@@ -1,0 +1,890 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:acquisition",
+  "title": "ERL2 acquisition, package and adapter-request contracts",
+  "$comment": "Design v2 \u00a711.1/\u00a716.2, ERL2-FR-003/FR-018. Acquisition and package-verification requests are schema-forbidden from carrying any later-phase ancestor.",
+  "$defs": {
+    "AcquisitionSourceManifestV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "source_id",
+        "source_kind",
+        "locator_hash",
+        "requested_version_or_channel",
+        "integrity_policy_hash",
+        "provenance_policy_hash",
+        "network_profile_hash",
+        "limits",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "acquisition-source-manifest/v1"
+        },
+        "source_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "source_kind": {
+          "enum": [
+            "local_delivery",
+            "registry",
+            "release_api",
+            "approved_repository"
+          ]
+        },
+        "locator_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "requested_version_or_channel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "authentication_ref_kind": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "integrity_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "provenance_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "network_profile_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "documentation_entrypoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "expected_package_sha256": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "runtime_ms",
+            "bytes",
+            "redirects"
+          ],
+          "properties": {
+            "runtime_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5400000
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 68719476736
+            },
+            "redirects": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 32
+            }
+          }
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "AcquisitionPreregistrationV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "preregistration_id",
+        "run_id",
+        "acquisition_source_manifest_hash",
+        "adapter_manifest_hash",
+        "acquisition_actor_script_hash",
+        "acquisition_actor_schema_hash",
+        "acquisition_step_commitment_hash",
+        "package_verification_step_commitment_hash",
+        "generic_run_policy_hash",
+        "run_trust_policy_hash",
+        "limits_hash",
+        "registered_at",
+        "expires_at",
+        "selected_case_identity",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "acquisition-preregistration/v1"
+        },
+        "preregistration_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "acquisition_source_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_actor_script_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_actor_schema_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_step_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "package_verification_step_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "generic_run_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "run_trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "limits_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "registered_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "expires_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "selected_case_identity": {
+          "const": "absent"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "AcquisitionPreregistrationVerificationReceiptV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "acquisition_preregistration_hash",
+        "source_manifest_hash",
+        "adapter_manifest_hash",
+        "trust_policy_hash",
+        "selected_case_identity_absent",
+        "signature_valid",
+        "verified_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "acquisition-preregistration-verification-receipt/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "acquisition_preregistration_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "source_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selected_case_identity_absent": {
+          "const": true
+        },
+        "signature_valid": {
+          "const": true
+        },
+        "verified_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "VisibleStepReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact",
+        "core_hash"
+      ],
+      "properties": {
+        "artifact": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "AcquisitionAdapterRequestV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_version",
+        "run_id",
+        "operation_id",
+        "acquisition_preregistration_hash",
+        "acquisition_source_manifest_hash",
+        "adapter_manifest_hash",
+        "visible_step",
+        "credential_handle_ids",
+        "resource_limit_hash",
+        "deadline",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "acquisition-adapter-request/v1"
+        },
+        "protocol_version": {
+          "const": "subject-adapter/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "acquisition_preregistration_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_source_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "visible_step": {
+          "$ref": "erl2:acquisition#/$defs/VisibleStepReference"
+        },
+        "credential_handle_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "resource_limit_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "deadline": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "PackageVerificationRequestV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_version",
+        "run_id",
+        "operation_id",
+        "acquisition_preregistration_hash",
+        "acquisition_record_hash",
+        "frozen_acquired_artifact",
+        "frozen_package_file_sha256",
+        "integrity_policy_hash",
+        "provenance_policy_hash",
+        "adapter_manifest_hash",
+        "visible_step",
+        "deadline",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "package-verification-request/v1"
+        },
+        "protocol_version": {
+          "const": "subject-adapter/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "acquisition_preregistration_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "frozen_acquired_artifact": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "frozen_package_file_sha256": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "integrity_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "provenance_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "visible_step": {
+          "$ref": "erl2:acquisition#/$defs/VisibleStepReference"
+        },
+        "deadline": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "AdapterStepRequestV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_version",
+        "run_id",
+        "operation_id",
+        "execution_plan_hash",
+        "visible_step",
+        "prior_visible_interaction_hashes",
+        "credential_handle_ids",
+        "resource_limit_hash",
+        "deadline",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "adapter-step-request/v1"
+        },
+        "protocol_version": {
+          "const": "subject-adapter/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "execution_plan_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "visible_step": {
+          "$ref": "erl2:acquisition#/$defs/VisibleStepReference"
+        },
+        "canonical_evidence_envelope_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "canonical_evidence_mount_handle_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "prior_visible_interaction_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "credential_handle_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "resource_limit_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "deadline": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "SubjectAcquisitionRecordV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "acquisition_request_hash",
+        "step_commitment_hash",
+        "source_manifest_hash",
+        "attempts",
+        "authentication_prompt_count",
+        "documentation_step_ids",
+        "active_operator_ms",
+        "elapsed_ms",
+        "lab_network_control_hash",
+        "status",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "subject-acquisition-record/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "acquisition_request_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "step_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "source_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "attempts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "attempt_id",
+              "started_at",
+              "ended_at",
+              "status",
+              "bytes",
+              "redirect_count",
+              "error_codes"
+            ],
+            "properties": {
+              "attempt_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "started_at": {
+                "$ref": "erl2:common#/$defs/Instant"
+              },
+              "ended_at": {
+                "$ref": "erl2:common#/$defs/Instant"
+              },
+              "status": {
+                "enum": [
+                  "completed",
+                  "failed"
+                ]
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 68719476736
+              },
+              "redirect_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 32
+              },
+              "error_codes": {
+                "$ref": "erl2:common#/$defs/ShortStringArray"
+              }
+            }
+          }
+        },
+        "authentication_prompt_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024
+        },
+        "documentation_step_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "active_operator_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5400000
+        },
+        "elapsed_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5400000
+        },
+        "acquired_artifact": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "lab_network_control_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "dependency_health_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "status": {
+          "$ref": "erl2:common#/$defs/RecordStatus"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "A completed acquisition must carry the acquired artifact; a failed or unsupported one must not fabricate it.",
+          "if": {
+            "properties": {
+              "status": {
+                "const": "completed"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "type": "object"
+          },
+          "then": {
+            "required": [
+              "acquired_artifact"
+            ],
+            "type": "object"
+          },
+          "else": {
+            "not": {
+              "required": [
+                "acquired_artifact"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      ]
+    },
+    "SubjectPackageVerificationRecordV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "verification_request_hash",
+        "step_commitment_hash",
+        "acquisition_record_hash",
+        "frozen_package_file_sha256",
+        "integrity_policy_hash",
+        "provenance_policy_hash",
+        "checks",
+        "status",
+        "started_at",
+        "ended_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "subject-package-verification-record/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "verification_request_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "step_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "frozen_package_file_sha256": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "integrity_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "provenance_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "check_id",
+              "passed",
+              "evidence_refs"
+            ],
+            "properties": {
+              "check_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "passed": {
+                "type": "boolean"
+              },
+              "evidence_refs": {
+                "$ref": "erl2:common#/$defs/HashArray"
+              }
+            }
+          }
+        },
+        "status": {
+          "$ref": "erl2:common#/$defs/RecordStatus"
+        },
+        "started_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "ended_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "SubjectPackageManifestV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "subject_id",
+        "subject_version",
+        "package_kind",
+        "acquisition_record_hash",
+        "package_verification_record_hash",
+        "package_file_sha256",
+        "provenance",
+        "signature_evidence",
+        "entrypoints",
+        "runtime_requirements",
+        "requested_resources",
+        "configuration_schema_hash",
+        "capability_declaration_hash",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "subject-package-manifest/v1"
+        },
+        "subject_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "subject_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "package_kind": {
+          "enum": [
+            "archive",
+            "oci",
+            "native",
+            "bundle"
+          ]
+        },
+        "acquisition_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "package_verification_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "package_file_sha256": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "provenance": {
+          "$ref": "erl2:common#/$defs/Provenance"
+        },
+        "sbom": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "signature_evidence": {
+          "$ref": "erl2:common#/$defs/ArtifactRefArray"
+        },
+        "entrypoints": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "runtime_requirements": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "requested_resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu_millis",
+            "memory_mib",
+            "disk_mib",
+            "network_profile"
+          ],
+          "properties": {
+            "cpu_millis": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 64000
+            },
+            "memory_mib": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 262144
+            },
+            "disk_mib": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1048576
+            },
+            "network_profile": {
+              "$ref": "erl2:common#/$defs/Id"
+            }
+          }
+        },
+        "configuration_schema_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "capability_declaration_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "SubjectAdapterManifestV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "adapter_id",
+        "version",
+        "protocol_version",
+        "adapter_artifact_hash",
+        "supported_package_kinds",
+        "operations",
+        "required_broker_capabilities",
+        "network_allowlist_ids",
+        "projection_schema",
+        "certification_receipt_hash",
+        "owner",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "subject-adapter-manifest/v1"
+        },
+        "adapter_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "protocol_version": {
+          "const": "subject-adapter/v1"
+        },
+        "adapter_artifact_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "supported_package_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "enum": [
+              "archive",
+              "oci",
+              "native",
+              "bundle"
+            ]
+          }
+        },
+        "operations": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "required_broker_capabilities": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "network_allowlist_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "projection_schema": {
+          "const": "generic-claim-set/v1"
+        },
+        "certification_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "GenericRunPolicyV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "policy_id",
+        "version",
+        "evidence_policy_hash",
+        "cutoff_policy_hash",
+        "journey_policy_hash",
+        "generic_evaluation_policy_hash",
+        "domain_pack_hashes",
+        "run_trust_policy_hash",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "generic-run-policy/v1"
+        },
+        "policy_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "evidence_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "cutoff_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "journey_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "generic_evaluation_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "domain_pack_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "run_trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    }
+  }
+}

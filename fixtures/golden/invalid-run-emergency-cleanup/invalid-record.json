@@ -1,0 +1,98 @@
+{
+  "schema_version": "invalid-lab-run-record/v1",
+  "run_id": "019f1af9-b400-7444-8444-444444444444",
+  "terminal_state": "invalidated",
+  "failed_phase": {
+    "kind": "lifecycle_phase",
+    "phase": "environment_restoration",
+    "lifecycle_event_hash": "sha256:3dbb2d7e2ca1f7909e12b48acc62768c96c7ae3dd374144c3f9f9a0a63349d6a"
+  },
+  "terminal_reason": {
+    "kind": "classified_failure",
+    "classification": "cleanup_failure",
+    "failure_event_hash": "sha256:3dbb2d7e2ca1f7909e12b48acc62768c96c7ae3dd374144c3f9f9a0a63349d6a",
+    "primary_finding_hash": "sha256:a711077d5912f8244e21aad1b59229c0bdf77eea700b0ef06f38beb7ad20ea78",
+    "invalidity_finding_hash": "sha256:a711077d5912f8244e21aad1b59229c0bdf77eea700b0ef06f38beb7ad20ea78"
+  },
+  "available_evidence": [
+    {
+      "artifact_role": "acquisition-preregistration",
+      "artifact_hash": "sha256:a84d3ebf6acffcafd06d2b740f59a9ab39c24315ff156f87d92b0e60866f7cb6",
+      "reached_event_hash": "sha256:c691ade0a7ded7257fd499d2b75df65e20b61737c6c6c6aecb481ca7c86f61d0"
+    },
+    {
+      "artifact_role": "acquisition-source-manifest",
+      "artifact_hash": "sha256:fa57383df86cc9071d64f8bf365328cadf0abeab833b2a032ca3ef1d0a6c1c34",
+      "reached_event_hash": "sha256:c691ade0a7ded7257fd499d2b75df65e20b61737c6c6c6aecb481ca7c86f61d0"
+    },
+    {
+      "artifact_role": "environment-driver-manifest",
+      "artifact_hash": "sha256:28861263c9e825955a3cf8094911b3db32bf75b38d7e03bf8df7963397201c57",
+      "reached_event_hash": "sha256:c733655271ef2c017e348a175adbfe4cdbfe54cc98b7838b36ad260d6a6bf543"
+    },
+    {
+      "artifact_role": "environment-resource-inventory",
+      "artifact_hash": "sha256:19f90a2a249e4d7242b1b7718f712a43025cc2eff7fd60728a84def7adc8abfd",
+      "reached_event_hash": "sha256:c733655271ef2c017e348a175adbfe4cdbfe54cc98b7838b36ad260d6a6bf543"
+    },
+    {
+      "artifact_role": "environment-baseline",
+      "artifact_hash": "sha256:b0465771b39e93a57e3a8462138ea2e6b4c4ab46a6a5f4e5edf4943279172edd",
+      "reached_event_hash": "sha256:c733655271ef2c017e348a175adbfe4cdbfe54cc98b7838b36ad260d6a6bf543"
+    },
+    {
+      "artifact_role": "environment-operation-receipt",
+      "artifact_hash": "sha256:2ac0ce8ecd19eefa77c9027c42c0b69bc3b566593ca4a58a0f062b29f4716340",
+      "reached_event_hash": "sha256:3dbb2d7e2ca1f7909e12b48acc62768c96c7ae3dd374144c3f9f9a0a63349d6a"
+    },
+    {
+      "artifact_role": "primary-finding",
+      "artifact_hash": "sha256:a711077d5912f8244e21aad1b59229c0bdf77eea700b0ef06f38beb7ad20ea78",
+      "reached_event_hash": "sha256:3dbb2d7e2ca1f7909e12b48acc62768c96c7ae3dd374144c3f9f9a0a63349d6a"
+    },
+    {
+      "artifact_role": "environment-resource-frontier",
+      "artifact_hash": "sha256:fcf0a0b1c838835560ba05399f51dcced25f3e1b4f5fa230e41699c8309dfe85",
+      "reached_event_hash": "sha256:ea6cdf82f3a429921d52c68c5401441a2e3c60cb27c022ab8583b1ce43d8e5f7"
+    },
+    {
+      "artifact_role": "emergency-cleanup-verification",
+      "artifact_hash": "sha256:62a2681213f502d97ac090d6242d4b7fdbbf03d75ce26d2943fc250a904c759c",
+      "reached_event_hash": "sha256:accd4b2d6016918d479e9ebae7e2356065a2557b0f51e436a3b5d6700496acf2"
+    },
+    {
+      "artifact_role": "emergency-attempt-receipt",
+      "artifact_hash": "sha256:e4c696b13d1d621f5c7e1c50fc3aed221a1d43f9af35f5cead0c805c22294012",
+      "reached_event_hash": "sha256:accd4b2d6016918d479e9ebae7e2356065a2557b0f51e436a3b5d6700496acf2"
+    },
+    {
+      "artifact_role": "emergency-attempt-receipt",
+      "artifact_hash": "sha256:eaa6e4490e52a0d9cd68648115185fb24e0cc77b7bedfbae6d3de201bfa53441",
+      "reached_event_hash": "sha256:accd4b2d6016918d479e9ebae7e2356065a2557b0f51e436a3b5d6700496acf2"
+    },
+    {
+      "artifact_role": "emergency-attempt-receipt",
+      "artifact_hash": "sha256:5cb348abf0d4bc5527c1e4759e04b0b51fe3b0d9509c816bb10f7e04f2069bcd",
+      "reached_event_hash": "sha256:accd4b2d6016918d479e9ebae7e2356065a2557b0f51e436a3b5d6700496acf2"
+    },
+    {
+      "artifact_role": "emergency-attempt-receipt",
+      "artifact_hash": "sha256:7604ab057423bae394045abf612a6ae016553f85478d56b25899b2fdd03e0f70",
+      "reached_event_hash": "sha256:accd4b2d6016918d479e9ebae7e2356065a2557b0f51e436a3b5d6700496acf2"
+    }
+  ],
+  "cleanup": {
+    "variant": "emergency_environment",
+    "status": "attempted_succeeded",
+    "attempt_hashes": [
+      "sha256:e4c696b13d1d621f5c7e1c50fc3aed221a1d43f9af35f5cead0c805c22294012",
+      "sha256:eaa6e4490e52a0d9cd68648115185fb24e0cc77b7bedfbae6d3de201bfa53441",
+      "sha256:5cb348abf0d4bc5527c1e4759e04b0b51fe3b0d9509c816bb10f7e04f2069bcd",
+      "sha256:7604ab057423bae394045abf612a6ae016553f85478d56b25899b2fdd03e0f70"
+    ],
+    "result_hash": "sha256:62a2681213f502d97ac090d6242d4b7fdbbf03d75ce26d2943fc250a904c759c"
+  },
+  "lifecycle_head_hash": "sha256:accd4b2d6016918d479e9ebae7e2356065a2557b0f51e436a3b5d6700496acf2",
+  "invalidated_at": "2026-07-01T00:00:26Z",
+  "core_hash": "sha256:0ab28a6dbe9b574d1b109154e284db0346f8b5ba31b76f35492afce6dc557821"
+}

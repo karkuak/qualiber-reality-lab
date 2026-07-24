@@ -1,0 +1,843 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:trust",
+  "title": "ERL2 trust, timestamp, signer-inventory and lifecycle contracts",
+  "$comment": "Design v2 \u00a714/\u00a716.2 and ADR-ERL2-003/012. trusted-timestamp-checkpoint/v1 is retained byte-compatible from revision 0.9.8. The trust policy, signer inventory and trust verification report are explicit new majors because V2 changed their referenced schema identities and terminal variants (see docs/decisions/CONFLICT-ERL2-001.md).",
+  "$defs": {
+    "SignerRole": {
+      "enum": [
+        "trust_root",
+        "timestamp_authority",
+        "policy_author",
+        "preregistrar",
+        "challenge_governor",
+        "environment_governor",
+        "selector",
+        "randomness_source",
+        "lab_verifier_association_signer",
+        "reveal_custodian",
+        "truth_custodian",
+        "vault_authorizer",
+        "controller",
+        "traffic_supervisor",
+        "runtime_attestor",
+        "reveal_service",
+        "adapter_owner",
+        "evaluator",
+        "confidential_selection_auditor",
+        "final_attestation_signer",
+        "deep_finalizer"
+      ]
+    },
+    "TrustPolicyManifestV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "manifest_id",
+        "version",
+        "issued_at",
+        "keys",
+        "revocations",
+        "root_key_id",
+        "core_hash",
+        "root_signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "trust-policy-manifest/v2"
+        },
+        "manifest_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "issued_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "key_id",
+              "public_key_pem",
+              "signer_roles",
+              "permitted_contract_types",
+              "permitted_encryption_recipient_ids",
+              "valid_from",
+              "valid_until",
+              "status",
+              "tiers"
+            ],
+            "properties": {
+              "key_id": {
+                "$ref": "erl2:common#/$defs/KeyId"
+              },
+              "public_key_pem": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              "signer_roles": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 21,
+                "items": {
+                  "$ref": "erl2:trust#/$defs/SignerRole"
+                }
+              },
+              "permitted_contract_types": {
+                "type": "array",
+                "maxItems": 256,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "permitted_encryption_recipient_ids": {
+                "$ref": "erl2:common#/$defs/KeyIdArray"
+              },
+              "valid_from": {
+                "$ref": "erl2:common#/$defs/Instant"
+              },
+              "valid_until": {
+                "$ref": "erl2:common#/$defs/Instant"
+              },
+              "status": {
+                "enum": [
+                  "active",
+                  "retired"
+                ]
+              },
+              "retired_at": {
+                "$ref": "erl2:common#/$defs/Instant"
+              },
+              "tiers": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 3,
+                "items": {
+                  "$ref": "erl2:common#/$defs/Tier"
+                }
+              }
+            }
+          }
+        },
+        "revocations": {
+          "type": "array",
+          "maxItems": 512,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "revocation_id",
+              "key_id",
+              "scope",
+              "announced_at",
+              "reason_code"
+            ],
+            "properties": {
+              "revocation_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "key_id": {
+                "$ref": "erl2:common#/$defs/KeyId"
+              },
+              "scope": {
+                "enum": [
+                  "prospective",
+                  "from_timestamp",
+                  "all_historical"
+                ]
+              },
+              "announced_at": {
+                "$ref": "erl2:common#/$defs/Instant"
+              },
+              "effective_at": {
+                "$ref": "erl2:common#/$defs/Instant"
+              },
+              "from_timestamp": {
+                "$ref": "erl2:common#/$defs/Instant"
+              },
+              "reason_code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            }
+          }
+        },
+        "prior_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "root_key_id": {
+          "$ref": "erl2:common#/$defs/KeyId"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "root_signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "TrustedTimestampCheckpointV1": {
+      "$comment": "Retained byte-compatible from revision 0.9.8. Domain ERL-SIGN-V1.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "checkpoint_id",
+        "log_id",
+        "context",
+        "first_sequence",
+        "last_sequence",
+        "entries",
+        "checkpointed_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "trusted-timestamp-checkpoint/v1"
+        },
+        "checkpoint_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "log_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "context": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "scope",
+                "run_id"
+              ],
+              "properties": {
+                "scope": {
+                  "const": "selected_run_public"
+                },
+                "run_id": {
+                  "$ref": "erl2:common#/$defs/RunId"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "scope",
+                "admission_context_id"
+              ],
+              "properties": {
+                "scope": {
+                  "const": "confidential_admission"
+                },
+                "admission_context_id": {
+                  "$ref": "erl2:common#/$defs/Id"
+                }
+              }
+            }
+          ]
+        },
+        "prior_checkpoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "first_sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000
+        },
+        "last_sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1024,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sequence",
+              "artifact_schema_version",
+              "artifact_core_hash",
+              "signer_key_id",
+              "signature_sha256",
+              "security_timestamp"
+            ],
+            "properties": {
+              "sequence": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000
+              },
+              "artifact_schema_version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "artifact_core_hash": {
+                "$ref": "erl2:common#/$defs/Hash"
+              },
+              "signer_key_id": {
+                "$ref": "erl2:common#/$defs/KeyId"
+              },
+              "signature_sha256": {
+                "$ref": "erl2:common#/$defs/Hash"
+              },
+              "security_timestamp": {
+                "$ref": "erl2:common#/$defs/Instant"
+              }
+            }
+          }
+        },
+        "checkpointed_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "SignerInventoryEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_schema_version",
+        "artifact_core_hash",
+        "signer_key_id",
+        "signature_sha256",
+        "security_timestamp",
+        "timestamp_log_id",
+        "timestamp_sequence"
+      ],
+      "properties": {
+        "artifact_schema_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "artifact_core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signer_key_id": {
+          "$ref": "erl2:common#/$defs/KeyId"
+        },
+        "signature_sha256": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "security_timestamp": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "timestamp_log_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "timestamp_sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000
+        }
+      }
+    },
+    "PreEnvironmentSignerInventoryV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "terminal_variant",
+        "inventory_id",
+        "run_id",
+        "acquisition_preregistration_hash",
+        "entries",
+        "excluded_public_terminal_types",
+        "complete_for_terminal_chain",
+        "inventoried_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "signer-inventory/v2"
+        },
+        "terminal_variant": {
+          "const": "pre_environment"
+        },
+        "inventory_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "acquisition_preregistration_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "items": {
+            "$ref": "erl2:trust#/$defs/SignerInventoryEntry"
+          }
+        },
+        "excluded_public_terminal_types": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "prefixItems": [
+            {
+              "const": "pre-environment-final-lab-attestation/v1"
+            }
+          ],
+          "items": false
+        },
+        "complete_for_terminal_chain": {
+          "const": true
+        },
+        "inventoried_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "EnvironmentSignerInventoryV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "terminal_variant",
+        "inventory_id",
+        "run_id",
+        "selection_commitment_hash",
+        "entries",
+        "excluded_public_terminal_types",
+        "complete_for_terminal_chain",
+        "inventoried_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "signer-inventory/v2"
+        },
+        "terminal_variant": {
+          "const": "environment"
+        },
+        "inventory_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "selection_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "items": {
+            "$ref": "erl2:trust#/$defs/SignerInventoryEntry"
+          }
+        },
+        "excluded_public_terminal_types": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            {
+              "const": "selection-verification-receipt/v2"
+            },
+            {
+              "const": "environment-final-lab-attestation/v1"
+            }
+          ],
+          "items": false
+        },
+        "complete_for_terminal_chain": {
+          "const": true
+        },
+        "inventoried_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "SignerInventoryV2": {
+      "oneOf": [
+        {
+          "$ref": "erl2:trust#/$defs/PreEnvironmentSignerInventoryV2"
+        },
+        {
+          "$ref": "erl2:trust#/$defs/EnvironmentSignerInventoryV2"
+        }
+      ]
+    },
+    "TrustVerificationReportV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "report_id",
+        "run_id",
+        "terminal_variant",
+        "verification_scope",
+        "final_attestation_hash",
+        "public_verification_bundle_hash",
+        "signer_inventory_hash",
+        "timestamp_checkpoint_hash",
+        "run_trust_policy_hash",
+        "verification_trust_head_hash",
+        "head_descends_from_run_policy",
+        "valid_when_signed",
+        "currently_trusted",
+        "signer_results",
+        "verified_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "trust-verification-report/v2"
+        },
+        "report_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "terminal_variant": {
+          "enum": [
+            "pre_environment",
+            "environment"
+          ]
+        },
+        "verification_scope": {
+          "enum": [
+            "confidential_full",
+            "public_product"
+          ]
+        },
+        "final_attestation_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "public_verification_bundle_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_verification_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signer_inventory_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "timestamp_checkpoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "run_trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "verification_trust_head_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "head_descends_from_run_policy": {
+          "const": true
+        },
+        "valid_when_signed": {
+          "type": "boolean"
+        },
+        "currently_trusted": {
+          "type": "boolean"
+        },
+        "signer_results": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "artifact_hash",
+              "key_id",
+              "security_timestamp",
+              "valid_when_signed",
+              "currently_trusted",
+              "applied_revocation_ids"
+            ],
+            "properties": {
+              "artifact_hash": {
+                "$ref": "erl2:common#/$defs/Hash"
+              },
+              "key_id": {
+                "$ref": "erl2:common#/$defs/KeyId"
+              },
+              "security_timestamp": {
+                "$ref": "erl2:common#/$defs/Instant"
+              },
+              "valid_when_signed": {
+                "type": "boolean"
+              },
+              "currently_trusted": {
+                "type": "boolean"
+              },
+              "applied_revocation_ids": {
+                "$ref": "erl2:common#/$defs/IdArray"
+              }
+            }
+          }
+        },
+        "verified_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "terminal_variant": {
+                "const": "pre_environment"
+              }
+            },
+            "required": [
+              "terminal_variant"
+            ],
+            "type": "object"
+          },
+          "then": {
+            "not": {
+              "required": [
+                "selection_verification_receipt_hash"
+              ],
+              "type": "object"
+            }
+          },
+          "else": {
+            "required": [
+              "selection_verification_receipt_hash"
+            ],
+            "type": "object"
+          }
+        }
+      ]
+    },
+    "ExposureEventV1": {
+      "$comment": "Retained byte-compatible from revision 0.9.8 with the generic corpus/challenge naming preserved.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "exposure_id",
+        "corpus_id",
+        "challenge_manifest_hash",
+        "prior_tier",
+        "resulting_tier",
+        "occurred_at",
+        "reason",
+        "actor_id",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "exposure-event/v1"
+        },
+        "exposure_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "corpus_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "challenge_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "prior_tier": {
+          "$ref": "erl2:common#/$defs/Tier"
+        },
+        "resulting_tier": {
+          "const": "development"
+        },
+        "occurred_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "reason": {
+          "enum": [
+            "product_team_view",
+            "truth_reveal",
+            "debug_access",
+            "public_disclosure"
+          ]
+        },
+        "actor_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "prior_exposure_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "LabLifecycleEventV1": {
+      "$comment": "New major: V2 replaces run-lifecycle-event/v1 because the state machine, produced roles and failure union all changed (design v2 \u00a712/\u00a726).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "sequence",
+        "event_id",
+        "event_type",
+        "state_from",
+        "state_to",
+        "occurred_at",
+        "actor_id",
+        "command_id",
+        "operation_id",
+        "required_hashes",
+        "produced",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "lab-lifecycle-event/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000
+        },
+        "event_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "event_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "state_from": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "state_to": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "occurred_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "actor_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "command_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "prior_event_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "required_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "produced": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "artifact_role",
+              "artifact_core_hash",
+              "artifact_schema_version"
+            ],
+            "properties": {
+              "artifact_role": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "artifact_core_hash": {
+                "$ref": "erl2:common#/$defs/Hash"
+              },
+              "artifact_schema_version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            }
+          }
+        },
+        "failure": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "owner",
+            "message"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+            },
+            "owner": {
+              "enum": [
+                "lab",
+                "external_dependency",
+                "adapter",
+                "subject",
+                "evaluator",
+                "inconclusive"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          }
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    }
+  }
+}

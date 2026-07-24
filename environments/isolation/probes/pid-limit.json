@@ -1,0 +1,19 @@
+{
+  "schema_version": "isolation-enforcement-probe-result/v1",
+  "probe_id": "pid-limit",
+  "control_id": "pid-limit",
+  "substrate_lock_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
+  "evidence": "observed",
+  "enforced": true,
+  "method": "read pids.max under --pids-limit and then exceed it; forks past the cap must fail",
+  "observation": {
+    "attempted": "cat /sys/fs/cgroup/pids.max, then attempt 200 forks under a 64-pid cap",
+    "observed": "64\nFAILED=1",
+    "expectation": "pids.max reports a finite cap and forks past it are refused",
+    "exit_code": 0
+  },
+  "resources_cleaned_up": true,
+  "started_at": "2026-07-23T16:57:21Z",
+  "ended_at": "2026-07-23T16:57:21Z",
+  "core_hash": "sha256:3ba9af71ea2ccd1416ace6841210bf801176c48b8c3320304ee1206de253bbc7"
+}

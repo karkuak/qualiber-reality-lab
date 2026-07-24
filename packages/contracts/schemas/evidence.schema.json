@@ -1,0 +1,531 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:evidence",
+  "title": "ERL2 cutoff, capture, observation and canonical-evidence contracts",
+  "$comment": "Design v2 §13/§16.2. CutoffPolicyV1, MonotonicClockDomainV1, TrafficProcessStartReceiptV1 and RuntimeMilestoneV1 are retained byte-compatible from revision 0.9.8, so their V1 field names are kept exactly. Under V2 `experiment_manifest_hash` carries the ChallengeManifestV1 core hash and `environment_fingerprint_hash` carries the EnvironmentInstanceV1 core hash; the field names are not redefined, only bound to their V2 successors.",
+  "$defs": {
+    "MonotonicClockDomainV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "domain_id", "run_id", "environment_fingerprint_hash", "host_identity_hash", "boot_id_hash", "clock_id", "clock_epoch_token_hash", "observed_at", "core_hash"],
+      "properties": {
+        "schema_version": { "const": "monotonic-clock-domain/v1" },
+        "domain_id": { "$ref": "erl2:common#/$defs/Id" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "environment_fingerprint_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "host_identity_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "boot_id_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "clock_id": { "enum": ["CLOCK_MONOTONIC", "mach_continuous_time"] },
+        "clock_epoch_token_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "observed_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+
+    "CutoffPolicyV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "policy_id", "version", "clock", "instant_rule", "inclusion", "max_skew_ms", "late_arrival_grace_ms", "maximum_selection_to_traffic_start_ms", "maximum_timestamp_submission_delay_ms", "maximum_process_milestone_skew_ms", "maximum_monotonic_wall_divergence_ms", "maximum_warmup_ms", "maximum_observation_ms", "minimum_observation_ms", "event_time_required", "ingestion_time_required", "valid_from", "valid_until", "core_hash", "signature"],
+      "properties": {
+        "schema_version": { "const": "cutoff-policy/v1" },
+        "policy_id": { "$ref": "erl2:common#/$defs/Id" },
+        "version": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+        "clock": { "const": "host_utc" },
+        "instant_rule": { "const": "traffic_process_started_at_plus_warmup_ms_plus_observation_ms" },
+        "inclusion": { "const": "event_time_lt_and_ingestion_time_lte" },
+        "max_skew_ms": { "type": "integer", "minimum": 0, "maximum": 600000 },
+        "late_arrival_grace_ms": { "type": "integer", "minimum": 0, "maximum": 3600000 },
+        "maximum_selection_to_traffic_start_ms": { "type": "integer", "minimum": 0, "maximum": 5400000 },
+        "maximum_timestamp_submission_delay_ms": { "type": "integer", "minimum": 0, "maximum": 3600000 },
+        "maximum_process_milestone_skew_ms": { "type": "integer", "minimum": 0, "maximum": 600000 },
+        "maximum_monotonic_wall_divergence_ms": { "type": "integer", "minimum": 0, "maximum": 600000 },
+        "maximum_warmup_ms": { "type": "integer", "minimum": 0, "maximum": 5400000 },
+        "maximum_observation_ms": { "type": "integer", "minimum": 1, "maximum": 5400000 },
+        "minimum_observation_ms": { "type": "integer", "minimum": 1, "maximum": 5400000 },
+        "event_time_required": { "const": true },
+        "ingestion_time_required": { "const": true },
+        "valid_from": { "$ref": "erl2:common#/$defs/Instant" },
+        "valid_until": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      }
+    },
+
+    "TrafficProcessStartReceiptV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "receipt_id", "run_id", "selection_commitment_hash", "experiment_manifest_hash", "environment_fingerprint_hash", "traffic_profile_hash", "process_identity_hash", "supervisor_boot_id_hash", "monotonic_clock_domain_hash", "process_started_at", "process_start_monotonic_ms", "core_hash", "signature"],
+      "properties": {
+        "schema_version": { "const": "traffic-process-start-receipt/v1" },
+        "receipt_id": { "$ref": "erl2:common#/$defs/Id" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "selection_commitment_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "experiment_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "environment_fingerprint_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "traffic_profile_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "process_identity_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "supervisor_boot_id_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "monotonic_clock_domain_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "process_started_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "process_start_monotonic_ms": { "type": "integer", "minimum": 0, "maximum": 1000000000000 },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      }
+    },
+
+    "RuntimeMilestoneV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "milestone_id", "run_id", "milestone", "selection_commitment_hash", "experiment_manifest_hash", "environment_fingerprint_hash", "traffic_profile_hash", "traffic_process_start_receipt_hash", "monotonic_clock_domain_hash", "occurred_at", "monotonic_elapsed_ms", "core_hash", "signature"],
+      "properties": {
+        "schema_version": { "const": "runtime-milestone/v1" },
+        "milestone_id": { "$ref": "erl2:common#/$defs/Id" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "milestone": { "const": "traffic_started" },
+        "selection_commitment_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "experiment_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "environment_fingerprint_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "traffic_profile_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "traffic_process_start_receipt_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "monotonic_clock_domain_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "occurred_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "monotonic_elapsed_ms": { "type": "integer", "minimum": 0, "maximum": 5400000 },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      }
+    },
+
+    "SourceSnapshotV1": {
+      "$comment": "Every source state is explicit. `unavailable`, `partial` and `error` are retained results, never silent omissions (design v2 §13).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "snapshot_id", "source_id", "source_kind", "source_schema", "source_identity_hash", "state", "query_hash", "window", "started_at", "ended_at", "pages", "records", "bytes", "dedupe_key", "ordering_id", "sampling", "truncation", "health_record_hash", "provenance", "core_hash"],
+      "properties": {
+        "schema_version": { "const": "source-snapshot/v1" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "snapshot_id": { "$ref": "erl2:common#/$defs/Id" },
+        "source_id": { "$ref": "erl2:common#/$defs/Id" },
+        "source_kind": { "$ref": "erl2:common#/$defs/Id" },
+        "source_schema": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "source_identity_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "state": { "$ref": "erl2:common#/$defs/SourceState" },
+        "query_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "to_exclusive"],
+          "properties": {
+            "from": { "$ref": "erl2:common#/$defs/Instant" },
+            "to_exclusive": { "$ref": "erl2:common#/$defs/Instant" }
+          }
+        },
+        "started_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "ended_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "pages": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "records": { "type": "integer", "minimum": 0, "maximum": 100000000 },
+        "bytes": { "type": "integer", "minimum": 0, "maximum": 1073741824 },
+        "cursor_start_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "cursor_end_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "dedupe_key": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ordering_id": { "$ref": "erl2:common#/$defs/Id" },
+        "sampling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": { "$ref": "erl2:common#/$defs/Id" },
+            "rate": { "$ref": "erl2:common#/$defs/Decimal" },
+            "seed_commitment": { "$ref": "erl2:common#/$defs/Hash" }
+          }
+        },
+        "truncation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["truncated"],
+          "properties": {
+            "truncated": { "type": "boolean" },
+            "reason": { "type": "string", "minLength": 1, "maxLength": 256 }
+          },
+          "allOf": [
+            {
+              "$comment": "ERL2-OPS-002: a limit truncates explicitly, never silently.",
+              "if": { "type": "object", "properties": { "truncated": { "const": true } }, "required": ["truncated"] },
+              "then": { "type": "object", "required": ["reason"] },
+              "else": { "type": "object", "not": { "type": "object", "required": ["reason"] } }
+            }
+          ]
+        },
+        "health_record_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "unavailable_reason_code": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "records_artifact": { "$ref": "erl2:common#/$defs/ArtifactRef" },
+        "provenance": { "$ref": "erl2:common#/$defs/Provenance" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      },
+      "allOf": [
+        {
+          "$comment": "An unavailable or errored source must say why and cannot carry records.",
+          "if": { "type": "object", "properties": { "state": { "enum": ["unavailable", "error"] } }, "required": ["state"] },
+          "then": {
+            "type": "object",
+            "required": ["unavailable_reason_code"],
+            "not": { "type": "object", "required": ["records_artifact"] }
+          },
+          "else": { "type": "object", "not": { "type": "object", "required": ["unavailable_reason_code"] } }
+        },
+        {
+          "$comment": "A healthy_empty source has no records artifact and zero records.",
+          "if": { "type": "object", "properties": { "state": { "const": "healthy_empty" } }, "required": ["state"] },
+          "then": {
+            "type": "object",
+            "properties": { "records": { "const": 0 } },
+            "not": { "type": "object", "required": ["records_artifact"] }
+          }
+        }
+      ]
+    },
+
+    "CanonicalEvidenceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entry_id", "source_content_hash", "artifact", "source_state"],
+      "properties": {
+        "entry_id": { "$ref": "erl2:common#/$defs/Id" },
+        "source_content_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "artifact": { "$ref": "erl2:common#/$defs/ArtifactRef" },
+        "source_state": { "$ref": "erl2:common#/$defs/SourceState" }
+      }
+    },
+
+    "UnsupportedDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entry_id", "evidence_kind", "reason_code"],
+      "properties": {
+        "entry_id": { "$ref": "erl2:common#/$defs/Id" },
+        "evidence_kind": { "$ref": "erl2:common#/$defs/Id" },
+        "reason_code": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+
+    "ReplayCanonicalEvidenceEnvelopeV1": {
+      "$comment": "Comparison-level artifact: no run, package, adapter, plan or run-local snapshot identity, so its bytes can be identical across subjects (ERL2-AC-010).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "comparison_id", "mode", "generic_run_policy_hash", "challenge_hash", "evidence_policy_hash", "cutoff_evidence_set_hash", "entries", "unsupported_descriptors", "tree_hash", "frozen_at", "core_hash"],
+      "properties": {
+        "schema_version": { "const": "replay-canonical-evidence-envelope/v1" },
+        "comparison_id": { "$ref": "erl2:common#/$defs/Id" },
+        "mode": { "const": "replay_comparison" },
+        "generic_run_policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "challenge_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "evidence_policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "cutoff_evidence_set_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "items": { "$ref": "erl2:evidence#/$defs/CanonicalEvidenceEntry" }
+        },
+        "unsupported_descriptors": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": { "$ref": "erl2:evidence#/$defs/UnsupportedDescriptor" }
+        },
+        "tree_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "frozen_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+
+    "LiveCanonicalEvidenceEnvelopeV1": {
+      "$comment": "Run-bound: each independently instantiated environment keeps its own volatile bytes. Equivalence is semantic and separately receipted; it is never byte equality.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "comparison_id", "mode", "generic_run_policy_hash", "challenge_hash", "evidence_policy_hash", "equivalence_profile_hash", "semantic_projection_hash", "entries", "unsupported_descriptors", "tree_hash", "frozen_at", "core_hash"],
+      "properties": {
+        "schema_version": { "const": "live-canonical-evidence-envelope/v1" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "comparison_id": { "$ref": "erl2:common#/$defs/Id" },
+        "mode": { "const": "live_ecosystem" },
+        "generic_run_policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "challenge_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "evidence_policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "equivalence_profile_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "semantic_projection_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "items": { "$ref": "erl2:evidence#/$defs/CanonicalEvidenceEntry" }
+        },
+        "unsupported_descriptors": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": { "$ref": "erl2:evidence#/$defs/UnsupportedDescriptor" }
+        },
+        "tree_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "frozen_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+
+    "CanonicalSubjectEvidenceEnvelopeV1": {
+      "oneOf": [
+        { "$ref": "erl2:evidence#/$defs/ReplayCanonicalEvidenceEnvelopeV1" },
+        { "$ref": "erl2:evidence#/$defs/LiveCanonicalEvidenceEnvelopeV1" }
+      ]
+    },
+
+    "EvidenceEquivalenceProfileV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "profile_id", "challenge_family_hash", "semantic_fact_schema_hash", "normalization_rule_hashes", "ignored_volatile_field_paths", "required_invariant_ids", "forbidden_omission_classes", "core_hash", "signature"],
+      "properties": {
+        "schema_version": { "const": "evidence-equivalence-profile/v1" },
+        "profile_id": { "$ref": "erl2:common#/$defs/Id" },
+        "challenge_family_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "semantic_fact_schema_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "normalization_rule_hashes": { "$ref": "erl2:common#/$defs/HashArray" },
+        "ignored_volatile_field_paths": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+        "required_invariant_ids": { "$ref": "erl2:common#/$defs/IdArray" },
+        "forbidden_omission_classes": { "$ref": "erl2:common#/$defs/IdArray" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      }
+    },
+
+    "SemanticEvidenceEquivalenceReceiptV1": {
+      "$comment": "A failed or inconclusive result stays visible; it can never be relabelled byte-identical (ERL2-FR-021).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "comparison_id", "equivalence_profile_hash", "independent_verifier_hash", "live_envelope_hashes", "semantic_projection_hashes", "invariant_results", "status", "verified_at", "core_hash", "signature"],
+      "properties": {
+        "schema_version": { "const": "semantic-evidence-equivalence-receipt/v1" },
+        "comparison_id": { "$ref": "erl2:common#/$defs/Id" },
+        "equivalence_profile_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "independent_verifier_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "live_envelope_hashes": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 64,
+          "items": { "$ref": "erl2:common#/$defs/Hash" }
+        },
+        "semantic_projection_hashes": { "$ref": "erl2:common#/$defs/HashArray" },
+        "invariant_results": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["invariant_id", "status", "proof_refs"],
+            "properties": {
+              "invariant_id": { "$ref": "erl2:common#/$defs/Id" },
+              "status": { "enum": ["passed", "failed", "inconclusive"] },
+              "proof_refs": { "$ref": "erl2:common#/$defs/HashArray" }
+            }
+          }
+        },
+        "status": { "enum": ["equivalent", "not_equivalent", "inconclusive"] },
+        "verified_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      }
+    },
+
+    "ObservationBundleV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "plan_hash", "environment_instance_hash", "cutoff", "source_snapshots", "subject_visible_projection_policy_hash", "comparison_policy_hash", "canonical_evidence_envelope_hash", "redaction_policy_hash", "leak_scan", "entries", "tree_hash", "frozen_at", "core_hash"],
+      "properties": {
+        "schema_version": { "const": "observation-bundle/v2" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "plan_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "environment_instance_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "cutoff": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["instant", "policy_hash", "process_start_receipt_hash", "runtime_milestone_hash"],
+          "properties": {
+            "instant": { "$ref": "erl2:common#/$defs/Instant" },
+            "policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+            "process_start_receipt_hash": { "$ref": "erl2:common#/$defs/Hash" },
+            "runtime_milestone_hash": { "$ref": "erl2:common#/$defs/Hash" }
+          }
+        },
+        "source_snapshots": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["snapshot_id", "snapshot_hash", "state"],
+            "properties": {
+              "snapshot_id": { "$ref": "erl2:common#/$defs/Id" },
+              "snapshot_hash": { "$ref": "erl2:common#/$defs/Hash" },
+              "state": { "$ref": "erl2:common#/$defs/SourceState" }
+            }
+          }
+        },
+        "subject_visible_projection_policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "comparison_policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "canonical_evidence_envelope_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "redaction_policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "leak_scan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "findings", "canaries_found"],
+          "properties": {
+            "version": { "type": "string", "minLength": 1, "maxLength": 64 },
+            "findings": { "type": "integer", "minimum": 0, "maximum": 100000 },
+            "canaries_found": { "const": 0 }
+          }
+        },
+        "entries": { "$ref": "erl2:common#/$defs/ArtifactRefArray" },
+        "tree_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "frozen_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+
+    "AdapterTranslationReceiptV1": {
+      "$comment": "Total coverage: every envelope entry is accounted for exactly once. `unsupported` is a retained disposition, never an omission (ERL2-FR-016).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "adapter_hash", "canonical_envelope_hash", "translated_tree_hash", "mappings", "total_input_entries", "accounted_entries", "complete", "translated_at", "core_hash"],
+      "properties": {
+        "schema_version": { "const": "adapter-translation-receipt/v1" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "adapter_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "canonical_envelope_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "translated_tree_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "mappings": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["entry_id", "disposition", "target_refs"],
+            "properties": {
+              "entry_id": { "$ref": "erl2:common#/$defs/Id" },
+              "disposition": { "enum": ["mapped_exact", "mapped_lossy", "unsupported"] },
+              "target_refs": { "$ref": "erl2:common#/$defs/ArtifactRefArray" },
+              "loss_reason_code": { "type": "string", "minLength": 1, "maxLength": 128 }
+            },
+            "allOf": [
+              {
+                "$comment": "A lossy or unsupported mapping must state why.",
+                "if": { "type": "object", "properties": { "disposition": { "const": "mapped_exact" } }, "required": ["disposition"] },
+                "then": { "type": "object", "not": { "type": "object", "required": ["loss_reason_code"] } },
+                "else": { "type": "object", "required": ["loss_reason_code"] }
+              }
+            ]
+          }
+        },
+        "total_input_entries": { "type": "integer", "minimum": 0, "maximum": 4096 },
+        "accounted_entries": { "type": "integer", "minimum": 0, "maximum": 4096 },
+        "complete": { "const": true },
+        "translated_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+
+    "GenericClaimSetV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "adapter_hash", "subject_output_hash", "domain_vocabulary_hash", "claims", "contradictions", "unprojected", "complete", "core_hash"],
+      "properties": {
+        "schema_version": { "const": "generic-claim-set/v1" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "adapter_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "subject_output_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "domain_vocabulary_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "claims": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["claim_id", "category", "subject", "predicate_id", "object", "temporal_scope", "polarity", "confidence", "authority", "citations", "source_output_path"],
+            "properties": {
+              "claim_id": { "$ref": "erl2:common#/$defs/Id" },
+              "category": { "enum": ["fact", "association", "causal", "unknown", "hypothesis", "recommendation", "action", "decision"] },
+              "subject": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "id"],
+                "properties": {
+                  "kind": { "$ref": "erl2:common#/$defs/Id" },
+                  "id": { "type": "string", "minLength": 1, "maxLength": 256 }
+                }
+              },
+              "predicate_id": { "$ref": "erl2:common#/$defs/Id" },
+              "object": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "value"],
+                "properties": {
+                  "type": { "$ref": "erl2:common#/$defs/Id" },
+                  "value": { "type": "string", "minLength": 1, "maxLength": 1024 }
+                }
+              },
+              "temporal_scope": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "from": { "$ref": "erl2:common#/$defs/Instant" },
+                  "to_exclusive": { "$ref": "erl2:common#/$defs/Instant" }
+                }
+              },
+              "polarity": { "enum": ["asserted", "negated", "unknown"] },
+              "confidence": { "$ref": "erl2:common#/$defs/Decimal" },
+              "authority": { "enum": ["none", "advisory", "human_approval_required", "external_authority_required"] },
+              "citations": {
+                "type": "array",
+                "maxItems": 256,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["artifact_file_sha256", "locator"],
+                  "properties": {
+                    "artifact_file_sha256": { "$ref": "erl2:common#/$defs/Hash" },
+                    "locator": { "type": "string", "minLength": 1, "maxLength": 512 }
+                  }
+                }
+              },
+              "source_output_path": { "$ref": "erl2:common#/$defs/LogicalPath" }
+            }
+          }
+        },
+        "contradictions": {
+          "type": "array",
+          "maxItems": 1024,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["claim_id_a", "claim_id_b"],
+            "properties": {
+              "claim_id_a": { "$ref": "erl2:common#/$defs/Id" },
+              "claim_id_b": { "$ref": "erl2:common#/$defs/Id" }
+            }
+          }
+        },
+        "unprojected": {
+          "type": "array",
+          "maxItems": 1024,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "reason_code"],
+            "properties": {
+              "path": { "$ref": "erl2:common#/$defs/LogicalPath" },
+              "reason_code": { "type": "string", "minLength": 1, "maxLength": 128 }
+            }
+          }
+        },
+        "complete": { "type": "boolean" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    }
+  }
+}

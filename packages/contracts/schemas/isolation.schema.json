@@ -1,0 +1,293 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:isolation",
+  "title": "ERL2 subject-isolation substrate lock, enforcement probe evidence and qualification report",
+  "$comment": "ERL2-OQ-008 / ADR-ERL2-016. These are NEW contracts, not a reinterpretation of erl2:environment#/$defs/SubstrateLockV1, which is bound to the ERL2-OQ-005 Compose-substrate question and whose qualification_status enum names that gate. Conflating the two would let one open question's resolution silently answer the other. Nothing here has an input that means 'enabled': qualification is derived from a pinned lock plus observed probe evidence.",
+  "$defs": {
+    "IsolationControlId": {
+      "$comment": "The twenty controls a profile must enforce before an opaque or third-party subject may run under it. Closed by construction; adding one is a contract major.",
+      "enum": [
+        "read-only-root-filesystem",
+        "numeric-non-root-user",
+        "capability-drop-all",
+        "no-new-privileges",
+        "seccomp-default-profile",
+        "cpu-limit",
+        "memory-limit",
+        "pid-limit",
+        "wall-clock-deadline",
+        "process-tree-termination",
+        "network-namespace-isolation",
+        "deny-by-default-egress",
+        "read-only-input-mounts",
+        "writable-output-only",
+        "no-docker-socket",
+        "no-ambient-home-directory",
+        "no-vault-truth-judge-or-selection-access",
+        "bounded-diagnostics",
+        "run-scoped-resource-identity",
+        "teardown-and-residue-inspection"
+      ]
+    },
+
+    "ProbeEvidenceKind": {
+      "$comment": "How a control's state was established. Only `observed` can contribute to qualification (ADR-ERL2-016 decision 2).",
+      "enum": ["observed", "declared", "mocked", "absent"]
+    },
+
+    "IsolationProfileId": {
+      "enum": ["local-process", "container", "disposable_vm"]
+    },
+
+    "IsolationSubstrateLockV1": {
+      "$comment": "An immutable pin of the runtime a qualified run will use. `image_digest` is a content digest, never a tag: a tag can move, and enforcement observed against a moved tag says nothing about the bytes a later run executes.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "lock_id",
+        "profile",
+        "runtime_id",
+        "runtime_version",
+        "platform",
+        "architecture",
+        "kernel_version",
+        "image_reference",
+        "image_digest",
+        "runtime_configuration_hashes",
+        "required_security_profile",
+        "probe_suite_id",
+        "probe_suite_digest",
+        "policy_input_hashes",
+        "pinned",
+        "recorded_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": { "const": "isolation-substrate-lock/v1" },
+        "lock_id": { "$ref": "erl2:common#/$defs/Id" },
+        "profile": { "$ref": "erl2:isolation#/$defs/IsolationProfileId" },
+        "runtime_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "runtime_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "platform": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "architecture": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "kernel_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "image_reference": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "image_digest": { "$ref": "erl2:common#/$defs/Hash" },
+        "runtime_configuration_hashes": { "$ref": "erl2:common#/$defs/UniqueHashArray" },
+        "required_security_profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["seccomp", "cgroup_version", "default_runtime"],
+          "properties": {
+            "seccomp": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "cgroup_version": { "enum": ["1", "2"] },
+            "default_runtime": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "apparmor": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "selinux": { "type": "string", "minLength": 1, "maxLength": 128 }
+          }
+        },
+        "probe_suite_id": { "$ref": "erl2:common#/$defs/Id" },
+        "probe_suite_digest": { "$ref": "erl2:common#/$defs/Hash" },
+        "policy_input_hashes": { "$ref": "erl2:common#/$defs/UniqueHashArray" },
+        "pinned": {
+          "$comment": "Constant true. An unpinned lock is not a lock; the absence of this artifact is the honest representation of 'no substrate pinned'.",
+          "const": true
+        },
+        "recorded_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      }
+    },
+
+    "IsolationEnforcementProbeResultV1": {
+      "$comment": "One control's durable evidence. `evidence` discriminates how the state was established; `observation` records what the probe attempted and saw so a reviewer can reproduce it without re-running the harness.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "probe_id",
+        "control_id",
+        "substrate_lock_hash",
+        "evidence",
+        "enforced",
+        "method",
+        "observation",
+        "started_at",
+        "ended_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "isolation-enforcement-probe-result/v1" },
+        "probe_id": { "$ref": "erl2:common#/$defs/Id" },
+        "control_id": { "$ref": "erl2:isolation#/$defs/IsolationControlId" },
+        "substrate_lock_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "evidence": { "$ref": "erl2:isolation#/$defs/ProbeEvidenceKind" },
+        "enforced": { "type": "boolean" },
+        "method": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "observation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["attempted", "observed", "expectation"],
+          "properties": {
+            "attempted": { "type": "string", "minLength": 1, "maxLength": 2048 },
+            "observed": { "type": "string", "minLength": 0, "maxLength": 4096 },
+            "expectation": { "type": "string", "minLength": 1, "maxLength": 1024 },
+            "exit_code": { "type": "integer", "minimum": -256, "maximum": 256 }
+          }
+        },
+        "reason_code": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "resources_cleaned_up": { "type": "boolean" },
+        "started_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "ended_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      },
+      "allOf": [
+        {
+          "$comment": "Only an observation may report enforcement. A declared, mocked or absent probe that also claimed `enforced: true` would be exactly the confusion ADR-ERL2-016 exists to prevent, so the schema makes it unrepresentable.",
+          "if": {
+            "type": "object",
+            "properties": { "enforced": { "const": true } },
+            "required": ["enforced"]
+          },
+          "then": {
+            "type": "object",
+            "properties": { "evidence": { "const": "observed" } },
+            "required": ["evidence"]
+          }
+        },
+        {
+          "$comment": "Anything that is not an enforced observation must say why.",
+          "if": {
+            "type": "object",
+            "properties": { "evidence": { "const": "observed" } },
+            "required": ["evidence"]
+          },
+          "then": {
+            "type": "object",
+            "if": {
+              "type": "object",
+              "properties": { "enforced": { "const": false } },
+              "required": ["enforced"]
+            },
+            "then": { "type": "object", "required": ["reason_code"] }
+          },
+          "else": { "type": "object", "required": ["reason_code"] }
+        }
+      ]
+    },
+
+    "IsolationQualificationReportV1": {
+      "$comment": "Derived output only. Never a producer assertion and never a bundle input: like MandatoryGraphClosureReportV1 it records what a derivation concluded, and it has no field that could be set to enable a profile.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "report_id",
+        "algorithm",
+        "profile",
+        "required_controls",
+        "observed_controls",
+        "probe_result_hashes",
+        "verdict",
+        "reasons",
+        "missing_controls",
+        "evaluated_at",
+        "qualifier_release",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "isolation-qualification-report/v1" },
+        "report_id": { "$ref": "erl2:common#/$defs/Id" },
+        "algorithm": { "const": "erl2-isolation-qualification/v1" },
+        "profile": { "$ref": "erl2:isolation#/$defs/IsolationProfileId" },
+        "substrate_lock_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "required_controls": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": { "$ref": "erl2:isolation#/$defs/IsolationControlId" }
+        },
+        "observed_controls": {
+          "type": "array",
+          "maxItems": 20,
+          "items": { "$ref": "erl2:isolation#/$defs/IsolationControlId" }
+        },
+        "probe_result_hashes": { "$ref": "erl2:common#/$defs/HashArray" },
+        "verdict": { "enum": ["qualified", "not_qualified"] },
+        "not_qualified_state": { "const": "disabled_no_qualified_adapter_substrate" },
+        "reasons": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+        },
+        "missing_controls": {
+          "type": "array",
+          "maxItems": 20,
+          "items": { "$ref": "erl2:isolation#/$defs/IsolationControlId" }
+        },
+        "evaluated_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "qualifier_release": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      },
+      "allOf": [
+        {
+          "$comment": "A qualified verdict requires a pinned lock, all twenty controls observed, no missing control and no reason. A not-qualified verdict must carry the fail-closed state.",
+          "if": {
+            "type": "object",
+            "properties": { "verdict": { "const": "qualified" } },
+            "required": ["verdict"]
+          },
+          "then": {
+            "type": "object",
+            "required": ["substrate_lock_hash"],
+            "properties": {
+              "observed_controls": { "type": "array", "minItems": 20 },
+              "missing_controls": { "type": "array", "maxItems": 0 },
+              "reasons": { "type": "array", "maxItems": 0 }
+            },
+            "not": { "type": "object", "required": ["not_qualified_state"] }
+          },
+          "else": {
+            "type": "object",
+            "required": ["not_qualified_state"],
+            "properties": { "reasons": { "type": "array", "minItems": 1 } }
+          }
+        }
+      ]
+    },
+    "IsolationProbeSigningManifestV1": {
+      "$comment": "A SIGNED manifest that authenticates the twenty probe results (review §10.1/6R-E). Each probe result is bound to the lock but was otherwise unsigned, so a producer could fabricate the twenty results; this manifest, signed by the same qualification authority as the lock, covers their ordered core hashes and binds them to the lock and probe suite. An `authenticated` qualification requires BOTH the lock and this manifest to be signed by a pinned authority.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "manifest_id",
+        "substrate_lock_hash",
+        "probe_suite_id",
+        "probe_suite_digest",
+        "probe_result_hashes",
+        "signed_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": { "const": "isolation-probe-signing-manifest/v1" },
+        "manifest_id": { "$ref": "erl2:common#/$defs/Id" },
+        "substrate_lock_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "probe_suite_id": { "$ref": "erl2:common#/$defs/Id" },
+        "probe_suite_digest": { "$ref": "erl2:common#/$defs/Hash" },
+        "probe_result_hashes": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": { "$ref": "erl2:common#/$defs/Hash" }
+        },
+        "signed_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      }
+    }
+  }
+}

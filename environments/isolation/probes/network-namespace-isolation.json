@@ -1,0 +1,19 @@
+{
+  "schema_version": "isolation-enforcement-probe-result/v1",
+  "probe_id": "netns",
+  "control_id": "network-namespace-isolation",
+  "substrate_lock_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
+  "evidence": "observed",
+  "enforced": true,
+  "method": "count routable interfaces (non-loopback, UP, with an inet address) under --network=none and under the default bridge; the isolated namespace must have none and the bridged control at least one",
+  "observation": {
+    "attempted": "count global-scope inet addresses and non-loopback UP links under --network=none, and the same under the default bridge",
+    "observed": "isolated_global_addresses=0 isolated_up_non_loopback_links=0 bridged_global_addresses=1",
+    "expectation": "the isolated namespace has zero global addresses and zero non-loopback UP links; the bridged negative control has at least one global address",
+    "exit_code": 0
+  },
+  "resources_cleaned_up": true,
+  "started_at": "2026-07-23T16:57:22Z",
+  "ended_at": "2026-07-23T16:57:23Z",
+  "core_hash": "sha256:c2edaee0b5b62847fa7394f8dd29bdbb06a13c7e586e8e55a5e83cdb3478c8c0"
+}

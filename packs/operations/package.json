@@ -1,0 +1,27 @@
+{
+  "name": "@erl2/pack-operations",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Subject-neutral software-delivery/operations evaluation pack",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist",
+    "schemas"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@erl2/evaluation-sdk": "*",
+    "@erl2/contracts": "*"
+  }
+}

@@ -1,0 +1,1285 @@
+{
+  "schema_version": "erl2-requirement-ledger/v1",
+  "generated_for_revision": "2.0.0-draft.11",
+  "generated_at": "2026-07-23",
+  "legend": {
+    "implemented": "producer and consumer exist with passing positive and adversarial tests",
+    "partial": "contracts and guards exist; the remaining producer/consumer belongs to a later slice",
+    "planned": "owned and scheduled, no code yet",
+    "blocked_fail_closed": "an open question forces the design's fail-closed state"
+  },
+  "requirements": [
+    {
+      "requirement_id": "ERL2-FR-001",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/core, packages/public-verifier",
+      "contracts": [
+        "ERL2-C-055",
+        "ERL2-C-056",
+        "ERL2-C-057",
+        "ERL2-C-058"
+      ],
+      "test_families": [
+        "NOOP-LIFECYCLE",
+        "INVALID-TERMINAL"
+      ],
+      "owner": "core",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-002",
+      "priority": "P0",
+      "slice": 3,
+      "status": "implemented",
+      "owning_package": "packages/core, environments/archetypes",
+      "contracts": [
+        "ERL2-C-001",
+        "ERL2-C-011"
+      ],
+      "test_families": [
+        "ADMISSION-INDEPENDENCE",
+        "ARCHETYPE"
+      ],
+      "owner": "environment-governor",
+      "note": "Archetype admission is source-neutral and needs no candidate output; proved by tests/integration/environment.test.ts."
+    },
+    {
+      "requirement_id": "ERL2-FR-003",
+      "priority": "P0",
+      "slice": 4,
+      "status": "implemented",
+      "owning_package": "packages/core, packages/cli",
+      "contracts": [
+        "ERL2-C-007",
+        "ERL2-C-016",
+        "ERL2-C-021"
+      ],
+      "test_families": [
+        "ACQUISITION-BINDING",
+        "REQUEST-ANCESTRY",
+        "JOURNEY-CAPTURE"
+      ],
+      "owner": "core",
+      "note": "Preregistration -> measured acquisition -> byte freeze -> package verification -> exact package manifest is enforced by the workspace and proved by the CLI e2e; a skipped stage refuses with GRAPH_CLOSURE_MISSING_ROLE."
+    },
+    {
+      "requirement_id": "ERL2-FR-004",
+      "priority": "P0",
+      "slice": 4,
+      "status": "implemented",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-027"
+      ],
+      "test_families": [
+        "JOURNEY-CAPTURE"
+      ],
+      "owner": "core",
+      "note": "The generic step engine drives all 14 intents through planned/started/succeeded/failed/unsupported/outcome-frozen with one identical lifecycle shape."
+    },
+    {
+      "requirement_id": "ERL2-FR-005",
+      "priority": "P0",
+      "slice": 4,
+      "status": "partial",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-038"
+      ],
+      "test_families": [
+        "UNSUPPORTED-HONESTY"
+      ],
+      "owner": "evaluation-governor",
+      "note": "`unsupported` is a first-class step outcome for every intent and is retained in the output manifest. The subject_unsupported finding is slice 6."
+    },
+    {
+      "requirement_id": "ERL2-FR-006",
+      "priority": "P0",
+      "slice": 5,
+      "status": "implemented",
+      "owning_package": "packages/adapter-sdk, packages/core",
+      "contracts": [
+        "ERL2-C-017",
+        "ERL2-C-125",
+        "ERL2-C-129",
+        "ERL2-C-130",
+        "ERL2-C-131"
+      ],
+      "test_families": [
+        "ADAPTER-CERT",
+        "COMPENSATION"
+      ],
+      "owner": "adapter-owner",
+      "note": "Mutation intent, receipt and compensation are host-adjudicated; an undeclared or unreconciled mutation refuses."
+    },
+    {
+      "requirement_id": "ERL2-FR-007",
+      "priority": "P0",
+      "slice": 4,
+      "status": "partial",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-028"
+      ],
+      "test_families": [
+        "REVEAL-REFUSAL"
+      ],
+      "owner": "core",
+      "note": "Output freezes before any reveal and the engine refuses to execute a step after one. Truth reveal itself is slice 6."
+    },
+    {
+      "requirement_id": "ERL2-FR-008",
+      "priority": "P0",
+      "slice": 6,
+      "status": "implemented",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-045",
+        "ERL2-C-048",
+        "ERL2-C-051",
+        "ERL2-C-052",
+        "ERL2-C-053",
+        "ERL2-C-146"
+      ],
+      "test_families": [
+        "EVAL-GOLDEN",
+        "DISCRIMINATION",
+        "RESULT-JOIN",
+        "VALIDITY-ROUTING",
+        "GENERIC-INDEX"
+      ],
+      "owner": "evaluation-governor",
+      "note": "Validity, journey, domain and generic-index producers ship in packages/core/src/evaluation; the four planes stay separate and no scalar combines them."
+    },
+    {
+      "requirement_id": "ERL2-FR-009",
+      "priority": "P0",
+      "slice": 6,
+      "status": "blocked_fail_closed",
+      "owning_package": "packages/evaluation-sdk",
+      "contracts": [
+        "ERL2-C-039",
+        "ERL2-C-143",
+        "ERL2-C-144",
+        "ERL2-C-145"
+      ],
+      "test_families": [
+        "PACK-SANDBOX",
+        "PACK-AUTHORITY",
+        "PACK-CERTIFICATION",
+        "PACK-RUNTIME"
+      ],
+      "owner": "evaluation-governor",
+      "note": "Data-only DSL only under ERL2-OQ-004. A pack is closed data with no code, I/O, clock, randomness, validity or threshold member; tests/architecture/evaluationBoundary.test.ts proves that from the schema."
+    },
+    {
+      "requirement_id": "ERL2-FR-010",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/core, packages/public-verifier",
+      "contracts": [
+        "ERL2-C-040",
+        "ERL2-C-060"
+      ],
+      "test_families": [
+        "FINAL-ONLY",
+        "EARLY-TERMINAL-CLOSURE"
+      ],
+      "owner": "core",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-011",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/public-verifier",
+      "contracts": [
+        "ERL2-C-070",
+        "ERL2-C-072"
+      ],
+      "test_families": [
+        "OFFLINE-VERIFY"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-012",
+      "priority": "P0",
+      "slice": 4,
+      "status": "partial",
+      "owning_package": "packages/contracts",
+      "contracts": [],
+      "test_families": [
+        "ASSISTANCE-REPLAY"
+      ],
+      "owner": "journey-owner",
+      "note": "AssistanceEventV1 is a frozen contract with its conditionals; the journey engine emits it in slice 5 when a human or agent actor exists."
+    },
+    {
+      "requirement_id": "ERL2-FR-013",
+      "priority": "P0",
+      "slice": 6,
+      "status": "implemented",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-046",
+        "ERL2-C-050"
+      ],
+      "test_families": [
+        "SETUP-FINALIZE",
+        "DOMAIN-NOT-APPLICABLE",
+        "GENERIC-FINALIZATION"
+      ],
+      "owner": "core",
+      "note": "A failed or unsupported acquisition/verification finalizes with a journey result and DomainResultNotApplicableV1; no functional scoring is invented and functional truth stays sealed."
+    },
+    {
+      "requirement_id": "ERL2-FR-014",
+      "priority": "P0",
+      "slice": 1,
+      "status": "implemented",
+      "owning_package": "tests/architecture",
+      "contracts": [],
+      "test_families": [
+        "DEP-GRAPH"
+      ],
+      "owner": "core",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-015",
+      "priority": "P0",
+      "slice": 4,
+      "status": "implemented",
+      "owning_package": "packages/core, packages/integrity",
+      "contracts": [
+        "ERL2-C-004",
+        "ERL2-C-005",
+        "ERL2-C-006"
+      ],
+      "test_families": [
+        "JOURNEY-ORACLE-CANARY"
+      ],
+      "owner": "core",
+      "note": "Split visible step / age-x25519 encrypted expectation / commitment, with canary scanning on all eight design-named surfaces and a structural field guard on the subject side."
+    },
+    {
+      "requirement_id": "ERL2-FR-016",
+      "priority": "P0",
+      "slice": 4,
+      "status": "partial",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-031",
+        "ERL2-C-032",
+        "ERL2-C-036"
+      ],
+      "test_families": [
+        "CANONICAL-EVIDENCE",
+        "COMPARISON-MODE"
+      ],
+      "owner": "core",
+      "note": "Replay and live envelopes, mode admissibility and translation totality are implemented and tested. The adapter that produces a real translated tree is slice 5."
+    },
+    {
+      "requirement_id": "ERL2-FR-017",
+      "priority": "P0",
+      "slice": 8,
+      "status": "planned",
+      "owning_package": "packs/qualiber-deep",
+      "contracts": [
+        "ERL2-C-022",
+        "ERL2-C-054"
+      ],
+      "test_families": [
+        "DEEP-ANCESTRY"
+      ],
+      "owner": "core",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-018",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/contracts, packages/adapter-sdk",
+      "contracts": [
+        "ERL2-C-008",
+        "ERL2-C-009",
+        "ERL2-C-010"
+      ],
+      "test_families": [
+        "REQUEST-ANCESTRY"
+      ],
+      "owner": "core",
+      "note": "Phase-specific closed request contracts plus assertRequestAncestry and the subject-side oracle field guard."
+    },
+    {
+      "requirement_id": "ERL2-FR-019",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/core, packages/public-verifier",
+      "contracts": [
+        "ERL2-C-040",
+        "ERL2-C-043",
+        "ERL2-C-055",
+        "ERL2-C-060",
+        "ERL2-C-070"
+      ],
+      "test_families": [
+        "EARLY-TERMINAL-CLOSURE"
+      ],
+      "owner": "core",
+      "note": "Both early terminals are reachable: a verified package can terminate pre-environment, and a failed acquisition freezes exactly one invalid record after bounded cleanup. Both verify offline."
+    },
+    {
+      "requirement_id": "ERL2-FR-020",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/public-verifier",
+      "contracts": [
+        "ERL2-C-059"
+      ],
+      "test_families": [
+        "GRAPH-CLOSURE"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-021",
+      "priority": "P1",
+      "slice": 4,
+      "status": "implemented",
+      "owning_package": "packages/core, packages/contracts",
+      "contracts": [
+        "ERL2-C-020"
+      ],
+      "test_families": [
+        "COMPARISON-MODE"
+      ],
+      "owner": "core",
+      "note": "Replay is refused outside development tier; live equivalence cannot be reported as byte equality."
+    },
+    {
+      "requirement_id": "ERL2-FR-022",
+      "priority": "P1",
+      "slice": 11,
+      "status": "planned",
+      "owning_package": "packages/public-verifier",
+      "contracts": [
+        "ERL2-C-064",
+        "ERL2-C-069"
+      ],
+      "test_families": [
+        "CUSTOMER-BUNDLE"
+      ],
+      "owner": "privacy-legal",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-023",
+      "priority": "P1",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/integrity",
+      "contracts": [
+        "ERL2-C-098"
+      ],
+      "test_families": [
+        "EXTERNAL-TRUST-PIN"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-024",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/contracts, packages/core",
+      "contracts": [
+        "ERL2-C-021",
+        "ERL2-C-076",
+        "ERL2-C-077"
+      ],
+      "test_families": [
+        "BLIND-JOURNEY-FAMILY"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-025",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/core, packages/contracts, packages/public-verifier",
+      "contracts": [
+        "ERL2-C-078",
+        "ERL2-C-085"
+      ],
+      "test_families": [
+        "EMERGENCY-CLEANUP"
+      ],
+      "owner": "core",
+      "note": "Frontier derivation, receipt-backed emergency actions and the verifier's bypass refusal are covered end to end by tests/e2e/preEnvironmentRun.test.ts."
+    },
+    {
+      "requirement_id": "ERL2-FR-026",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/contracts, packages/public-verifier",
+      "contracts": [
+        "ERL2-C-057",
+        "ERL2-C-079",
+        "ERL2-C-080"
+      ],
+      "test_families": [
+        "INVALID-REASON-PHASE"
+      ],
+      "owner": "core",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-027",
+      "priority": "P1",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/public-verifier, packages/cli",
+      "contracts": [
+        "ERL2-C-057",
+        "ERL2-C-059"
+      ],
+      "test_families": [
+        "VERIFY-INVALID-RECORD"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-028",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/contracts, packages/core",
+      "contracts": [
+        "ERL2-C-021",
+        "ERL2-C-075"
+      ],
+      "test_families": [
+        "BLIND-ACTOR-POLICY"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-029",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/contracts, packages/core",
+      "contracts": [
+        "ERL2-C-081",
+        "ERL2-C-082",
+        "ERL2-C-083",
+        "ERL2-C-084"
+      ],
+      "test_families": [
+        "SELECTION-CHAIN-CLOSURE"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-030",
+      "priority": "P1",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-076",
+        "ERL2-C-081"
+      ],
+      "test_families": [
+        "POOL-METADATA-UNIFORMITY"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-031",
+      "priority": "P1",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/contracts, packages/public-verifier",
+      "contracts": [
+        "ERL2-C-085"
+      ],
+      "test_families": [
+        "EMERGENCY-ACTION-EVIDENCE"
+      ],
+      "owner": "core",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-032",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-093"
+      ],
+      "test_families": [
+        "INDEPENDENT-RANDOMNESS"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-033",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/integrity, packages/core",
+      "contracts": [
+        "ERL2-C-099"
+      ],
+      "test_families": [
+        "ACYCLIC-SELECTION-TIME"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-034",
+      "priority": "P1",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-090",
+        "ERL2-C-089"
+      ],
+      "test_families": [
+        "SELECTION-NON-COLLUSION"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-035",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-091",
+        "ERL2-C-081"
+      ],
+      "test_families": [
+        "SINGLE-RANDOMNESS-SOURCE"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-036",
+      "priority": "P1",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/contracts, packages/core",
+      "contracts": [
+        "ERL2-C-086",
+        "ERL2-C-087",
+        "ERL2-C-092"
+      ],
+      "test_families": [
+        "RANDOMNESS-VARIANT-CLOSURE"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-037",
+      "priority": "P1",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/core, packages/integrity",
+      "contracts": [
+        "ERL2-C-095"
+      ],
+      "test_families": [
+        "RANDOMNESS-SOURCE-TRUST"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-038",
+      "priority": "P1",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-093"
+      ],
+      "test_families": [
+        "BEACON-WRAPPER-OWNERSHIP"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-FR-039",
+      "priority": "P1",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/contracts, packages/core",
+      "contracts": [
+        "ERL2-C-092"
+      ],
+      "test_families": [
+        "THRESHOLD-VRF-ACTIVATION-GATE"
+      ],
+      "owner": "integrity",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-NFR-001",
+      "priority": "P0",
+      "slice": 2,
+      "status": "partial",
+      "owning_package": "packages/integrity",
+      "contracts": [],
+      "test_families": [
+        "CROSS-PLATFORM-GOLDEN"
+      ],
+      "owner": "integrity",
+      "note": "Verified on macOS arm64 in this session; the Linux amd64 lane is wired in .github/workflows/pr.yml and runs on CI."
+    },
+    {
+      "requirement_id": "ERL2-NFR-002",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/contracts",
+      "contracts": [],
+      "test_families": [
+        "VALIDATOR-FUZZ"
+      ],
+      "owner": "contracts",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-NFR-003",
+      "priority": "P0",
+      "slice": 10,
+      "status": "planned",
+      "owning_package": "packages/core",
+      "contracts": [],
+      "test_families": [
+        "CRASH-MATRIX"
+      ],
+      "owner": "core",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-NFR-004",
+      "priority": "P0",
+      "slice": 11,
+      "status": "planned",
+      "owning_package": "packages/core",
+      "contracts": [],
+      "test_families": [
+        "PERF-E2E"
+      ],
+      "owner": "core",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-SEC-001",
+      "priority": "P0",
+      "slice": 5,
+      "status": "partial",
+      "owning_package": "packages/core (adapter host), packages/adapter-sdk",
+      "contracts": [
+        "ERL2-C-137",
+        "ERL2-C-138",
+        "ERL2-C-135",
+        "ERL2-C-136"
+      ],
+      "test_families": [
+        "MOUNT-NET-NEG",
+        "SSRF-SUITE",
+        "SECRET-CANARY"
+      ],
+      "owner": "security",
+      "note": "Enforced on the local-process profile: separate process, process-tree termination, deadline, frame bounds, environment allowlist, single writable output, read-only-mount tamper detection, capability/credential/egress adjudication. Kernel-level controls (read-only rootfs, non-root uid, capability drop, seccomp, cgroup limits, network namespace, socket block) are reported unsupported_on_this_host; the container profile is disabled with no qualified adapter substrate."
+    },
+    {
+      "requirement_id": "ERL2-SEC-002",
+      "priority": "P0",
+      "slice": 4,
+      "status": "partial",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-016"
+      ],
+      "test_families": [
+        "SUPPLY-LOCK"
+      ],
+      "owner": "security",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-SEC-003",
+      "priority": "P0",
+      "slice": 5,
+      "status": "blocked_fail_closed",
+      "owning_package": "packages/core (capability broker)",
+      "contracts": [],
+      "test_families": [
+        "PRIV-BROKER"
+      ],
+      "owner": "security",
+      "note": "ERL2-OQ-001 unresolved: every privileged capability is denied with ADAPTER_PRIVILEGED_OPERATION_NOT_SUPPORTED and the denial is recorded in AdapterCapabilityGrantV1. No shell capability exists in the enum at all. Unprivileged subject operations only."
+    },
+    {
+      "requirement_id": "ERL2-SEC-004",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/integrity",
+      "contracts": [],
+      "test_families": [
+        "PATH-FUZZ",
+        "SECRET-CANARY"
+      ],
+      "owner": "security",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-SEC-005",
+      "priority": "P0",
+      "slice": 3,
+      "status": "partial",
+      "owning_package": "packages/core",
+      "contracts": [],
+      "test_families": [
+        "TWO-TENANT",
+        "RESIDUE"
+      ],
+      "owner": "environment-governor",
+      "note": "Run-scoped resource identity, allocator isolation and zero-residue teardown are implemented and tested on the fake driver; a live two-tenant substrate needs ERL2-OQ-005."
+    },
+    {
+      "requirement_id": "ERL2-INT-001",
+      "priority": "P0",
+      "slice": 4,
+      "status": "planned",
+      "owning_package": "packages/core",
+      "contracts": [],
+      "test_families": [
+        "ORACLE-INDEPENDENCE"
+      ],
+      "owner": "challenge-governor",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-INT-002",
+      "priority": "P0",
+      "slice": 3,
+      "status": "partial",
+      "owning_package": "environments/archetypes",
+      "contracts": [
+        "ERL2-C-001"
+      ],
+      "test_families": [
+        "ARCHETYPE-MATRIX"
+      ],
+      "owner": "environment-governor",
+      "note": "The required clean-greenfield control is admitted and repeatable. The eleven constrained/brownfield archetypes are slice 10 work, blocked on ERL2-OQ-002."
+    },
+    {
+      "requirement_id": "ERL2-INT-003",
+      "priority": "P0",
+      "slice": 9,
+      "status": "planned",
+      "owning_package": "packages/core",
+      "contracts": [],
+      "test_families": [
+        "CROSS-SUBJECT"
+      ],
+      "owner": "core",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-INT-004",
+      "priority": "P0",
+      "slice": 11,
+      "status": "planned",
+      "owning_package": "docs/decisions",
+      "contracts": [],
+      "test_families": [
+        "GOVERNANCE"
+      ],
+      "owner": "independent-qe",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-OPS-001",
+      "priority": "P0",
+      "slice": 2,
+      "status": "partial",
+      "owning_package": "packages/core",
+      "contracts": [
+        "ERL2-C-103"
+      ],
+      "test_families": [
+        "COMPENSATION"
+      ],
+      "owner": "core",
+      "note": "Idempotency, conflict detection, driver mutation/compensation receipts and step-level attempt records exist; the adapter compensation ledger is slice 5."
+    },
+    {
+      "requirement_id": "ERL2-OPS-002",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/contracts",
+      "contracts": [],
+      "test_families": [
+        "LIMIT-MATRIX"
+      ],
+      "owner": "contracts",
+      "note": ""
+    },
+    {
+      "requirement_id": "ERL2-OPS-003",
+      "priority": "P0",
+      "slice": 2,
+      "status": "implemented",
+      "owning_package": "packages/contracts",
+      "contracts": [
+        "ERL2-C-038"
+      ],
+      "test_families": [
+        "FAILURE-FIXTURES"
+      ],
+      "owner": "core",
+      "note": ""
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "acceptance_id": "ERL2-AC-001",
+      "status": "passing",
+      "evidence": "tests/architecture/purity.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-002",
+      "status": "passing",
+      "evidence": "tests/e2e/preEnvironmentRun.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-003",
+      "status": "passing",
+      "evidence": "tests/contract/findingUnion.test.ts proves every union branch, every prohibited owner/category crossover and every attribution prerequisite; tests/integration/genericDomainEvaluation.test.ts shows the misleading subject attributed to the subject while adapter, dependency, evaluator and Lab failures score on no plane."
+    },
+    {
+      "acceptance_id": "ERL2-AC-004",
+      "status": "passing",
+      "evidence": "tests/e2e/preEnvironmentRun.test.ts (classified lab failure and restoration failure)"
+    },
+    {
+      "acceptance_id": "ERL2-AC-005",
+      "status": "passing",
+      "evidence": "tests/e2e/genericFinalization.test.ts: an unsupported package verification finalizes as a *valid* run, the retained finding is subject_unsupported with an empty scoreable_planes, and the case is unchanged. tests/contract/findingUnion.test.ts refuses relabelling it as a scored defect or as Lab invalidity."
+    },
+    {
+      "acceptance_id": "ERL2-AC-006",
+      "status": "partial",
+      "evidence": "clean control repeatable twice (tests/integration/environment.test.ts); three constrained archetypes blocked on ERL2-OQ-002"
+    },
+    {
+      "acceptance_id": "ERL2-AC-007",
+      "status": "passing",
+      "evidence": "tests/integration/genericDomainEvaluation.test.ts: correct, limited, misleading and inconclusive reference subjects produce different typed outcomes through the same evaluator and the same pack, with no core branch naming a subject."
+    },
+    {
+      "acceptance_id": "ERL2-AC-008",
+      "status": "blocked",
+      "evidence": "slice 7: no opaque subject package supplied"
+    },
+    {
+      "acceptance_id": "ERL2-AC-009",
+      "status": "blocked",
+      "evidence": "slice 8"
+    },
+    {
+      "acceptance_id": "ERL2-AC-010",
+      "status": "planned",
+      "evidence": "slice 9"
+    },
+    {
+      "acceptance_id": "ERL2-AC-011",
+      "status": "partial",
+      "evidence": "tests/e2e/genericFinalization.test.ts measures attempts, retries, active and elapsed time, documentation steps, interventions and unsupported retention through the Lab-owned journey metric catalogue. Live environment records still need the slice 3/4 environment branch."
+    },
+    {
+      "acceptance_id": "ERL2-AC-012",
+      "status": "passing",
+      "evidence": "tests/adversarial/oracle.test.ts and tests/adversarial/adapterHost.test.ts: an oracle field in a request, a canary in a mount, in diagnostics or in output, and a prefilled output directory are each refused; post-freeze dispatch is refused."
+    },
+    {
+      "acceptance_id": "ERL2-AC-013",
+      "status": "partial",
+      "evidence": "tests/integration/integrity.test.ts, tests/adversarial/selectionChain.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-014",
+      "status": "partial",
+      "evidence": "process-boundary resume proved in tests/e2e/journeyRun.test.ts; the full kill-point matrix is slice 10"
+    },
+    {
+      "acceptance_id": "ERL2-AC-015",
+      "status": "partial",
+      "evidence": "attestation schema restricts claim_scope to T1-T3"
+    },
+    {
+      "acceptance_id": "ERL2-AC-016",
+      "status": "passing",
+      "evidence": "packages/evaluation-sdk certifyPack plus tests/adversarial/genericEvaluation.test.ts (subject vocabulary, shortcut predicates, forbidden inputs, generic-metric override, threshold relaxation) and tests/architecture/evaluationBoundary.test.ts (the contract has no capability member)."
+    },
+    {
+      "acceptance_id": "ERL2-AC-017",
+      "status": "blocked",
+      "evidence": "ERL2-OQ-001: every privileged capability is refused and receipted (tests/adversarial/adapterHost.test.ts PRIV-BROKER). Approved narrow privileged operations require the audited broker and a superseding ADR."
+    },
+    {
+      "acceptance_id": "ERL2-AC-018",
+      "status": "passing",
+      "evidence": "tests/architecture/removability.test.ts: core, integrity, contracts and the verifier run in a module tree containing no adapter package, and the core digest is identical with and without adapters."
+    },
+    {
+      "acceptance_id": "ERL2-AC-019",
+      "status": "planned",
+      "evidence": "slice 6"
+    },
+    {
+      "acceptance_id": "ERL2-AC-020",
+      "status": "planned",
+      "evidence": "slice 8"
+    },
+    {
+      "acceptance_id": "ERL2-AC-021",
+      "status": "passing",
+      "evidence": "tests/contract/adapterContracts.test.ts REQUEST-ANCESTRY plus tests/adversarial/adapterHost.test.ts: the three phase requests are structurally disjoint and a later-phase ancestor is refused on both sides of the boundary."
+    },
+    {
+      "acceptance_id": "ERL2-AC-022",
+      "status": "passing",
+      "evidence": "tests/contract/contracts.test.ts, tests/e2e/preEnvironmentRun.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-023",
+      "status": "passing",
+      "evidence": "packages/public-verifier closure derivation"
+    },
+    {
+      "acceptance_id": "ERL2-AC-024",
+      "status": "passing",
+      "evidence": "tests/integration/capture.test.ts COMPARISON-MODE and live-equivalence cases"
+    },
+    {
+      "acceptance_id": "ERL2-AC-025",
+      "status": "planned",
+      "evidence": "slice 11"
+    },
+    {
+      "acceptance_id": "ERL2-AC-026",
+      "status": "passing",
+      "evidence": "tests/e2e/preEnvironmentRun.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-027",
+      "status": "passing",
+      "evidence": "packages/integrity TrustEvaluator local pinning"
+    },
+    {
+      "acceptance_id": "ERL2-AC-028",
+      "status": "passing",
+      "evidence": "tests/contract/contracts.test.ts, tests/adversarial/selectionChain.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-029",
+      "status": "passing",
+      "evidence": "tests/e2e/preEnvironmentRun.test.ts EMERGENCY-CLEANUP cases"
+    },
+    {
+      "acceptance_id": "ERL2-AC-030",
+      "status": "passing",
+      "evidence": "tests/e2e/preEnvironmentRun.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-031",
+      "status": "passing",
+      "evidence": "tests/e2e/preEnvironmentRun.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-032",
+      "status": "passing",
+      "evidence": "tests/adversarial/selectionChain.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-033",
+      "status": "passing",
+      "evidence": "tests/adversarial/selectionChain.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-034",
+      "status": "passing",
+      "evidence": "tests/adversarial/selectionChain.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-035",
+      "status": "passing",
+      "evidence": "tests/contract/contracts.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-036",
+      "status": "passing",
+      "evidence": "tests/adversarial/selectionChain.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-037",
+      "status": "passing",
+      "evidence": "tests/adversarial/selectionChain.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-038",
+      "status": "passing",
+      "evidence": "tests/adversarial/selectionChain.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-039",
+      "status": "passing",
+      "evidence": "tests/adversarial/selectionChain.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-040",
+      "status": "passing",
+      "evidence": "tests/adversarial/selectionChain.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-041",
+      "status": "passing",
+      "evidence": "tests/adversarial/selectionChain.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-042",
+      "status": "passing",
+      "evidence": "tests/adversarial/selectionChain.test.ts"
+    },
+    {
+      "acceptance_id": "ERL2-AC-043",
+      "status": "passing",
+      "evidence": "tests/adversarial/selectionChain.test.ts"
+    }
+  ],
+  "open_questions": [
+    {
+      "id": "ERL2-OQ-001",
+      "decision": "privilege broker host technology",
+      "owner": "security + core",
+      "deadline": "before slice 5",
+      "fail_closed": "unprivileged container subjects only",
+      "status": "open"
+    },
+    {
+      "id": "ERL2-OQ-002",
+      "decision": "first three constrained archetype parameter sets",
+      "owner": "environment governor",
+      "deadline": "before slice 10",
+      "fail_closed": "clean preview only",
+      "status": "open"
+    },
+    {
+      "id": "ERL2-OQ-003",
+      "decision": "non-Qualiber OSS subject",
+      "owner": "governor + independent QE",
+      "deadline": "before slice 9",
+      "fail_closed": "no architectural-independence claim",
+      "status": "open"
+    },
+    {
+      "id": "ERL2-OQ-004",
+      "decision": "evaluation pack executable format",
+      "owner": "evaluation + security",
+      "deadline": "before slice 6",
+      "fail_closed": "data-only declarative pack DSL; no executable pack module and no pack runtime to sandbox",
+      "status": "open_fail_closed_enforced"
+    },
+    {
+      "id": "ERL2-OQ-005",
+      "decision": "OpenTelemetry Demo release and image digest lock",
+      "owner": "environment governor",
+      "deadline": "before slice 3",
+      "fail_closed": "fake driver only; Compose disabled",
+      "status": "open"
+    },
+    {
+      "id": "ERL2-OQ-006",
+      "decision": "seven-year retention legal approval",
+      "owner": "privacy/legal",
+      "deadline": "before slice 11",
+      "fail_closed": "no held-out production release",
+      "status": "open"
+    },
+    {
+      "id": "ERL2-OQ-007",
+      "decision": "external beacon, pinned source registry entry, custodian roster",
+      "owner": "security + environment governor",
+      "deadline": "before slice 2 selection freeze",
+      "fail_closed": "non-blind development selection only; threshold VRF always THRESHOLD_VRF_NOT_ACTIVATED",
+      "status": "open_fail_closed_enforced"
+    },
+    {
+      "id": "ERL2-OQ-008",
+      "decision": "container or disposable-VM substrate qualified for opaque subjects",
+      "owner": "security + core",
+      "deadline": "before slice 7 executes an opaque package",
+      "fail_closed": "substrate qualified with twenty observed controls, but no container adapter launcher exists; the container sandbox profile stays disabled and every opaque-private or third-party subject is refused",
+      "status": "open_substrate_qualified_launcher_missing",
+      "resolution_adr": "ADR-ERL2-017",
+      "evidence": "environments/isolation/"
+    }
+  ],
+  "adrs": [
+    {
+      "id": "ADR-ERL2-001",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-002",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-003",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-004",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-005",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-006",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-007",
+      "status": "proposed"
+    },
+    {
+      "id": "ADR-ERL2-008",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-009",
+      "status": "proposed"
+    },
+    {
+      "id": "ADR-ERL2-010",
+      "status": "proposed"
+    },
+    {
+      "id": "ADR-ERL2-011",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-012",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-013",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-014",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-015",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-016",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-017",
+      "status": "accepted"
+    }
+  ],
+  "normative_conflicts": [
+    {
+      "id": "CONFLICT-ERL2-001",
+      "status": "resolved_option_1",
+      "resolution_adr": "ADR-ERL2-012",
+      "summary": "Design v2 \u00a716.2 lists TrustPolicyManifestV1, ProductSafeSignerInventoryV1 and TrustVerificationReportV1 as retained byte-compatible, but V2 requires signer roles, terminal variants and schema identities those contracts cannot express.",
+      "resolved_at": "2026-07-23",
+      "design_revision": "2.0.0-draft.10"
+    }
+  ],
+  "slices": [
+    {
+      "slice": 1,
+      "title": "Charter, decisions and repository bootstrap",
+      "status": "complete"
+    },
+    {
+      "slice": 2,
+      "title": "Integrity, lifecycle, selection, trust and offline-verification kernel",
+      "status": "complete"
+    },
+    {
+      "slice": 3,
+      "title": "Environment archetypes and clean ecosystem",
+      "status": "complete_fake_driver_compose_disabled",
+      "exit_gate": "Fake driver satisfies the full EnvironmentDriver suite; clean environment reaches a stable baseline twice with identical fingerprints; teardown leaves zero applicable residue; ERL2-OQ-005 unresolved so the Compose driver stays disabled and the plan stays on the fake driver (implementation plan \u00a79.4)."
+    },
+    {
+      "slice": 4,
+      "title": "Journey, acquisition, blind selection and capture",
+      "status": "complete_development_tier_only",
+      "exit_gate": "Acquisition reaches frozen subject output through the CLI; the selection chain verifies independently; journey closure is derived from lifecycle events rather than producer arrays; both early terminals verify offline; no judge canary reaches subject-visible state. Held-out and blind execution stay refused under ERL2-OQ-007, Compose stays disabled under ERL2-OQ-005, and the subject is the development-only fake port because slice 5 owns the adapter host."
+    },
+    {
+      "slice": 5,
+      "title": "Adapter SDK, sandbox host and reference subjects",
+      "status": "complete_local_process_profile_unprivileged_only",
+      "exit_gate": "Correct and limited reference adapters certify under ADAPTER-CERT-V1 and drive the journey out of process through the public subject-adapter/v1 protocol; core owns the executable identity, protocol, frame bounds, deadline, process-tree termination, environment allowlist, mounts, output, diagnostics, capability, credential, egress and mutation boundaries it actually enforces; 23 hostile adapter fixtures each yield a typed adapter or Lab outcome and never a subject defect; removing every adapter package leaves core green. ERL2-OQ-001 unresolved so every privileged capability is refused, and the container sandbox profile is disabled with no qualified adapter substrate, so kernel-level isolation is reported unsupported rather than claimed."
+    },
+    {
+      "slice": 6,
+      "title": "Generic evaluation, terminal closure and finalization",
+      "status": "complete_pre_environment_terminal_environment_terminal_pending_slice_3_4_branch",
+      "exit_gate": "The finding union is closed and every prohibited crossover refuses; the evaluation pack DSL is data-only and certified; deterministic Lab-owned metrics measure the journey and domain planes; correct, limited, misleading and inconclusive reference subjects produce different typed outcomes; fabricated citations are detected by set membership against the frozen canonical envelope; journey and exactly one domain result join before cleanup; validity reads only Lab-owned gates; invalid validity cannot enter the generic index; a valid pre-environment terminal finalizes and its public bundle verifies offline in a fresh process; invalid records verify offline and produce no bundle. The *environment* valid terminal is not reachable end to end because the selection, provisioning and observation CLI commands belong to the slice 3/4 environment branch, which has not shipped; its contracts, closure roles and refusals exist and are exercised, but no environment run record, attestation or bundle is produced by a real run."
+    }
+  ],
+  "generated_for_plan_revision": "2026-07-23 (normative source 2.0.0-draft.10)"
+}

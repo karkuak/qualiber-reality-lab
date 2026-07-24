@@ -1,0 +1,1802 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:selection",
+  "title": "ERL2 V2 blind-selection chain contracts",
+  "$comment": "Design v2 \u00a715/\u00a716.2, ERL2-FR-024/028/029/030/032/033/034/035/036/037/038/039. The chain is request -> role audit -> ordered pool -> pool checkpoint -> authenticated beacon round -> Lab/verifier association wrapper -> source-trust report -> commitment -> commitment checkpoint -> threshold reveal -> selected binding -> binding checkpoint -> proof -> verification receipt. Each object is closed, so a self-anchoring checkpoint field is structurally impossible.",
+  "$defs": {
+    "ComparisonPolicyV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "policy_id",
+        "mode",
+        "selection_eligibility",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "comparison-policy/v1"
+        },
+        "policy_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "mode": {
+          "enum": [
+            "replay_comparison",
+            "live_ecosystem"
+          ]
+        },
+        "selection_eligibility": {
+          "enum": [
+            "development_only_non_blind",
+            "blind_capable"
+          ]
+        },
+        "replay_envelope_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "equivalence_profile_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "independent_equivalence_verifier_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "replay_comparison"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "then": {
+            "required": [
+              "replay_envelope_hash"
+            ],
+            "properties": {
+              "selection_eligibility": {
+                "const": "development_only_non_blind"
+              }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "equivalence_profile_hash"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "required": [
+                    "independent_equivalence_verifier_hash"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "type": "object"
+          },
+          "else": {
+            "required": [
+              "equivalence_profile_hash",
+              "independent_equivalence_verifier_hash"
+            ],
+            "properties": {
+              "selection_eligibility": {
+                "const": "blind_capable"
+              }
+            },
+            "not": {
+              "required": [
+                "replay_envelope_hash"
+              ],
+              "type": "object"
+            },
+            "type": "object"
+          }
+        }
+      ]
+    },
+    "JourneySelectionPolicyV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "policy_id",
+        "challenge_family_hash",
+        "journey_family_root_hash",
+        "allowed_intents",
+        "journey_schema_hash",
+        "step_commitment_schema_hash",
+        "actor_policy_hash",
+        "actor_policy_schema_hash",
+        "admission_policy_hash",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "journey-selection-policy/v1"
+        },
+        "policy_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "challenge_family_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "journey_family_root_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "allowed_intents": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 14,
+          "items": {
+            "$ref": "erl2:common#/$defs/JourneyIntent"
+          }
+        },
+        "journey_schema_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "step_commitment_schema_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "actor_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "actor_policy_schema_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "admission_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "ExternalBeaconRandomnessPolicyV1": {
+      "$comment": "The one active randomness policy variant. Exactly one source_id; no array, no fallback, no retry.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "policy_id",
+        "source_kind",
+        "source_id",
+        "source_trust_policy_hash",
+        "beacon_trust_configuration_hash",
+        "round_rule",
+        "finality_rule_hash",
+        "retry_policy",
+        "required_operator_separation_policy_hash",
+        "randomness_domain",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "external-beacon-randomness-policy/v1"
+        },
+        "policy_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "source_kind": {
+          "const": "external_beacon"
+        },
+        "source_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "source_trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "beacon_trust_configuration_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "round_rule": {
+          "const": "first_finalized_round_after_pool_checkpoint"
+        },
+        "finality_rule_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "retry_policy": {
+          "const": "none_invalidate_run"
+        },
+        "required_operator_separation_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "randomness_domain": {
+          "const": "ERL2-SELECTION-RANDOMNESS-V1"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "ThresholdVrfRandomnessPolicyV1": {
+      "$comment": "Reservation marker only. Deliberately NOT a member of SelectionRandomnessPolicyV1. Any admission attempt fails with THRESHOLD_VRF_NOT_ACTIVATED (ERL2-FR-036/039, ERL2-AC-043).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "source_kind",
+        "activation_status",
+        "activation_gate",
+        "admissible",
+        "emittable",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "threshold-vrf-randomness-policy/v1"
+        },
+        "source_kind": {
+          "const": "threshold_vrf"
+        },
+        "activation_status": {
+          "const": "disabled_pending_adr_erl2_011"
+        },
+        "activation_gate": {
+          "const": "ADR-ERL2-011"
+        },
+        "admissible": {
+          "const": false
+        },
+        "emittable": {
+          "const": false
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "SelectionRandomnessPolicyV1": {
+      "$comment": "Active alias: the external-beacon policy and nothing else.",
+      "$ref": "erl2:selection#/$defs/ExternalBeaconRandomnessPolicyV1"
+    },
+    "SelectionRequestV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "request_id",
+        "run_id",
+        "request_nonce",
+        "requested_tier",
+        "acquisition_preregistration_hash",
+        "acquisition_source_manifest_hash",
+        "acquisition_record_hash",
+        "subject_package_manifest_hash",
+        "adapter_manifest_hash",
+        "admissible_archetype_set_hash",
+        "challenge_family_hash",
+        "environment_profile_hash",
+        "eligibility_policy_hash",
+        "configuration_intent_hash",
+        "generic_run_policy_hash",
+        "actor_policy_hash",
+        "comparison_policy_hash",
+        "selection_randomness_policy_hash",
+        "journey_selection_policy_hash",
+        "requested_at",
+        "expires_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "selection-request/v2"
+        },
+        "request_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "request_nonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "requested_tier": {
+          "$ref": "erl2:common#/$defs/Tier"
+        },
+        "acquisition_preregistration_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_source_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "subject_package_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "admissible_archetype_set_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "challenge_family_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "environment_profile_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "eligibility_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "configuration_intent_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "generic_run_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "actor_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "comparison_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_randomness_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "journey_selection_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "non_blind_replay_persona_script_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "non_blind_replay_journey_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "non_blind_replay_step_commitment_hashes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "erl2:common#/$defs/Hash"
+          }
+        },
+        "requested_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "expires_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "ERL2-AC-028/032: a held-out or blind request may not carry an exact persona, journey or step commitment.",
+          "if": {
+            "properties": {
+              "requested_tier": {
+                "enum": [
+                  "held_out",
+                  "blind"
+                ]
+              }
+            },
+            "required": [
+              "requested_tier"
+            ],
+            "type": "object"
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "non_blind_replay_persona_script_hash"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "required": [
+                    "non_blind_replay_journey_hash"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "required": [
+                    "non_blind_replay_step_commitment_hashes"
+                  ],
+                  "type": "object"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$comment": "The three non-blind replay fields are all-or-nothing.",
+          "dependentRequired": {
+            "non_blind_replay_persona_script_hash": [
+              "non_blind_replay_journey_hash",
+              "non_blind_replay_step_commitment_hashes"
+            ],
+            "non_blind_replay_journey_hash": [
+              "non_blind_replay_persona_script_hash",
+              "non_blind_replay_step_commitment_hashes"
+            ],
+            "non_blind_replay_step_commitment_hashes": [
+              "non_blind_replay_persona_script_hash",
+              "non_blind_replay_journey_hash"
+            ]
+          }
+        }
+      ]
+    },
+    "SelectionRoleSeparationAuditV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "audit_id",
+        "run_id",
+        "selection_request_hash",
+        "role_assignments",
+        "reveal_threshold",
+        "reveal_participant_key_ids",
+        "prohibited_operator_overlaps",
+        "prohibited_key_overlaps",
+        "append_only_access_log_head_hash",
+        "all_required_roles_disjoint",
+        "status",
+        "audited_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "selection-role-separation-audit/v1"
+        },
+        "audit_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "selection_request_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "role_assignments": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "operator_identity_hash",
+              "key_ids"
+            ],
+            "properties": {
+              "role": {
+                "enum": [
+                  "challenge_governor",
+                  "selector",
+                  "randomness_source",
+                  "reveal_custodian",
+                  "evaluator"
+                ]
+              },
+              "operator_identity_hash": {
+                "$ref": "erl2:common#/$defs/Hash"
+              },
+              "key_ids": {
+                "$ref": "erl2:common#/$defs/KeyIdArray"
+              }
+            }
+          }
+        },
+        "reveal_threshold": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 64
+        },
+        "reveal_participant_key_ids": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 64,
+          "items": {
+            "$ref": "erl2:common#/$defs/KeyId"
+          }
+        },
+        "prohibited_operator_overlaps": {
+          "$ref": "erl2:common#/$defs/EmptyArray"
+        },
+        "prohibited_key_overlaps": {
+          "$ref": "erl2:common#/$defs/EmptyArray"
+        },
+        "append_only_access_log_head_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "all_required_roles_disjoint": {
+          "const": true
+        },
+        "status": {
+          "const": "passed"
+        },
+        "audited_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "SelectorVisibleProfileV1": {
+      "$comment": "ERL2-FR-030/AC-034: one pool-common fixed profile fixes every selector-visible length and metadata value.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "payload_ciphertext_byte_length",
+        "entry_serialized_byte_length",
+        "opaque_handle_encoding",
+        "artifact_path_pattern_id",
+        "artifact_path_byte_length",
+        "payload_media_type",
+        "payload_classification",
+        "payload_encryption",
+        "payload_padding",
+        "reveal_threshold",
+        "reveal_participant_key_ids",
+        "decryption_release_policy_hash",
+        "entry_signer_key_id",
+        "hidden_payload_schema_hash",
+        "challenge_correlated_cleartext_fields",
+        "exposure_epoch_visibility",
+        "core_hash"
+      ],
+      "properties": {
+        "payload_ciphertext_byte_length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "entry_serialized_byte_length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2097152
+        },
+        "opaque_handle_encoding": {
+          "const": "base64url-256"
+        },
+        "artifact_path_pattern_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "artifact_path_byte_length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        },
+        "payload_media_type": {
+          "const": "application/vnd.erl2.selection-binding+age"
+        },
+        "payload_classification": {
+          "const": "SECRET"
+        },
+        "payload_encryption": {
+          "const": "threshold-x25519-envelope/v1"
+        },
+        "payload_padding": {
+          "const": "iso7816-4-to-fixed-size"
+        },
+        "reveal_threshold": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 64
+        },
+        "reveal_participant_key_ids": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 64,
+          "items": {
+            "$ref": "erl2:common#/$defs/KeyId"
+          }
+        },
+        "decryption_release_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "entry_signer_key_id": {
+          "$ref": "erl2:common#/$defs/KeyId"
+        },
+        "hidden_payload_schema_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "challenge_correlated_cleartext_fields": {
+          "$ref": "erl2:common#/$defs/EmptyArray"
+        },
+        "exposure_epoch_visibility": {
+          "const": "encrypted_until_selected"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "EligibilityPoolEntryV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "opaque_entry_handle",
+        "weight",
+        "challenge_actor_journey_hiding_commitment",
+        "encrypted_binding_payload",
+        "selector_visible_profile_hash",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "eligibility-pool-entry/v2"
+        },
+        "opaque_entry_handle": {
+          "$ref": "erl2:common#/$defs/Base64Url256"
+        },
+        "weight": {
+          "const": 1
+        },
+        "challenge_actor_journey_hiding_commitment": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "encrypted_binding_payload": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "selector_visible_profile_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "HiddenBindingPayloadV1": {
+      "$comment": "Plaintext of the threshold-encrypted per-entry payload. Never appears in a public artifact; only the selected entry is opened.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "challenge_manifest_hash",
+        "persona_script_hash",
+        "journey_hash",
+        "ordered_step_commitment_hashes",
+        "exposure_epoch",
+        "opening_nonce_base64"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "hidden-binding-payload/v1"
+        },
+        "challenge_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "persona_script_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "journey_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "ordered_step_commitment_hashes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "erl2:common#/$defs/Hash"
+          }
+        },
+        "exposure_epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "opening_nonce_base64": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{43}=$"
+        }
+      }
+    },
+    "EligibilityPoolManifestV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "pool_id",
+        "selection_request_hash",
+        "journey_selection_policy_hash",
+        "selection_randomness_policy_hash",
+        "randomness_source_id",
+        "randomness_source_trust_policy_hash",
+        "selection_role_separation_audit_hash",
+        "ordered_entry_hashes",
+        "entry_count",
+        "pool_root_hash",
+        "eligibility_proof_hash",
+        "selector_visible_profile",
+        "created_at",
+        "expires_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "eligibility-pool-manifest/v2"
+        },
+        "pool_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "selection_request_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "journey_selection_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_randomness_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "randomness_source_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "randomness_source_trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_role_separation_audit_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "ordered_entry_hashes": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4096,
+          "items": {
+            "$ref": "erl2:common#/$defs/Hash"
+          }
+        },
+        "entry_count": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 4096
+        },
+        "pool_root_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "eligibility_proof_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selector_visible_profile": {
+          "$ref": "erl2:selection#/$defs/SelectorVisibleProfileV1"
+        },
+        "created_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "expires_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "ExternalBeaconRandomnessReceiptV1": {
+      "$comment": "Owned and signed by the Lab/verifier, not by the beacon (ERL2-FR-038). beacon_signed_payload_hash covers only the canonical beacon round and output.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "receipt_id",
+        "run_id",
+        "selection_request_hash",
+        "eligibility_pool_manifest_hash",
+        "pool_root_hash",
+        "pool_manifest_timestamp_checkpoint_hash",
+        "randomness_policy_hash",
+        "source_kind",
+        "source_id",
+        "source_trust_policy_hash",
+        "source_round_id",
+        "source_request_binding_hash",
+        "randomness_output_base64",
+        "randomness_output_hash",
+        "beacon_signed_payload_hash",
+        "beacon_inclusion_proof",
+        "beacon_signature_proof",
+        "wrapper_kind",
+        "association_rule",
+        "beacon_signed_scope",
+        "wrapper_signed_scope",
+        "round_observed_at",
+        "wrapped_at",
+        "core_hash",
+        "wrapper_signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "external-beacon-randomness-receipt/v1"
+        },
+        "receipt_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "selection_request_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "eligibility_pool_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "pool_root_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "pool_manifest_timestamp_checkpoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "randomness_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "source_kind": {
+          "const": "external_beacon"
+        },
+        "source_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "source_trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "source_round_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "source_request_binding_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "randomness_output_base64": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{86}==$"
+        },
+        "randomness_output_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "beacon_signed_payload_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "beacon_inclusion_proof": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "beacon_signature_proof": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "wrapper_kind": {
+          "const": "lab_verifier_beacon_association"
+        },
+        "association_rule": {
+          "const": "first_finalized_round_after_pool_checkpoint"
+        },
+        "beacon_signed_scope": {
+          "const": "canonical_beacon_round_and_output_only"
+        },
+        "wrapper_signed_scope": {
+          "const": "erl_request_policy_source_pool_checkpoint_round_association"
+        },
+        "round_observed_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "wrapped_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "wrapper_signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "SelectionRandomnessReceiptV1": {
+      "$comment": "Active alias: the Lab/verifier beacon association wrapper and nothing else.",
+      "$ref": "erl2:selection#/$defs/ExternalBeaconRandomnessReceiptV1"
+    },
+    "BeaconSignatureProofV1": {
+      "$comment": "The external beacon's own signature over its canonical round/output, scoped so it can never sign an ERL identifier. Frozen as a PUBLIC artifact and re-parsed by the offline verifier, so it is a closed, schema-governed wire type (review §11.13).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proof_kind",
+        "scope",
+        "native_signature_domain",
+        "source_id",
+        "round_id",
+        "randomness_output_base64",
+        "beacon_signed_payload_hash",
+        "signature"
+      ],
+      "properties": {
+        "proof_kind": { "const": "beacon_native_signature" },
+        "scope": { "const": "canonical_beacon_round_and_output_only" },
+        "native_signature_domain": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "source_id": { "$ref": "erl2:common#/$defs/Id" },
+        "round_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "randomness_output_base64": { "$ref": "erl2:common#/$defs/Base64" },
+        "beacon_signed_payload_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      }
+    },
+    "BeaconInclusionProofV1": {
+      "$comment": "The external beacon's chain-inclusion proof for a round. Frozen as a PUBLIC artifact and re-parsed by the offline verifier, so it is a closed, schema-governed wire type (review §11.13).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proof_kind",
+        "source_id",
+        "round_id",
+        "chain_hash"
+      ],
+      "properties": {
+        "proof_kind": { "const": "beacon_native_inclusion" },
+        "source_id": { "$ref": "erl2:common#/$defs/Id" },
+        "round_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "previous_round_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "chain_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+    "RandomnessSourceTrustVerificationReportV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "report_id",
+        "run_id",
+        "selection_randomness_policy_hash",
+        "selection_randomness_receipt_hash",
+        "source_kind",
+        "source_id",
+        "source_trust_policy_hash",
+        "verifier_pinned_registry_head_hash",
+        "authorized_beacon_key_ids",
+        "verified_beacon_key_ids",
+        "authorized_wrapper_key_ids",
+        "verified_wrapper_key_ids",
+        "checks",
+        "verified_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "randomness-source-trust-verification-report/v1"
+        },
+        "report_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "selection_randomness_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_randomness_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "source_kind": {
+          "const": "external_beacon"
+        },
+        "source_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "source_trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "verifier_pinned_registry_head_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "authorized_beacon_key_ids": {
+          "$ref": "erl2:common#/$defs/KeyIdArray"
+        },
+        "verified_beacon_key_ids": {
+          "$ref": "erl2:common#/$defs/KeyIdArray"
+        },
+        "authorized_wrapper_key_ids": {
+          "$ref": "erl2:common#/$defs/KeyIdArray"
+        },
+        "verified_wrapper_key_ids": {
+          "$ref": "erl2:common#/$defs/KeyIdArray"
+        },
+        "checks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "policy_source_authorized",
+            "policy_trust_hash_pinned",
+            "receipt_source_matches",
+            "beacon_keys_subset_authorized",
+            "wrapper_key_authorized_by_run_trust_policy",
+            "beacon_native_scope_verified",
+            "source_proof_valid",
+            "wrapper_signature_valid",
+            "wrapper_scope_verified",
+            "registry_current_and_non_revoked"
+          ],
+          "properties": {
+            "policy_source_authorized": {
+              "const": true
+            },
+            "policy_trust_hash_pinned": {
+              "const": true
+            },
+            "receipt_source_matches": {
+              "const": true
+            },
+            "beacon_keys_subset_authorized": {
+              "const": true
+            },
+            "wrapper_key_authorized_by_run_trust_policy": {
+              "const": true
+            },
+            "beacon_native_scope_verified": {
+              "const": true
+            },
+            "source_proof_valid": {
+              "const": true
+            },
+            "wrapper_signature_valid": {
+              "const": true
+            },
+            "wrapper_scope_verified": {
+              "const": true
+            },
+            "registry_current_and_non_revoked": {
+              "const": true
+            }
+          }
+        },
+        "verified_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "SelectionCommitmentV2": {
+      "$comment": "Closed: contains no checkpoint field, so it cannot anchor itself (ERL2-FR-033/AC-037).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "commitment_id",
+        "run_id",
+        "selection_request_hash",
+        "eligibility_pool_manifest_hash",
+        "pool_root_hash",
+        "selection_randomness_receipt_hash",
+        "source_trust_verification_report_hash",
+        "selected_opaque_entry_handle",
+        "selected_entry_hash",
+        "selection_algorithm",
+        "committed_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "selection-commitment/v2"
+        },
+        "commitment_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "selection_request_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "eligibility_pool_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "pool_root_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_randomness_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "source_trust_verification_report_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selected_opaque_entry_handle": {
+          "$ref": "erl2:common#/$defs/Base64Url256"
+        },
+        "selected_entry_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_algorithm": {
+          "const": "hmac-sha256-rejection-sampling/v1"
+        },
+        "committed_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "ThresholdRevealReceiptV1": {
+      "$comment": "core_hash excludes participant_signatures; custodians sign domain ERL2-THRESHOLD-REVEAL-V1.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "receipt_id",
+        "run_id",
+        "selection_commitment_hash",
+        "commitment_timestamp_checkpoint_hash",
+        "selected_entry_hash",
+        "threshold",
+        "participant_key_ids",
+        "decryption_share_receipt_hashes",
+        "append_only_access_log_head_hash",
+        "released_at",
+        "core_hash",
+        "participant_signatures"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "threshold-reveal-receipt/v1"
+        },
+        "receipt_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "selection_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "commitment_timestamp_checkpoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selected_entry_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "threshold": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 64
+        },
+        "participant_key_ids": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 64,
+          "items": {
+            "$ref": "erl2:common#/$defs/KeyId"
+          }
+        },
+        "decryption_share_receipt_hashes": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 64,
+          "items": {
+            "$ref": "erl2:common#/$defs/Hash"
+          }
+        },
+        "append_only_access_log_head_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "released_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "participant_signatures": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 64,
+          "items": {
+            "$ref": "erl2:common#/$defs/Signature"
+          }
+        }
+      }
+    },
+    "SelectedChallengeJourneyBindingV1": {
+      "$comment": "Closed: contains no checkpoint field of its own (ERL2-FR-033).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "selection_commitment_hash",
+        "selected_opaque_entry_handle",
+        "pool_entry_hash",
+        "encrypted_binding_payload_file_sha256",
+        "payload_plaintext_hash",
+        "challenge_manifest_hash",
+        "persona_script_hash",
+        "journey_hash",
+        "ordered_step_commitment_hashes",
+        "exposure_epoch",
+        "threshold_reveal_receipt_hash",
+        "opening_nonce_base64",
+        "opening_event_hash",
+        "opened_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "selected-challenge-journey-binding/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "selection_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selected_opaque_entry_handle": {
+          "$ref": "erl2:common#/$defs/Base64Url256"
+        },
+        "pool_entry_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "encrypted_binding_payload_file_sha256": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "payload_plaintext_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "challenge_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "persona_script_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "journey_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "ordered_step_commitment_hashes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "erl2:common#/$defs/Hash"
+          }
+        },
+        "exposure_epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "threshold_reveal_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "opening_nonce_base64": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{43}=$"
+        },
+        "opening_event_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "opened_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "SelectionProofV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "proof_id",
+        "run_id",
+        "selection_request_hash",
+        "eligibility_pool_manifest_hash",
+        "pool_manifest_timestamp_checkpoint_hash",
+        "selection_randomness_policy_hash",
+        "randomness_source_kind",
+        "randomness_source_id",
+        "randomness_source_trust_policy_hash",
+        "source_request_binding_hash",
+        "source_trust_verification_report_hash",
+        "selection_randomness_receipt_hash",
+        "selection_commitment_hash",
+        "commitment_timestamp_checkpoint_hash",
+        "threshold_reveal_receipt_hash",
+        "selected_binding_hash",
+        "binding_timestamp_checkpoint_hash",
+        "request_nonce",
+        "algorithm",
+        "rejection_count",
+        "derived_index",
+        "derived_opaque_entry_handle",
+        "pool_checkpoint_precedes_randomness",
+        "randomness_precedes_source_trust",
+        "source_trust_precedes_commitment",
+        "commitment_checkpoint_precedes_opening",
+        "opening_precedes_binding",
+        "binding_checkpoint_precedes_proof",
+        "opening_event_hash",
+        "proved_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "selection-proof/v2"
+        },
+        "proof_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "selection_request_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "eligibility_pool_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "pool_manifest_timestamp_checkpoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_randomness_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "randomness_source_kind": {
+          "const": "external_beacon"
+        },
+        "randomness_source_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "randomness_source_trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "source_request_binding_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "source_trust_verification_report_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_randomness_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "commitment_timestamp_checkpoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "threshold_reveal_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selected_binding_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "binding_timestamp_checkpoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "request_nonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "algorithm": {
+          "const": "hmac-sha256-rejection-sampling/v1"
+        },
+        "rejection_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "derived_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4095
+        },
+        "derived_opaque_entry_handle": {
+          "$ref": "erl2:common#/$defs/Base64Url256"
+        },
+        "pool_checkpoint_precedes_randomness": {
+          "const": true
+        },
+        "randomness_precedes_source_trust": {
+          "const": true
+        },
+        "source_trust_precedes_commitment": {
+          "const": true
+        },
+        "commitment_checkpoint_precedes_opening": {
+          "const": true
+        },
+        "opening_precedes_binding": {
+          "const": true
+        },
+        "binding_checkpoint_precedes_proof": {
+          "const": true
+        },
+        "opening_event_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "proved_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "SelectionVerificationReceiptV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "receipt_id",
+        "run_id",
+        "selection_request_hash",
+        "eligibility_pool_manifest_hash",
+        "selection_commitment_hash",
+        "selection_proof_hash",
+        "selection_randomness_policy_hash",
+        "randomness_source_kind",
+        "randomness_source_id",
+        "randomness_source_trust_policy_hash",
+        "source_request_binding_hash",
+        "source_trust_verification_report_hash",
+        "selection_randomness_receipt_hash",
+        "pool_manifest_timestamp_checkpoint_hash",
+        "commitment_timestamp_checkpoint_hash",
+        "threshold_reveal_receipt_hash",
+        "selected_binding_hash",
+        "binding_timestamp_checkpoint_hash",
+        "selection_role_separation_audit_hash",
+        "journey_selection_policy_hash",
+        "verified_selected_entry_hash",
+        "checks",
+        "verified_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "selection-verification-receipt/v2"
+        },
+        "receipt_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "selection_request_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "eligibility_pool_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_proof_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_randomness_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "randomness_source_kind": {
+          "const": "external_beacon"
+        },
+        "randomness_source_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "randomness_source_trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "source_request_binding_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "source_trust_verification_report_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_randomness_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "pool_manifest_timestamp_checkpoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "commitment_timestamp_checkpoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "threshold_reveal_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selected_binding_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "binding_timestamp_checkpoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_role_separation_audit_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "journey_selection_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "verified_selected_entry_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "checks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "request_pool_bound",
+            "role_separation_precedes_pool",
+            "ordered_entry_root_verified",
+            "uniform_selector_metadata_verified",
+            "selected_entry_in_pool",
+            "pool_checkpoint_verified",
+            "single_policy_source_verified",
+            "source_request_binding_verified",
+            "randomness_variant_verified",
+            "beacon_native_proof_verified",
+            "beacon_wrapper_signature_verified",
+            "beacon_wrapper_scope_verified",
+            "threshold_vrf_inactive_verified",
+            "verifier_pinned_source_trust_verified",
+            "independent_randomness_verified",
+            "pool_checkpoint_precedes_randomness",
+            "randomness_precedes_source_trust",
+            "source_trust_precedes_commitment",
+            "commitment_checkpoint_verified",
+            "commitment_checkpoint_precedes_opening",
+            "threshold_reveal_verified",
+            "opening_precedes_binding",
+            "binding_checkpoint_verified",
+            "binding_checkpoint_precedes_proof",
+            "selection_algorithm_verified",
+            "hiding_commitment_opened",
+            "manifest_journey_steps_verified",
+            "journey_family_verified",
+            "actor_family_verified",
+            "exposure_eligible",
+            "role_separation_verified",
+            "access_log_verified"
+          ],
+          "properties": {
+            "request_pool_bound": {
+              "const": true
+            },
+            "role_separation_precedes_pool": {
+              "const": true
+            },
+            "ordered_entry_root_verified": {
+              "const": true
+            },
+            "uniform_selector_metadata_verified": {
+              "const": true
+            },
+            "selected_entry_in_pool": {
+              "const": true
+            },
+            "pool_checkpoint_verified": {
+              "const": true
+            },
+            "single_policy_source_verified": {
+              "const": true
+            },
+            "source_request_binding_verified": {
+              "const": true
+            },
+            "randomness_variant_verified": {
+              "const": true
+            },
+            "beacon_native_proof_verified": {
+              "const": true
+            },
+            "beacon_wrapper_signature_verified": {
+              "const": true
+            },
+            "beacon_wrapper_scope_verified": {
+              "const": true
+            },
+            "threshold_vrf_inactive_verified": {
+              "const": true
+            },
+            "verifier_pinned_source_trust_verified": {
+              "const": true
+            },
+            "independent_randomness_verified": {
+              "const": true
+            },
+            "pool_checkpoint_precedes_randomness": {
+              "const": true
+            },
+            "randomness_precedes_source_trust": {
+              "const": true
+            },
+            "source_trust_precedes_commitment": {
+              "const": true
+            },
+            "commitment_checkpoint_verified": {
+              "const": true
+            },
+            "commitment_checkpoint_precedes_opening": {
+              "const": true
+            },
+            "threshold_reveal_verified": {
+              "const": true
+            },
+            "opening_precedes_binding": {
+              "const": true
+            },
+            "binding_checkpoint_verified": {
+              "const": true
+            },
+            "binding_checkpoint_precedes_proof": {
+              "const": true
+            },
+            "selection_algorithm_verified": {
+              "const": true
+            },
+            "hiding_commitment_opened": {
+              "const": true
+            },
+            "manifest_journey_steps_verified": {
+              "const": true
+            },
+            "journey_family_verified": {
+              "const": true
+            },
+            "actor_family_verified": {
+              "const": true
+            },
+            "exposure_eligible": {
+              "const": true
+            },
+            "role_separation_verified": {
+              "const": true
+            },
+            "access_log_verified": {
+              "const": true
+            }
+          }
+        },
+        "verified_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "NonBlindSelectionAssuranceV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "blindness_claim"
+      ],
+      "properties": {
+        "mode": {
+          "const": "non_blind_development"
+        },
+        "blindness_claim": {
+          "const": "none"
+        }
+      }
+    },
+    "BlindSelectionAssuranceV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "blindness_assurance",
+        "residual_limitation",
+        "role_separation_audit_hash",
+        "randomness_source_id",
+        "randomness_source_trust_policy_hash",
+        "source_trust_verification_report_hash",
+        "selection_randomness_receipt_hash",
+        "threshold_reveal_receipt_hash",
+        "access_log_head_hash"
+      ],
+      "properties": {
+        "mode": {
+          "const": "blind_or_held_out"
+        },
+        "blindness_assurance": {
+          "const": "role_separated_threshold_protocol"
+        },
+        "residual_limitation": {
+          "const": "governor/selector/reveal-quorum or privileged-administrator collusion is not excluded"
+        },
+        "role_separation_audit_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "randomness_source_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "randomness_source_trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "source_trust_verification_report_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_randomness_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "threshold_reveal_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "access_log_head_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "SelectionAssuranceV1": {
+      "oneOf": [
+        {
+          "$ref": "erl2:selection#/$defs/NonBlindSelectionAssuranceV1"
+        },
+        {
+          "$ref": "erl2:selection#/$defs/BlindSelectionAssuranceV1"
+        }
+      ]
+    }
+  }
+}

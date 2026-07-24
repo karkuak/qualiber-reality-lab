@@ -1,0 +1,19 @@
+{
+  "schema_version": "isolation-enforcement-probe-result/v1",
+  "probe_id": "no-host-home",
+  "control_id": "no-ambient-home-directory",
+  "substrate_lock_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
+  "evidence": "observed",
+  "enforced": true,
+  "method": "look for the operator's home directory and the runtime's host-mount roots inside the container",
+  "observation": {
+    "attempted": "scan for a populated /Users/karthik, /Users, /home, /host_mnt and /mnt/host inside the container",
+    "observed": "SCAN_DONE",
+    "expectation": "no host home or host-mount root is populated inside the container",
+    "exit_code": 0
+  },
+  "resources_cleaned_up": true,
+  "started_at": "2026-07-23T16:57:31Z",
+  "ended_at": "2026-07-23T16:57:31Z",
+  "core_hash": "sha256:a3cc0d15e4238247ec229df8820e0de40f35fb332c4958c9fc9f9b496c69ff4b"
+}

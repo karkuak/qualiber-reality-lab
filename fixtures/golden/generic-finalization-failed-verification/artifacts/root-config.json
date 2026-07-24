@@ -1,0 +1,8 @@
+{
+  "rootKeyIds": [
+    "erl2-dev-root-ed25519-1"
+  ],
+  "currentTrustHeadHash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+  "randomnessSources": [],
+  "randomnessRegistryHeadHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+}

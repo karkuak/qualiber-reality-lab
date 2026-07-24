@@ -1,0 +1,18 @@
+{
+  "schema_version": "isolation-enforcement-probe-result/v1",
+  "probe_id": "teardown-residue",
+  "control_id": "teardown-and-residue-inspection",
+  "substrate_lock_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
+  "evidence": "observed",
+  "enforced": true,
+  "method": "create run-scoped resources, tear them down, then enumerate the runtime for anything still bearing this run id",
+  "observation": {
+    "attempted": "create then destroy a run-scoped container and volume, then enumerate residue by run id",
+    "observed": "residue=<none>",
+    "expectation": "no container or volume bearing this run id survives teardown"
+  },
+  "resources_cleaned_up": true,
+  "started_at": "2026-07-23T16:57:33Z",
+  "ended_at": "2026-07-23T16:57:33Z",
+  "core_hash": "sha256:c4ba6628515187770e9dfa357a91c027f9fb9562c9690b16951c80b59a1c88e9"
+}

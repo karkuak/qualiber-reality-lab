@@ -1,0 +1,3174 @@
+[
+  {
+    "argv": [
+      "erl2",
+      "doctor",
+      "--profile",
+      "local-developer"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "doctor",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "data": {
+        "subject_isolation": {
+          "qualification": "locally_observed_unauthenticated",
+          "authenticity": "locally_observed_unauthenticated",
+          "substrate_lock_signature": {
+            "valid": true,
+            "signer": "erl2-dev-environment-governor-ed25519-1",
+            "reason": "SUBSTRATE_LOCK_SIGNED_BY_DEVELOPMENT_KEY"
+          },
+          "probe_manifest": {
+            "status": "valid_development",
+            "signer": "erl2-dev-environment-governor-ed25519-1",
+            "reason": "-"
+          },
+          "launcher_available": false,
+          "profile": "container",
+          "required_controls": 20,
+          "observed_controls": 20,
+          "missing_controls": [],
+          "refusal_reasons": [
+            "SUBSTRATE_LOCK_SIGNED_BY_DEVELOPMENT_KEY",
+            "probe_manifest:valid_development"
+          ],
+          "probe_suite_id": "erl2-container-enforcement-probes-v1",
+          "probe_suite_digest": "sha256:bd324f7591b009e2f1096ba496a5ad61c24b1f10b218c6e65f027faa03d996e9",
+          "substrate_lock": {
+            "lock_id": "erl2-container-isolation-lock",
+            "core_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
+            "runtime": "docker/29.5.3",
+            "platform": "linux/arm64",
+            "kernel": "6.12.76-linuxkit",
+            "image_reference": "alpine@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce",
+            "image_digest": "sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce",
+            "seccomp": "builtin",
+            "cgroup_version": "2",
+            "default_runtime": "runc",
+            "pinned_probe_suite": "erl2-container-enforcement-probes-v1@sha256:bd324f7591b009e2f1096ba496a5ad61c24b1f10b218c6e65f027faa03d996e9"
+          },
+          "probe_evidence_dir": "environments/isolation/probes",
+          "probe_status": [
+            {
+              "control": "read-only-root-filesystem",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "numeric-non-root-user",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "capability-drop-all",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "no-new-privileges",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "seccomp-default-profile",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "cpu-limit",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "memory-limit",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "pid-limit",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "wall-clock-deadline",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "process-tree-termination",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "network-namespace-isolation",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "deny-by-default-egress",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "read-only-input-mounts",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "writable-output-only",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "no-docker-socket",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "no-ambient-home-directory",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "no-vault-truth-judge-or-selection-access",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "bounded-diagnostics",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "run-scoped-resource-identity",
+              "evidence": "observed",
+              "enforced": true
+            },
+            {
+              "control": "teardown-and-residue-inspection",
+              "evidence": "observed",
+              "enforced": true
+            }
+          ]
+        },
+        "profile": "local-developer",
+        "node_version": "v26.4.0",
+        "registered_contracts": 150,
+        "lifecycle_states": 63,
+        "separation_domains": 21,
+        "threshold_vrf": "THRESHOLD_VRF_NOT_ACTIVATED",
+        "held_out_selection": "disabled_pending_erl2_oq_007",
+        "fake_environment_driver": "enabled",
+        "compose_environment_driver": "disabled_pending_erl2_oq_005",
+        "otel_demo_substrate_lock": "unqualified_pending_erl2_oq_005",
+        "constrained_archetypes": "clean_greenfield_only_pending_erl2_oq_002",
+        "pack_runtime": "data_only_dsl_pending_erl2_oq_004",
+        "generic_evaluator": "erl2-generic-evaluator/0.1.0",
+        "generic_metric_definitions": 17,
+        "subject_isolation_qualification": "locally_observed_unauthenticated",
+        "subject_isolation_required_controls": 20,
+        "privilege_broker": "unprivileged_container_subjects_only_pending_erl2_oq_001",
+        "adapter_protocol_version": "subject-adapter/v1",
+        "adapter_sandbox_profile": "local-process",
+        "adapter_container_sandbox_profile": "disabled_no_container_adapter_launcher_pending_erl2_oq_008",
+        "adapter_sandbox_controls_enforced": 12,
+        "adapter_sandbox_controls_unsupported": 13,
+        "adapter_privileged_capabilities_denied": 9
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "status",
+      "--run",
+      "019f1af9-b400-7111-9111-111111111111",
+      "--artifact-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/artifacts"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "status",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "019f1af9-b400-7111-9111-111111111111",
+      "state": "generic_finalized",
+      "data": {
+        "lifecycle_head_hash": "sha256:e9cf4fcf46e4558c6bbf519cd38f08771d89828a2b9820d2e25517f9d0590ebc"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify",
+      "--public-bundle",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/public-bundle.json",
+      "--root-config",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/root-config.json",
+      "--artifact-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/artifacts",
+      "--lifecycle",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/lifecycle.json",
+      "--offline"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "019f1af9-b400-7111-9111-111111111111",
+      "record_hash": "sha256:172f939f85dd8d99e103bf12c1d5a76482f6ac7f4f034d3378c34240de680af5",
+      "data": {
+        "verdict": "valid",
+        "trust_head_hash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+        "valid_when_signed": true,
+        "currently_trusted": true,
+        "closure": {
+          "schema_version": "mandatory-graph-closure-report/v1",
+          "algorithm": "erl2-mandatory-closure/v1",
+          "run_id": "019f1af9-b400-7111-9111-111111111111",
+          "derived_terminal_phase": "verify_package",
+          "derived_terminal_variant": "pre_environment",
+          "lifecycle_head_hash": "sha256:e9cf4fcf46e4558c6bbf519cd38f08771d89828a2b9820d2e25517f9d0590ebc",
+          "verified_trust_head_hash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+          "required_hashes_by_role": [
+            {
+              "role": "acquisition-preregistration",
+              "ordered_hashes": [
+                "sha256:38be7232cc54e5c69ba91e7317a4553b1f086af804e022cb0c67c03ce0d22ffb"
+              ]
+            },
+            {
+              "role": "acquisition-source-manifest",
+              "ordered_hashes": [
+                "sha256:fa57383df86cc9071d64f8bf365328cadf0abeab833b2a032ca3ef1d0a6c1c34"
+              ]
+            },
+            {
+              "role": "acquisition-record",
+              "ordered_hashes": [
+                "sha256:3b7179b011c3886dfbc5f8c1c08e81c03dbabc53de04e09e7559270ed12e41f6"
+              ]
+            },
+            {
+              "role": "package-verification-record",
+              "ordered_hashes": [
+                "sha256:c8b3835c54c59a5c6a0a8da4f30829135da4a8345040524c9aab2a9447618d4e"
+              ]
+            },
+            {
+              "role": "journey-step-outcome",
+              "ordered_hashes": [
+                "sha256:a753ceaea9e23eeeed459016e9e14eab57a01e8c27626fe9c00b4ee68fb66c73",
+                "sha256:91cea39c8b4bfe2caf9b9459c5ed827cffc69c188d1e514cb659a281c4bd4c36"
+              ]
+            },
+            {
+              "role": "subject-output-manifest",
+              "ordered_hashes": [
+                "sha256:fc3c0c31ed2b8cb6529007eb4ff4734aa6abe1253863c50e0527ccbd548ff96e"
+              ]
+            },
+            {
+              "role": "journey-result",
+              "ordered_hashes": [
+                "sha256:b29496d3567aa972f86edad9b49a1d736f892871c6b51d8ddc0a385c747101a8"
+              ]
+            },
+            {
+              "role": "domain-result",
+              "ordered_hashes": [
+                "sha256:54f3ffd6af4fd93d9d4c76948e7cd8c177cefc057f8460b2218cf6d6fa8f4881"
+              ]
+            },
+            {
+              "role": "precleanup-result-join",
+              "ordered_hashes": [
+                "sha256:6dc413ab73c606be067228d4bde0871a47a6b174d30de641adc8692aa99d45db"
+              ]
+            },
+            {
+              "role": "pre-environment-cleanup",
+              "ordered_hashes": [
+                "sha256:00a76d748ff7bb04fc931f7df7a086189bd49d016870e492eb0b494b034b2395"
+              ]
+            },
+            {
+              "role": "validity-result",
+              "ordered_hashes": [
+                "sha256:1e1ee64bc525337ae80ed26b554d62e7aaca6f701673151af62a83cd2d32c6e6"
+              ]
+            },
+            {
+              "role": "generic-evaluation-index",
+              "ordered_hashes": [
+                "sha256:d98ba0f61585aa5ae6ac7dde6792c434456eefb3fe59a52416123308341926a1"
+              ]
+            },
+            {
+              "role": "run-record",
+              "ordered_hashes": [
+                "sha256:409b3499c28552d27f2be522375e4ad284e28bfd6db66d437a537e6d23d2b9f6"
+              ]
+            },
+            {
+              "role": "final-attestation",
+              "ordered_hashes": [
+                "sha256:172f939f85dd8d99e103bf12c1d5a76482f6ac7f4f034d3378c34240de680af5"
+              ]
+            },
+            {
+              "role": "signer-inventory",
+              "ordered_hashes": [
+                "sha256:4738168b0dba30233fd4a52a11f37529aef94b6f69499f9245a0e2f4fc212960"
+              ]
+            },
+            {
+              "role": "finding",
+              "ordered_hashes": [
+                "sha256:b92dc486600c43bb558b4d9c516214a5e81f049d696b2df341ee88d4151bdfdc"
+              ]
+            }
+          ],
+          "rejected_extra_hashes": [],
+          "missing_roles": [],
+          "verdict": "valid",
+          "verified_at": "2026-07-24T21:51:02Z",
+          "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+          "core_hash": "sha256:9ce996a8f211bc05e7ac35d084158c7c6310863dc92079622c9947088b1a426f"
+        }
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify",
+      "--public-bundle",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/public-bundle.json",
+      "--root-config",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/root-config.json",
+      "--artifact-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/artifacts",
+      "--lifecycle",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/lifecycle.json"
+    ],
+    "exit_code": 10,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify",
+      "ok": false,
+      "exit_code": 10,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [
+        {
+          "code": "VERIFY_OFFLINE_REQUIRED",
+          "message": "--offline is required; verification never uses the network"
+        }
+      ]
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-record",
+      "--record",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-cancellation/invalid-record.json",
+      "--lifecycle",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-cancellation/lifecycle.json",
+      "--artifact-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-cancellation/artifacts",
+      "--root-config",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-cancellation/root-config.json",
+      "--offline"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-record",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "019f1af9-b400-7222-a222-222222222222",
+      "state": "invalidated",
+      "data": {
+        "closure": {
+          "schema_version": "mandatory-graph-closure-report/v1",
+          "algorithm": "erl2-mandatory-closure/v1",
+          "run_id": "019f1af9-b400-7222-a222-222222222222",
+          "derived_terminal_phase": {
+            "cancelled_during": "pre_environment",
+            "kind": "cancellation",
+            "lifecycle_event_hash": "sha256:a1f9c05a271876cda7848715be625d845a565600902053187a6e606e0992ed77"
+          },
+          "derived_terminal_variant": "invalid",
+          "lifecycle_head_hash": "sha256:df1c9d7e7f01c740d70b6611b34a129d2d35a9a490c42cbda58adb1892855be3",
+          "required_hashes_by_role": [
+            {
+              "role": "invalid-run-record",
+              "ordered_hashes": [
+                "sha256:5c2cf0aacf93e39b73f7f5fbb3b7dc9846476226613b2fd46442414f2151951f"
+              ]
+            },
+            {
+              "role": "reached-evidence",
+              "ordered_hashes": [
+                "sha256:fe13f8ddf1a61edbd9993a4b19aeff1de36b9a3ba64b7e2eb0296d521db99ae0",
+                "sha256:fa57383df86cc9071d64f8bf365328cadf0abeab833b2a032ca3ef1d0a6c1c34"
+              ]
+            },
+            {
+              "role": "cleanup-attempt",
+              "ordered_hashes": []
+            }
+          ],
+          "rejected_extra_hashes": [],
+          "missing_roles": [],
+          "verdict": "valid",
+          "verified_at": "2026-07-24T21:51:02Z",
+          "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+          "core_hash": "sha256:8f29ba1feb5aa46e922896b055fa42a6fea698d4f0fb9a53baa935e26abbdd67"
+        }
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-record",
+      "--record",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-classified-lab-failure/invalid-record.json",
+      "--lifecycle",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-classified-lab-failure/lifecycle.json",
+      "--artifact-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-classified-lab-failure/artifacts",
+      "--root-config",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-classified-lab-failure/root-config.json",
+      "--offline"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-record",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "019f1af9-b400-7333-b333-333333333333",
+      "state": "invalidated",
+      "data": {
+        "closure": {
+          "schema_version": "mandatory-graph-closure-report/v1",
+          "algorithm": "erl2-mandatory-closure/v1",
+          "run_id": "019f1af9-b400-7333-b333-333333333333",
+          "derived_terminal_phase": {
+            "kind": "lifecycle_phase",
+            "lifecycle_event_hash": "sha256:ecb3be729acc69ee69eea93a8b703a06005bd3ec104526967ba506b930bcfd96",
+            "phase": "acquisition"
+          },
+          "derived_terminal_variant": "invalid",
+          "lifecycle_head_hash": "sha256:7a9d6bc99eb72950dc07799455f318a4956dc2f21450312776e37ec6ddfb1d55",
+          "required_hashes_by_role": [
+            {
+              "role": "invalid-run-record",
+              "ordered_hashes": [
+                "sha256:9a8c2a27f52ac24298a376b11bcba4bd5ae40b4e3fe7e0d2ccdc66524b1f3b6c"
+              ]
+            },
+            {
+              "role": "reached-evidence",
+              "ordered_hashes": [
+                "sha256:a9f00c180f38c8d9e3269116aa59f8f9afaccb466c756265bdce3efbf759fb3d",
+                "sha256:fa57383df86cc9071d64f8bf365328cadf0abeab833b2a032ca3ef1d0a6c1c34",
+                "sha256:b9236de945e74ff3e2a66ebd76ae24970bc58d510e9e80b84c86a5f0e90260ef"
+              ]
+            },
+            {
+              "role": "cleanup-attempt",
+              "ordered_hashes": []
+            }
+          ],
+          "rejected_extra_hashes": [],
+          "missing_roles": [],
+          "verdict": "valid",
+          "verified_at": "2026-07-24T21:51:02Z",
+          "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+          "core_hash": "sha256:6cd0edb556e2a44108d1bc453d447514760adc1431656583af4240cc62cb1d56"
+        }
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-record",
+      "--record",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-emergency-cleanup/invalid-record.json",
+      "--lifecycle",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-emergency-cleanup/lifecycle.json",
+      "--artifact-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-emergency-cleanup/artifacts",
+      "--root-config",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-emergency-cleanup/root-config.json",
+      "--offline"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-record",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "019f1af9-b400-7444-8444-444444444444",
+      "state": "invalidated",
+      "data": {
+        "closure": {
+          "schema_version": "mandatory-graph-closure-report/v1",
+          "algorithm": "erl2-mandatory-closure/v1",
+          "run_id": "019f1af9-b400-7444-8444-444444444444",
+          "derived_terminal_phase": {
+            "kind": "lifecycle_phase",
+            "lifecycle_event_hash": "sha256:3dbb2d7e2ca1f7909e12b48acc62768c96c7ae3dd374144c3f9f9a0a63349d6a",
+            "phase": "environment_restoration"
+          },
+          "derived_terminal_variant": "invalid",
+          "lifecycle_head_hash": "sha256:abbb79f770f7869d266dea30c6ad778314ed6eec6c444c8a9a07d1cb0f177fd4",
+          "required_hashes_by_role": [
+            {
+              "role": "invalid-run-record",
+              "ordered_hashes": [
+                "sha256:0ab28a6dbe9b574d1b109154e284db0346f8b5ba31b76f35492afce6dc557821"
+              ]
+            },
+            {
+              "role": "reached-evidence",
+              "ordered_hashes": [
+                "sha256:a84d3ebf6acffcafd06d2b740f59a9ab39c24315ff156f87d92b0e60866f7cb6",
+                "sha256:fa57383df86cc9071d64f8bf365328cadf0abeab833b2a032ca3ef1d0a6c1c34",
+                "sha256:28861263c9e825955a3cf8094911b3db32bf75b38d7e03bf8df7963397201c57",
+                "sha256:19f90a2a249e4d7242b1b7718f712a43025cc2eff7fd60728a84def7adc8abfd",
+                "sha256:b0465771b39e93a57e3a8462138ea2e6b4c4ab46a6a5f4e5edf4943279172edd",
+                "sha256:2ac0ce8ecd19eefa77c9027c42c0b69bc3b566593ca4a58a0f062b29f4716340",
+                "sha256:a711077d5912f8244e21aad1b59229c0bdf77eea700b0ef06f38beb7ad20ea78",
+                "sha256:fcf0a0b1c838835560ba05399f51dcced25f3e1b4f5fa230e41699c8309dfe85",
+                "sha256:62a2681213f502d97ac090d6242d4b7fdbbf03d75ce26d2943fc250a904c759c",
+                "sha256:e4c696b13d1d621f5c7e1c50fc3aed221a1d43f9af35f5cead0c805c22294012",
+                "sha256:eaa6e4490e52a0d9cd68648115185fb24e0cc77b7bedfbae6d3de201bfa53441",
+                "sha256:5cb348abf0d4bc5527c1e4759e04b0b51fe3b0d9509c816bb10f7e04f2069bcd",
+                "sha256:7604ab057423bae394045abf612a6ae016553f85478d56b25899b2fdd03e0f70"
+              ]
+            },
+            {
+              "role": "cleanup-attempt",
+              "ordered_hashes": [
+                "sha256:e4c696b13d1d621f5c7e1c50fc3aed221a1d43f9af35f5cead0c805c22294012",
+                "sha256:eaa6e4490e52a0d9cd68648115185fb24e0cc77b7bedfbae6d3de201bfa53441",
+                "sha256:5cb348abf0d4bc5527c1e4759e04b0b51fe3b0d9509c816bb10f7e04f2069bcd",
+                "sha256:7604ab057423bae394045abf612a6ae016553f85478d56b25899b2fdd03e0f70"
+              ]
+            }
+          ],
+          "rejected_extra_hashes": [],
+          "missing_roles": [],
+          "verdict": "valid",
+          "verified_at": "2026-07-24T21:51:03Z",
+          "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+          "core_hash": "sha256:45d3a5ac9a79dae73c647176a3e2f81bed7ad302396f238ab95711436416deae"
+        }
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-record",
+      "--record",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/public-bundle.json",
+      "--lifecycle",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/lifecycle.json",
+      "--artifact-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/artifacts",
+      "--root-config",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/root-config.json",
+      "--offline"
+    ],
+    "exit_code": 10,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-record",
+      "ok": false,
+      "exit_code": 10,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [
+        {
+          "code": "VERIFY_RECORD_ATTESTATION_PRESENT",
+          "message": "verify-record does not accept a public verification bundle"
+        }
+      ]
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "preregister-acquisition",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000001",
+      "--acquisition-source",
+      "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e",
+      "--adapter",
+      "sha256:8dcecd84e7a495d13a3e79cd6913dfab4a44252e2f19809e9472def0fb306d07",
+      "--acquisition-actor-script",
+      "sha256:2cbd48d538454b9f506ce0ac911e2dfc6772053c2f675b62c566d7f7a65bc5c6",
+      "--acquisition-actor-schema",
+      "sha256:bb9f4c8b0fd376e9d81a914ed56abb5646e0b8547a43f6ceccdf5f47a43d2880",
+      "--acquisition-step",
+      "sha256:5da675f43178f7cfa6ccd60ed8f601dd9b0404a1a91fe51b16a3113bc2d2bbfc",
+      "--package-verification-step",
+      "sha256:66e56f58a0f142d0d3114821befababf905ed4e783dbb90b25e98b13143a14b7",
+      "--generic-policy",
+      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "--trust-policy",
+      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "--limits",
+      "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
+      "--expires",
+      "2026-12-31T00:00:00Z"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "preregister-acquisition",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000001",
+      "state": "acquisition_preregistered",
+      "data": {
+        "acquisition_preregistration_hash": "sha256:e2813c787cd8e03ce87e0631afb8ff321316a54ccfa7000ae413f46d86da0ec1",
+        "selected_case_identity": "absent"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "acquire",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000001"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "acquire",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000001",
+      "state": "step_outcome_frozen",
+      "data": {
+        "acquisition_record_hash": "sha256:7a1fca4ac587d1c033f98bbe104811818422fc8a31c8598e67b83cd727e40246",
+        "status": "completed",
+        "attempts": 1,
+        "active_operator_ms": 2000,
+        "elapsed_ms": 2400,
+        "documentation_step_ids": [
+          "doc-install-overview",
+          "doc-quickstart"
+        ],
+        "authentication_prompt_count": 0
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000001"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000001",
+      "state": "subject_package_frozen",
+      "data": {
+        "frozen_package_path": "retained/package-store/sha256/20ba17871efe2aae1c673976c39fd06a920e6afbb64a5d31424baf8d945bf515.bin",
+        "frozen_package_file_sha256": "sha256:20ba17871efe2aae1c673976c39fd06a920e6afbb64a5d31424baf8d945bf515"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000001",
+      "--subject-id",
+      "fake-subject",
+      "--subject-version",
+      "0.1.0",
+      "--fake-verify-package",
+      "failed"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000001",
+      "state": "step_outcome_frozen",
+      "data": {
+        "package_verification_record_hash": "sha256:1e68c433bef737163bf3c9ac479f84f428e6bf69e547068f9808f36fbbe74436",
+        "status": "failed"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-output",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000001",
+      "--terminal-stage",
+      "verify_package"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-output",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000001",
+      "state": "subject_output_frozen",
+      "data": {
+        "subject_output_hash": "sha256:4852ce95560428d39cc1cec963788777102edf5f0003278267ae6386561fe38a",
+        "terminal_stage": "verify_package",
+        "step_outcome_hashes": [
+          "sha256:16d65b17fc2019328f9b25cb5d7d8560e8d4665fe231a16370995fa43a41ce31",
+          "sha256:659902119d2fb471cae23f7ad696613475900aa3b401ca6d96940c6b5df57b4e"
+        ],
+        "tree_hash": "sha256:c67490420b3895aa6777d94dc9ab3d6116f8cdc1ba67480cc1dfafde7ab83926"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "preregister-acquisition",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000002",
+      "--acquisition-source",
+      "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e",
+      "--adapter",
+      "sha256:8dcecd84e7a495d13a3e79cd6913dfab4a44252e2f19809e9472def0fb306d07",
+      "--acquisition-actor-script",
+      "sha256:2cbd48d538454b9f506ce0ac911e2dfc6772053c2f675b62c566d7f7a65bc5c6",
+      "--acquisition-actor-schema",
+      "sha256:bb9f4c8b0fd376e9d81a914ed56abb5646e0b8547a43f6ceccdf5f47a43d2880",
+      "--acquisition-step",
+      "sha256:5da675f43178f7cfa6ccd60ed8f601dd9b0404a1a91fe51b16a3113bc2d2bbfc",
+      "--package-verification-step",
+      "sha256:66e56f58a0f142d0d3114821befababf905ed4e783dbb90b25e98b13143a14b7",
+      "--generic-policy",
+      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "--trust-policy",
+      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "--limits",
+      "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
+      "--expires",
+      "2026-12-31T00:00:00Z"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "preregister-acquisition",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000002",
+      "state": "acquisition_preregistered",
+      "data": {
+        "acquisition_preregistration_hash": "sha256:ef1f912e644c2c60a4697838f09b95042b46e3c4be507eef571d1e78c6ac596f",
+        "selected_case_identity": "absent"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "acquire",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000002"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "acquire",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000002",
+      "state": "step_outcome_frozen",
+      "data": {
+        "acquisition_record_hash": "sha256:6da9d1a59d4520223ae2c58b51e4c69495bc807ad0c834ad2dc68fca65a2d5a9",
+        "status": "completed",
+        "attempts": 1,
+        "active_operator_ms": 2000,
+        "elapsed_ms": 2400,
+        "documentation_step_ids": [
+          "doc-install-overview",
+          "doc-quickstart"
+        ],
+        "authentication_prompt_count": 0
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000002"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000002",
+      "state": "subject_package_frozen",
+      "data": {
+        "frozen_package_path": "retained/package-store/sha256/20ba17871efe2aae1c673976c39fd06a920e6afbb64a5d31424baf8d945bf515.bin",
+        "frozen_package_file_sha256": "sha256:20ba17871efe2aae1c673976c39fd06a920e6afbb64a5d31424baf8d945bf515"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000002",
+      "--subject-id",
+      "fake-subject",
+      "--subject-version",
+      "0.1.0"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000002",
+      "state": "package_manifest_frozen",
+      "data": {
+        "package_verification_record_hash": "sha256:53e02ff0de0b9ed4ac10db45394c32d2431da527cc4cc621cc174b3195844340",
+        "status": "completed",
+        "subject_package_manifest_hash": "sha256:b8f39581aa499f6d0e35a67d8e572cd44586c038fdb03ddb5182eb52e2952245",
+        "package_file_sha256": "sha256:20ba17871efe2aae1c673976c39fd06a920e6afbb64a5d31424baf8d945bf515",
+        "next_authorized_state": "challenge_preregistered"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-output",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000002",
+      "--terminal-stage",
+      "verify_package"
+    ],
+    "exit_code": 10,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-output",
+      "ok": false,
+      "exit_code": 10,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [
+        {
+          "code": "GRAPH_CLOSURE_TERMINAL_MISMATCH",
+          "message": "a successful subject package manifest exists; the pre-environment terminal variant cannot close over it, so this run must continue to challenge preregistration"
+        }
+      ]
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "preregister-acquisition",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/failed-acquisition",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000003",
+      "--acquisition-source",
+      "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e",
+      "--adapter",
+      "sha256:8dcecd84e7a495d13a3e79cd6913dfab4a44252e2f19809e9472def0fb306d07",
+      "--acquisition-actor-script",
+      "sha256:2cbd48d538454b9f506ce0ac911e2dfc6772053c2f675b62c566d7f7a65bc5c6",
+      "--acquisition-actor-schema",
+      "sha256:bb9f4c8b0fd376e9d81a914ed56abb5646e0b8547a43f6ceccdf5f47a43d2880",
+      "--acquisition-step",
+      "sha256:5da675f43178f7cfa6ccd60ed8f601dd9b0404a1a91fe51b16a3113bc2d2bbfc",
+      "--package-verification-step",
+      "sha256:66e56f58a0f142d0d3114821befababf905ed4e783dbb90b25e98b13143a14b7",
+      "--generic-policy",
+      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "--trust-policy",
+      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "--limits",
+      "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
+      "--expires",
+      "2026-12-31T00:00:00Z"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "preregister-acquisition",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000003",
+      "state": "acquisition_preregistered",
+      "data": {
+        "acquisition_preregistration_hash": "sha256:ced3cbfc65aeaa10fd73663e8d7bfb32e1b62cabd4a7bae2690fb86e9caa5a85",
+        "selected_case_identity": "absent"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "acquire",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/failed-acquisition",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000003",
+      "--fake-acquire",
+      "failed"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "acquire",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000003",
+      "state": "invalidated",
+      "data": {
+        "acquisition_record_hash": "sha256:e95e4a78199f1d5af01ce15cab60f4aac0c2ce33a331ba67af5cd32c55a4f221",
+        "status": "failed",
+        "attempts": 1,
+        "active_operator_ms": 1500,
+        "elapsed_ms": 1500,
+        "documentation_step_ids": [
+          "doc-install-overview"
+        ],
+        "authentication_prompt_count": 1,
+        "invalid_run_record_hash": "sha256:a0c4b168aefa803a424641e694858d562182da737018dee3581501bde47c7ce6",
+        "terminal_state": "invalidated",
+        "cleanup_variant": "pre_environment"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "preregister-acquisition",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/held-out-refused",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-3NM0kb",
+      "--tier",
+      "held_out",
+      "--acquisition-source",
+      "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e",
+      "--adapter",
+      "sha256:8dcecd84e7a495d13a3e79cd6913dfab4a44252e2f19809e9472def0fb306d07",
+      "--acquisition-actor-script",
+      "sha256:2cbd48d538454b9f506ce0ac911e2dfc6772053c2f675b62c566d7f7a65bc5c6",
+      "--acquisition-actor-schema",
+      "sha256:bb9f4c8b0fd376e9d81a914ed56abb5646e0b8547a43f6ceccdf5f47a43d2880",
+      "--acquisition-step",
+      "sha256:5da675f43178f7cfa6ccd60ed8f601dd9b0404a1a91fe51b16a3113bc2d2bbfc",
+      "--package-verification-step",
+      "sha256:66e56f58a0f142d0d3114821befababf905ed4e783dbb90b25e98b13143a14b7",
+      "--generic-policy",
+      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "--trust-policy",
+      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "--limits",
+      "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
+      "--expires",
+      "2026-12-31T00:00:00Z"
+    ],
+    "exit_code": 3,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "preregister-acquisition",
+      "ok": false,
+      "exit_code": 3,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [
+        {
+          "code": "ADMISSION_SUBJECT_PORT_NOT_DEVELOPMENT",
+          "message": "tier held_out is refused: held-out and blind execution is disabled pending ERL2-OQ-007"
+        }
+      ]
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "preregister-acquisition",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bEOFjE",
+      "--tier",
+      "development",
+      "--adapter-entry",
+      "/Users/karthik/Developer/qualiber-reality-lab/adapters/reference-correct/dist/src/main.js",
+      "--run",
+      "00000000-0000-7000-8000-000000000004",
+      "--acquisition-source",
+      "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e",
+      "--adapter",
+      "sha256:9b54e82999d6ca798f9abb54b6b01af2c4ed4a421d0769748f577ac667968aa6",
+      "--acquisition-actor-script",
+      "sha256:2cbd48d538454b9f506ce0ac911e2dfc6772053c2f675b62c566d7f7a65bc5c6",
+      "--acquisition-actor-schema",
+      "sha256:bb9f4c8b0fd376e9d81a914ed56abb5646e0b8547a43f6ceccdf5f47a43d2880",
+      "--acquisition-step",
+      "sha256:518fd2a3d172ff372bba23bd9f5e0a01c8dab02f93a3c3b029a9d47c0415c2bb",
+      "--package-verification-step",
+      "sha256:f8e65ec1bf2c8dbcfabdbaa4cc890651e68e36dfbc9650acd47238a8dfb364e7",
+      "--generic-policy",
+      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "--trust-policy",
+      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "--limits",
+      "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
+      "--expires",
+      "2026-12-31T00:00:00Z"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "preregister-acquisition",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000004",
+      "state": "acquisition_preregistered",
+      "data": {
+        "acquisition_preregistration_hash": "sha256:7a515a1048a3aba74f0bcdd5eb89f27bbe7d1aa588b0ffce8233039c09e417d6",
+        "selected_case_identity": "absent"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "acquire",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bEOFjE",
+      "--tier",
+      "development",
+      "--adapter-entry",
+      "/Users/karthik/Developer/qualiber-reality-lab/adapters/reference-correct/dist/src/main.js",
+      "--run",
+      "00000000-0000-7000-8000-000000000004"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "acquire",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000004",
+      "state": "step_outcome_frozen",
+      "data": {
+        "acquisition_record_hash": "sha256:c2b3343513680bbaebcfe7a862bf92ff65087833246659fd135b9ca3897429b9",
+        "status": "completed",
+        "attempts": 1,
+        "active_operator_ms": 1800,
+        "elapsed_ms": 2100,
+        "documentation_step_ids": [
+          "doc-quickstart",
+          "doc-install-overview"
+        ],
+        "authentication_prompt_count": 0
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bEOFjE",
+      "--tier",
+      "development",
+      "--adapter-entry",
+      "/Users/karthik/Developer/qualiber-reality-lab/adapters/reference-correct/dist/src/main.js",
+      "--run",
+      "00000000-0000-7000-8000-000000000004"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000004",
+      "state": "subject_package_frozen",
+      "data": {
+        "frozen_package_path": "retained/package-store/sha256/a97fd7922960016fa30fce51d7c0fd695c3688f02dee28ee44c98aab9bcb430c.bin",
+        "frozen_package_file_sha256": "sha256:a97fd7922960016fa30fce51d7c0fd695c3688f02dee28ee44c98aab9bcb430c"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bEOFjE",
+      "--tier",
+      "development",
+      "--adapter-entry",
+      "/Users/karthik/Developer/qualiber-reality-lab/adapters/reference-correct/dist/src/main.js",
+      "--run",
+      "00000000-0000-7000-8000-000000000004",
+      "--subject-id",
+      "reference-correct",
+      "--subject-version",
+      "0.1.0"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000004",
+      "state": "package_manifest_frozen",
+      "data": {
+        "package_verification_record_hash": "sha256:1604bf9d1a1fc4af905820a34dbd8664a754b61935a7cffdbc8e3da794708798",
+        "status": "completed",
+        "subject_package_manifest_hash": "sha256:80b89887879d67fcc2fc1acb3d8cf94c1244bf77cefceed674a99201f210bbf8",
+        "package_file_sha256": "sha256:a97fd7922960016fa30fce51d7c0fd695c3688f02dee28ee44c98aab9bcb430c",
+        "next_authorized_state": "challenge_preregistered"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-output",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bEOFjE",
+      "--tier",
+      "development",
+      "--adapter-entry",
+      "/Users/karthik/Developer/qualiber-reality-lab/adapters/reference-correct/dist/src/main.js",
+      "--run",
+      "00000000-0000-7000-8000-000000000004",
+      "--terminal-stage",
+      "verify_package"
+    ],
+    "exit_code": 10,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-output",
+      "ok": false,
+      "exit_code": 10,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [
+        {
+          "code": "GRAPH_CLOSURE_TERMINAL_MISMATCH",
+          "message": "a successful subject package manifest exists; the pre-environment terminal variant cannot close over it, so this run must continue to challenge preregistration"
+        }
+      ]
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "preregister-acquisition",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bEOFjE",
+      "--tier",
+      "development",
+      "--adapter-entry",
+      "/Users/karthik/Developer/qualiber-reality-lab/adapters/reference-limited/dist/src/main.js",
+      "--run",
+      "00000000-0000-7000-8000-000000000005",
+      "--acquisition-source",
+      "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e",
+      "--adapter",
+      "sha256:7ffd7ba0d4bf4d8c21d9ed5520739e788df32b49bae30ed7d79cb9284ee431ba",
+      "--acquisition-actor-script",
+      "sha256:2cbd48d538454b9f506ce0ac911e2dfc6772053c2f675b62c566d7f7a65bc5c6",
+      "--acquisition-actor-schema",
+      "sha256:bb9f4c8b0fd376e9d81a914ed56abb5646e0b8547a43f6ceccdf5f47a43d2880",
+      "--acquisition-step",
+      "sha256:518fd2a3d172ff372bba23bd9f5e0a01c8dab02f93a3c3b029a9d47c0415c2bb",
+      "--package-verification-step",
+      "sha256:f8e65ec1bf2c8dbcfabdbaa4cc890651e68e36dfbc9650acd47238a8dfb364e7",
+      "--generic-policy",
+      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "--trust-policy",
+      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "--limits",
+      "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
+      "--expires",
+      "2026-12-31T00:00:00Z"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "preregister-acquisition",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000005",
+      "state": "acquisition_preregistered",
+      "data": {
+        "acquisition_preregistration_hash": "sha256:4cc8a67474c86fe0a7888b34860b332737dffc0d4f91c3f06831121094891bd3",
+        "selected_case_identity": "absent"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "acquire",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bEOFjE",
+      "--tier",
+      "development",
+      "--adapter-entry",
+      "/Users/karthik/Developer/qualiber-reality-lab/adapters/reference-limited/dist/src/main.js",
+      "--run",
+      "00000000-0000-7000-8000-000000000005"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "acquire",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000005",
+      "state": "step_outcome_frozen",
+      "data": {
+        "acquisition_record_hash": "sha256:5f06ede4c6b1b676a536ce267728dbaa22c4c39cff9ebe6ef1d2aadd6b90de75",
+        "status": "completed",
+        "attempts": 1,
+        "active_operator_ms": 1200,
+        "elapsed_ms": 1400,
+        "documentation_step_ids": [
+          "doc-readme"
+        ],
+        "authentication_prompt_count": 0
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bEOFjE",
+      "--tier",
+      "development",
+      "--adapter-entry",
+      "/Users/karthik/Developer/qualiber-reality-lab/adapters/reference-limited/dist/src/main.js",
+      "--run",
+      "00000000-0000-7000-8000-000000000005"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000005",
+      "state": "subject_package_frozen",
+      "data": {
+        "frozen_package_path": "retained/package-store/sha256/080ca816d55fbac4aaaa63a31bde596bb66b51784b3a44d9fb9e5155474113fc.bin",
+        "frozen_package_file_sha256": "sha256:080ca816d55fbac4aaaa63a31bde596bb66b51784b3a44d9fb9e5155474113fc"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bEOFjE",
+      "--tier",
+      "development",
+      "--adapter-entry",
+      "/Users/karthik/Developer/qualiber-reality-lab/adapters/reference-limited/dist/src/main.js",
+      "--run",
+      "00000000-0000-7000-8000-000000000005",
+      "--subject-id",
+      "reference-limited",
+      "--subject-version",
+      "0.1.0"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000005",
+      "state": "step_outcome_frozen",
+      "data": {
+        "package_verification_record_hash": "sha256:8f29291b90b1e8adb443f772b99f29dd0fa9901d46dccad7762d1e9d8f56ffad",
+        "status": "unsupported"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-output",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bEOFjE",
+      "--tier",
+      "development",
+      "--adapter-entry",
+      "/Users/karthik/Developer/qualiber-reality-lab/adapters/reference-limited/dist/src/main.js",
+      "--run",
+      "00000000-0000-7000-8000-000000000005",
+      "--terminal-stage",
+      "verify_package"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-output",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000005",
+      "state": "subject_output_frozen",
+      "data": {
+        "subject_output_hash": "sha256:65c657a799bf536abb52bee8995dca667b31df38a3c6f178dd170866476735ca",
+        "terminal_stage": "verify_package",
+        "step_outcome_hashes": [
+          "sha256:87591eaf1a78239c54c40458f9baa4d63a8395808a90598a961ac30459939196",
+          "sha256:f6d00835bdbe497e005312f87db41566f4c0bd0fd09fa1dfca733a633404b211"
+        ],
+        "tree_hash": "sha256:2dcbbcd4c8d78f8cb2401317191b737c5341f18b9ece26374e7e7c004de11318"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "preregister-acquisition",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bEOFjE",
+      "--tier",
+      "development",
+      "--adapter-entry",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/sabotage/adapters/timeout.mjs",
+      "--run",
+      "00000000-0000-7000-8000-000000000006",
+      "--acquisition-source",
+      "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e",
+      "--adapter",
+      "sha256:9b54e82999d6ca798f9abb54b6b01af2c4ed4a421d0769748f577ac667968aa6",
+      "--acquisition-actor-script",
+      "sha256:2cbd48d538454b9f506ce0ac911e2dfc6772053c2f675b62c566d7f7a65bc5c6",
+      "--acquisition-actor-schema",
+      "sha256:bb9f4c8b0fd376e9d81a914ed56abb5646e0b8547a43f6ceccdf5f47a43d2880",
+      "--acquisition-step",
+      "sha256:518fd2a3d172ff372bba23bd9f5e0a01c8dab02f93a3c3b029a9d47c0415c2bb",
+      "--package-verification-step",
+      "sha256:f8e65ec1bf2c8dbcfabdbaa4cc890651e68e36dfbc9650acd47238a8dfb364e7",
+      "--generic-policy",
+      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "--trust-policy",
+      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "--limits",
+      "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
+      "--expires",
+      "2026-12-31T00:00:00Z"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "preregister-acquisition",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000006",
+      "state": "acquisition_preregistered",
+      "data": {
+        "acquisition_preregistration_hash": "sha256:b7ee18e5a9266b4bbd480258281dae3a7ff91ebe2eba35c497ad65dd1b2407ce",
+        "selected_case_identity": "absent"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "acquire",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/run",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bEOFjE",
+      "--tier",
+      "development",
+      "--adapter-entry",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/sabotage/adapters/timeout.mjs",
+      "--run",
+      "00000000-0000-7000-8000-000000000006"
+    ],
+    "exit_code": 6,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "acquire",
+      "ok": false,
+      "exit_code": 6,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [
+        {
+          "code": "ADAPTER_DEADLINE_EXCEEDED",
+          "message": "the adapter exceeded its 30000ms deadline and its process tree was terminated"
+        }
+      ],
+      "run_id": "00000000-0000-7000-8000-000000000006",
+      "state": "invalidated",
+      "data": {
+        "invalid_run_record_hash": "sha256:73720953047b0c689c96c9b52e0968055fa55bc2b81ffcc2ee36d1d766ef8ad2",
+        "terminal_state": "invalidated",
+        "cleanup_variant": "none",
+        "adapter_failure_finding_hash": "sha256:5601c0f7bee034537be02510cbba60742f358042ca3098ab7383fc540f28ec38",
+        "refusal_code": "ADAPTER_DEADLINE_EXCEEDED"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-record",
+      "--record",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/run/retained/invalid-run-record.json",
+      "--lifecycle",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/lifecycle.json",
+      "--artifact-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/run",
+      "--root-config",
+      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/root-config.json",
+      "--offline"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-record",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000006",
+      "state": "invalidated",
+      "data": {
+        "closure": {
+          "schema_version": "mandatory-graph-closure-report/v1",
+          "algorithm": "erl2-mandatory-closure/v1",
+          "run_id": "00000000-0000-7000-8000-000000000006",
+          "derived_terminal_phase": {
+            "kind": "lifecycle_phase",
+            "lifecycle_event_hash": "sha256:6a3e7a08b23c7205f81ffc2df170bb09854c392907e1823e48bbbfec81777e7b",
+            "phase": "acquisition"
+          },
+          "derived_terminal_variant": "invalid",
+          "lifecycle_head_hash": "sha256:b846ee4dd128486ed8416ed2221a590476a15856d3e1552ab2b9e47c1f623e00",
+          "required_hashes_by_role": [
+            {
+              "role": "invalid-run-record",
+              "ordered_hashes": [
+                "sha256:73720953047b0c689c96c9b52e0968055fa55bc2b81ffcc2ee36d1d766ef8ad2"
+              ]
+            },
+            {
+              "role": "reached-evidence",
+              "ordered_hashes": [
+                "sha256:b7ee18e5a9266b4bbd480258281dae3a7ff91ebe2eba35c497ad65dd1b2407ce",
+                "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e",
+                "sha256:b9cbeb8e9bcacc7266d1fd11c36d53929d5bb9bf850ab9f60bf00062ecc56059",
+                "sha256:9b54e82999d6ca798f9abb54b6b01af2c4ed4a421d0769748f577ac667968aa6",
+                "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+                "sha256:5601c0f7bee034537be02510cbba60742f358042ca3098ab7383fc540f28ec38"
+              ]
+            },
+            {
+              "role": "cleanup-attempt",
+              "ordered_hashes": []
+            }
+          ],
+          "rejected_extra_hashes": [],
+          "missing_roles": [],
+          "verdict": "valid",
+          "verified_at": "2026-07-24T21:51:42Z",
+          "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+          "core_hash": "sha256:39848944f989aa45c04d24a37b020ae6933490de0205f48765b8f0cca767bf23"
+        }
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "preregister-acquisition",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YEQh1m",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000007",
+      "--acquisition-source",
+      "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e",
+      "--adapter",
+      "sha256:8dcecd84e7a495d13a3e79cd6913dfab4a44252e2f19809e9472def0fb306d07",
+      "--acquisition-actor-script",
+      "sha256:2cbd48d538454b9f506ce0ac911e2dfc6772053c2f675b62c566d7f7a65bc5c6",
+      "--acquisition-actor-schema",
+      "sha256:bb9f4c8b0fd376e9d81a914ed56abb5646e0b8547a43f6ceccdf5f47a43d2880",
+      "--acquisition-step",
+      "sha256:c51456e1df2d04880ca779f00e4348d29efc55ed5878da2186b66ed7d74c1799",
+      "--package-verification-step",
+      "sha256:c10db6c27f23bff84ebaf595bb48e83a483562f5c27f6ee2fdfbb560aa09a46c",
+      "--generic-policy",
+      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "--trust-policy",
+      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "--limits",
+      "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
+      "--expires",
+      "2026-12-31T00:00:00Z"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "preregister-acquisition",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000007",
+      "state": "acquisition_preregistered",
+      "data": {
+        "acquisition_preregistration_hash": "sha256:b1ddb80efaaa3f7d32fbae3c0c110f5d25988db4a9edbae061c0b28159cc36e0",
+        "selected_case_identity": "absent"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "acquire",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YEQh1m",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000007"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "acquire",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000007",
+      "state": "step_outcome_frozen",
+      "data": {
+        "acquisition_record_hash": "sha256:a50a35fc864bc84e071dc31a0e6ab3577833d570cdf73e8cd09e2cc98a37bf24",
+        "status": "completed",
+        "attempts": 1,
+        "active_operator_ms": 2000,
+        "elapsed_ms": 2400,
+        "documentation_step_ids": [
+          "doc-install-overview",
+          "doc-quickstart"
+        ],
+        "authentication_prompt_count": 0
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YEQh1m",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000007"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000007",
+      "state": "subject_package_frozen",
+      "data": {
+        "frozen_package_path": "retained/package-store/sha256/20ba17871efe2aae1c673976c39fd06a920e6afbb64a5d31424baf8d945bf515.bin",
+        "frozen_package_file_sha256": "sha256:20ba17871efe2aae1c673976c39fd06a920e6afbb64a5d31424baf8d945bf515"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YEQh1m",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000007",
+      "--fake-verify-package",
+      "failed",
+      "--subject-id",
+      "reference-subject",
+      "--subject-version",
+      "0.1.0"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000007",
+      "state": "step_outcome_frozen",
+      "data": {
+        "package_verification_record_hash": "sha256:48c257231319296cc0c4f1cfa1922fcdeab4c9549a1c52c31b4c70106d7960e4",
+        "status": "failed"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-output",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YEQh1m",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000007",
+      "--terminal-stage",
+      "verify_package"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-output",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000007",
+      "state": "subject_output_frozen",
+      "data": {
+        "subject_output_hash": "sha256:2f456b5f81d61d7ec15f788a33a0db18b259a6df9bdc72609dfe3752720e2e9e",
+        "terminal_stage": "verify_package",
+        "step_outcome_hashes": [
+          "sha256:724ffe41ddc3e7dad9e7f73cddfb7a5f02c9c8ea4850c2ab1e35e4d95c64d651",
+          "sha256:cdbb34d930a2d17a15328b80c53a549f586343337832261d121547b93abd9888"
+        ],
+        "tree_hash": "sha256:7c0df4365bcf17fc7362e3d1136689ea8b1cf88c37e3b2a7ec1afdb1fa03f069"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "reveal",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YEQh1m",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000007",
+      "--vault",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-IYOwHY"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "reveal",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000007",
+      "state": "judge_journey_expectation_revealed",
+      "data": {
+        "reveal_record_hash": "sha256:e0feee6a7692d21f40bc7d0a0636ae15e36966a0a49ff657d294ce1b73523d16",
+        "revealed_expectation_hashes": [
+          "sha256:e4797e248ff46ed035096af7bef42772f98eaaa29ee5f14b07afa1f17ad24029"
+        ],
+        "revealed_count": 1
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "evaluate",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YEQh1m",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000007"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "evaluate",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000007",
+      "state": "generic_precleanup_results_complete",
+      "data": {
+        "journey_result_hash": "sha256:1eae1192cbd601391ea7356d7e0de960c86869b24bc292907a20eeca0d49f1ab",
+        "journey_status": "evaluated",
+        "domain_result_hash": "sha256:53b885d53120bf33ef336fa2404aa00dedb02f3b2f05eed7138800954374cba6",
+        "domain_status": "not_applicable",
+        "domain_not_applicable_reason": "pre_environment_terminal",
+        "precleanup_result_join_hash": "sha256:27a1ab7b0b35fbe23fe6bb3cf59d9d0e71eb194a23085c6c6f1e67937950ebee",
+        "domain_variant": "not_applicable",
+        "metric_result_hashes": [
+          "sha256:4ce920cdccedc608ef1977e270b886e0c97d291b7e1f42e5fa5e5b7e1545510a",
+          "sha256:f2d29721223a16b05986b25cf29eebf56852e5882b9a6705799adc08734289a0",
+          "sha256:b7bd39ab20c6fbf2f3b2aa374f833a8fb29abb6fe31684649d2a8e3139108193",
+          "sha256:477738c3c81ef3628bc2b9df772ec8b24dc83970f0b742944487558a8e71d159",
+          "sha256:b1d74c8869180217ea1f942b2452ec956914e5248569def587043fefead46fe9",
+          "sha256:6db60a1036e772bec8b19bda9e0171161893743270fa128c5662d780ddb88a7e",
+          "sha256:c0aa24fe60e3abfdd533631da4373946b5bcca579d08668bb886b8844d02ee30",
+          "sha256:ca964e738831e77fd07f774c7d045ba15222fd7a1d480332646912e4b25dad50",
+          "sha256:205a6d3a075aca985b3bdabd43e45350db3ae60b26727b7c638f54384c33e58f"
+        ],
+        "metric_results": [
+          {
+            "metric_id": "documentation-success",
+            "status": "not_applicable",
+            "value": null,
+            "threshold_class": "information"
+          },
+          {
+            "metric_id": "journey-active-ms",
+            "status": "measured",
+            "value": "2500",
+            "threshold_class": "measurement"
+          },
+          {
+            "metric_id": "journey-elapsed-ms",
+            "status": "measured",
+            "value": "8000",
+            "threshold_class": "measurement"
+          },
+          {
+            "metric_id": "mutation-compensation",
+            "status": "not_applicable",
+            "value": null,
+            "threshold_class": "ordinary_gate"
+          },
+          {
+            "metric_id": "operator-interventions",
+            "status": "measured",
+            "value": "0",
+            "threshold_class": "measurement"
+          },
+          {
+            "metric_id": "recovery-outcome",
+            "status": "not_applicable",
+            "value": null,
+            "threshold_class": "ordinary_gate"
+          },
+          {
+            "metric_id": "step-failure-count",
+            "status": "measured",
+            "value": "1",
+            "threshold_class": "measurement"
+          },
+          {
+            "metric_id": "step-retry-count",
+            "status": "measured",
+            "value": "0",
+            "threshold_class": "measurement"
+          },
+          {
+            "metric_id": "unsupported-retention",
+            "status": "measured",
+            "value": "0",
+            "threshold_class": "measurement"
+          }
+        ]
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "finalize-generic",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YEQh1m",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000007",
+      "--claim-scope",
+      "T1"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "finalize-generic",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000007",
+      "state": "generic_finalized",
+      "data": {
+        "run_record_hash": "sha256:6acbbd62446116a81b56b86f011534814d81a12feaa61bb2d5d2b35cdbce506e",
+        "terminal_stage": "verify_package",
+        "validity_result_hash": "sha256:f53653e77dc3eee0db4582ba5b1482081558f3ebfaff88ef3f0af5679c8e3410",
+        "validity_status": "valid",
+        "generic_evaluation_index_hash": "sha256:d3a45c773fbdf24832273a793c2f0f119dfe8f1abd36d9eb151dcf27ba7bcaba",
+        "final_attestation_hash": "sha256:0c427939e301e61afb30c03462907cfcc1acfb59408a5b1084ef0360c5fc26ad",
+        "claim_scope": "T1",
+        "public_bundle_hash": "sha256:b3869c4f46d13c6f905377eaf503a20245cb4d83c68157ba03684ee32ccb3add",
+        "public_bundle_path": "retained/public-bundle.json"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify",
+      "--public-bundle",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification/retained/public-bundle.json",
+      "--root-config",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification/root-config.json",
+      "--artifact-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "--lifecycle",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification/lifecycle.json",
+      "--offline"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000007",
+      "record_hash": "sha256:0c427939e301e61afb30c03462907cfcc1acfb59408a5b1084ef0360c5fc26ad",
+      "data": {
+        "verdict": "valid",
+        "trust_head_hash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+        "valid_when_signed": true,
+        "currently_trusted": true,
+        "closure": {
+          "schema_version": "mandatory-graph-closure-report/v1",
+          "algorithm": "erl2-mandatory-closure/v1",
+          "run_id": "00000000-0000-7000-8000-000000000007",
+          "derived_terminal_phase": "verify_package",
+          "derived_terminal_variant": "pre_environment",
+          "lifecycle_head_hash": "sha256:e3a6cc83864459f3f7f961377db984e790ec66be51b93bc34453f069756c21bc",
+          "verified_trust_head_hash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+          "required_hashes_by_role": [
+            {
+              "role": "acquisition-preregistration",
+              "ordered_hashes": [
+                "sha256:b1ddb80efaaa3f7d32fbae3c0c110f5d25988db4a9edbae061c0b28159cc36e0"
+              ]
+            },
+            {
+              "role": "acquisition-source-manifest",
+              "ordered_hashes": [
+                "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e"
+              ]
+            },
+            {
+              "role": "acquisition-record",
+              "ordered_hashes": [
+                "sha256:a50a35fc864bc84e071dc31a0e6ab3577833d570cdf73e8cd09e2cc98a37bf24"
+              ]
+            },
+            {
+              "role": "package-verification-record",
+              "ordered_hashes": [
+                "sha256:48c257231319296cc0c4f1cfa1922fcdeab4c9549a1c52c31b4c70106d7960e4"
+              ]
+            },
+            {
+              "role": "journey-step-outcome",
+              "ordered_hashes": [
+                "sha256:724ffe41ddc3e7dad9e7f73cddfb7a5f02c9c8ea4850c2ab1e35e4d95c64d651",
+                "sha256:cdbb34d930a2d17a15328b80c53a549f586343337832261d121547b93abd9888"
+              ]
+            },
+            {
+              "role": "subject-output-manifest",
+              "ordered_hashes": [
+                "sha256:2f456b5f81d61d7ec15f788a33a0db18b259a6df9bdc72609dfe3752720e2e9e"
+              ]
+            },
+            {
+              "role": "journey-result",
+              "ordered_hashes": [
+                "sha256:1eae1192cbd601391ea7356d7e0de960c86869b24bc292907a20eeca0d49f1ab"
+              ]
+            },
+            {
+              "role": "domain-result",
+              "ordered_hashes": [
+                "sha256:53b885d53120bf33ef336fa2404aa00dedb02f3b2f05eed7138800954374cba6"
+              ]
+            },
+            {
+              "role": "precleanup-result-join",
+              "ordered_hashes": [
+                "sha256:27a1ab7b0b35fbe23fe6bb3cf59d9d0e71eb194a23085c6c6f1e67937950ebee"
+              ]
+            },
+            {
+              "role": "pre-environment-cleanup",
+              "ordered_hashes": [
+                "sha256:146d690f864190508b7c0a2a0f1b67e6fd33fab87f89ed5812da64e9c14b2964"
+              ]
+            },
+            {
+              "role": "validity-result",
+              "ordered_hashes": [
+                "sha256:f53653e77dc3eee0db4582ba5b1482081558f3ebfaff88ef3f0af5679c8e3410"
+              ]
+            },
+            {
+              "role": "generic-evaluation-index",
+              "ordered_hashes": [
+                "sha256:d3a45c773fbdf24832273a793c2f0f119dfe8f1abd36d9eb151dcf27ba7bcaba"
+              ]
+            },
+            {
+              "role": "run-record",
+              "ordered_hashes": [
+                "sha256:6acbbd62446116a81b56b86f011534814d81a12feaa61bb2d5d2b35cdbce506e"
+              ]
+            },
+            {
+              "role": "final-attestation",
+              "ordered_hashes": [
+                "sha256:0c427939e301e61afb30c03462907cfcc1acfb59408a5b1084ef0360c5fc26ad"
+              ]
+            },
+            {
+              "role": "signer-inventory",
+              "ordered_hashes": [
+                "sha256:52b4a6bfbbc7f2e00b7369396f3129f15edc72d4f867ffa77ebce5e4ab79fdee"
+              ]
+            },
+            {
+              "role": "finding",
+              "ordered_hashes": [
+                "sha256:54f02750c051f8a2e5a1dab935ba1fce074880e9578ac0cfe0959cee7f61873c"
+              ]
+            },
+            {
+              "role": "metric-result",
+              "ordered_hashes": [
+                "sha256:4ce920cdccedc608ef1977e270b886e0c97d291b7e1f42e5fa5e5b7e1545510a",
+                "sha256:f2d29721223a16b05986b25cf29eebf56852e5882b9a6705799adc08734289a0",
+                "sha256:b7bd39ab20c6fbf2f3b2aa374f833a8fb29abb6fe31684649d2a8e3139108193",
+                "sha256:477738c3c81ef3628bc2b9df772ec8b24dc83970f0b742944487558a8e71d159",
+                "sha256:b1d74c8869180217ea1f942b2452ec956914e5248569def587043fefead46fe9",
+                "sha256:6db60a1036e772bec8b19bda9e0171161893743270fa128c5662d780ddb88a7e",
+                "sha256:c0aa24fe60e3abfdd533631da4373946b5bcca579d08668bb886b8844d02ee30",
+                "sha256:ca964e738831e77fd07f774c7d045ba15222fd7a1d480332646912e4b25dad50",
+                "sha256:205a6d3a075aca985b3bdabd43e45350db3ae60b26727b7c638f54384c33e58f"
+              ]
+            },
+            {
+              "role": "judge-expectation-reveal",
+              "ordered_hashes": [
+                "sha256:e0feee6a7692d21f40bc7d0a0636ae15e36966a0a49ff657d294ce1b73523d16"
+              ]
+            }
+          ],
+          "rejected_extra_hashes": [],
+          "missing_roles": [],
+          "verdict": "valid",
+          "verified_at": "2026-07-24T21:51:44Z",
+          "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+          "core_hash": "sha256:b620f2f2709474a61880fcf3baba2591cc8c41c48fd003184fa0e562df2ed9b2"
+        }
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-record",
+      "--record",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification/retained/public-bundle.json",
+      "--lifecycle",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification/lifecycle.json",
+      "--artifact-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "--root-config",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification/root-config.json",
+      "--offline"
+    ],
+    "exit_code": 10,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-record",
+      "ok": false,
+      "exit_code": 10,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [
+        {
+          "code": "VERIFY_RECORD_ATTESTATION_PRESENT",
+          "message": "verify-record does not accept a public verification bundle"
+        }
+      ]
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "preregister-acquisition",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-S2oyVD",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000008",
+      "--acquisition-source",
+      "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e",
+      "--adapter",
+      "sha256:8dcecd84e7a495d13a3e79cd6913dfab4a44252e2f19809e9472def0fb306d07",
+      "--acquisition-actor-script",
+      "sha256:2cbd48d538454b9f506ce0ac911e2dfc6772053c2f675b62c566d7f7a65bc5c6",
+      "--acquisition-actor-schema",
+      "sha256:bb9f4c8b0fd376e9d81a914ed56abb5646e0b8547a43f6ceccdf5f47a43d2880",
+      "--acquisition-step",
+      "sha256:6c69b632ae854d0c7d1f0a0319bcc654d84806aeeac0eeb37e87bc8f5893f73e",
+      "--package-verification-step",
+      "sha256:e868b0c9e1547444637f45bdf2eaf0bda1ed4ce64e07b0066c8749a2cfb8989d",
+      "--generic-policy",
+      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "--trust-policy",
+      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "--limits",
+      "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
+      "--expires",
+      "2026-12-31T00:00:00Z"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "preregister-acquisition",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000008",
+      "state": "acquisition_preregistered",
+      "data": {
+        "acquisition_preregistration_hash": "sha256:5296bb4df7bd0c964a5ea2f5bbc964db43a784f9d82f6fd1ba65e275b10a33aa",
+        "selected_case_identity": "absent"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "acquire",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-S2oyVD",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000008"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "acquire",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000008",
+      "state": "step_outcome_frozen",
+      "data": {
+        "acquisition_record_hash": "sha256:e7fc4621e61f5f2a01820121cf800594a99025026d90f0cb963a03b74e12ebb1",
+        "status": "completed",
+        "attempts": 1,
+        "active_operator_ms": 2000,
+        "elapsed_ms": 2400,
+        "documentation_step_ids": [
+          "doc-install-overview",
+          "doc-quickstart"
+        ],
+        "authentication_prompt_count": 0
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-S2oyVD",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000008"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000008",
+      "state": "subject_package_frozen",
+      "data": {
+        "frozen_package_path": "retained/package-store/sha256/20ba17871efe2aae1c673976c39fd06a920e6afbb64a5d31424baf8d945bf515.bin",
+        "frozen_package_file_sha256": "sha256:20ba17871efe2aae1c673976c39fd06a920e6afbb64a5d31424baf8d945bf515"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-S2oyVD",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000008",
+      "--fake-verify-package",
+      "unsupported",
+      "--subject-id",
+      "reference-subject",
+      "--subject-version",
+      "0.1.0"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000008",
+      "state": "step_outcome_frozen",
+      "data": {
+        "package_verification_record_hash": "sha256:73d300688abcc86fb6ada8f6fcb81d0a82487e7b4b87e061efd61577b3a71947",
+        "status": "unsupported"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-output",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-S2oyVD",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000008",
+      "--terminal-stage",
+      "verify_package"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-output",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000008",
+      "state": "subject_output_frozen",
+      "data": {
+        "subject_output_hash": "sha256:cd4fc4de09ae1694fc2ed3f3d91fd857fb3ed944ad41f7a972e336018fba9d10",
+        "terminal_stage": "verify_package",
+        "step_outcome_hashes": [
+          "sha256:cc2242661c8fa296ccf5baf17f323036c6c15d7a2017bb2145343fad91c80e17",
+          "sha256:9046f107d29c8808d5c2f15aabdf15f50d623846238bd76854d9b0e848a345cc"
+        ],
+        "tree_hash": "sha256:42b077c19f67172be6ee77fb68ea7adec59ff41014cfb66f3a38258842b25d7f"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "reveal",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-S2oyVD",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000008",
+      "--vault",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-RcpohI"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "reveal",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000008",
+      "state": "judge_journey_expectation_revealed",
+      "data": {
+        "reveal_record_hash": "sha256:5cebba7f8e08200bff2b9f5703b22dcf6fa7e6ed7c1b5cd0e6f009a29c8c283c",
+        "revealed_expectation_hashes": [
+          "sha256:c4f84acaa6ade35eeda63f9c5e974bc0f56750d62abebef68559dfd8f27e69ac"
+        ],
+        "revealed_count": 1
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "evaluate",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-S2oyVD",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000008"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "evaluate",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000008",
+      "state": "generic_precleanup_results_complete",
+      "data": {
+        "journey_result_hash": "sha256:1309bb7cd68daec7911847041d7c4af7c0237839eaa08362d9557c2612acf298",
+        "journey_status": "evaluated",
+        "domain_result_hash": "sha256:d48fbb4c57f3a9a8531194315cdaa85d4cebae39db9f38514ba091101c310259",
+        "domain_status": "not_applicable",
+        "domain_not_applicable_reason": "pre_environment_terminal",
+        "precleanup_result_join_hash": "sha256:d57c8445d835c7330273c46557e45c067e7622d3a4e21f2f5bb488950c14c260",
+        "domain_variant": "not_applicable",
+        "metric_result_hashes": [
+          "sha256:2c38add23371db58483968a5bb532dcb5cfbd4a7cd1fe7b8d4bfb94a8c7e15ac",
+          "sha256:b920f8de1d64dce4ba830abc674726350450b10c55ada9160fa15af8df2ecdce",
+          "sha256:21b87b17c8d5a425280925ea02165180a44bf8e1ba3a98468fd27ba5fa85259c",
+          "sha256:18a82b4dfda4b1807cf3b915a14954983e75491fcac967431c572acabcd61534",
+          "sha256:e3283094361f4786f0a35b04411ea1b66c1f79c61ec80586b18a9811b1fb6c7d",
+          "sha256:76b178227876faa40c577b965e89616beb1d5345be39a35f43adcb02d4dae6d0",
+          "sha256:fdd3a076f37159c19bc1113b53a682b41e4d97c1cbb02035b47b6f328db0f970",
+          "sha256:515c7e284a385f5d877c5daaa36f9f935139c4c553d1116bc05e34a53bf5e997",
+          "sha256:c05e0b67f8ba1b06b6b3d13d692ef3b31af7f390cdbc74bb10ae855739fb308d"
+        ],
+        "metric_results": [
+          {
+            "metric_id": "documentation-success",
+            "status": "not_applicable",
+            "value": null,
+            "threshold_class": "information"
+          },
+          {
+            "metric_id": "journey-active-ms",
+            "status": "measured",
+            "value": "2500",
+            "threshold_class": "measurement"
+          },
+          {
+            "metric_id": "journey-elapsed-ms",
+            "status": "measured",
+            "value": "8000",
+            "threshold_class": "measurement"
+          },
+          {
+            "metric_id": "mutation-compensation",
+            "status": "not_applicable",
+            "value": null,
+            "threshold_class": "ordinary_gate"
+          },
+          {
+            "metric_id": "operator-interventions",
+            "status": "measured",
+            "value": "0",
+            "threshold_class": "measurement"
+          },
+          {
+            "metric_id": "recovery-outcome",
+            "status": "not_applicable",
+            "value": null,
+            "threshold_class": "ordinary_gate"
+          },
+          {
+            "metric_id": "step-failure-count",
+            "status": "measured",
+            "value": "0",
+            "threshold_class": "measurement"
+          },
+          {
+            "metric_id": "step-retry-count",
+            "status": "measured",
+            "value": "0",
+            "threshold_class": "measurement"
+          },
+          {
+            "metric_id": "unsupported-retention",
+            "status": "measured",
+            "value": "1",
+            "threshold_class": "measurement"
+          }
+        ]
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "finalize-generic",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-S2oyVD",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000008",
+      "--claim-scope",
+      "T1"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "finalize-generic",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000008",
+      "state": "generic_finalized",
+      "data": {
+        "run_record_hash": "sha256:4de3d972f26a203e5413955aa8a670f567d0a48767aead705efbfebbf3d17080",
+        "terminal_stage": "verify_package",
+        "validity_result_hash": "sha256:a2859ab64f2b04182e50e7aad4649b4dc49d64729745788fc2da76094959ddb6",
+        "validity_status": "valid",
+        "generic_evaluation_index_hash": "sha256:3666a3506c876e3ac847f8fdc27ae252d6fd15a5e12c9c3f91e308f9e6eb4b9d",
+        "final_attestation_hash": "sha256:969c4756062c3746f1c853b7871fa83b926362491cd79141972b2167bdf48b6a",
+        "claim_scope": "T1",
+        "public_bundle_hash": "sha256:e3498cb065642d2b7f911b4a354e094644e0dffbae75226186a569d162dfe355",
+        "public_bundle_path": "retained/public-bundle.json"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify",
+      "--public-bundle",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification/retained/public-bundle.json",
+      "--root-config",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification/root-config.json",
+      "--artifact-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "--lifecycle",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification/lifecycle.json",
+      "--offline"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000008",
+      "record_hash": "sha256:969c4756062c3746f1c853b7871fa83b926362491cd79141972b2167bdf48b6a",
+      "data": {
+        "verdict": "valid",
+        "trust_head_hash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+        "valid_when_signed": true,
+        "currently_trusted": true,
+        "closure": {
+          "schema_version": "mandatory-graph-closure-report/v1",
+          "algorithm": "erl2-mandatory-closure/v1",
+          "run_id": "00000000-0000-7000-8000-000000000008",
+          "derived_terminal_phase": "verify_package",
+          "derived_terminal_variant": "pre_environment",
+          "lifecycle_head_hash": "sha256:1ceedf70f0883834f8c5a50c528c227e4a7efd61b3222c63dc35f2ce390c4fef",
+          "verified_trust_head_hash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+          "required_hashes_by_role": [
+            {
+              "role": "acquisition-preregistration",
+              "ordered_hashes": [
+                "sha256:5296bb4df7bd0c964a5ea2f5bbc964db43a784f9d82f6fd1ba65e275b10a33aa"
+              ]
+            },
+            {
+              "role": "acquisition-source-manifest",
+              "ordered_hashes": [
+                "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e"
+              ]
+            },
+            {
+              "role": "acquisition-record",
+              "ordered_hashes": [
+                "sha256:e7fc4621e61f5f2a01820121cf800594a99025026d90f0cb963a03b74e12ebb1"
+              ]
+            },
+            {
+              "role": "package-verification-record",
+              "ordered_hashes": [
+                "sha256:73d300688abcc86fb6ada8f6fcb81d0a82487e7b4b87e061efd61577b3a71947"
+              ]
+            },
+            {
+              "role": "journey-step-outcome",
+              "ordered_hashes": [
+                "sha256:cc2242661c8fa296ccf5baf17f323036c6c15d7a2017bb2145343fad91c80e17",
+                "sha256:9046f107d29c8808d5c2f15aabdf15f50d623846238bd76854d9b0e848a345cc"
+              ]
+            },
+            {
+              "role": "subject-output-manifest",
+              "ordered_hashes": [
+                "sha256:cd4fc4de09ae1694fc2ed3f3d91fd857fb3ed944ad41f7a972e336018fba9d10"
+              ]
+            },
+            {
+              "role": "journey-result",
+              "ordered_hashes": [
+                "sha256:1309bb7cd68daec7911847041d7c4af7c0237839eaa08362d9557c2612acf298"
+              ]
+            },
+            {
+              "role": "domain-result",
+              "ordered_hashes": [
+                "sha256:d48fbb4c57f3a9a8531194315cdaa85d4cebae39db9f38514ba091101c310259"
+              ]
+            },
+            {
+              "role": "precleanup-result-join",
+              "ordered_hashes": [
+                "sha256:d57c8445d835c7330273c46557e45c067e7622d3a4e21f2f5bb488950c14c260"
+              ]
+            },
+            {
+              "role": "pre-environment-cleanup",
+              "ordered_hashes": [
+                "sha256:87ebf6149d49d4270ebd8c264b36bbc8e2ceb21d6b10bd305c17d67b1255eb8a"
+              ]
+            },
+            {
+              "role": "validity-result",
+              "ordered_hashes": [
+                "sha256:a2859ab64f2b04182e50e7aad4649b4dc49d64729745788fc2da76094959ddb6"
+              ]
+            },
+            {
+              "role": "generic-evaluation-index",
+              "ordered_hashes": [
+                "sha256:3666a3506c876e3ac847f8fdc27ae252d6fd15a5e12c9c3f91e308f9e6eb4b9d"
+              ]
+            },
+            {
+              "role": "run-record",
+              "ordered_hashes": [
+                "sha256:4de3d972f26a203e5413955aa8a670f567d0a48767aead705efbfebbf3d17080"
+              ]
+            },
+            {
+              "role": "final-attestation",
+              "ordered_hashes": [
+                "sha256:969c4756062c3746f1c853b7871fa83b926362491cd79141972b2167bdf48b6a"
+              ]
+            },
+            {
+              "role": "signer-inventory",
+              "ordered_hashes": [
+                "sha256:f45ae1f5e96bdb92b9d6f3dfea04700a88605c5009cdcedea0e6b8e973d3bc7f"
+              ]
+            },
+            {
+              "role": "finding",
+              "ordered_hashes": [
+                "sha256:cacc6ef520a4a007eb6eaba8a46674d0d957f72c0e8ec593de9f958213c2e58a"
+              ]
+            },
+            {
+              "role": "metric-result",
+              "ordered_hashes": [
+                "sha256:2c38add23371db58483968a5bb532dcb5cfbd4a7cd1fe7b8d4bfb94a8c7e15ac",
+                "sha256:b920f8de1d64dce4ba830abc674726350450b10c55ada9160fa15af8df2ecdce",
+                "sha256:21b87b17c8d5a425280925ea02165180a44bf8e1ba3a98468fd27ba5fa85259c",
+                "sha256:18a82b4dfda4b1807cf3b915a14954983e75491fcac967431c572acabcd61534",
+                "sha256:e3283094361f4786f0a35b04411ea1b66c1f79c61ec80586b18a9811b1fb6c7d",
+                "sha256:76b178227876faa40c577b965e89616beb1d5345be39a35f43adcb02d4dae6d0",
+                "sha256:fdd3a076f37159c19bc1113b53a682b41e4d97c1cbb02035b47b6f328db0f970",
+                "sha256:515c7e284a385f5d877c5daaa36f9f935139c4c553d1116bc05e34a53bf5e997",
+                "sha256:c05e0b67f8ba1b06b6b3d13d692ef3b31af7f390cdbc74bb10ae855739fb308d"
+              ]
+            },
+            {
+              "role": "judge-expectation-reveal",
+              "ordered_hashes": [
+                "sha256:5cebba7f8e08200bff2b9f5703b22dcf6fa7e6ed7c1b5cd0e6f009a29c8c283c"
+              ]
+            }
+          ],
+          "rejected_extra_hashes": [],
+          "missing_roles": [],
+          "verdict": "valid",
+          "verified_at": "2026-07-24T21:51:47Z",
+          "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+          "core_hash": "sha256:e2a171bccbb98204baa9c378333cc6e95e65e6df2416cc48fa5965ea45666de3"
+        }
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-record",
+      "--record",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification/retained/public-bundle.json",
+      "--lifecycle",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification/lifecycle.json",
+      "--artifact-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "--root-config",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification/root-config.json",
+      "--offline"
+    ],
+    "exit_code": 10,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-record",
+      "ok": false,
+      "exit_code": 10,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [
+        {
+          "code": "VERIFY_RECORD_ATTESTATION_PRESENT",
+          "message": "verify-record does not accept a public verification bundle"
+        }
+      ]
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "preregister-acquisition",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-GRgtW5",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000009",
+      "--acquisition-source",
+      "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e",
+      "--adapter",
+      "sha256:8dcecd84e7a495d13a3e79cd6913dfab4a44252e2f19809e9472def0fb306d07",
+      "--acquisition-actor-script",
+      "sha256:2cbd48d538454b9f506ce0ac911e2dfc6772053c2f675b62c566d7f7a65bc5c6",
+      "--acquisition-actor-schema",
+      "sha256:bb9f4c8b0fd376e9d81a914ed56abb5646e0b8547a43f6ceccdf5f47a43d2880",
+      "--acquisition-step",
+      "sha256:28c41a39dd6143b2f85dbd44fff6e9d5d19de8574db814a7d818ef89fe5c0218",
+      "--package-verification-step",
+      "sha256:3b8ef697ddeecd369ef7a4d5dcdb9be1a4ddce390e9be8ec9707f62519afd959",
+      "--generic-policy",
+      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "--trust-policy",
+      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "--limits",
+      "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
+      "--expires",
+      "2026-12-31T00:00:00Z"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "preregister-acquisition",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000009",
+      "state": "acquisition_preregistered",
+      "data": {
+        "acquisition_preregistration_hash": "sha256:a5fbb4265874337f3fb1e1625379538173fd8c9c44e9863a05551f6721db3141",
+        "selected_case_identity": "absent"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "acquire",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-GRgtW5",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000009"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "acquire",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000009",
+      "state": "step_outcome_frozen",
+      "data": {
+        "acquisition_record_hash": "sha256:47b66e9384600c25ab4be5bd6a7e6bade6b53e2ee2f5a8bacc54d5912c3529d8",
+        "status": "completed",
+        "attempts": 1,
+        "active_operator_ms": 2000,
+        "elapsed_ms": 2400,
+        "documentation_step_ids": [
+          "doc-install-overview",
+          "doc-quickstart"
+        ],
+        "authentication_prompt_count": 0
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-GRgtW5",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000009"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000009",
+      "state": "subject_package_frozen",
+      "data": {
+        "frozen_package_path": "retained/package-store/sha256/20ba17871efe2aae1c673976c39fd06a920e6afbb64a5d31424baf8d945bf515.bin",
+        "frozen_package_file_sha256": "sha256:20ba17871efe2aae1c673976c39fd06a920e6afbb64a5d31424baf8d945bf515"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "verify-package",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-GRgtW5",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000009",
+      "--fake-verify-package",
+      "failed",
+      "--subject-id",
+      "reference-subject",
+      "--subject-version",
+      "0.1.0"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "verify-package",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000009",
+      "state": "step_outcome_frozen",
+      "data": {
+        "package_verification_record_hash": "sha256:810caa217010030cb460f51252f9c9ff19d9d80a88b5f40d079b89740615efe1",
+        "status": "failed"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "freeze-output",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-GRgtW5",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000009",
+      "--terminal-stage",
+      "verify_package"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "freeze-output",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000009",
+      "state": "subject_output_frozen",
+      "data": {
+        "subject_output_hash": "sha256:973fb62c58b9552c1cceb2c820eccb777c5dd2283f0ab59f16cb938b819b16f5",
+        "terminal_stage": "verify_package",
+        "step_outcome_hashes": [
+          "sha256:86d27a48219f629d2d27c6486347a32885e73e264fb2838c3676fd443c78b2f6",
+          "sha256:2fcd25b6fcca7e80395d4cf3b45a3a0ee532d015496b54c507c95181dd338425"
+        ],
+        "tree_hash": "sha256:f269b2ed353e089b47f6e2c91db35dd6e976e4b705c11bf49ab8f1ded0519760"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "reveal",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-GRgtW5",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000009",
+      "--vault",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-tDd7TG"
+    ],
+    "exit_code": 0,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "reveal",
+      "ok": true,
+      "exit_code": 0,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [],
+      "run_id": "00000000-0000-7000-8000-000000000009",
+      "state": "judge_journey_expectation_revealed",
+      "data": {
+        "reveal_record_hash": "sha256:8f01598312ea8e990b8a1d86ae4281c8dc83e68b70e715c9b6978443614435be",
+        "revealed_expectation_hashes": [
+          "sha256:7c5ea9d2d31a3d06247f2ea3ddd2a051de9d979b26122552eef1141c363ae0af"
+        ],
+        "revealed_count": 1
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "finalize-generic",
+      "--run-root",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "--registry",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-GRgtW5",
+      "--tier",
+      "development",
+      "--run",
+      "00000000-0000-7000-8000-000000000009",
+      "--claim-scope",
+      "T1"
+    ],
+    "exit_code": 10,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "finalize-generic",
+      "ok": false,
+      "exit_code": 10,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [
+        {
+          "code": "GRAPH_CLOSURE_MISSING_ROLE",
+          "message": "this run has not yet produced a precleanup-result-join; the ordered journey forbids skipping it"
+        }
+      ]
+    },
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "erl2",
+      "select",
+      "--request",
+      "x"
+    ],
+    "exit_code": 2,
+    "stdout": {
+      "schema_version": "erl2-cli-response/v1",
+      "command": "select",
+      "ok": false,
+      "exit_code": 2,
+      "authority_scope": "lab_orchestration_only",
+      "findings": [],
+      "errors": [
+        {
+          "code": "POLICY_COMMAND_NOT_IMPLEMENTED",
+          "message": "command select belongs to a slice that has not shipped; it is not silently skipped"
+        }
+      ]
+    },
+    "stderr": ""
+  }
+]

@@ -1,0 +1,489 @@
+/**
+ * `@erl2/core` — lifecycle, admission, selection, journey, cleanup, validity and
+ * finalization.
+ *
+ * Depends only on `@erl2/contracts` and `@erl2/integrity`.  It must never
+ * depend on `adapters/*`, `packs/*`, a consumer integration or any named
+ * subject (implementation plan §4.1); `tests/architecture` proves it.
+ */
+
+export {
+  LAB_STATES,
+  TERMINAL_STATES,
+  TRANSITIONS,
+  POST_REVEAL_STATES,
+  NO_SUBJECT_EXECUTION_STATES,
+  isLabState,
+  assertTransitionAllowed,
+  assertNoSubjectExecutionAfterReveal,
+  assertSubjectPortExecutable,
+  type LabState,
+} from "./lifecycle/states.js";
+export {
+  LifecycleLog,
+  verifyLifecycleChain,
+  type AppendEventInput,
+  type RunSnapshot,
+} from "./lifecycle/log.js";
+export { RunLease, LEASE_TTL_MS } from "./lifecycle/lease.js";
+export { TimestampLog, type TimestampSubmission } from "./timestamps/log.js";
+export {
+  SystemClock,
+  SteppingClock,
+  SystemRandom,
+  SeededRandom,
+  uuidV7From,
+  newRunId,
+  type Clock,
+  type RandomSource,
+  type Seams,
+} from "./runtime/seams.js";
+export {
+  hidingCommitment,
+  poolRootHash,
+  poolRootOf,
+  selectorVisibleProfileCoreHash,
+  sourceRequestBindingHash,
+  deriveSelectedIndex,
+  opaqueHandleFromBytes,
+  type DerivedSelection,
+  type HidingCommitmentInput,
+  type PoolRootInput,
+  type SourceRequestBindingInput,
+} from "./selection/derive.js";
+export {
+  buildEligibilityPool,
+  assertPoolMetadataUniform,
+  entryLogicalPath,
+  FIXED_PAYLOAD_PLAINTEXT_BYTES,
+  type BuildPoolOptions,
+  type BuiltPool,
+  type BuiltPoolEntry,
+  type EligibleCandidate,
+} from "./selection/pool.js";
+export {
+  beaconRoundPayloadHash,
+  verifyBeaconNativeProof,
+  assertWrapperOwnership,
+  assertActiveRandomnessVariant,
+  assertActiveRandomnessReceiptVariant,
+  proofBytes,
+  proofDigest,
+  parseBeaconSignatureProof,
+  parseBeaconInclusionProof,
+  type BeaconRound,
+  type BeaconSource,
+  type BeaconSignatureProofV1,
+  type BeaconInclusionProofV1,
+} from "./selection/beacon.js";
+export {
+  DevelopmentBeaconSource,
+  DEVELOPMENT_BEACON_NATIVE_DOMAIN,
+  DEVELOPMENT_BEACON_SOURCE_ID,
+  assertDevelopmentTierOnly,
+  type DevelopmentBeaconOptions,
+} from "./selection/developmentBeacon.js";
+export {
+  runSelectionChain,
+  type RunSelectionOptions,
+  type SelectionChainKeys,
+  type SelectionChainResult,
+} from "./selection/chain.js";
+export {
+  resourceIdentityHash,
+  assertOwnedByRun,
+  assertNarrowSelector,
+  assertDriverEnabled,
+  assertOperationSupported,
+  type EnvironmentDriver,
+  type ProvisionRequest,
+  type ProvisionResult,
+  type ProbeRequest,
+  type MutateRequest,
+  type RestoreRequest,
+  type DestroyRequest,
+  type DestroyResult,
+} from "./environment/driver.js";
+export {
+  FakeEnvironmentDriver,
+  fakeDriverManifest,
+  type FakeDriverOptions,
+  type FakeDriverFaults,
+} from "./environment/fakeDriver.js";
+export {
+  ReservationAllocator,
+  type ReservationKind,
+  type ReclaimedLease,
+} from "./environment/allocator.js";
+export {
+  baselineFingerprintHash,
+  buildBaselineFingerprint,
+  assertBaselineClean,
+  assertRepeatableBaseline,
+  type BuildBaselineOptions,
+  type EvidenceSourceState,
+} from "./environment/cleanControl.js";
+export {
+  freezeResourceFrontier,
+  assertFrontierActionsDerivable,
+  safeActions,
+  type FreezeFrontierOptions,
+} from "./environment/frontier.js";
+export {
+  assertSubstrateQualified,
+  assertObservedMatchesLock,
+  composeDriverManifestBody,
+  REQUIRED_PLATFORMS,
+  type ObservedSubstrate,
+  type Platform,
+} from "./environment/substrateLock.js";
+export {
+  commitJourneyStep,
+  assertVisibleStepMatchesCommitment,
+  newCanaryId,
+  type CommittedStep,
+  type CommitStepOptions,
+  type VisibleStepInput,
+  type JudgeExpectationInput,
+} from "./journey/steps.js";
+export {
+  ORACLE_SCAN_SURFACES,
+  LIVE_ORACLE_SCAN_SURFACES,
+  PENDING_ORACLE_SCAN_SURFACES,
+  scanForCanaries,
+  assertNoCanaryLeak,
+  assertNoOracleFields,
+  type OracleScanSurface,
+  type OracleScanTarget,
+  type OracleScanFinding,
+} from "./journey/oracle.js";
+export {
+  GenericStepEngine,
+  INTENT_EVENT_PREFIX,
+  nextPermittedIntents,
+  deriveStepClosure,
+  type RunStepOptions,
+  type StepExecutionResult,
+  type StepStatus,
+} from "./journey/engine.js";
+export {
+  FakeSubjectPort,
+  FAKE_SUBJECT_PORT_ID,
+  assertDevelopmentSubjectPort,
+  type SubjectPort,
+  type SubjectStepResponse,
+  type SubjectAcquisitionResponse,
+  type FakeSubjectBehaviour,
+} from "./journey/subjectPort.js";
+export {
+  AdapterHost,
+  instantAfter,
+  type AdapterHostOptions,
+  type AdapterMount,
+  type AdapterOperationResult,
+} from "./adapter/host.js";
+export {
+  HostedSubjectPort,
+  HOSTED_SUBJECT_PORT_ID,
+} from "./adapter/hostedSubjectPort.js";
+export {
+  certifyAdapter,
+  type CertifyAdapterOptions,
+} from "./adapter/certification.js";
+export {
+  UNPRIVILEGED_CAPABILITIES,
+  PRIVILEGED_CAPABILITIES,
+  PRIVILEGE_BROKER_STATE,
+  isPrivilegedCapability,
+  privilegedRefusal,
+  grantCapabilities,
+  assertManifestCapabilitiesUnprivileged,
+  type CapabilityGrantOptions,
+} from "./adapter/capabilities.js";
+export {
+  CredentialBroker,
+  DEVELOPMENT_CREDENTIAL_POLICY,
+  credentialTargetHash,
+  type CredentialScopePolicy,
+  type IssueHandleOptions,
+  type IssuedHandle,
+} from "./adapter/credentials.js";
+export {
+  decideEgress,
+  denyByDefaultEgressPolicy,
+  type EgressDecisionOptions,
+} from "./adapter/egress.js";
+export {
+  MutationLedger,
+  mutationTargetHash,
+  stateHash,
+  type DeclaredMutation,
+  type DeclaredCompensation,
+  type MutationLedgerOptions,
+} from "./adapter/mutations.js";
+export {
+  assertNoExecutionAfterOutputFreeze,
+  assertOutputClean,
+  collectBoundedTree,
+  freezeAdapterOutput,
+  freezeDiagnostics,
+  redact,
+  scanBytes,
+  DEFAULT_OUTPUT_BOUNDS,
+  FORBIDDEN_OUTPUT_IDENTIFIERS,
+  type CollectedFile,
+  type OutputBounds,
+} from "./adapter/outputFreezer.js";
+export {
+  ALLOWED_ENVIRONMENT_VARIABLE_NAMES,
+  CONTAINER_PROFILE_STATE,
+  assertControlReportMatchesProfile,
+  assertEnvironmentAllowlisted,
+  assertMountPermitted,
+  assertSandboxProfileEnabled,
+  enforcedControls,
+  sandboxControlReport,
+  unsupportedControls,
+  type SandboxControlReport,
+  type SandboxProfileId,
+} from "./adapter/sandbox.js";
+export {
+  NOT_QUALIFIED_STATE,
+  REQUIRED_ISOLATION_CONTROLS,
+  assertSubjectMayRunUnderProfile,
+  fakeEnforcementProbes,
+  qualifyIsolationProfile,
+  type IsolationControlId,
+  type IsolationProbeResult,
+  type IsolationVerdict,
+  type ProbeEvidence,
+  type SubstrateLockEvidence,
+} from "./adapter/isolationQualification.js";
+export {
+  CliContainerRuntime,
+  DEFAULT_PROBE_OUTPUT_BYTES,
+  assertRuntimeAvailable,
+  type ContainerRuntime,
+  type RuntimeInvocation,
+  type RuntimeResult,
+} from "./adapter/containerRuntime.js";
+export {
+  assertObservedMatchesIsolationLock,
+  assertProbeSuiteMatchesLock,
+  buildIsolationSubstrateLock,
+  diffObservedAgainstIsolationLock,
+  discoverSubstrate,
+  resolveImageDigest,
+  runtimeConfigurationHash,
+  type BuildIsolationLockInput,
+  type ObservedSubstrateState,
+  type SubstrateDrift,
+} from "./adapter/isolationSubstrateLock.js";
+export {
+  PROBE_SUITE_ID,
+  assertSuiteCoversEveryControl,
+  probeCatalogue,
+  probeSuiteDigest,
+  reapProbeResidue,
+  runEnforcementProbes,
+  type ProbeContext,
+} from "./adapter/isolationProbes.js";
+export {
+  QUALIFIER_RELEASE,
+  assertQualificationGrantsNoNewAuthority,
+  assertQualifiedForExecution,
+  buildIsolationQualificationReport,
+  probeEvidenceHash,
+  toProbeInput,
+  type BuildQualificationReportInput,
+} from "./adapter/isolationQualificationReport.js";
+export {
+  verifyIsolationLockSignature,
+  deriveIsolationAuthenticity,
+  buildIsolationProbeSigningManifest,
+  verifyIsolationProbeManifest,
+  type IsolationAuthenticity,
+  type LockSignatureVerification,
+  type PinnedQualificationAuthority,
+  type ProbeManifestStatus,
+  type ProbeManifestVerification,
+} from "./adapter/isolationAuthenticity.js";
+export {
+  AdmissionRegistry,
+  assertChallengeAdmissible,
+  assertNoCandidateDerivedEligibility,
+  type AdmittedArtifact,
+  type ChallengeAdmissionOptions,
+} from "./registry/admission.js";
+export {
+  realizeCutoff,
+  isEligibleAtCutoff,
+  freezeSourceSnapshot,
+  freezeObservation,
+  type CutoffInput,
+  type RealizedCutoff,
+  type SnapshotInput,
+  type FreezeObservationOptions,
+} from "./capture/capture.js";
+export {
+  assertComparisonModeAdmissible,
+  buildReplayEnvelope,
+  buildLiveEnvelope,
+  assertReplayEnvelopesIdentical,
+  assertLiveEquivalence,
+  assertTranslationTotality,
+  type BuildReplayEnvelopeOptions,
+  type BuildLiveEnvelopeOptions,
+  type CanonicalEntryInput,
+  type UnsupportedDescriptorInput,
+} from "./capture/envelope.js";
+export {
+  EVALUATOR_RELEASE,
+  RunWorkspace,
+  type OpenWorkspaceOptions,
+  type WorkspaceKeyring,
+} from "./run/workspace.js";
+export {
+  verifySelectionChain,
+  assertDisjointRoles,
+  type SelectionChainEvidence,
+  type SelectionVerificationOutcome,
+} from "./selection/verify.js";
+
+// -- slice 6: generic evaluation, cleanup and finalization -------------------
+export {
+  assertAttributionProven,
+  assertFindingOwnershipConsistent,
+  assertInvalidRunAssertsNoSubjectDefect,
+  buildAdapterFailure,
+  buildDependencyFinding,
+  buildEvaluatorFailure,
+  buildInconclusiveFinding,
+  buildLabInvalidity,
+  buildSubjectFinding,
+  type AdapterFailureInput,
+  type AttributionPrerequisites,
+  type DependencyFindingInput,
+  type EvaluatorFailureInput,
+  type InconclusiveFindingInput,
+  type LabInvalidityCategory,
+  type LabInvalidityInput,
+  type ScoreablePlane,
+  type SubjectFindingInput,
+} from "./evaluation/findings.js";
+export {
+  EVALUATOR_REASON_CODES,
+  RATIO_SCALE,
+  evaluateMetric,
+  evaluatePredicate,
+  exactInteger,
+  exactRatio,
+  hardSafetyViolations,
+  type EvaluateMetricOptions,
+  type EvaluationClaim,
+  type EvaluationEnvelopeIndex,
+  type EvaluationMutation,
+  type EvaluationSource,
+  type EvaluationStepOutcome,
+  type EvaluationTruthFact,
+  type MetricInputs,
+} from "./evaluation/metrics.js";
+export {
+  AUTHORITY_SCOPE_METRIC,
+  CAUSAL_OVERCLAIM,
+  CITATION_REACHABILITY,
+  CORRECT_ABSTENTION,
+  CREDENTIAL_SAFETY,
+  DEGRADATION_HONESTY,
+  DOMAIN_PLANE_METRICS,
+  EVIDENCE_PRECISION,
+  EVIDENCE_RECALL,
+  GENERIC_METRIC_DEFINITIONS,
+  JOURNEY_PLANE_METRICS,
+  assertReferencedMetricsAreGeneric,
+  genericMetric,
+  genericMetricHashes,
+} from "./evaluation/genericMetrics.js";
+export {
+  INTERVENTION_SEVERITY,
+  NO_ASSISTANCE,
+  assertClaimedOrderMatchesDerived,
+  buildPreSelectionJourneyResult,
+  buildSelectedJourneyResult,
+  elapsedMs,
+  projectStepOutcomes,
+  type AssistanceSummary,
+  type JourneyEvaluationInput,
+} from "./evaluation/journey.js";
+export {
+  bindDomainPack,
+  buildDomainNotApplicable,
+  evaluateDomain,
+  missingDomainAncestors,
+  type BoundDomainPack,
+  type DomainAncestors,
+  type DomainEvidence,
+  type EvaluateDomainInput,
+  type EvaluateDomainOutput,
+  type NotApplicableReason,
+} from "./evaluation/domain.js";
+export {
+  ENVIRONMENT_GATE_IDS,
+  LAB_VALIDITY_GATES,
+  PRE_ENVIRONMENT_GATE_IDS,
+  assertGatesAreLabOwned,
+  assertRequiredGatesPresent,
+  assertValidityAdmitsGenericIndex,
+  buildEnvironmentValidity,
+  buildPreEnvironmentValidity,
+  type GateResult,
+} from "./evaluation/validity.js";
+export {
+  DEEP_ANCESTRY_FORBIDDEN_FIELDS,
+  assertNoDeepAncestry,
+  buildGenericEvaluationIndex,
+  buildPrecleanupResultJoin,
+  deriveJoinOrdering,
+  type BuildGenericIndexInput,
+  type BuildJoinInput,
+  type JoinOrderingEvidence,
+} from "./evaluation/join.js";
+export {
+  assertRemainingResourcesMatchFrontier,
+  buildEmergencyCleanup,
+  buildEnvironmentRestoration,
+  buildPreEnvironmentCleanup,
+  buildTeardownVerification,
+  requiredEmergencyAttempts,
+  type EmergencyAttempt,
+  type EmergencyCleanupInput,
+  type EnvironmentRestorationInput,
+  type PreEnvironmentCleanupInput,
+  type TeardownCheck,
+  type TeardownInput,
+} from "./cleanup/cleanup.js";
+export {
+  NON_BLIND_DEVELOPMENT_ASSURANCE,
+  assertEnvironmentFinalizable,
+  buildEnvironmentAttestation,
+  buildEnvironmentBundle,
+  buildEnvironmentRunRecord,
+  buildEnvironmentSignerInventory,
+  type EnvironmentAttestationInput,
+  type EnvironmentBundleInput,
+  type EnvironmentFinalizationPreconditions,
+  type EnvironmentRunRecordInput,
+} from "./terminal/environmentFinalize.js";
+export {
+  assertFinalizable,
+  assertNoVersionCrossover,
+  buildPreEnvironmentAttestation,
+  buildPreEnvironmentBundle,
+  buildPreEnvironmentRunRecord,
+  buildPreEnvironmentSignerInventory,
+  type FinalizationPreconditions,
+  type PreEnvironmentAttestationInput,
+  type PreEnvironmentBundleInput,
+  type PreEnvironmentRunRecordInput,
+  type SignerInventoryEntryInput,
+} from "./terminal/finalize.js";

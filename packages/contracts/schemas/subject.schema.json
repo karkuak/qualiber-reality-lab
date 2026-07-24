@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:subject",
+  "title": "ERL2 subject step-detail records, capability declaration and assistance evidence",
+  "$comment": "Design v2 §10/§16.2. These are the per-intent detail records the generic step engine freezes; the step outcome itself is contract ERL2-C-027.",
+  "$defs": {
+    "SubjectInstallationRecordV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "attempt_id", "plan_hash", "adapter_hash", "started_at", "ended_at", "status", "package_verification_hash", "mutations", "compensation_ids", "warnings", "error_codes", "active_operator_ms", "elapsed_ms", "core_hash"],
+      "properties": {
+        "schema_version": { "const": "subject-installation-record/v1" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "attempt_id": { "$ref": "erl2:common#/$defs/Id" },
+        "plan_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "started_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "ended_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "status": { "$ref": "erl2:common#/$defs/RecordStatus" },
+        "package_verification_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "mutations": { "$ref": "erl2:common#/$defs/HashArray" },
+        "compensation_ids": { "$ref": "erl2:common#/$defs/IdArray" },
+        "warnings": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+        "error_codes": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+        "active_operator_ms": { "type": "integer", "minimum": 0, "maximum": 5400000 },
+        "elapsed_ms": { "type": "integer", "minimum": 0, "maximum": 5400000 },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+
+    "SubjectConfigurationRecordV1": {
+      "$comment": "Credential scopes are recorded requested/granted/used so overreach is measurable (design v2 §17).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "attempt_id", "installation_hash", "input_configuration_hash", "redacted_change_refs", "credential_scopes_requested", "credential_scopes_granted", "credential_scopes_used", "documentation_step_ids", "warnings", "error_codes", "manual_intervention_ids", "status", "started_at", "ended_at", "active_operator_ms", "core_hash"],
+      "properties": {
+        "schema_version": { "const": "subject-configuration-record/v1" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "attempt_id": { "$ref": "erl2:common#/$defs/Id" },
+        "installation_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "input_configuration_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "redacted_change_refs": { "$ref": "erl2:common#/$defs/ArtifactRefArray" },
+        "credential_scopes_requested": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+        "credential_scopes_granted": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+        "credential_scopes_used": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+        "documentation_step_ids": { "$ref": "erl2:common#/$defs/IdArray" },
+        "warnings": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+        "error_codes": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+        "manual_intervention_ids": { "$ref": "erl2:common#/$defs/IdArray" },
+        "status": { "$ref": "erl2:common#/$defs/RecordStatus" },
+        "started_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "ended_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "active_operator_ms": { "type": "integer", "minimum": 0, "maximum": 5400000 },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+
+    "SubjectInteractionRecordV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "interaction_id", "step_hash", "intent", "request_core_hash", "subject_visible_input_hash", "response_artifacts", "mutations", "status", "started_at", "ended_at", "active_operator_ms", "retry_count", "core_hash"],
+      "properties": {
+        "schema_version": { "const": "subject-interaction-record/v1" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "interaction_id": { "$ref": "erl2:common#/$defs/Id" },
+        "step_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "intent": { "$ref": "erl2:common#/$defs/JourneyIntent" },
+        "request_core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "subject_visible_input_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "response_artifacts": { "$ref": "erl2:common#/$defs/ArtifactRefArray" },
+        "mutations": { "$ref": "erl2:common#/$defs/HashArray" },
+        "status": { "$ref": "erl2:common#/$defs/RecordStatus" },
+        "started_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "ended_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "active_operator_ms": { "type": "integer", "minimum": 0, "maximum": 5400000 },
+        "retry_count": { "type": "integer", "minimum": 0, "maximum": 16 },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+
+    "SubjectCapabilityDeclarationV1": {
+      "$comment": "Declarations inform environment feasibility. They can never filter the challenge inventory (ERL2-FR-002/AC-005).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "subject_id", "domain", "consumes", "produces", "credential_needs", "limitations", "declared_at", "core_hash"],
+      "properties": {
+        "schema_version": { "const": "subject-capability-declaration/v1" },
+        "subject_id": { "$ref": "erl2:common#/$defs/Id" },
+        "domain": { "const": "software_delivery_operations" },
+        "consumes": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["evidence_kind", "schema_ids", "required"],
+            "properties": {
+              "evidence_kind": { "$ref": "erl2:common#/$defs/Id" },
+              "schema_ids": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+              "required": { "type": "boolean" }
+            }
+          }
+        },
+        "produces": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["claim_categories", "action_kinds"],
+            "properties": {
+              "claim_categories": { "$ref": "erl2:common#/$defs/IdArray" },
+              "action_kinds": { "$ref": "erl2:common#/$defs/IdArray" }
+            }
+          }
+        },
+        "credential_needs": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "scope", "required"],
+            "properties": {
+              "kind": { "$ref": "erl2:common#/$defs/Id" },
+              "scope": { "type": "string", "minLength": 1, "maxLength": 256 },
+              "required": { "type": "boolean" }
+            }
+          }
+        },
+        "limitations": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+        "declared_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      }
+    },
+
+    "AssistanceEventV1": {
+      "$comment": "Human or agent action is evidence, never oracle truth (design v2 §10, ADR-ERL2-009). Free narration is retained separately as non-deterministic commentary and cannot satisfy truth, citations or gates.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "event_id", "run_id", "step_id", "actor_kind", "actor_script_version", "prompt_hash", "visible_evidence_hashes", "action", "started_at", "ended_at", "active_ms", "core_hash", "signature"],
+      "properties": {
+        "schema_version": { "const": "assistance-event/v1" },
+        "event_id": { "$ref": "erl2:common#/$defs/Id" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "step_id": { "$ref": "erl2:common#/$defs/Id" },
+        "actor_kind": { "enum": ["human_operator", "scripted_actor", "agent"] },
+        "actor_script_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "prompt_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "visible_evidence_hashes": { "$ref": "erl2:common#/$defs/HashArray" },
+        "action": { "enum": ["followed_documented_step", "manual_intervention", "undocumented_workaround", "privilege_escalation_request", "abandoned"] },
+        "intervention_reason_code": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "narration_artifact": { "$ref": "erl2:common#/$defs/ArtifactRef" },
+        "started_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "ended_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "active_ms": { "type": "integer", "minimum": 0, "maximum": 5400000 },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      },
+      "allOf": [
+        {
+          "$comment": "Anything other than a documented step needs a reason on the record.",
+          "if": { "type": "object", "properties": { "action": { "const": "followed_documented_step" } }, "required": ["action"] },
+          "then": { "type": "object", "not": { "type": "object", "required": ["intervention_reason_code"] } },
+          "else": { "type": "object", "required": ["intervention_reason_code"] }
+        }
+      ]
+    }
+  }
+}

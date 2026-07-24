@@ -1,0 +1,620 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:evaluation",
+  "title": "ERL2 data-only evaluation pack, metric definition and metric result contracts",
+  "$comment": "Design v2 §17 and implementation plan §12.2 (S6.2/S6.3). ERL2-OQ-004 is unresolved, so the design's fail-closed state applies: a pack is closed declarative data whose every predicate, input selector and ordering key comes from a closed vocabulary the Lab's evaluator implements. A pack carries no code, no I/O, no clock, no randomness, no validity authority and no generic threshold authority.",
+  "$defs": {
+    "MetricThresholdClass": {
+      "$comment": "Design v2 §17 metric table. A hard-safety metric can never be traded off against another plane, and no class collapses to a scalar leaderboard score.",
+      "enum": [
+        "measurement",
+        "information",
+        "ordinary_gate",
+        "hard_safety"
+      ]
+    },
+    "MetricZeroDenominatorBehaviour": {
+      "$comment": "Explicit and mandatory: a zero denominator never silently becomes 0 or 1.",
+      "enum": [
+        "not_applicable",
+        "zero",
+        "one",
+        "one_only_when_correct_abstention"
+      ]
+    },
+    "MetricMissingInputBehaviour": {
+      "$comment": "What the evaluator does when a declared input is unavailable. `inconclusive` produces an inconclusive finding naming the missing source; it never becomes a subject defect.",
+      "enum": [
+        "not_applicable",
+        "inconclusive"
+      ]
+    },
+    "MetricInputSelector": {
+      "$comment": "Closed set of Lab-owned frozen inputs a metric may read. A pack cannot name an arbitrary path, so it cannot reach outside frozen evidence.",
+      "enum": [
+        "claims",
+        "cited_claims",
+        "causal_claims",
+        "unknown_claims",
+        "recommendation_claims",
+        "action_claims",
+        "required_truth_facts",
+        "evidence_sources",
+        "unavailable_evidence_sources",
+        "step_outcomes",
+        "assistance_events",
+        "intervention_events",
+        "credential_grants",
+        "documentation_steps",
+        "declared_mutations",
+        "compensation_receipts",
+        "recovery_step_outcomes",
+        "unsupported_step_outcomes"
+      ]
+    },
+    "MetricCanonicalOrdering": {
+      "$comment": "Deterministic ordering key applied before any bounded computation, so a metric result is identical across processes and platforms.",
+      "enum": [
+        "claim_id_ascending",
+        "fact_id_ascending",
+        "source_id_ascending",
+        "step_index_ascending",
+        "artifact_hash_ascending"
+      ]
+    },
+    "MetricAggregation": {
+      "$comment": "`ratio` divides the measured numerator by the measured denominator population; `sum` reports the measured numerator itself (a count when the measure is `unit`). There is deliberately no aggregation that combines metrics: no scalar leaderboard score exists (design v2 §17).",
+      "enum": [
+        "ratio",
+        "sum"
+      ]
+    },
+    "MetricMeasure": {
+      "$comment": "The closed set of integer quantities a metric may measure per item. `unit` weighs every item as 1, which is how a plain count or unweighted ratio is expressed. Every measure is an exact integer, so no platform floating-point behaviour can reach a frozen result.",
+      "enum": [
+        "unit",
+        "claim_weight",
+        "active_ms",
+        "elapsed_ms",
+        "attempt_count",
+        "retry_count",
+        "intervention_severity"
+      ]
+    },
+    "EvaluationPredicateId": {
+      "$comment": "Closed, deterministic, subject-neutral predicate vocabulary implemented by @erl2/core. A pack selects a predicate; it never supplies one. There is deliberately no free-text, regular-expression, similarity or model-backed predicate: prose similarity and nondeterministic models are forbidden in attesting generic evaluation (design v2 §17).",
+      "enum": [
+        "always_included",
+        "citation_resolves_in_canonical_envelope",
+        "citation_locator_reachable",
+        "claim_exactly_supported_by_truth_fact",
+        "causal_claim_has_declared_supporting_association",
+        "unknown_claim_matches_unrevealed_truth_gap",
+        "unavailable_source_explicitly_disclosed",
+        "claim_carries_no_credential_material",
+        "claim_authority_within_declared_ceiling",
+        "required_fact_supported_by_some_claim",
+        "step_outcome_status_is",
+        "declared_mutation_has_compensation"
+      ]
+    },
+    "MetricDefinitionV1": {
+      "$comment": "ERL2-C-143. Every metric states its inputs, canonical ordering, numerator, denominator, zero behaviour, missing-input behaviour, threshold class, claim ceiling and reason codes, exactly as design v2 §17 requires. `pack_may_not_override` is a schema constant: a pack addition cannot overwrite a generic metric id.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "metric_id",
+        "title",
+        "inputs",
+        "canonical_ordering",
+        "aggregation",
+        "measure",
+        "numerator_predicate",
+        "numerator_polarity",
+        "denominator_selector",
+        "zero_denominator",
+        "missing_input_behaviour",
+        "threshold_class",
+        "claim_ceiling",
+        "reason_codes",
+        "inclusions",
+        "exclusions",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "metric-definition/v1"
+        },
+        "metric_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "inputs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "$ref": "erl2:evaluation#/$defs/MetricInputSelector"
+          }
+        },
+        "canonical_ordering": {
+          "$ref": "erl2:evaluation#/$defs/MetricCanonicalOrdering"
+        },
+        "aggregation": {
+          "$ref": "erl2:evaluation#/$defs/MetricAggregation"
+        },
+        "measure": {
+          "$ref": "erl2:evaluation#/$defs/MetricMeasure"
+        },
+        "numerator_predicate": {
+          "$ref": "erl2:evaluation#/$defs/EvaluationPredicateId"
+        },
+        "numerator_predicate_argument": {
+          "$comment": "Only a closed-vocabulary literal, e.g. a step status. Never a path, expression or code.",
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+        },
+        "numerator_polarity": {
+          "$comment": "`satisfied` counts predicate hits; `violated` counts predicate misses, which is how an overclaim metric is expressed without a second predicate language.",
+          "enum": [
+            "satisfied",
+            "violated"
+          ]
+        },
+        "denominator_selector": {
+          "$ref": "erl2:evaluation#/$defs/MetricInputSelector"
+        },
+        "zero_denominator": {
+          "$ref": "erl2:evaluation#/$defs/MetricZeroDenominatorBehaviour"
+        },
+        "missing_input_behaviour": {
+          "$ref": "erl2:evaluation#/$defs/MetricMissingInputBehaviour"
+        },
+        "threshold_class": {
+          "$ref": "erl2:evaluation#/$defs/MetricThresholdClass"
+        },
+        "threshold": {
+          "$comment": "Absent for a pure measurement. Present thresholds are frozen with the definition, so a post-hoc threshold change produces a different metric-definition hash and a different pack.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "comparator",
+            "bound"
+          ],
+          "properties": {
+            "comparator": {
+              "enum": [
+                "at_least",
+                "at_most",
+                "equals"
+              ]
+            },
+            "bound": {
+              "$ref": "erl2:common#/$defs/Decimal"
+            }
+          }
+        },
+        "claim_ceiling": {
+          "$ref": "erl2:common#/$defs/ClaimScope"
+        },
+        "reason_codes": {
+          "$comment": "Every reason code a result of this metric may carry; a result carrying an undeclared code is refused.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+          }
+        },
+        "inclusions": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "exclusions": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "EvaluationPackAssertionV1": {
+      "$comment": "A named, deterministic assertion over a closed predicate. Assertions carry no authority over validity: an unsatisfied assertion produces a finding on its declared plane, never a Lab-invalidity verdict.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assertion_id",
+        "predicate",
+        "polarity",
+        "severity",
+        "finding_category",
+        "reason_code"
+      ],
+      "properties": {
+        "assertion_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "predicate": {
+          "$ref": "erl2:evaluation#/$defs/EvaluationPredicateId"
+        },
+        "predicate_argument": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+        },
+        "polarity": {
+          "enum": [
+            "must_hold",
+            "must_not_hold"
+          ]
+        },
+        "severity": {
+          "$ref": "erl2:results#/$defs/Severity"
+        },
+        "finding_category": {
+          "$comment": "The only subject categories a domain pack may propose. A pack cannot propose a Lab, adapter, dependency or evaluator category: ownership is not a pack decision.",
+          "enum": [
+            "subject_functional_miss",
+            "subject_misdiagnosis",
+            "subject_output_contract_failure",
+            "subject_unsupported"
+          ]
+        },
+        "reason_code": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        }
+      }
+    },
+    "EvaluationPackBodyV1": {
+      "$comment": "ERL2-C-144, the data-only pack artifact whose digest is EvaluationPackManifestV1.pack_artifact_hash. It is closed data: every field is a literal or a closed-vocabulary identifier. It has no member that could carry code, a filesystem or network reference, a clock or randomness source, a selection or truth-reveal handle, a validity setter or a generic-threshold override.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "pack_id",
+        "version",
+        "scope",
+        "domain",
+        "input_contract_ids",
+        "metric_ids",
+        "assertions",
+        "applicable_challenge_families",
+        "applicable_archetype_families",
+        "output_ordering",
+        "claim_ceiling",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "evaluation-pack-body/v1"
+        },
+        "pack_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "scope": {
+          "enum": [
+            "domain",
+            "subject_deep"
+          ]
+        },
+        "domain": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "subject_id": {
+          "$comment": "Permitted only when scope is subject_deep; certification refuses a domain-scoped pack that names a subject.",
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "input_contract_ids": {
+          "$comment": "Stable ERL2 contract identifiers the pack is entitled to read. Certification refuses any identifier outside the frozen-evidence set.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "pattern": "^ERL2-C-[0-9]{3}[a-z]?$"
+          }
+        },
+        "metric_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "assertions": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "$ref": "erl2:evaluation#/$defs/EvaluationPackAssertionV1"
+          }
+        },
+        "applicable_challenge_families": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "applicable_archetype_families": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "output_ordering": {
+          "$comment": "Deterministic ordering of the pack's emitted results and findings.",
+          "enum": [
+            "metric_id_ascending",
+            "assertion_id_ascending"
+          ]
+        },
+        "claim_ceiling": {
+          "$ref": "erl2:common#/$defs/ClaimScope"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "EvaluationPackCertificationFindingV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check_id",
+        "passed",
+        "reason_code"
+      ],
+      "properties": {
+        "check_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "reason_code": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        },
+        "detail": {
+          "type": "string",
+          "maxLength": 512
+        }
+      }
+    },
+    "EvaluationPackCertificationReceiptV1": {
+      "$comment": "ERL2-C-145. Independent certification of a pack body: subject-name scan, candidate-token scan, shortcut-predicate scan, undeclared-vocabulary scan, unknown-metric scan and forbidden-authority scan. A pack with no passing receipt cannot be bound by a run policy.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "pack_id",
+        "pack_artifact_hash",
+        "certifier_id",
+        "checks",
+        "forbidden_token_list_hash",
+        "passed",
+        "certified_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "evaluation-pack-certification-receipt/v1"
+        },
+        "pack_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "pack_artifact_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "certifier_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "$ref": "erl2:evaluation#/$defs/EvaluationPackCertificationFindingV1"
+          }
+        },
+        "forbidden_token_list_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "certified_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "EvaluationPackManifestV1": {
+      "$comment": "ERL2-C-039, exactly the closed shape in design v2 §16.2. The signed manifest names the pack body by digest; the body itself is EvaluationPackBodyV1.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "pack_id",
+        "version",
+        "scope",
+        "domain",
+        "pack_artifact_hash",
+        "vocabulary_hash",
+        "truth_schema_hash",
+        "assertion_ids",
+        "metric_definitions",
+        "prohibited_core_apis",
+        "reviewer_ids",
+        "bias_review_hash",
+        "certification_receipt_hash",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "evaluation-pack-manifest/v1"
+        },
+        "pack_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "scope": {
+          "enum": [
+            "domain",
+            "subject_deep"
+          ]
+        },
+        "domain": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "subject_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "pack_artifact_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "vocabulary_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "truth_schema_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "assertion_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "metric_definitions": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "prohibited_core_apis": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "reviewer_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "bias_review_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "certification_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "MetricResultV1": {
+      "$comment": "ERL2-C-146. One frozen metric evaluation. `result_identity_hash` is the stable identity of (metric definition, ordered input identities), so the same inputs always produce the same identity and a replay can be compared exactly. `status` retains not_applicable and inconclusive rather than coercing them to a number.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "metric_definition_hash",
+        "metric_id",
+        "plane",
+        "status",
+        "numerator",
+        "denominator",
+        "ordered_input_hashes",
+        "result_identity_hash",
+        "reason_codes",
+        "threshold_class",
+        "claim_ceiling",
+        "evaluated_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "metric-result/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "metric_definition_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "metric_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "plane": {
+          "$comment": "The result plane this measurement belongs to. `validity` is absent by construction: a metric can never contribute to Lab validity.",
+          "enum": [
+            "journey",
+            "domain"
+          ]
+        },
+        "status": {
+          "enum": [
+            "measured",
+            "not_applicable",
+            "inconclusive"
+          ]
+        },
+        "value": {
+          "$comment": "Present only when status is `measured`. Canonical decimal, computed by exact integer division rendered to a fixed scale, never a platform float literal.",
+          "$ref": "erl2:common#/$defs/Decimal"
+        },
+        "numerator": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "denominator": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "threshold_satisfied": {
+          "$comment": "Present only when the definition declares a threshold and the status is `measured`.",
+          "type": "boolean"
+        },
+        "ordered_input_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "result_identity_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "reason_codes": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+          }
+        },
+        "missing_input_selectors": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "erl2:evaluation#/$defs/MetricInputSelector"
+          }
+        },
+        "threshold_class": {
+          "$ref": "erl2:evaluation#/$defs/MetricThresholdClass"
+        },
+        "claim_ceiling": {
+          "$ref": "erl2:common#/$defs/ClaimScope"
+        },
+        "evaluated_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    }
+  }
+}

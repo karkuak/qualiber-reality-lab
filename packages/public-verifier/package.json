@@ -1,0 +1,28 @@
+{
+  "name": "@erl2/public-verifier",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Neutral offline public-bundle and invalid-record verifier",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist",
+    "schemas"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@erl2/contracts": "*",
+    "@erl2/integrity": "*",
+    "@erl2/core": "*"
+  }
+}

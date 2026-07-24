@@ -1,0 +1,78 @@
+# PR lane (implementation plan §17.4): contract, canonicalization, architecture
+# purity, fake lifecycle, unit, type and lint checks on every change.
+name: pr
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generated types are current
+        run: npm run verify:generated
+      - name: Type check
+        run: npm run build
+      - name: Contract, canonicalization, purity, lifecycle, environment and adversarial suites
+        run: npm test
+      - name: ERL2-OQ-005 fail-closed — the Compose driver must stay disabled
+        run: node --test "tests/dist/integration/environment.test.js"
+      - name: ERL2-OQ-007 fail-closed and oracle partition
+        run: node --test "tests/dist/adversarial/oracle.test.js" "tests/dist/e2e/journeyRun.test.js"
+      - name: ADR-ERL2-013 — one authorized continuation after a verified package
+        run: node --test "tests/dist/adversarial/preEnvironmentTerminal.test.js"
+      - name: ERL2-OQ-001 fail-closed, hostile adapters and certification
+        run: |
+          node --test \
+            "tests/dist/adversarial/adapterHost.test.js" \
+            "tests/dist/integration/adapterCertification.test.js" \
+            "tests/dist/e2e/adapterJourney.test.js"
+      - name: Adapter packages are removable
+        run: node --test "tests/dist/architecture/removability.test.js" "tests/dist/architecture/adapterSurface.test.js"
+      - name: Evidence byte-pin (6R-D — deterministic generation must match the pinned goldens; adapter-platform real-subprocess subtree explicitly excluded)
+        run: npm run evidence:verify
+      - name: Golden fixtures must not drift (P2-10 — routine verification never rewrites approved evidence)
+        run: git diff --exit-code -- fixtures/golden
+      - name: Offline verification with the network disabled
+        run: |
+          node packages/cli/dist/src/bin.js verify \
+            --public-bundle fixtures/golden/valid-pre-environment-run/public-bundle.json \
+            --root-config fixtures/golden/valid-pre-environment-run/root-config.json \
+            --artifact-root fixtures/golden/valid-pre-environment-run/artifacts \
+            --lifecycle fixtures/golden/valid-pre-environment-run/lifecycle.json \
+            --offline
+      - name: Invalid-record verification
+        run: |
+          node packages/cli/dist/src/bin.js verify-record \
+            --record fixtures/golden/invalid-run-cancellation/invalid-record.json \
+            --lifecycle fixtures/golden/invalid-run-cancellation/lifecycle.json \
+            --artifact-root fixtures/golden/invalid-run-cancellation/artifacts \
+            --root-config fixtures/golden/invalid-run-cancellation/root-config.json \
+            --offline
+
+  cross-platform-golden:
+    # ERL2-NFR-001: JCS, hash and signature goldens must match on both platforms.
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node --test "tests/dist/integration/*.test.js"

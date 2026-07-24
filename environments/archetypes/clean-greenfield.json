@@ -1,0 +1,19 @@
+{
+  "archetype_id": "clean-greenfield",
+  "domain": "software_delivery_operations",
+  "note": "The required clean control (design v2 §9). Empty isolated state and complete configuration; two clean provisions must produce identical baseline fingerprints. Constrained and brownfield archetypes are slice 10 work and are blocked on ERL2-OQ-002.",
+  "topology": [
+    { "node_id": "delivery-plane", "kind": "delivery", "version_constraint": "*" },
+    { "node_id": "operations-plane", "kind": "operations", "version_constraint": "*" }
+  ],
+  "evidence_sources": [
+    { "source_id": "deployment-log", "kind": "deployment", "required": true },
+    { "source_id": "service-metric", "kind": "metric", "required": true },
+    { "source_id": "change-record", "kind": "change", "required": true }
+  ],
+  "resource_kinds": ["project", "network", "volume", "container", "port"],
+  "cleanup_expectations": {
+    "expected_zero_residue_kinds": ["project", "network", "volume", "container", "port"],
+    "permitted_retained_kinds": []
+  }
+}

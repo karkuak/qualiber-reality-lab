@@ -1,0 +1,53 @@
+{
+  "name": "erl2-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "External Reality Lab V2 \u2014 product-independent reality lab core",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "workspaces": [
+    "packages/contracts",
+    "packages/integrity",
+    "packages/core",
+    "packages/adapter-sdk",
+    "packages/evaluation-sdk",
+    "packages/public-verifier",
+    "packages/cli",
+    "adapters/reference-correct",
+    "adapters/reference-limited",
+    "adapters/reference-misleading",
+    "adapters/reference-inconclusive",
+    "packs/operations",
+    "tests"
+  ],
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "generate": "node scripts/generate-types.mjs",
+    "build": "node scripts/build.mjs",
+    "typecheck": "node scripts/build.mjs --typecheck-only",
+    "test": "npm run build && node --test --test-reporter=spec \"tests/dist/**/*.test.js\" \"packages/*/dist/test/**/*.test.js\"",
+    "test:contract": "npm run build && node --test \"tests/dist/contract/**/*.test.js\"",
+    "test:architecture": "npm run build && node --test \"tests/dist/architecture/**/*.test.js\"",
+    "test:adversarial": "npm run build && node --test \"tests/dist/adversarial/**/*.test.js\"",
+    "test:e2e": "npm run build && node --test \"tests/dist/e2e/**/*.test.js\"",
+    "verify:generated": "node scripts/generate-types.mjs --check",
+    "purity": "npm run build && node --test \"tests/dist/architecture/**/*.test.js\"",
+    "qualify:isolation": "npm run build && node scripts/qualify-isolation.mjs",
+    "erl2": "node packages/cli/dist/src/bin.js",
+    "evidence": "npm run build && node scripts/generate-evidence.mjs",
+    "evidence:generate": "npm run build && node scripts/generate-evidence.mjs",
+    "evidence:verify": "npm run build && node scripts/generate-evidence.mjs --verify",
+    "evidence:update": "npm run build && node scripts/generate-evidence.mjs --update"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "ajv": "8.17.1",
+    "ajv-formats": "3.0.1"
+  }
+}

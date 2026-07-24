@@ -1,0 +1,19 @@
+{
+  "schema_version": "isolation-enforcement-probe-result/v1",
+  "probe_id": "memory-limit",
+  "control_id": "memory-limit",
+  "substrate_lock_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
+  "evidence": "observed",
+  "enforced": true,
+  "method": "read memory.max under --memory=64m and then allocate past it; the kernel must both report the cap and kill the allocation",
+  "observation": {
+    "attempted": "read memory.max, then write a 256 MiB balloon inside a 64 MiB container",
+    "observed": "memory.max=67108864 balloon=EXIT=1",
+    "expectation": "memory.max reports the 64 MiB cap and the 256 MiB allocation does not complete",
+    "exit_code": 0
+  },
+  "resources_cleaned_up": true,
+  "started_at": "2026-07-23T16:57:20Z",
+  "ended_at": "2026-07-23T16:57:21Z",
+  "core_hash": "sha256:c6a084c37c7df1d1448c567090c280cec37be194f284e8cfb60cc5377ab3af7d"
+}

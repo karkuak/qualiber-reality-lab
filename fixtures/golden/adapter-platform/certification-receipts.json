@@ -1,0 +1,360 @@
+{
+  "reference-correct": {
+    "schema_version": "subject-adapter-certification-receipt/v1",
+    "receipt_id": "cert-reference-correct",
+    "suite": "ADAPTER-CERT-V1",
+    "adapter_manifest_hash": "sha256:9b54e82999d6ca798f9abb54b6b01af2c4ed4a421d0769748f577ac667968aa6",
+    "adapter_artifact_hash": "sha256:2add85ff025d8188d878a1ca2b458a167140568b984760f6db5ca56e4f330ff3",
+    "adapter_id": "reference-correct",
+    "adapter_version": "0.1.0",
+    "certified_operations": [
+      "acquire",
+      "validate-package",
+      "install",
+      "uninstall",
+      "translate-evidence",
+      "project",
+      "report-residue",
+      "compensate"
+    ],
+    "certified_package_kinds": [
+      "archive"
+    ],
+    "checks": [
+      {
+        "check_id": "immutable-artifact-identity",
+        "status": "passed",
+        "severity": "info",
+        "detail": "adapter entry digest sha256:2add85ff025d8188…"
+      },
+      {
+        "check_id": "no-privileged-broker-capability",
+        "status": "passed",
+        "severity": "info",
+        "detail": "the adapter declares only unprivileged capabilities"
+      },
+      {
+        "check_id": "no-product-specific-core-change",
+        "status": "passed",
+        "severity": "info",
+        "detail": "every declared operation is in the closed enum"
+      },
+      {
+        "check_id": "protocol-negotiation",
+        "status": "passed",
+        "severity": "info",
+        "detail": "negotiated subject-adapter/v1 and repeated identifiers"
+      },
+      {
+        "check_id": "unsupported-retention",
+        "status": "passed",
+        "severity": "info",
+        "detail": "the probe operation reported a supported or failed outcome, both of which are retained"
+      },
+      {
+        "check_id": "diagnostics-bounds",
+        "status": "passed",
+        "severity": "info",
+        "detail": "diagnostics scanned: 88 bytes retained"
+      },
+      {
+        "check_id": "deterministic-projection",
+        "status": "passed",
+        "severity": "info",
+        "detail": "identical inputs produced an identical result identity"
+      },
+      {
+        "check_id": "phase-request-ancestry",
+        "status": "passed",
+        "severity": "info",
+        "detail": "a later-phase ancestor injected into an earlier request is refused"
+      },
+      {
+        "check_id": "oracle-partition",
+        "status": "passed",
+        "severity": "info",
+        "detail": "an oracle field in an adapter request is refused before dispatch"
+      },
+      {
+        "check_id": "mutation-disclosure",
+        "status": "passed",
+        "severity": "info",
+        "detail": "the probe operation declared no external mutation"
+      },
+      {
+        "check_id": "unsupported-package-kind",
+        "status": "passed",
+        "severity": "info",
+        "detail": "package kind oci is honestly reported unsupported"
+      },
+      {
+        "check_id": "deadline-and-process-tree-termination",
+        "status": "passed",
+        "severity": "info",
+        "detail": "a 1ms deadline terminated the adapter (ADAPTER_DEADLINE_EXCEEDED)"
+      },
+      {
+        "check_id": "no-execution-after-output-freeze",
+        "status": "passed",
+        "severity": "info",
+        "detail": "dispatch after output freeze is refused"
+      },
+      {
+        "check_id": "residue-reporting",
+        "status": "passed",
+        "severity": "info",
+        "detail": "the adapter declares report-residue"
+      }
+    ],
+    "verdict": "certified",
+    "refusal_codes": [],
+    "certifier_id": "erl2-certifier",
+    "certifier_is_adapter_owner": false,
+    "enforced_controls": [
+      "separate-process",
+      "process-tree-termination",
+      "wall-clock-deadline",
+      "bounded-request-bytes",
+      "bounded-response-bytes",
+      "writable-output-only",
+      "environment-variable-allowlist",
+      "bounded-diagnostics",
+      "input-mount-tamper-detection",
+      "egress-policy-adjudication",
+      "docker-socket-capability-denied",
+      "privileged-capability-denied"
+    ],
+    "unsupported_controls": [
+      "read-only-input-mounts",
+      "no-ambient-home-directory",
+      "no-docker-socket",
+      "deny-by-default-egress",
+      "numeric-non-root-user",
+      "read-only-root-filesystem",
+      "capability-drop-all",
+      "no-new-privileges",
+      "seccomp-default-profile",
+      "pid-limit",
+      "memory-limit",
+      "cpu-limit",
+      "network-namespace-isolation"
+    ],
+    "certified_at": "2026-07-01T00:00:15Z",
+    "core_hash": "sha256:36b6d246789555f035a6f6ee42e747e4ff1bbd0f051d8ac5aa914e1d6fedf7ef"
+  },
+  "reference-limited": {
+    "schema_version": "subject-adapter-certification-receipt/v1",
+    "receipt_id": "cert-reference-limited",
+    "suite": "ADAPTER-CERT-V1",
+    "adapter_manifest_hash": "sha256:7ffd7ba0d4bf4d8c21d9ed5520739e788df32b49bae30ed7d79cb9284ee431ba",
+    "adapter_artifact_hash": "sha256:88e72d8e746bf2c36d907bfa85e0e25039508578854808312968adb6c8d99412",
+    "adapter_id": "reference-limited",
+    "adapter_version": "0.1.0",
+    "certified_operations": [
+      "acquire",
+      "validate-package",
+      "translate-evidence",
+      "project",
+      "report-residue"
+    ],
+    "certified_package_kinds": [
+      "oci"
+    ],
+    "checks": [
+      {
+        "check_id": "immutable-artifact-identity",
+        "status": "passed",
+        "severity": "info",
+        "detail": "adapter entry digest sha256:88e72d8e746bf2c3…"
+      },
+      {
+        "check_id": "no-privileged-broker-capability",
+        "status": "passed",
+        "severity": "info",
+        "detail": "the adapter declares only unprivileged capabilities"
+      },
+      {
+        "check_id": "no-product-specific-core-change",
+        "status": "passed",
+        "severity": "info",
+        "detail": "every declared operation is in the closed enum"
+      },
+      {
+        "check_id": "protocol-negotiation",
+        "status": "passed",
+        "severity": "info",
+        "detail": "negotiated subject-adapter/v1 and repeated identifiers"
+      },
+      {
+        "check_id": "unsupported-retention",
+        "status": "passed",
+        "severity": "info",
+        "detail": "the probe operation reported a supported or failed outcome, both of which are retained"
+      },
+      {
+        "check_id": "diagnostics-bounds",
+        "status": "passed",
+        "severity": "info",
+        "detail": "diagnostics scanned: 66 bytes retained"
+      },
+      {
+        "check_id": "deterministic-projection",
+        "status": "passed",
+        "severity": "info",
+        "detail": "identical inputs produced an identical result identity"
+      },
+      {
+        "check_id": "phase-request-ancestry",
+        "status": "passed",
+        "severity": "info",
+        "detail": "a later-phase ancestor injected into an earlier request is refused"
+      },
+      {
+        "check_id": "oracle-partition",
+        "status": "passed",
+        "severity": "info",
+        "detail": "an oracle field in an adapter request is refused before dispatch"
+      },
+      {
+        "check_id": "mutation-disclosure",
+        "status": "passed",
+        "severity": "info",
+        "detail": "the probe operation declared no external mutation"
+      },
+      {
+        "check_id": "unsupported-package-kind",
+        "status": "passed",
+        "severity": "info",
+        "detail": "package kind archive is honestly reported unsupported"
+      },
+      {
+        "check_id": "deadline-and-process-tree-termination",
+        "status": "passed",
+        "severity": "info",
+        "detail": "a 1ms deadline terminated the adapter (ADAPTER_DEADLINE_EXCEEDED)"
+      },
+      {
+        "check_id": "no-execution-after-output-freeze",
+        "status": "passed",
+        "severity": "info",
+        "detail": "dispatch after output freeze is refused"
+      },
+      {
+        "check_id": "residue-reporting",
+        "status": "passed",
+        "severity": "info",
+        "detail": "the adapter declares report-residue"
+      }
+    ],
+    "verdict": "certified",
+    "refusal_codes": [],
+    "certifier_id": "erl2-certifier",
+    "certifier_is_adapter_owner": false,
+    "enforced_controls": [
+      "separate-process",
+      "process-tree-termination",
+      "wall-clock-deadline",
+      "bounded-request-bytes",
+      "bounded-response-bytes",
+      "writable-output-only",
+      "environment-variable-allowlist",
+      "bounded-diagnostics",
+      "input-mount-tamper-detection",
+      "egress-policy-adjudication",
+      "docker-socket-capability-denied",
+      "privileged-capability-denied"
+    ],
+    "unsupported_controls": [
+      "read-only-input-mounts",
+      "no-ambient-home-directory",
+      "no-docker-socket",
+      "deny-by-default-egress",
+      "numeric-non-root-user",
+      "read-only-root-filesystem",
+      "capability-drop-all",
+      "no-new-privileges",
+      "seccomp-default-profile",
+      "pid-limit",
+      "memory-limit",
+      "cpu-limit",
+      "network-namespace-isolation"
+    ],
+    "certified_at": "2026-07-01T00:00:15Z",
+    "core_hash": "sha256:8e73f2741b525fe6a15e66369464242ab99817d0c9a59d03403b4321dc309686"
+  },
+  "sabotage-protocol-mismatch": {
+    "schema_version": "subject-adapter-certification-receipt/v1",
+    "receipt_id": "cert-reference-correct",
+    "suite": "ADAPTER-CERT-V1",
+    "adapter_manifest_hash": "sha256:9b54e82999d6ca798f9abb54b6b01af2c4ed4a421d0769748f577ac667968aa6",
+    "adapter_artifact_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "adapter_id": "reference-correct",
+    "adapter_version": "0.1.0",
+    "certified_operations": [],
+    "certified_package_kinds": [],
+    "checks": [
+      {
+        "check_id": "immutable-artifact-identity",
+        "status": "passed",
+        "severity": "info",
+        "detail": "adapter entry digest sha256:582c739c914a811d…"
+      },
+      {
+        "check_id": "no-privileged-broker-capability",
+        "status": "passed",
+        "severity": "info",
+        "detail": "the adapter declares only unprivileged capabilities"
+      },
+      {
+        "check_id": "no-product-specific-core-change",
+        "status": "passed",
+        "severity": "info",
+        "detail": "every declared operation is in the closed enum"
+      },
+      {
+        "check_id": "protocol-negotiation",
+        "status": "failed",
+        "severity": "critical",
+        "detail": "the adapter did not complete a negotiated exchange: ADAPTER_PROTOCOL_VERSION_MISMATCH",
+        "refusal_code": "ADAPTER_PROTOCOL_VERSION_MISMATCH"
+      }
+    ],
+    "verdict": "refused",
+    "refusal_codes": [
+      "ADAPTER_PROTOCOL_VERSION_MISMATCH"
+    ],
+    "certifier_id": "erl2-certifier",
+    "certifier_is_adapter_owner": false,
+    "enforced_controls": [
+      "separate-process",
+      "process-tree-termination",
+      "wall-clock-deadline",
+      "bounded-request-bytes",
+      "bounded-response-bytes",
+      "writable-output-only",
+      "environment-variable-allowlist",
+      "bounded-diagnostics",
+      "input-mount-tamper-detection",
+      "egress-policy-adjudication",
+      "docker-socket-capability-denied",
+      "privileged-capability-denied"
+    ],
+    "unsupported_controls": [
+      "read-only-input-mounts",
+      "no-ambient-home-directory",
+      "no-docker-socket",
+      "deny-by-default-egress",
+      "numeric-non-root-user",
+      "read-only-root-filesystem",
+      "capability-drop-all",
+      "no-new-privileges",
+      "seccomp-default-profile",
+      "pid-limit",
+      "memory-limit",
+      "cpu-limit",
+      "network-namespace-isolation"
+    ],
+    "certified_at": "2026-07-01T00:00:03Z",
+    "core_hash": "sha256:a02229ab07e48b3e00bdc9caa11bdb80c1f3fafe3ef9ace5e3831df0735294a2"
+  }
+}

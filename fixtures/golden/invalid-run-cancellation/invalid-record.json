@@ -1,0 +1,38 @@
+{
+  "schema_version": "invalid-lab-run-record/v1",
+  "run_id": "019f1af9-b400-7222-a222-222222222222",
+  "terminal_state": "invalidated",
+  "failed_phase": {
+    "kind": "cancellation",
+    "cancelled_during": "pre_environment",
+    "lifecycle_event_hash": "sha256:a1f9c05a271876cda7848715be625d845a565600902053187a6e606e0992ed77"
+  },
+  "terminal_reason": {
+    "kind": "cancellation",
+    "classification": "cancellation",
+    "cancellation_request_hash": "sha256:785b42e72ff28624021497edfe349d95e767d9f19069ed7e43eca2bd9147e67f",
+    "cancellation_event_hash": "sha256:a1f9c05a271876cda7848715be625d845a565600902053187a6e606e0992ed77",
+    "requested_by_actor_hash": "sha256:4aebad5eca7f119419e59ae16b362b7b6b9feccad7ba4fa1e6ed2422809fa954",
+    "reason_code": "OPERATOR_CANCELLED"
+  },
+  "available_evidence": [
+    {
+      "artifact_role": "acquisition-preregistration",
+      "artifact_hash": "sha256:fe13f8ddf1a61edbd9993a4b19aeff1de36b9a3ba64b7e2eb0296d521db99ae0",
+      "reached_event_hash": "sha256:240c4003b60874de6b1ae0d23ad7dbdf1ab5552bb25549b5494b767751c903b8"
+    },
+    {
+      "artifact_role": "acquisition-source-manifest",
+      "artifact_hash": "sha256:fa57383df86cc9071d64f8bf365328cadf0abeab833b2a032ca3ef1d0a6c1c34",
+      "reached_event_hash": "sha256:240c4003b60874de6b1ae0d23ad7dbdf1ab5552bb25549b5494b767751c903b8"
+    }
+  ],
+  "cleanup": {
+    "variant": "none",
+    "status": "not_required",
+    "attempt_hashes": []
+  },
+  "lifecycle_head_hash": "sha256:b84dd8b2bb5823188077e7be1c6b72c38418dd041fb7076e6a88f6bc0a69fb5f",
+  "invalidated_at": "2026-07-01T00:00:07Z",
+  "core_hash": "sha256:5c2cf0aacf93e39b73f7f5fbb3b7dc9846476226613b2fd46442414f2151951f"
+}

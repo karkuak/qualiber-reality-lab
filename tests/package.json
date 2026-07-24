@@ -1,0 +1,18 @@
+{
+  "name": "@erl2/tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ERL2 cross-cutting test suites",
+  "license": "UNLICENSED",
+  "type": "module",
+  "dependencies": {
+    "@erl2/contracts": "*",
+    "@erl2/integrity": "*",
+    "@erl2/core": "*",
+    "@erl2/public-verifier": "*",
+    "@erl2/cli": "*",
+    "@erl2/adapter-sdk": "*",
+    "@erl2/evaluation-sdk": "*",
+    "@erl2/pack-operations": "*"
+  }
+}

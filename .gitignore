@@ -1,0 +1,5 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.erl2-work/
+.DS_Store

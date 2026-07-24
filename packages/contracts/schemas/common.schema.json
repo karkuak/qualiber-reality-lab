@@ -1,0 +1,344 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:common",
+  "title": "ERL2 shared scalar and composite definitions",
+  "$comment": "Design v2 \u00a716.1/\u00a716.2. All contract objects are closed; these definitions are shared building blocks only.",
+  "$defs": {
+    "Hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "Instant": {
+      "type": "string",
+      "$comment": "UTC RFC 3339 with second precision and a literal Z.",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "Decimal": {
+      "type": "string",
+      "$comment": "Canonical decimal string; no exponent, no leading +, no trailing zeros beyond one fractional digit group.",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "Id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "RunId": {
+      "type": "string",
+      "$comment": "UUIDv7.",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "Base64": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+      "maxLength": 16384
+    },
+    "Base64Url256": {
+      "type": "string",
+      "$comment": "Fixed-width opaque pool entry handle: 256 bits, base64url, unpadded.",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "LogicalPath": {
+      "type": "string",
+      "$comment": "Root-relative, slash separated, NFC. Rejects empty, dot, dot-dot, backslash, NUL, drive letters and absolute forms. Deeper checks live in @erl2/integrity path confinement.",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!/)(?!.*//)(?!.*(^|/)\\.\\.?(/|$))[^\\u0000-\\u001f\\\\:*?\"<>|]+$"
+    },
+    "MediaType": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]{0,126}/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$"
+    },
+    "Classification": {
+      "enum": [
+        "PUBLIC",
+        "INTERNAL",
+        "CONFIDENTIAL",
+        "SECRET"
+      ]
+    },
+    "SourceState": {
+      "enum": [
+        "complete",
+        "healthy_empty",
+        "partial",
+        "unavailable",
+        "error"
+      ]
+    },
+    "Tier": {
+      "enum": [
+        "development",
+        "held_out",
+        "blind"
+      ]
+    },
+    "ClaimScope": {
+      "enum": [
+        "T1",
+        "T2",
+        "T3"
+      ]
+    },
+    "JourneyIntent": {
+      "enum": [
+        "acquire",
+        "verify_package",
+        "install",
+        "configure",
+        "authenticate",
+        "connect",
+        "discover",
+        "exercise",
+        "observe",
+        "diagnose_decide",
+        "recover",
+        "upgrade",
+        "rollback",
+        "remove"
+      ]
+    },
+    "EnvironmentJourneyIntent": {
+      "enum": [
+        "install",
+        "configure",
+        "authenticate",
+        "connect",
+        "discover",
+        "exercise",
+        "observe",
+        "diagnose_decide",
+        "recover",
+        "upgrade",
+        "rollback",
+        "remove"
+      ]
+    },
+    "PreEnvironmentJourneyIntent": {
+      "enum": [
+        "acquire",
+        "verify_package"
+      ]
+    },
+    "StepStatus": {
+      "enum": [
+        "succeeded",
+        "failed",
+        "unsupported"
+      ]
+    },
+    "RecordStatus": {
+      "enum": [
+        "completed",
+        "failed",
+        "unsupported"
+      ]
+    },
+    "KeyId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,95}$"
+    },
+    "Signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "key_id",
+        "signed_hash",
+        "signature_base64"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "Ed25519"
+        },
+        "key_id": {
+          "$ref": "erl2:common#/$defs/KeyId"
+        },
+        "signed_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature_base64": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{86}==$"
+        }
+      }
+    },
+    "ArtifactRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "media_type",
+        "byte_length",
+        "file_sha256",
+        "classification"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "erl2:common#/$defs/LogicalPath"
+        },
+        "media_type": {
+          "$ref": "erl2:common#/$defs/MediaType"
+        },
+        "byte_length": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 68719476736
+        },
+        "file_sha256": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "classification": {
+          "$ref": "erl2:common#/$defs/Classification"
+        }
+      }
+    },
+    "Provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer",
+        "producer_version",
+        "transformations"
+      ],
+      "properties": {
+        "producer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "producer_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "source_uri": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "source_commit": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "transformations": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          }
+        }
+      }
+    },
+    "BundleMember": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact",
+        "artifact_core_hash"
+      ],
+      "properties": {
+        "artifact": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "artifact_core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "HashArray": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": {
+        "$ref": "erl2:common#/$defs/Hash"
+      }
+    },
+    "UniqueHashArray": {
+      "$comment": "A SET of hashes: unique per design v2 §16.1 (review §11.14). Used where order is not semantically relevant and membership is what matters, e.g. substrate/isolation configuration and policy-input hash sets.",
+      "type": "array",
+      "maxItems": 4096,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "erl2:common#/$defs/Hash"
+      }
+    },
+    "IdArray": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": {
+        "$ref": "erl2:common#/$defs/Id"
+      }
+    },
+    "KeyIdArray": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "erl2:common#/$defs/KeyId"
+      }
+    },
+    "ShortStringArray": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "ArtifactRefArray": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": {
+        "$ref": "erl2:common#/$defs/ArtifactRef"
+      }
+    },
+    "EmptyArray": {
+      "type": "array",
+      "maxItems": 0,
+      "items": false
+    },
+    "GateResults": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "gate_id",
+          "passed",
+          "evidence_refs"
+        ],
+        "properties": {
+          "gate_id": {
+            "$ref": "erl2:common#/$defs/Id"
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "evidence_refs": {
+            "$ref": "erl2:common#/$defs/HashArray"
+          }
+        }
+      }
+    },
+    "ResourceIdentityList": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "identity_hash"
+        ],
+        "properties": {
+          "kind": {
+            "$ref": "erl2:common#/$defs/Id"
+          },
+          "identity_hash": {
+            "$ref": "erl2:common#/$defs/Hash"
+          }
+        }
+      }
+    }
+  }
+}

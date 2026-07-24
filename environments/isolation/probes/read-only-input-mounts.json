@@ -1,0 +1,19 @@
+{
+  "schema_version": "isolation-enforcement-probe-result/v1",
+  "probe_id": "ro-input-mount",
+  "control_id": "read-only-input-mounts",
+  "substrate_lock_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
+  "evidence": "observed",
+  "enforced": true,
+  "method": "mount an ERL-owned input directory :ro, read the seeded file (must succeed) and write to it (must fail)",
+  "observation": {
+    "attempted": "read and write /erl2-input mounted :ro",
+    "observed": "erl2-probe-input-seed\ntouch: /erl2-input/breakout: Read-only file system\nREFUSED host_unchanged=true",
+    "expectation": "the seeded content reads back, the write is refused, and the host directory is unchanged",
+    "exit_code": 0
+  },
+  "resources_cleaned_up": true,
+  "started_at": "2026-07-23T16:57:29Z",
+  "ended_at": "2026-07-23T16:57:30Z",
+  "core_hash": "sha256:6f9eca429fd943b1815704049fdb1de08f2868e559d2fcb352239e02e4f05a9e"
+}

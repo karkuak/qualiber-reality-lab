@@ -1,0 +1,22 @@
+{
+  "schema_version": "substrate-lock/v1",
+  "lock_id": "otel-demo-candidate",
+  "substrate_id": "opentelemetry-demo",
+  "qualification_status": "unqualified_pending_erl2_oq_005",
+  "unqualified_reason_code": "OTEL_DEMO_NOT_RE_ADMITTED: no archive digest, per-platform image digests, SBOM, provenance or config hashes captured since the July 2026 upstream changes recorded in design v2 \u00a71.4. See environments/otel-demo/README.md. Gate: ERL2-OQ-005.",
+  "source_archive": {
+    "release_tag": "UNQUALIFIED-CANDIDATE",
+    "source_commit": "UNQUALIFIED-CANDIDATE",
+    "archive_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "images": [],
+  "config_hashes": [],
+  "recorded_at": "2026-07-23T00:00:00Z",
+  "core_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "erl2-dev-environment-governor-ed25519-1",
+    "signed_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "signature_base64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+  }
+}

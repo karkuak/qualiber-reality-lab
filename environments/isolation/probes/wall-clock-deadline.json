@@ -1,0 +1,18 @@
+{
+  "schema_version": "isolation-enforcement-probe-result/v1",
+  "probe_id": "wall-clock",
+  "control_id": "wall-clock-deadline",
+  "substrate_lock_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
+  "evidence": "observed",
+  "enforced": true,
+  "method": "run a long-lived container detached, SIGKILL it at the deadline, and measure real elapsed time: the run must be dead within a small multiple of the bound and must never print its survival sentinel",
+  "observation": {
+    "attempted": "launch 'sleep 600; echo SURVIVED' detached, SIGKILL at the 4000 ms deadline, then read state and logs",
+    "observed": "elapsed_ms=167 running_after=false survived_sentinel=false within_bound=true",
+    "expectation": "the container is not running, never printed SURVIVED, and the whole bounded run finished well inside the 600 s it asked for"
+  },
+  "resources_cleaned_up": true,
+  "started_at": "2026-07-23T16:57:21Z",
+  "ended_at": "2026-07-23T16:57:21Z",
+  "core_hash": "sha256:b957d01556bfcb9aa8ba32c949826fca2550a19dc9dd4c13ec4e1b9a325745a0"
+}

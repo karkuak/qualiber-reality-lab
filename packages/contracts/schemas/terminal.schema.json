@@ -1,0 +1,1263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:terminal",
+  "title": "ERL2 terminal run records, attestations, public bundles and closure report",
+  "$comment": "Design v2 \u00a714/\u00a716.2/\u00a716.3. Exactly one of three run-record variants terminates an accepted run (ERL2-FR-001). The invalid variant schema-forbids every attestation and bundle field.",
+  "$defs": {
+    "CancellationRequestV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "$comment": "Signed evidence that a durably-accepted run was cancelled (design v2 §12). Cited by CancellationTerminalReasonV1.cancellation_request_hash; carries no finding.",
+      "required": [
+        "schema_version",
+        "request_id",
+        "run_id",
+        "cancelled_during",
+        "observed_state",
+        "requested_by_actor_id",
+        "reason_code",
+        "requested_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "cancellation-request/v1"
+        },
+        "request_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "cancelled_during": {
+          "enum": [
+            "pre_environment",
+            "selection",
+            "environment_setup",
+            "journey_execution",
+            "cleanup",
+            "finalization"
+          ]
+        },
+        "observed_state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "requested_by_actor_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "reason_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "requested_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "PreEnvironmentLabRunRecordV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "terminal_stage",
+        "acquisition_preregistration_hash",
+        "acquisition_source_manifest_hash",
+        "acquisition_record_hash",
+        "adapter_hash",
+        "generic_run_policy_hash",
+        "subject_output_hash",
+        "journey_result_hash",
+        "domain_not_applicable_result_hash",
+        "precleanup_result_join_hash",
+        "pre_environment_cleanup_hash",
+        "validity_result_hash",
+        "generic_evaluation_index_hash",
+        "lifecycle_head_hash",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "pre-environment-lab-run-record/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "terminal_stage": {
+          "$ref": "erl2:common#/$defs/PreEnvironmentJourneyIntent"
+        },
+        "acquisition_preregistration_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_source_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "package_verification_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "generic_run_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "subject_output_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "journey_result_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "domain_not_applicable_result_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "precleanup_result_join_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "pre_environment_cleanup_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "validity_result_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "generic_evaluation_index_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "lifecycle_head_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "terminal_stage": {
+                "const": "verify_package"
+              }
+            },
+            "required": [
+              "terminal_stage"
+            ],
+            "type": "object"
+          },
+          "then": {
+            "required": [
+              "package_verification_record_hash"
+            ],
+            "type": "object"
+          },
+          "else": {
+            "not": {
+              "required": [
+                "package_verification_record_hash"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      ]
+    },
+    "EnvironmentLabRunRecordV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "terminal_stage",
+        "acquisition_preregistration_hash",
+        "acquisition_source_manifest_hash",
+        "acquisition_record_hash",
+        "subject_package_manifest_hash",
+        "selection_request_hash",
+        "selection_receipt_hash",
+        "selected_challenge_journey_binding_hash",
+        "adapter_hash",
+        "generic_run_policy_hash",
+        "plan_hash",
+        "environment_instance_hash",
+        "subject_output_hash",
+        "journey_result_hash",
+        "domain_result_hash",
+        "precleanup_result_join_hash",
+        "generic_evaluation_index_hash",
+        "environment_restoration_hash",
+        "teardown_hash",
+        "lifecycle_head_hash",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "environment-lab-run-record/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "terminal_stage": {
+          "$ref": "erl2:common#/$defs/EnvironmentJourneyIntent"
+        },
+        "acquisition_preregistration_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_source_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "subject_package_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_request_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selected_challenge_journey_binding_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "generic_run_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "plan_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "environment_instance_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "observation_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "canonical_evidence_envelope_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_translation_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "subject_output_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "journey_result_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "domain_result_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "precleanup_result_join_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "generic_evaluation_index_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "environment_restoration_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "teardown_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "lifecycle_head_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "InvalidNonJourneyPhase": {
+      "enum": [
+        "acquisition_preregistration",
+        "acquisition",
+        "package_verification",
+        "challenge_preregistration",
+        "selection",
+        "provisioning",
+        "baseline",
+        "planning",
+        "activation",
+        "observation",
+        "output_freeze",
+        "reveal",
+        "evaluation",
+        "pre_environment_cleanup",
+        "environment_restoration",
+        "emergency_cleanup",
+        "teardown",
+        "validity",
+        "finalization"
+      ]
+    },
+    "InvalidLifecyclePhaseV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "phase",
+        "lifecycle_event_hash"
+      ],
+      "properties": {
+        "kind": {
+          "const": "lifecycle_phase"
+        },
+        "phase": {
+          "$ref": "erl2:terminal#/$defs/InvalidNonJourneyPhase"
+        },
+        "lifecycle_event_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "InvalidJourneyExecutionPhaseV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "failed_intent",
+        "step_commitment_hash",
+        "lifecycle_event_hash"
+      ],
+      "properties": {
+        "kind": {
+          "const": "journey_execution"
+        },
+        "failed_intent": {
+          "$ref": "erl2:common#/$defs/EnvironmentJourneyIntent"
+        },
+        "step_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "lifecycle_event_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "InvalidCancellationPhaseV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "cancelled_during",
+        "lifecycle_event_hash"
+      ],
+      "properties": {
+        "kind": {
+          "const": "cancellation"
+        },
+        "cancelled_during": {
+          "enum": [
+            "pre_environment",
+            "selection",
+            "environment_setup",
+            "journey_execution",
+            "cleanup",
+            "finalization"
+          ]
+        },
+        "journey_intent": {
+          "$ref": "erl2:common#/$defs/EnvironmentJourneyIntent"
+        },
+        "lifecycle_event_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "An intent is required exactly when cancellation happened during journey execution.",
+          "if": {
+            "properties": {
+              "cancelled_during": {
+                "const": "journey_execution"
+              }
+            },
+            "required": [
+              "cancelled_during"
+            ],
+            "type": "object"
+          },
+          "then": {
+            "required": [
+              "journey_intent"
+            ],
+            "type": "object"
+          },
+          "else": {
+            "not": {
+              "required": [
+                "journey_intent"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      ]
+    },
+    "InvalidFailurePhaseV1": {
+      "oneOf": [
+        {
+          "$ref": "erl2:terminal#/$defs/InvalidLifecyclePhaseV1"
+        },
+        {
+          "$ref": "erl2:terminal#/$defs/InvalidJourneyExecutionPhaseV1"
+        },
+        {
+          "$ref": "erl2:terminal#/$defs/InvalidCancellationPhaseV1"
+        }
+      ]
+    },
+    "InvalidFailureClassification": {
+      "enum": [
+        "lab_invalidity",
+        "dependency_failure",
+        "adapter_failure",
+        "evaluator_failure",
+        "integrity_failure",
+        "cleanup_failure",
+        "teardown_failure"
+      ]
+    },
+    "ClassifiedFailureTerminalReasonV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "classification",
+        "failure_event_hash",
+        "primary_finding_hash"
+      ],
+      "properties": {
+        "kind": {
+          "const": "classified_failure"
+        },
+        "classification": {
+          "$ref": "erl2:terminal#/$defs/InvalidFailureClassification"
+        },
+        "failure_event_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "primary_finding_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "invalidity_finding_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "Lab, integrity, cleanup and teardown classifications additionally require an invalidity finding (design v2 \u00a716.3).",
+          "if": {
+            "properties": {
+              "classification": {
+                "enum": [
+                  "lab_invalidity",
+                  "integrity_failure",
+                  "cleanup_failure",
+                  "teardown_failure"
+                ]
+              }
+            },
+            "required": [
+              "classification"
+            ],
+            "type": "object"
+          },
+          "then": {
+            "required": [
+              "invalidity_finding_hash"
+            ],
+            "type": "object"
+          }
+        }
+      ]
+    },
+    "CancellationTerminalReasonV1": {
+      "$comment": "Cancellation schema-forbids primary and invalidity finding fields; it never fabricates a finding (ERL2-AC-030).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "classification",
+        "cancellation_request_hash",
+        "cancellation_event_hash",
+        "requested_by_actor_hash",
+        "reason_code"
+      ],
+      "properties": {
+        "kind": {
+          "const": "cancellation"
+        },
+        "classification": {
+          "const": "cancellation"
+        },
+        "cancellation_request_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "cancellation_event_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "requested_by_actor_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "reason_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "InvalidTerminalReasonV1": {
+      "oneOf": [
+        {
+          "$ref": "erl2:terminal#/$defs/ClassifiedFailureTerminalReasonV1"
+        },
+        {
+          "$ref": "erl2:terminal#/$defs/CancellationTerminalReasonV1"
+        }
+      ]
+    },
+    "InvalidLabRunRecordV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "terminal_state",
+        "failed_phase",
+        "terminal_reason",
+        "available_evidence",
+        "cleanup",
+        "lifecycle_head_hash",
+        "invalidated_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "invalid-lab-run-record/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "terminal_state": {
+          "const": "invalidated"
+        },
+        "failed_phase": {
+          "$ref": "erl2:terminal#/$defs/InvalidFailurePhaseV1"
+        },
+        "terminal_reason": {
+          "$ref": "erl2:terminal#/$defs/InvalidTerminalReasonV1"
+        },
+        "available_evidence": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "artifact_role",
+              "artifact_hash",
+              "reached_event_hash"
+            ],
+            "properties": {
+              "artifact_role": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "artifact_hash": {
+                "$ref": "erl2:common#/$defs/Hash"
+              },
+              "reached_event_hash": {
+                "$ref": "erl2:common#/$defs/Hash"
+              }
+            }
+          }
+        },
+        "cleanup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "variant",
+            "status",
+            "attempt_hashes"
+          ],
+          "properties": {
+            "variant": {
+              "enum": [
+                "none",
+                "pre_environment",
+                "partial_environment",
+                "environment",
+                "emergency_environment"
+              ]
+            },
+            "status": {
+              "enum": [
+                "not_required",
+                "attempted_succeeded",
+                "attempted_failed"
+              ]
+            },
+            "attempt_hashes": {
+              "$ref": "erl2:common#/$defs/HashArray"
+            },
+            "result_hash": {
+              "$ref": "erl2:common#/$defs/Hash"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "variant": {
+                    "const": "none"
+                  }
+                },
+                "required": [
+                  "variant"
+                ],
+                "type": "object"
+              },
+              "then": {
+                "properties": {
+                  "status": {
+                    "const": "not_required"
+                  }
+                },
+                "not": {
+                  "required": [
+                    "result_hash"
+                  ],
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "else": {
+                "required": [
+                  "result_hash"
+                ],
+                "type": "object"
+              }
+            }
+          ]
+        },
+        "lifecycle_head_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "invalidated_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "ERL2-AC-030: cancellation discriminants pair only with each other.",
+          "if": {
+            "properties": {
+              "failed_phase": {
+                "properties": {
+                  "kind": {
+                    "const": "cancellation"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "failed_phase"
+            ],
+            "type": "object"
+          },
+          "then": {
+            "properties": {
+              "terminal_reason": {
+                "properties": {
+                  "kind": {
+                    "const": "cancellation"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
+          "else": {
+            "properties": {
+              "terminal_reason": {
+                "properties": {
+                  "kind": {
+                    "const": "classified_failure"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              }
+            },
+            "type": "object"
+          }
+        },
+        {
+          "$comment": "ERL2-FR-025/AC-029: restoration and teardown failures must terminate through receipt-backed emergency cleanup.",
+          "if": {
+            "properties": {
+              "failed_phase": {
+                "properties": {
+                  "kind": {
+                    "const": "lifecycle_phase"
+                  },
+                  "phase": {
+                    "enum": [
+                      "environment_restoration",
+                      "teardown"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "phase"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "failed_phase"
+            ],
+            "type": "object"
+          },
+          "then": {
+            "properties": {
+              "cleanup": {
+                "properties": {
+                  "variant": {
+                    "const": "emergency_environment"
+                  }
+                },
+                "required": [
+                  "variant",
+                  "result_hash"
+                ],
+                "type": "object"
+              }
+            },
+            "type": "object"
+          }
+        }
+      ]
+    },
+    "LabRunRecordV1": {
+      "oneOf": [
+        {
+          "$ref": "erl2:terminal#/$defs/PreEnvironmentLabRunRecordV1"
+        },
+        {
+          "$ref": "erl2:terminal#/$defs/EnvironmentLabRunRecordV1"
+        },
+        {
+          "$ref": "erl2:terminal#/$defs/InvalidLabRunRecordV1"
+        }
+      ]
+    },
+    "PreEnvironmentFinalLabAttestationV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "attestation_id",
+        "run_id",
+        "terminal_variant",
+        "run_record_hash",
+        "acquisition_preregistration_verification_receipt_hash",
+        "signer_inventory_hash",
+        "timestamp_checkpoint_hash",
+        "run_trust_policy_hash",
+        "acquisition_source_manifest_hash",
+        "acquisition_record_hash",
+        "adapter_hash",
+        "generic_run_policy_hash",
+        "generic_evaluation_index_hash",
+        "cleanup",
+        "lab_validity",
+        "claim_scope",
+        "finalized_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "pre-environment-final-lab-attestation/v1"
+        },
+        "attestation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "terminal_variant": {
+          "const": "pre_environment"
+        },
+        "run_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_preregistration_verification_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signer_inventory_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "timestamp_checkpoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "run_trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_source_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "generic_run_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "generic_evaluation_index_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "cleanup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "verification_hash"
+          ],
+          "properties": {
+            "kind": {
+              "const": "pre_environment"
+            },
+            "verification_hash": {
+              "$ref": "erl2:common#/$defs/Hash"
+            }
+          }
+        },
+        "lab_validity": {
+          "const": "valid"
+        },
+        "claim_scope": {
+          "$ref": "erl2:common#/$defs/ClaimScope"
+        },
+        "finalized_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "EnvironmentFinalLabAttestationV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "attestation_id",
+        "run_id",
+        "terminal_variant",
+        "run_record_hash",
+        "acquisition_preregistration_verification_receipt_hash",
+        "selection_receipt_hash",
+        "signer_inventory_hash",
+        "timestamp_checkpoint_hash",
+        "run_trust_policy_hash",
+        "acquisition_source_manifest_hash",
+        "acquisition_record_hash",
+        "subject_package_manifest_hash",
+        "adapter_hash",
+        "generic_run_policy_hash",
+        "generic_evaluation_index_hash",
+        "cleanup",
+        "exposure_event_hash",
+        "selection_assurance",
+        "lab_validity",
+        "claim_scope",
+        "finalized_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "environment-final-lab-attestation/v1"
+        },
+        "attestation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "terminal_variant": {
+          "const": "environment"
+        },
+        "run_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_preregistration_verification_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signer_inventory_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "timestamp_checkpoint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "run_trust_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_source_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "subject_package_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "generic_run_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "generic_evaluation_index_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "cleanup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "restoration_hash",
+            "teardown_hash"
+          ],
+          "properties": {
+            "kind": {
+              "const": "environment"
+            },
+            "restoration_hash": {
+              "$ref": "erl2:common#/$defs/Hash"
+            },
+            "teardown_hash": {
+              "$ref": "erl2:common#/$defs/Hash"
+            }
+          }
+        },
+        "exposure_event_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_assurance": {
+          "$ref": "erl2:selection#/$defs/SelectionAssuranceV1"
+        },
+        "lab_validity": {
+          "const": "valid"
+        },
+        "claim_scope": {
+          "$ref": "erl2:common#/$defs/ClaimScope"
+        },
+        "finalized_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "FinalLabAttestationV1": {
+      "oneOf": [
+        {
+          "$ref": "erl2:terminal#/$defs/PreEnvironmentFinalLabAttestationV1"
+        },
+        {
+          "$ref": "erl2:terminal#/$defs/EnvironmentFinalLabAttestationV1"
+        }
+      ]
+    },
+    "PreEnvironmentPublicVerificationBundleV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "terminal_variant",
+        "bundle_id",
+        "run_id",
+        "final_attestation",
+        "acquisition_preregistration_verification_receipt",
+        "signer_inventory",
+        "run_trust_policy",
+        "acquisition_timestamp_checkpoint_chain",
+        "verification_trust_head_source",
+        "execution_verification_mode",
+        "execution_artifacts",
+        "created_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "public-verification-bundle/v2"
+        },
+        "terminal_variant": {
+          "const": "pre_environment"
+        },
+        "bundle_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "final_attestation": {
+          "$ref": "erl2:common#/$defs/BundleMember"
+        },
+        "acquisition_preregistration_verification_receipt": {
+          "$ref": "erl2:common#/$defs/BundleMember"
+        },
+        "signer_inventory": {
+          "$ref": "erl2:common#/$defs/BundleMember"
+        },
+        "run_trust_policy": {
+          "$ref": "erl2:common#/$defs/BundleMember"
+        },
+        "acquisition_timestamp_checkpoint_chain": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "erl2:common#/$defs/BundleMember"
+          }
+        },
+        "verification_trust_head_source": {
+          "const": "local_root_pinned_configuration"
+        },
+        "execution_verification_mode": {
+          "const": "finalizer_verdict_only"
+        },
+        "execution_artifacts": {
+          "$ref": "erl2:common#/$defs/EmptyArray"
+        },
+        "created_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "EnvironmentPublicVerificationBundleV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "terminal_variant",
+        "bundle_id",
+        "run_id",
+        "final_attestation",
+        "acquisition_preregistration_verification_receipt",
+        "selection_verification_receipt",
+        "signer_inventory",
+        "run_trust_policy",
+        "selected_run_timestamp_checkpoint_chain",
+        "verification_trust_head_source",
+        "execution_verification_mode",
+        "execution_artifacts",
+        "created_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "public-verification-bundle/v2"
+        },
+        "terminal_variant": {
+          "const": "environment"
+        },
+        "bundle_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "final_attestation": {
+          "$ref": "erl2:common#/$defs/BundleMember"
+        },
+        "acquisition_preregistration_verification_receipt": {
+          "$ref": "erl2:common#/$defs/BundleMember"
+        },
+        "selection_verification_receipt": {
+          "$ref": "erl2:common#/$defs/BundleMember"
+        },
+        "signer_inventory": {
+          "$ref": "erl2:common#/$defs/BundleMember"
+        },
+        "run_trust_policy": {
+          "$ref": "erl2:common#/$defs/BundleMember"
+        },
+        "selected_run_timestamp_checkpoint_chain": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "erl2:common#/$defs/BundleMember"
+          }
+        },
+        "verification_trust_head_source": {
+          "const": "local_root_pinned_configuration"
+        },
+        "execution_verification_mode": {
+          "const": "finalizer_verdict_only"
+        },
+        "execution_artifacts": {
+          "$ref": "erl2:common#/$defs/EmptyArray"
+        },
+        "created_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "PublicVerificationBundleV2": {
+      "oneOf": [
+        {
+          "$ref": "erl2:terminal#/$defs/PreEnvironmentPublicVerificationBundleV2"
+        },
+        {
+          "$ref": "erl2:terminal#/$defs/EnvironmentPublicVerificationBundleV2"
+        }
+      ]
+    },
+    "MandatoryGraphClosureReportV1": {
+      "$comment": "Verifier output only. Never a bundle input and never a producer assertion.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "algorithm",
+        "run_id",
+        "derived_terminal_phase",
+        "derived_terminal_variant",
+        "lifecycle_head_hash",
+        "required_hashes_by_role",
+        "rejected_extra_hashes",
+        "missing_roles",
+        "verdict",
+        "verified_at",
+        "verifier_release_hash",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "mandatory-graph-closure-report/v1"
+        },
+        "algorithm": {
+          "const": "erl2-mandatory-closure/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "derived_terminal_phase": {
+          "oneOf": [
+            {
+              "$ref": "erl2:common#/$defs/JourneyIntent"
+            },
+            {
+              "$ref": "erl2:terminal#/$defs/InvalidFailurePhaseV1"
+            }
+          ]
+        },
+        "derived_terminal_variant": {
+          "enum": [
+            "pre_environment",
+            "environment",
+            "invalid"
+          ]
+        },
+        "lifecycle_head_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "verified_trust_head_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "required_hashes_by_role": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "ordered_hashes"
+            ],
+            "properties": {
+              "role": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "ordered_hashes": {
+                "$ref": "erl2:common#/$defs/HashArray"
+              }
+            }
+          }
+        },
+        "rejected_extra_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "missing_roles": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "verdict": {
+          "enum": [
+            "valid",
+            "invalid"
+          ]
+        },
+        "verified_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "verifier_release_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    }
+  }
+}

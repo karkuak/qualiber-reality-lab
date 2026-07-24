@@ -1,0 +1,18 @@
+{
+  "schema_version": "isolation-enforcement-probe-result/v1",
+  "probe_id": "run-scoped-identity",
+  "control_id": "run-scoped-resource-identity",
+  "substrate_lock_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
+  "evidence": "observed",
+  "enforced": true,
+  "method": "create a named container and volume, then confirm the runtime reports names that embed this run id and that a foreign name is not ours",
+  "observation": {
+    "attempted": "create a run-scoped container and volume and read their names back from the runtime",
+    "observed": "container=erl2-probe-run-scoped-identity-01890000-0000-7000-8000-0000000000aa volumes=erl2-probe-volume-01890000-0000-7000-8000-0000000000aa",
+    "expectation": "every created resource name embeds this run id and a foreign name does not match"
+  },
+  "resources_cleaned_up": true,
+  "started_at": "2026-07-23T16:57:32Z",
+  "ended_at": "2026-07-23T16:57:33Z",
+  "core_hash": "sha256:bd114e9ccfb2889c3770954721a9b06bb57bdf9971e4719d12b332b0f972e9bf"
+}

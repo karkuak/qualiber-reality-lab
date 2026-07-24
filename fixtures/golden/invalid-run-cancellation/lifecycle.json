@@ -1,0 +1,142 @@
+[
+  {
+    "schema_version": "lab-lifecycle-event/v1",
+    "run_id": "019f1af9-b400-7222-a222-222222222222",
+    "sequence": 0,
+    "event_id": "evt-000000",
+    "event_type": "acquisition_preregistered",
+    "state_from": "created",
+    "state_to": "acquisition_preregistered",
+    "occurred_at": "2026-07-01T00:00:02Z",
+    "actor_id": "fake-operator",
+    "command_id": "preregister-acquisition",
+    "operation_id": "op-preregister",
+    "required_hashes": [],
+    "produced": [
+      {
+        "artifact_role": "acquisition-preregistration",
+        "artifact_core_hash": "sha256:fe13f8ddf1a61edbd9993a4b19aeff1de36b9a3ba64b7e2eb0296d521db99ae0",
+        "artifact_schema_version": "acquisition-preregistration/v1"
+      },
+      {
+        "artifact_role": "acquisition-source-manifest",
+        "artifact_core_hash": "sha256:fa57383df86cc9071d64f8bf365328cadf0abeab833b2a032ca3ef1d0a6c1c34",
+        "artifact_schema_version": "acquisition-source-manifest/v1"
+      }
+    ],
+    "core_hash": "sha256:240c4003b60874de6b1ae0d23ad7dbdf1ab5552bb25549b5494b767751c903b8"
+  },
+  {
+    "schema_version": "lab-lifecycle-event/v1",
+    "run_id": "019f1af9-b400-7222-a222-222222222222",
+    "sequence": 1,
+    "event_id": "evt-000001",
+    "event_type": "subject_acquisition_planned",
+    "state_from": "acquisition_preregistered",
+    "state_to": "step_planned",
+    "occurred_at": "2026-07-01T00:00:03Z",
+    "actor_id": "fake-operator",
+    "command_id": "acquire",
+    "operation_id": "op-acquire-planned",
+    "prior_event_hash": "sha256:240c4003b60874de6b1ae0d23ad7dbdf1ab5552bb25549b5494b767751c903b8",
+    "required_hashes": [],
+    "produced": [],
+    "core_hash": "sha256:f4a03ecc7cab8d716f75214a9a29f74252c5911aa6a184ac202f43c0c13b2b05"
+  },
+  {
+    "schema_version": "lab-lifecycle-event/v1",
+    "run_id": "019f1af9-b400-7222-a222-222222222222",
+    "sequence": 2,
+    "event_id": "evt-000002",
+    "event_type": "cancellation_requested",
+    "state_from": "step_planned",
+    "state_to": "invalid_failure_detected",
+    "occurred_at": "2026-07-01T00:00:04Z",
+    "actor_id": "fake-operator",
+    "command_id": "cancel",
+    "operation_id": "op-cancel",
+    "prior_event_hash": "sha256:f4a03ecc7cab8d716f75214a9a29f74252c5911aa6a184ac202f43c0c13b2b05",
+    "required_hashes": [],
+    "produced": [],
+    "failure": {
+      "code": "INVALID_TERMINAL_CANCELLED",
+      "owner": "lab",
+      "message": "operator cancelled the run"
+    },
+    "core_hash": "sha256:a1f9c05a271876cda7848715be625d845a565600902053187a6e606e0992ed77"
+  },
+  {
+    "schema_version": "lab-lifecycle-event/v1",
+    "run_id": "019f1af9-b400-7222-a222-222222222222",
+    "sequence": 3,
+    "event_id": "evt-000003",
+    "event_type": "invalid_pre_environment_cleanup_started",
+    "state_from": "invalid_failure_detected",
+    "state_to": "invalid_pre_environment_cleanup_started",
+    "occurred_at": "2026-07-01T00:00:05Z",
+    "actor_id": "fake-operator",
+    "command_id": "cleanup",
+    "operation_id": "op-invalid-cleanup-start",
+    "prior_event_hash": "sha256:a1f9c05a271876cda7848715be625d845a565600902053187a6e606e0992ed77",
+    "required_hashes": [],
+    "produced": [],
+    "core_hash": "sha256:76dcb84aaade1cbd697680517b749508a8422b57551fe5f3577f05bc100466ca"
+  },
+  {
+    "schema_version": "lab-lifecycle-event/v1",
+    "run_id": "019f1af9-b400-7222-a222-222222222222",
+    "sequence": 4,
+    "event_id": "evt-000004",
+    "event_type": "invalid_cleanup_terminal",
+    "state_from": "invalid_pre_environment_cleanup_started",
+    "state_to": "invalid_cleanup_terminal",
+    "occurred_at": "2026-07-01T00:00:06Z",
+    "actor_id": "fake-operator",
+    "command_id": "cleanup",
+    "operation_id": "op-invalid-cleanup-terminal",
+    "prior_event_hash": "sha256:76dcb84aaade1cbd697680517b749508a8422b57551fe5f3577f05bc100466ca",
+    "required_hashes": [],
+    "produced": [],
+    "core_hash": "sha256:b84dd8b2bb5823188077e7be1c6b72c38418dd041fb7076e6a88f6bc0a69fb5f"
+  },
+  {
+    "schema_version": "lab-lifecycle-event/v1",
+    "run_id": "019f1af9-b400-7222-a222-222222222222",
+    "sequence": 5,
+    "event_id": "evt-000005",
+    "event_type": "invalid_lab_run_record_frozen",
+    "state_from": "invalid_cleanup_terminal",
+    "state_to": "invalid_lab_run_record_frozen",
+    "occurred_at": "2026-07-01T00:00:08Z",
+    "actor_id": "fake-operator",
+    "command_id": "cleanup",
+    "operation_id": "op-invalid-record",
+    "prior_event_hash": "sha256:b84dd8b2bb5823188077e7be1c6b72c38418dd041fb7076e6a88f6bc0a69fb5f",
+    "required_hashes": [],
+    "produced": [
+      {
+        "artifact_role": "invalid-run-record",
+        "artifact_core_hash": "sha256:5c2cf0aacf93e39b73f7f5fbb3b7dc9846476226613b2fd46442414f2151951f",
+        "artifact_schema_version": "invalid-lab-run-record/v1"
+      }
+    ],
+    "core_hash": "sha256:d1b5bb5abc21c991dea6ad59fcb1c9234631780d865259c3d8abe724e239c0f9"
+  },
+  {
+    "schema_version": "lab-lifecycle-event/v1",
+    "run_id": "019f1af9-b400-7222-a222-222222222222",
+    "sequence": 6,
+    "event_id": "evt-000006",
+    "event_type": "invalidated",
+    "state_from": "invalid_lab_run_record_frozen",
+    "state_to": "invalidated",
+    "occurred_at": "2026-07-01T00:00:09Z",
+    "actor_id": "fake-operator",
+    "command_id": "cleanup",
+    "operation_id": "op-invalidated",
+    "prior_event_hash": "sha256:d1b5bb5abc21c991dea6ad59fcb1c9234631780d865259c3d8abe724e239c0f9",
+    "required_hashes": [],
+    "produced": [],
+    "core_hash": "sha256:df1c9d7e7f01c740d70b6611b34a129d2d35a9a490c42cbda58adb1892855be3"
+  }
+]

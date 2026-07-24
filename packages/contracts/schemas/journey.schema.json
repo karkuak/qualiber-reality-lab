@@ -1,0 +1,1061 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:journey",
+  "title": "ERL2 journey, challenge and environment contracts",
+  "$comment": "Design v2 §9/§10/§16.2. The subject-visible step and the judge expectation are deliberately different closed contracts (ERL2-FR-015).",
+  "$defs": {
+    "SubjectVisibleJourneyStepV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "step_id",
+        "intent",
+        "actor_role",
+        "interaction_kinds",
+        "visible_prerequisite_ids",
+        "visible_input_refs",
+        "timeout_ms",
+        "retry_policy",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "subject-visible-journey-step/v1"
+        },
+        "step_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "intent": {
+          "$ref": "erl2:common#/$defs/JourneyIntent"
+        },
+        "actor_role": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "interaction_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "enum": [
+              "cli",
+              "api",
+              "ui",
+              "file",
+              "documentation"
+            ]
+          }
+        },
+        "visible_prerequisite_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "visible_input_refs": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5400000
+        },
+        "retry_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "max_attempts",
+            "backoff_id"
+          ],
+          "properties": {
+            "max_attempts": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16
+            },
+            "backoff_id": {
+              "$ref": "erl2:common#/$defs/Id"
+            }
+          }
+        },
+        "compensation_intent": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "JudgeJourneyExpectationV1": {
+      "$comment": "Never leaves the judge/vault boundary before the permitted reveal. oracle_canary_id is scanned for in every adapter-visible byte stream.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "step_id",
+        "visible_step_hash",
+        "expected_observations",
+        "permitted_failure_categories",
+        "attribution_requirements",
+        "earliest_reveal",
+        "truth_scope",
+        "oracle_canary_id",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "judge-journey-expectation/v1"
+        },
+        "step_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "visible_step_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "expected_observations": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "observation_id",
+              "predicate_id",
+              "required",
+              "proof_source_ids"
+            ],
+            "properties": {
+              "observation_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "predicate_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "proof_source_ids": {
+                "$ref": "erl2:common#/$defs/IdArray"
+              }
+            }
+          }
+        },
+        "permitted_failure_categories": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "attribution_requirements": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "earliest_reveal": {
+          "const": "after_subject_output_freeze"
+        },
+        "truth_scope": {
+          "enum": [
+            "journey_only",
+            "functional"
+          ]
+        },
+        "oracle_canary_id": {
+          "type": "string",
+          "pattern": "^erl2-canary-[0-9a-f]{32}$"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "JourneyStepCommitmentV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "step_id",
+        "visible_step_hash",
+        "judge_expectation_core_hash",
+        "judge_expectation_plaintext_file_sha256",
+        "judge_expectation_ciphertext",
+        "encryption",
+        "recipient_key_ids",
+        "committed_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "journey-step-commitment/v1"
+        },
+        "step_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "visible_step_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "judge_expectation_core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "judge_expectation_plaintext_file_sha256": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "judge_expectation_ciphertext": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "encryption": {
+          "const": "age-x25519"
+        },
+        "recipient_key_ids": {
+          "$ref": "erl2:common#/$defs/KeyIdArray"
+        },
+        "committed_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "JourneyDefinitionV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "journey_id",
+        "version",
+        "domain",
+        "persona_script_hash",
+        "ordered_step_commitment_hashes",
+        "prerequisite_policy_hash",
+        "assistance_policy_hash",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "journey-definition/v1"
+        },
+        "journey_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "domain": {
+          "const": "software_delivery_operations"
+        },
+        "persona_script_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "ordered_step_commitment_hashes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "erl2:common#/$defs/Hash"
+          }
+        },
+        "prerequisite_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "assistance_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "ChallengeManifestV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "challenge_id",
+        "version",
+        "domain",
+        "archetype_hashes",
+        "journey_hash",
+        "journey_step_commitment_hashes",
+        "truth_commitment_hash",
+        "evidence_policy_hash",
+        "cutoff_policy_hash",
+        "required_domain_capabilities",
+        "tier",
+        "exposure_epoch",
+        "admission_proof_hash",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "challenge-manifest/v1"
+        },
+        "challenge_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "domain": {
+          "const": "software_delivery_operations"
+        },
+        "archetype_hashes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "$ref": "erl2:common#/$defs/Hash"
+          }
+        },
+        "journey_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "journey_step_commitment_hashes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "erl2:common#/$defs/Hash"
+          }
+        },
+        "truth_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "traffic_profile_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "evidence_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "cutoff_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "required_domain_capabilities": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "tier": {
+          "$ref": "erl2:common#/$defs/Tier"
+        },
+        "exposure_epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "admission_proof_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "EnvironmentArchetypeV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "archetype_id",
+        "version",
+        "domain",
+        "topology",
+        "evidence_sources",
+        "organization_metadata_schema",
+        "access_constraints",
+        "normal_disorder",
+        "resource_budget",
+        "cleanup_contract_hash",
+        "compatibility_tags",
+        "admission_proof_hash",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "environment-archetype/v1"
+        },
+        "archetype_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "domain": {
+          "const": "software_delivery_operations"
+        },
+        "topology": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "node_id",
+              "kind",
+              "version_constraint"
+            ],
+            "properties": {
+              "node_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "kind": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "version_constraint": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            }
+          }
+        },
+        "evidence_sources": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source_id",
+              "kind",
+              "required"
+            ],
+            "properties": {
+              "source_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "kind": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "required": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "organization_metadata_schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "access_constraints": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "constraint_id",
+              "kind",
+              "scope"
+            ],
+            "properties": {
+              "constraint_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "kind": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "scope": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          }
+        },
+        "normal_disorder": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "disorder_id",
+              "kind",
+              "parameters_hash"
+            ],
+            "properties": {
+              "disorder_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "kind": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "parameters_hash": {
+                "$ref": "erl2:common#/$defs/Hash"
+              }
+            }
+          }
+        },
+        "resource_budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu_millis",
+            "memory_mib",
+            "disk_mib",
+            "runtime_ms"
+          ],
+          "properties": {
+            "cpu_millis": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 64000
+            },
+            "memory_mib": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 262144
+            },
+            "disk_mib": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1048576
+            },
+            "runtime_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5400000
+            }
+          }
+        },
+        "cleanup_contract_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "compatibility_tags": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "admission_proof_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "EnvironmentInstanceV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "archetype_hash",
+        "driver_manifest_hash",
+        "resolved_nodes",
+        "source_bindings",
+        "credential_scope_hashes",
+        "disorder_seed_commitment",
+        "resource_inventory",
+        "created_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "environment-instance/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "archetype_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "driver_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "resolved_nodes": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "node_id",
+              "artifact_digest",
+              "instance_identity_hash"
+            ],
+            "properties": {
+              "node_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "artifact_digest": {
+                "$ref": "erl2:common#/$defs/Hash"
+              },
+              "instance_identity_hash": {
+                "$ref": "erl2:common#/$defs/Hash"
+              }
+            }
+          }
+        },
+        "source_bindings": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source_id",
+              "endpoint_hash",
+              "tenant_hash"
+            ],
+            "properties": {
+              "source_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "endpoint_hash": {
+                "$ref": "erl2:common#/$defs/Hash"
+              },
+              "tenant_hash": {
+                "$ref": "erl2:common#/$defs/Hash"
+              }
+            }
+          }
+        },
+        "credential_scope_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "disorder_seed_commitment": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "resource_inventory": {
+          "$ref": "erl2:common#/$defs/ArtifactRefArray"
+        },
+        "baseline_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "created_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "SubjectExecutionPlanV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "selection_commitment_hash",
+        "selection_verification_receipt_hash",
+        "selected_challenge_journey_binding_hash",
+        "environment_instance_hash",
+        "challenge_hash",
+        "journey_hash",
+        "acquisition_source_manifest_hash",
+        "subject_package_manifest_hash",
+        "adapter_manifest_hash",
+        "configuration_hash",
+        "generic_run_policy_hash",
+        "actor_script_hash",
+        "limits",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "subject-execution-plan/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "selection_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selection_verification_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "selected_challenge_journey_binding_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "environment_instance_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "challenge_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "journey_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_source_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "subject_package_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "configuration_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "generic_run_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "actor_script_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "runtime_ms",
+            "output_bytes",
+            "diagnostic_bytes"
+          ],
+          "properties": {
+            "runtime_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5400000
+            },
+            "output_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 67108864
+            },
+            "diagnostic_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16384
+            }
+          }
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "JourneyStepOutcomeV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "step_id",
+        "step_commitment_hash",
+        "visible_step_hash",
+        "adapter_request_hash",
+        "intent",
+        "status",
+        "attempt_record_hashes",
+        "detail_record_hashes",
+        "visible_input_hashes",
+        "output_refs",
+        "mutation_receipt_hashes",
+        "compensation_receipt_hashes",
+        "diagnostic_refs",
+        "started_at",
+        "ended_at",
+        "active_operator_ms",
+        "next_permitted_intents",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "journey-step-outcome/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "step_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "step_commitment_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "visible_step_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_request_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "intent": {
+          "$ref": "erl2:common#/$defs/JourneyIntent"
+        },
+        "status": {
+          "$ref": "erl2:common#/$defs/StepStatus"
+        },
+        "attempt_record_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "detail_record_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "visible_input_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "output_refs": {
+          "$ref": "erl2:common#/$defs/ArtifactRefArray"
+        },
+        "mutation_receipt_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "compensation_receipt_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "diagnostic_refs": {
+          "$ref": "erl2:common#/$defs/ArtifactRefArray"
+        },
+        "started_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "ended_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "active_operator_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5400000
+        },
+        "next_permitted_intents": {
+          "type": "array",
+          "maxItems": 14,
+          "items": {
+            "$ref": "erl2:common#/$defs/JourneyIntent"
+          }
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "PreEnvironmentSubjectOutputManifestV1": {
+      "$comment": "terminal_stage acquire|verify_package. Forbids every descendant that cannot yet exist (ERL2-AC-022). A pre-environment terminal is reached only from a failed or unsupported acquire/verify_package step outcome, so `subject_package_manifest_hash` is not a member of this branch at all: a successful package manifest continues to challenge preregistration and can only close through the environment branch (design v2 §12, ADR-ERL2-013).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "terminal_stage",
+        "acquisition_source_manifest_hash",
+        "acquisition_record_hash",
+        "adapter_hash",
+        "run_id",
+        "step_outcome_hashes",
+        "interaction_hashes",
+        "entries",
+        "tree_hash",
+        "timed_out",
+        "unsupported_inputs",
+        "frozen_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "subject-output-manifest/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "terminal_stage": {
+          "$ref": "erl2:common#/$defs/PreEnvironmentJourneyIntent"
+        },
+        "acquisition_source_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "step_outcome_hashes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "erl2:common#/$defs/Hash"
+          }
+        },
+        "interaction_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "entries": {
+          "$ref": "erl2:common#/$defs/ArtifactRefArray"
+        },
+        "tree_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "stdout": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "stderr": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "exit_status": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 255
+        },
+        "timed_out": {
+          "type": "boolean"
+        },
+        "unsupported_inputs": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "frozen_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "EnvironmentSubjectOutputManifestV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "terminal_stage",
+        "acquisition_source_manifest_hash",
+        "acquisition_record_hash",
+        "subject_package_manifest_hash",
+        "adapter_hash",
+        "plan_hash",
+        "step_outcome_hashes",
+        "interaction_hashes",
+        "entries",
+        "tree_hash",
+        "timed_out",
+        "unsupported_inputs",
+        "frozen_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "subject-output-manifest/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "terminal_stage": {
+          "$ref": "erl2:common#/$defs/EnvironmentJourneyIntent"
+        },
+        "acquisition_source_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "acquisition_record_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "subject_package_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "plan_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "canonical_evidence_envelope_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_translation_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "step_outcome_hashes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "erl2:common#/$defs/Hash"
+          }
+        },
+        "interaction_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "entries": {
+          "$ref": "erl2:common#/$defs/ArtifactRefArray"
+        },
+        "tree_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "stdout": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "stderr": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "exit_status": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 255
+        },
+        "timed_out": {
+          "type": "boolean"
+        },
+        "unsupported_inputs": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "projection_input_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "frozen_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "SubjectOutputManifestV1": {
+      "oneOf": [
+        {
+          "$ref": "erl2:journey#/$defs/PreEnvironmentSubjectOutputManifestV1"
+        },
+        {
+          "$ref": "erl2:journey#/$defs/EnvironmentSubjectOutputManifestV1"
+        }
+      ]
+    },
+    "JudgeExpectationRevealRecordV1": {
+      "$comment": "ERL2-C-148. Names which committed judge expectations were opened, and when. It carries no expectation body, no observation predicate and no canary, so retaining it in the run root leaks nothing a subject could have used. Only failed and unsupported steps appear: a succeeded step's expectation stays sealed.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "subject_output_hash",
+        "revealed_step_ids",
+        "revealed_expectation_hashes",
+        "revealed_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "judge-expectation-reveal-record/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "subject_output_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "revealed_step_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "revealed_expectation_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "revealed_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    }
+  }
+}

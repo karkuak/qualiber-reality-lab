@@ -1,0 +1,809 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:environment",
+  "title": "ERL2 environment driver, clean-control, frontier and substrate-lock contracts",
+  "$comment": "Design v2 \u00a79/\u00a712/\u00a722 and implementation plan \u00a79. No contract here names a product or a subject-supported evidence class: source kinds are open identifiers owned by the environment contract (ERL2-FR-002).",
+  "$defs": {
+    "DriverOperation": {
+      "enum": [
+        "provision",
+        "probe",
+        "mutate",
+        "restore",
+        "destroy",
+        "inspect"
+      ]
+    },
+    "EnvironmentDriverManifestV1": {
+      "$comment": "A driver is admissible only when `enabled` is true. The Compose driver stays disabled while its substrate lock is unqualified (ERL2-OQ-005).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "driver_id",
+        "driver_kind",
+        "version",
+        "supported_operations",
+        "resource_kinds",
+        "enabled",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "environment-driver-manifest/v1"
+        },
+        "driver_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "driver_kind": {
+          "enum": [
+            "fake",
+            "compose"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "supported_operations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": {
+            "$ref": "erl2:environment#/$defs/DriverOperation"
+          }
+        },
+        "resource_kinds": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "substrate_lock_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "disabled_reason_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "activation_gate": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "A disabled driver must state why and name its activation gate; an enabled driver may not carry either field.",
+          "if": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "const": false
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "disabled_reason_code",
+              "activation_gate"
+            ]
+          },
+          "else": {
+            "type": "object",
+            "not": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "disabled_reason_code"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "activation_gate"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$comment": "A Compose driver is only admissible against a qualified substrate lock.",
+          "if": {
+            "type": "object",
+            "properties": {
+              "driver_kind": {
+                "const": "compose"
+              }
+            },
+            "required": [
+              "driver_kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "substrate_lock_hash"
+            ]
+          }
+        }
+      ]
+    },
+    "SubstrateLockV1": {
+      "$comment": "ERL2-OQ-005. Qualification requires the archive digest, per-platform image digests, SBOM and provenance, and config hashes, all re-verified before an attesting run.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "lock_id",
+        "substrate_id",
+        "qualification_status",
+        "source_archive",
+        "images",
+        "config_hashes",
+        "recorded_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "substrate-lock/v1"
+        },
+        "lock_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "substrate_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "qualification_status": {
+          "enum": [
+            "qualified",
+            "unqualified_pending_erl2_oq_005"
+          ]
+        },
+        "unqualified_reason_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "source_archive": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "release_tag",
+            "source_commit",
+            "archive_sha256"
+          ],
+          "properties": {
+            "release_tag": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "source_commit": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "archive_sha256": {
+              "$ref": "erl2:common#/$defs/Hash"
+            }
+          }
+        },
+        "images": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "service_id",
+              "platform",
+              "digest"
+            ],
+            "properties": {
+              "service_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "platform": {
+                "enum": [
+                  "linux/amd64",
+                  "linux/arm64",
+                  "darwin/arm64"
+                ]
+              },
+              "digest": {
+                "$ref": "erl2:common#/$defs/Hash"
+              }
+            }
+          }
+        },
+        "sbom": {
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "provenance": {
+          "$ref": "erl2:common#/$defs/Provenance"
+        },
+        "config_hashes": {
+          "$ref": "erl2:common#/$defs/UniqueHashArray"
+        },
+        "recorded_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "A qualified lock requires at least one image digest, an SBOM and provenance, and forbids an unqualified reason.",
+          "if": {
+            "type": "object",
+            "properties": {
+              "qualification_status": {
+                "const": "qualified"
+              }
+            },
+            "required": [
+              "qualification_status"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "sbom",
+              "provenance"
+            ],
+            "properties": {
+              "images": {
+                "minItems": 1,
+                "type": "array"
+              }
+            },
+            "not": {
+              "type": "object",
+              "required": [
+                "unqualified_reason_code"
+              ]
+            }
+          },
+          "else": {
+            "type": "object",
+            "required": [
+              "unqualified_reason_code"
+            ]
+          }
+        }
+      ]
+    },
+    "EnvironmentResourceV1": {
+      "$comment": "Every resource identity embeds the run id, so cleanup can never target a foreign resource (design v2 \u00a722).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resource_id",
+        "kind",
+        "run_scoped_name",
+        "identity_hash",
+        "destroyable"
+      ],
+      "properties": {
+        "resource_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "kind": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_scoped_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "identity_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "destroyable": {
+          "type": "boolean"
+        },
+        "shared_with_other_runs": {
+          "type": "boolean"
+        }
+      }
+    },
+    "EnvironmentResourceInventoryV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "environment_instance_hash",
+        "driver_manifest_hash",
+        "resources",
+        "inventoried_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "environment-resource-inventory/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "environment_instance_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "driver_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "resources": {
+          "type": "array",
+          "maxItems": 1024,
+          "items": {
+            "$ref": "erl2:environment#/$defs/EnvironmentResourceV1"
+          }
+        },
+        "inventoried_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "EnvironmentOperationReceiptV1": {
+      "$comment": "Every external mutation is intent -> receipt -> event -> snapshot. A receipt carries before/after state and a compensation identifier where one applies.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "operation",
+        "operation_id",
+        "idempotency_key",
+        "driver_manifest_hash",
+        "target_identity_hash",
+        "before_state_hash",
+        "after_state_hash",
+        "status",
+        "started_at",
+        "ended_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "environment-operation-receipt/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation": {
+          "$ref": "erl2:environment#/$defs/DriverOperation"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "idempotency_key": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "driver_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "target_identity_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "before_state_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "after_state_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "compensation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "status": {
+          "enum": [
+            "succeeded",
+            "failed"
+          ]
+        },
+        "error_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "started_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "ended_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "error_code"
+            ]
+          },
+          "else": {
+            "type": "object",
+            "not": {
+              "type": "object",
+              "required": [
+                "error_code"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "EnvironmentProbeResultV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "probe_id",
+        "phase",
+        "kind",
+        "target_resource_id",
+        "passed",
+        "observation_hash"
+      ],
+      "properties": {
+        "probe_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "phase": {
+          "enum": [
+            "readiness",
+            "baseline",
+            "fault",
+            "restoration",
+            "teardown"
+          ]
+        },
+        "kind": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "target_resource_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "observation_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "failure_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "EnvironmentBaselineFingerprintV1": {
+      "$comment": "The clean control. `fingerprint_hash` is derived from the ordered probe observations only, so two clean provisions of the same archetype produce identical bytes.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "environment_instance_hash",
+        "archetype_hash",
+        "driver_manifest_hash",
+        "probes",
+        "evidence_source_states",
+        "fingerprint_hash",
+        "contamination",
+        "observed_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "environment-baseline-fingerprint/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "environment_instance_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "archetype_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "driver_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "probes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "erl2:environment#/$defs/EnvironmentProbeResultV1"
+          }
+        },
+        "evidence_source_states": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source_id",
+              "state"
+            ],
+            "properties": {
+              "source_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "state": {
+                "$ref": "erl2:common#/$defs/SourceState"
+              }
+            }
+          }
+        },
+        "fingerprint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "contamination": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "detected",
+            "finding_codes"
+          ],
+          "properties": {
+            "detected": {
+              "type": "boolean"
+            },
+            "finding_codes": {
+              "$ref": "erl2:common#/$defs/ShortStringArray"
+            }
+          }
+        },
+        "observed_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "EnvironmentResourceFrontierV1": {
+      "$comment": "Frozen before emergency cleanup. The safe-action set is derived independently from the frontier, never supplied by the driver (ERL2-FR-025).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "environment_instance_hash",
+        "driver_manifest_hash",
+        "trigger",
+        "observed_resources",
+        "derived_actions",
+        "frozen_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "environment-resource-frontier/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "environment_instance_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "driver_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "trigger": {
+          "enum": [
+            "provision_failure",
+            "restoration_failure",
+            "teardown_failure",
+            "invalid_environment_failure"
+          ]
+        },
+        "observed_resources": {
+          "type": "array",
+          "maxItems": 1024,
+          "items": {
+            "$ref": "erl2:environment#/$defs/EnvironmentResourceV1"
+          }
+        },
+        "derived_actions": {
+          "type": "array",
+          "maxItems": 1024,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "action_id",
+              "kind",
+              "target_resource_id",
+              "independently_safe"
+            ],
+            "properties": {
+              "action_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "kind": {
+                "$ref": "erl2:results#/$defs/EmergencyCleanupActionKind"
+              },
+              "target_resource_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "independently_safe": {
+                "type": "boolean"
+              },
+              "unsafe_reason_code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "type": "object",
+                  "properties": {
+                    "independently_safe": {
+                      "const": false
+                    }
+                  },
+                  "required": [
+                    "independently_safe"
+                  ]
+                },
+                "then": {
+                  "type": "object",
+                  "required": [
+                    "unsafe_reason_code"
+                  ]
+                },
+                "else": {
+                  "type": "object",
+                  "not": {
+                    "type": "object",
+                    "required": [
+                      "unsafe_reason_code"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "frozen_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "EnvironmentReservationLeaseV1": {
+      "$comment": "The global allocator stores reservation leases only \u2014 never resource state (design v2 \u00a722).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "lease_id",
+        "run_id",
+        "reservation_kind",
+        "reserved_value",
+        "acquired_at",
+        "expires_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "environment-reservation-lease/v1"
+        },
+        "lease_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "reservation_kind": {
+          "enum": [
+            "network",
+            "volume",
+            "port",
+            "tenant",
+            "project"
+          ]
+        },
+        "reserved_value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "acquired_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "expires_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "EnvironmentCleanupContractV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "contract_id",
+        "archetype_id",
+        "expected_zero_residue_kinds",
+        "permitted_retained_kinds",
+        "teardown_probe_ids",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "environment-cleanup-contract/v1"
+        },
+        "contract_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "archetype_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "expected_zero_residue_kinds": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "permitted_retained_kinds": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "teardown_probe_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    }
+  }
+}

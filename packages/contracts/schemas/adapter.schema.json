@@ -1,0 +1,1923 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:adapter",
+  "title": "ERL2 adapter platform: protocol, sandbox, capability, credential, mutation and certification contracts",
+  "$comment": "Design v2 §11.2/§11.3/§21, implementation plan §11. Every object is closed. Nothing here may carry a plaintext secret, a truth or judge reference, a selection handle, or a validity verdict: the adapter plane has none of those authorities.",
+  "$defs": {
+    "AdapterProtocolVersion": {
+      "const": "subject-adapter/v1"
+    },
+    "AdapterOperationId": {
+      "$comment": "Closed operation set, one per SubjectAdapterV1 method (design v2 §11.2). An operation outside this set is refused with ADAPTER_OPERATION_UNSUPPORTED.",
+      "enum": [
+        "acquire",
+        "validate-package",
+        "install",
+        "configure",
+        "start",
+        "interact",
+        "translate-evidence",
+        "collect-outputs",
+        "project",
+        "stop",
+        "uninstall",
+        "report-residue",
+        "compensate"
+      ]
+    },
+    "AdapterCapabilityId": {
+      "$comment": "Closed capability enum. There is no arbitrary-shell capability at all. The privileged members exist so that a request for one is a typed refusal rather than an unrecognised string; ERL2-OQ-001 keeps every one of them ungrantable.",
+      "enum": [
+        "read-subject-visible-input",
+        "read-canonical-evidence",
+        "write-run-output",
+        "write-adapter-workspace",
+        "request-credential-handle",
+        "network-egress",
+        "bind-loopback-port",
+        "install-package-into-host",
+        "write-host-configuration",
+        "register-host-service",
+        "host-package-manager",
+        "load-kernel-module",
+        "use-docker-socket",
+        "elevate-to-root",
+        "reboot-host"
+      ]
+    },
+    "SandboxControlId": {
+      "$comment": "Isolation controls the host may claim. Each is reported as enforced or unsupported_on_this_host with a reason; an unsupported control is never reported as enforced (design v2 §21 residual-risk rule). The distinction matters: a control the host *adjudicates* (it decides and receipts every declared attempt) is not the same as a control the kernel *prevents*, and they are separate members here so a report cannot conflate them.",
+      "enum": [
+        "separate-process",
+        "process-tree-termination",
+        "wall-clock-deadline",
+        "bounded-request-bytes",
+        "bounded-response-bytes",
+        "writable-output-only",
+        "environment-variable-allowlist",
+        "bounded-diagnostics",
+        "input-mount-tamper-detection",
+        "egress-policy-adjudication",
+        "docker-socket-capability-denied",
+        "privileged-capability-denied",
+        "read-only-input-mounts",
+        "no-ambient-home-directory",
+        "no-docker-socket",
+        "deny-by-default-egress",
+        "numeric-non-root-user",
+        "read-only-root-filesystem",
+        "capability-drop-all",
+        "no-new-privileges",
+        "seccomp-default-profile",
+        "pid-limit",
+        "memory-limit",
+        "cpu-limit",
+        "network-namespace-isolation"
+      ]
+    },
+    "MutationClass": {
+      "enum": [
+        "filesystem",
+        "service",
+        "configuration",
+        "package",
+        "credential",
+        "environment"
+      ]
+    },
+    "AdapterProtocolNegotiationV1": {
+      "$comment": "The one handshake. The host offers exactly one protocol version and refuses any adapter that answers with another (ADAPTER_PROTOCOL_VERSION_MISMATCH).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "adapter_manifest_hash",
+        "host_protocol_version",
+        "adapter_protocol_version",
+        "adapter_id",
+        "adapter_version",
+        "adapter_artifact_hash",
+        "supported_operations",
+        "supported_package_kinds",
+        "max_request_bytes",
+        "max_response_bytes",
+        "negotiated_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "adapter-protocol-negotiation/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "host_protocol_version": {
+          "$ref": "erl2:adapter#/$defs/AdapterProtocolVersion"
+        },
+        "adapter_protocol_version": {
+          "$ref": "erl2:adapter#/$defs/AdapterProtocolVersion"
+        },
+        "adapter_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "adapter_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "adapter_artifact_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "supported_operations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 13,
+          "items": {
+            "$ref": "erl2:adapter#/$defs/AdapterOperationId"
+          }
+        },
+        "supported_package_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "enum": [
+              "archive",
+              "oci",
+              "native",
+              "bundle"
+            ]
+          }
+        },
+        "max_request_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "max_response_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "negotiated_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "AdapterResponseEnvelopeV1": {
+      "$comment": "What an adapter returns for one operation. `unsupported` is a first-class retained outcome, never an omission (ERL2-FR-005). There is no validity, threshold, score or truth field.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_version",
+        "run_id",
+        "operation_id",
+        "operation",
+        "status",
+        "mutation_receipt_hashes",
+        "compensation_receipt_hashes",
+        "credential_use_receipt_hashes",
+        "unsupported_inputs",
+        "active_operator_ms",
+        "responded_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "adapter-response-envelope/v1"
+        },
+        "protocol_version": {
+          "$ref": "erl2:adapter#/$defs/AdapterProtocolVersion"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "operation": {
+          "$ref": "erl2:adapter#/$defs/AdapterOperationId"
+        },
+        "status": {
+          "enum": [
+            "supported",
+            "failed",
+            "unsupported"
+          ]
+        },
+        "result_core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "result_schema_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "mutation_receipt_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "compensation_receipt_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "credential_use_receipt_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "diagnostics_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "unsupported_inputs": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "owner",
+            "safe_message"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+            },
+            "owner": {
+              "$comment": "An adapter may attribute a failure to itself or to the subject it wraps. It can never attribute one to the Lab, the evaluator or a dependency; only core owns those domains.",
+              "enum": [
+                "adapter",
+                "subject"
+              ]
+            },
+            "safe_message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          }
+        },
+        "active_operator_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400000
+        },
+        "responded_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "A supported outcome carries a result and no error; a failed or unsupported outcome carries an error.",
+          "if": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "const": "supported"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "result_core_hash",
+              "result_schema_version"
+            ],
+            "not": {
+              "type": "object",
+              "required": [
+                "error"
+              ]
+            }
+          },
+          "else": {
+            "type": "object",
+            "required": [
+              "error"
+            ]
+          }
+        },
+        {
+          "$comment": "Only an unsupported outcome may list unsupported inputs.",
+          "if": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "const": "unsupported"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "unsupported_inputs": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "unsupported_inputs": {
+                "$ref": "erl2:common#/$defs/EmptyArray"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "AdapterCapabilityGrantV1": {
+      "$comment": "The capability broker's decision. Under ERL2-OQ-001 every privileged capability is denied, and the denial is recorded rather than emulated (ERL2-SEC-003, ERL2-AC-017).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "operation_id",
+        "grant_id",
+        "adapter_manifest_hash",
+        "requested_capability_ids",
+        "granted_capability_ids",
+        "denied_capability_ids",
+        "privileged_broker_state",
+        "granted_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "adapter-capability-grant/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "grant_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "requested_capability_ids": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "$ref": "erl2:adapter#/$defs/AdapterCapabilityId"
+          }
+        },
+        "granted_capability_ids": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "$ref": "erl2:adapter#/$defs/AdapterCapabilityId"
+          }
+        },
+        "denied_capability_ids": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "$ref": "erl2:adapter#/$defs/AdapterCapabilityId"
+          }
+        },
+        "denial_codes": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "privileged_broker_state": {
+          "const": "absent_pending_erl2_oq_001"
+        },
+        "granted_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "MutationIntentV1": {
+      "$comment": "Declared before the external mutation happens. Intent -> receipt -> event -> snapshot is the only permitted order (design v2 §6.3/§20).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "operation_id",
+        "mutation_id",
+        "mutation_class",
+        "capability_id",
+        "target_identity_hash",
+        "target_descriptor",
+        "before_state_hash",
+        "compensation_id",
+        "compensation_capability_id",
+        "declared_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "mutation-intent/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "mutation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "mutation_class": {
+          "$ref": "erl2:adapter#/$defs/MutationClass"
+        },
+        "capability_id": {
+          "$ref": "erl2:adapter#/$defs/AdapterCapabilityId"
+        },
+        "target_identity_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "target_descriptor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "before_state_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "compensation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "compensation_capability_id": {
+          "$ref": "erl2:adapter#/$defs/AdapterCapabilityId"
+        },
+        "declared_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "MutationReceiptV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "operation_id",
+        "mutation_id",
+        "mutation_intent_hash",
+        "capability_id",
+        "target_identity_hash",
+        "before_state_hash",
+        "after_state_hash",
+        "status",
+        "compensation_id",
+        "idempotency_key",
+        "started_at",
+        "ended_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "mutation-receipt/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "mutation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "mutation_intent_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "capability_id": {
+          "$ref": "erl2:adapter#/$defs/AdapterCapabilityId"
+        },
+        "target_identity_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "before_state_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "after_state_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "status": {
+          "enum": [
+            "succeeded",
+            "failed"
+          ]
+        },
+        "error_code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        },
+        "compensation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "idempotency_key": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "started_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "ended_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "A failed mutation must state why.",
+          "if": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "error_code"
+            ]
+          },
+          "else": {
+            "type": "object",
+            "not": {
+              "type": "object",
+              "required": [
+                "error_code"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "CompensationReceiptV1": {
+      "$comment": "Every mutation receipt names a compensation identity, and the compensation receipt must name the same mutation and the same target (ERL2-OPS-001).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "compensation_id",
+        "mutation_id",
+        "mutation_receipt_hash",
+        "target_identity_hash",
+        "before_state_hash",
+        "after_state_hash",
+        "status",
+        "compensated_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "compensation-receipt/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "compensation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "mutation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "mutation_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "target_identity_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "before_state_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "after_state_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "status": {
+          "enum": [
+            "succeeded",
+            "failed",
+            "not_required"
+          ]
+        },
+        "reason_code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        },
+        "compensated_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "const": "succeeded"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "not": {
+              "type": "object",
+              "required": [
+                "reason_code"
+              ]
+            }
+          },
+          "else": {
+            "type": "object",
+            "required": [
+              "reason_code"
+            ]
+          }
+        }
+      ]
+    },
+    "CredentialHandleRequestV1": {
+      "$comment": "A credential is requested as a scoped handle. Every property here is an identifier, a hash, an enum or a bounded integer: the contract has no field a plaintext secret could occupy (ERL2-SEC-001).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "operation_id",
+        "handle_request_id",
+        "credential_reference_kind",
+        "requested_scope_ids",
+        "requested_ttl_seconds",
+        "requested_max_uses",
+        "bound_target_hash",
+        "purpose_code",
+        "requested_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "credential-handle-request/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "handle_request_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "credential_reference_kind": {
+          "enum": [
+            "development-keychain-reference",
+            "workload-identity-reference",
+            "short-lived-token-reference"
+          ]
+        },
+        "requested_scope_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "$ref": "erl2:common#/$defs/Id"
+          }
+        },
+        "requested_ttl_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600
+        },
+        "requested_max_uses": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "bound_target_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "purpose_code": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "requested_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "CredentialHandleGrantV1": {
+      "$comment": "Requested, granted and denied scopes are recorded separately so an over-broad request is visible even when the broker narrowed it (ERL2-AC-011).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "operation_id",
+        "handle_id",
+        "handle_request_hash",
+        "adapter_manifest_hash",
+        "requested_scope_ids",
+        "granted_scope_ids",
+        "denied_scope_ids",
+        "bound_target_hash",
+        "max_uses",
+        "issued_at",
+        "expires_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "credential-handle-grant/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "handle_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "handle_request_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "requested_scope_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "granted_scope_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "denied_scope_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "denial_codes": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "bound_target_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "max_uses": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "issued_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "expires_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "CredentialUseReceiptV1": {
+      "$comment": "Each use is bound to run, adapter, operation and target. Reuse outside scope, after expiry, beyond max uses, or from another run is denied and receipted as denied.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "operation_id",
+        "handle_id",
+        "grant_hash",
+        "adapter_manifest_hash",
+        "used_scope_id",
+        "target_identity_hash",
+        "use_index",
+        "decision",
+        "used_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "credential-use-receipt/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "handle_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "grant_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "used_scope_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "target_identity_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "use_index": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "decision": {
+          "enum": [
+            "allowed",
+            "denied"
+          ]
+        },
+        "denial_code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        },
+        "used_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "decision": {
+                "const": "denied"
+              }
+            },
+            "required": [
+              "decision"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "denial_code"
+            ]
+          },
+          "else": {
+            "type": "object",
+            "not": {
+              "type": "object",
+              "required": [
+                "denial_code"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "EgressAllowlistPolicyV1": {
+      "$comment": "Deny by default. Loopback, link-local, metadata services and proxy bypass are denied unless the policy names them explicitly, and there is no wildcard host form.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "policy_id",
+        "default_action",
+        "allowed_schemes",
+        "allowed_hosts",
+        "allowed_ports",
+        "max_redirects",
+        "revalidate_redirect_targets",
+        "allow_loopback_hosts",
+        "deny_link_local",
+        "deny_metadata_service",
+        "deny_proxy_bypass",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "egress-allowlist-policy/v1"
+        },
+        "policy_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "default_action": {
+          "const": "deny"
+        },
+        "allowed_schemes": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "enum": [
+              "https",
+              "http"
+            ]
+          }
+        },
+        "allowed_hosts": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253,
+            "pattern": "^[a-z0-9]([a-z0-9-]{0,62})(\\.[a-z0-9]([a-z0-9-]{0,62}))*$"
+          }
+        },
+        "allowed_ports": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          }
+        },
+        "max_redirects": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "revalidate_redirect_targets": {
+          "const": true
+        },
+        "allow_loopback_hosts": {
+          "$comment": "Explicitly granted loopback hosts only; an empty array is the default and denies loopback entirely.",
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
+          }
+        },
+        "deny_link_local": {
+          "const": true
+        },
+        "deny_metadata_service": {
+          "const": true
+        },
+        "deny_proxy_bypass": {
+          "const": true
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "EgressDecisionReceiptV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "operation_id",
+        "decision_id",
+        "policy_hash",
+        "request_url_hash",
+        "scheme",
+        "host",
+        "port",
+        "resolved_address_hashes",
+        "redirect_chain_url_hashes",
+        "decision",
+        "decided_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "egress-decision-receipt/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "decision_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "request_url_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "scheme": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "host": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "resolved_address_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "redirect_chain_url_hashes": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "decision": {
+          "enum": [
+            "allowed",
+            "denied"
+          ]
+        },
+        "denial_code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        },
+        "decided_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "decision": {
+                "const": "denied"
+              }
+            },
+            "required": [
+              "decision"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "denial_code"
+            ]
+          },
+          "else": {
+            "type": "object",
+            "not": {
+              "type": "object",
+              "required": [
+                "denial_code"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "SandboxInvocationManifestV1": {
+      "$comment": "Exactly what the host will run and exactly what it will expose. `enforced_controls` reports each isolation control as enforced or unsupported_on_this_host; a control the host cannot actually apply is never listed as enforced (design v2 §21).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "operation_id",
+        "invocation_id",
+        "adapter_manifest_hash",
+        "adapter_artifact_hash",
+        "executable_file_sha256",
+        "protocol_version",
+        "working_directory_path",
+        "read_only_mounts",
+        "writable_output_path",
+        "environment_variable_names",
+        "enforced_controls",
+        "resource_limits",
+        "capability_ids",
+        "credential_handle_ids",
+        "deadline",
+        "created_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "sandbox-invocation-manifest/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "invocation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_artifact_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "executable_file_sha256": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "protocol_version": {
+          "$ref": "erl2:adapter#/$defs/AdapterProtocolVersion"
+        },
+        "working_directory_path": {
+          "$ref": "erl2:common#/$defs/LogicalPath"
+        },
+        "read_only_mounts": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "mount_id",
+              "logical_path",
+              "purpose",
+              "read_only"
+            ],
+            "properties": {
+              "mount_id": {
+                "$ref": "erl2:common#/$defs/Id"
+              },
+              "logical_path": {
+                "$ref": "erl2:common#/$defs/LogicalPath"
+              },
+              "purpose": {
+                "enum": [
+                  "subject-visible-input",
+                  "canonical-evidence",
+                  "frozen-package"
+                ]
+              },
+              "read_only": {
+                "const": true
+              }
+            }
+          }
+        },
+        "writable_output_path": {
+          "$ref": "erl2:common#/$defs/LogicalPath"
+        },
+        "environment_variable_names": {
+          "$comment": "Allowlisted names only. Values are never recorded, so this contract cannot become a secret channel.",
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "enforced_controls": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "control_id",
+              "state"
+            ],
+            "properties": {
+              "control_id": {
+                "$ref": "erl2:adapter#/$defs/SandboxControlId"
+              },
+              "state": {
+                "enum": [
+                  "enforced",
+                  "unsupported_on_this_host"
+                ]
+              },
+              "reason_code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "const": "unsupported_on_this_host"
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ]
+                },
+                "then": {
+                  "type": "object",
+                  "required": [
+                    "reason_code"
+                  ]
+                },
+                "else": {
+                  "type": "object",
+                  "not": {
+                    "type": "object",
+                    "required": [
+                      "reason_code"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "resource_limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "wall_clock_ms",
+            "max_request_bytes",
+            "max_response_bytes",
+            "max_output_files",
+            "max_output_bytes",
+            "max_output_path_depth",
+            "max_diagnostic_bytes"
+          ],
+          "properties": {
+            "wall_clock_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3600000
+            },
+            "max_request_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "max_response_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "max_output_files": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4096
+            },
+            "max_output_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1073741824
+            },
+            "max_output_path_depth": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16
+            },
+            "max_diagnostic_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1048576
+            }
+          }
+        },
+        "egress_policy_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "capability_ids": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "$ref": "erl2:adapter#/$defs/AdapterCapabilityId"
+          }
+        },
+        "credential_handle_ids": {
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "deadline": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "created_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "SandboxInvocationResultV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "invocation_id",
+        "manifest_hash",
+        "outcome",
+        "process_tree_terminated",
+        "terminated_descendant_count",
+        "request_bytes",
+        "response_bytes",
+        "stdout_bytes",
+        "stderr_bytes",
+        "wall_clock_ms",
+        "started_at",
+        "ended_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "sandbox-invocation-result/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "invocation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "outcome": {
+          "enum": [
+            "completed",
+            "timed_out",
+            "crashed",
+            "refused"
+          ]
+        },
+        "exit_status": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 255
+        },
+        "termination_signal": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "process_tree_terminated": {
+          "type": "boolean"
+        },
+        "terminated_descendant_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "request_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16777216
+        },
+        "response_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16777216
+        },
+        "stdout_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16777216
+        },
+        "stderr_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16777216
+        },
+        "wall_clock_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3600000
+        },
+        "refusal_code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        },
+        "started_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "ended_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "const": "refused"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "refusal_code"
+            ]
+          }
+        }
+      ]
+    },
+    "SubjectDiagnosticsManifestV1": {
+      "$comment": "Bounded, scanned and redacted before retention (ERL2-SEC-004). A positive canary count is a Lab integrity failure, never a subject-quality result.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "operation_id",
+        "entries",
+        "tree_hash",
+        "total_bytes",
+        "truncated",
+        "scan",
+        "frozen_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "subject-diagnostics-manifest/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "entries": {
+          "$ref": "erl2:common#/$defs/ArtifactRefArray"
+        },
+        "tree_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "total_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "truncation_reason_code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        },
+        "scan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scanner_version",
+            "secret_canaries_found",
+            "judge_canaries_found",
+            "forbidden_identifiers_found",
+            "redactions_applied"
+          ],
+          "properties": {
+            "scanner_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "secret_canaries_found": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "judge_canaries_found": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "forbidden_identifiers_found": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "redactions_applied": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            }
+          }
+        },
+        "frozen_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "truncated": {
+                "const": true
+              }
+            },
+            "required": [
+              "truncated"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "truncation_reason_code"
+            ]
+          },
+          "else": {
+            "type": "object",
+            "not": {
+              "type": "object",
+              "required": [
+                "truncation_reason_code"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "ResidueReportV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "operation_id",
+        "scope",
+        "before_inventory_hash",
+        "after_inventory_hash",
+        "residual_resources",
+        "residual_paths",
+        "status",
+        "reported_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "residue-report/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "scope": {
+          "enum": [
+            "adapter_workspace",
+            "run_output",
+            "environment"
+          ]
+        },
+        "before_inventory_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "after_inventory_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "residual_resources": {
+          "$ref": "erl2:common#/$defs/ResourceIdentityList"
+        },
+        "residual_paths": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "status": {
+          "enum": [
+            "clean",
+            "residue_detected",
+            "unknown"
+          ]
+        },
+        "reported_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "AdapterFailureReportV1": {
+      "$comment": "A typed adapter/Lab ownership record. `subject_attribution_proven` is const false: a broken or malicious adapter can never be recorded as a subject defect (ERL2-OPS-003, ERL2-AC-003).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "operation_id",
+        "adapter_manifest_hash",
+        "owner",
+        "category",
+        "refusal_code",
+        "evidence_refs",
+        "subject_attribution_proven",
+        "safe_summary",
+        "reported_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "adapter-failure-report/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "operation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "owner": {
+          "enum": [
+            "adapter",
+            "lab"
+          ]
+        },
+        "category": {
+          "enum": [
+            "adapter_protocol_failure",
+            "adapter_projection_failure",
+            "adapter_mutation_violation",
+            "adapter_sandbox_violation",
+            "adapter_capability_violation",
+            "adapter_credential_violation",
+            "adapter_egress_violation",
+            "adapter_output_violation",
+            "adapter_timeout",
+            "adapter_crash",
+            "lab_host_failure"
+          ]
+        },
+        "refusal_code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        },
+        "evidence_refs": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        },
+        "sandbox_result_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "subject_attribution_proven": {
+          "const": false
+        },
+        "safe_summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "reported_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "AdapterCertificationFindingV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check_id",
+        "status",
+        "severity",
+        "detail"
+      ],
+      "properties": {
+        "check_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "status": {
+          "enum": [
+            "passed",
+            "failed",
+            "unsupported"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "refusal_code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        },
+        "evidence_refs": {
+          "$ref": "erl2:common#/$defs/HashArray"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "refusal_code"
+            ]
+          }
+        }
+      ]
+    },
+    "SubjectAdapterCertificationReceiptV1": {
+      "$comment": "ADAPTER-CERT-V1. `certifier_is_adapter_owner` is const false: an adapter cannot self-certify (design v2 §11.3). Certification permits an adapter version/digest; it never certifies subject quality.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "receipt_id",
+        "suite",
+        "adapter_manifest_hash",
+        "adapter_artifact_hash",
+        "adapter_id",
+        "adapter_version",
+        "certified_operations",
+        "certified_package_kinds",
+        "checks",
+        "verdict",
+        "refusal_codes",
+        "certifier_id",
+        "certifier_is_adapter_owner",
+        "enforced_controls",
+        "unsupported_controls",
+        "certified_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "subject-adapter-certification-receipt/v1"
+        },
+        "receipt_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "suite": {
+          "const": "ADAPTER-CERT-V1"
+        },
+        "adapter_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_artifact_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "adapter_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "adapter_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "certified_operations": {
+          "type": "array",
+          "maxItems": 13,
+          "items": {
+            "$ref": "erl2:adapter#/$defs/AdapterOperationId"
+          }
+        },
+        "certified_package_kinds": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "enum": [
+              "archive",
+              "oci",
+              "native",
+              "bundle"
+            ]
+          }
+        },
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "items": {
+            "$ref": "erl2:adapter#/$defs/AdapterCertificationFindingV1"
+          }
+        },
+        "verdict": {
+          "enum": [
+            "certified",
+            "refused"
+          ]
+        },
+        "refusal_codes": {
+          "$ref": "erl2:common#/$defs/ShortStringArray"
+        },
+        "certifier_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "certifier_is_adapter_owner": {
+          "const": false
+        },
+        "enforced_controls": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "$ref": "erl2:adapter#/$defs/SandboxControlId"
+          }
+        },
+        "unsupported_controls": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "$ref": "erl2:adapter#/$defs/SandboxControlId"
+          }
+        },
+        "certified_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "A refused verdict must name at least one refusal code; a certified one names none.",
+          "if": {
+            "type": "object",
+            "properties": {
+              "verdict": {
+                "const": "refused"
+              }
+            },
+            "required": [
+              "verdict"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "refusal_codes": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "refusal_codes": {
+                "$ref": "erl2:common#/$defs/EmptyArray"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
