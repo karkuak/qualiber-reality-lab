@@ -193,16 +193,38 @@ function treeDigest() {
 }
 
 const before = treeDigest();
-if (before.status !== "" && !process.argv.includes("--allow-dirty")) {
+
+/**
+ * Paths whose uncommitted state could change a control's result.
+ *
+ * Narrower than "the whole tree" on purpose. Refusing on *any* dirt sounds
+ * stricter, but it fires on an unrelated markdown edit, and a check that fires
+ * for reasons the operator knows are irrelevant trains them to pass
+ * `--allow-dirty` reflexively — at which point it stops protecting the case it
+ * exists for. These are the roots the build and the controls actually read.
+ */
+const BUILD_RELEVANT = ["packages/", "tests/", "scripts/", "adapters/", "packs/", "package.json", "tsconfig"];
+const dirty = before.status
+  .split("\n")
+  .filter(Boolean)
+  .map((line) => line.slice(3));
+const blocking = dirty.filter((f) => BUILD_RELEVANT.some((prefix) => f.startsWith(prefix)));
+if (blocking.length > 0 && !process.argv.includes("--allow-dirty")) {
   console.error(
-    "negative-control refuses to run against a dirty tree.\n\n" +
-      "Controls are applied to a worktree checked out at HEAD, so uncommitted\n" +
-      "changes to a guard would be measured against source that does not contain\n" +
-      "them — the result would look authoritative and mean nothing. Commit first,\n" +
-      "or pass --allow-dirty if you know the difference does not matter.\n\n" +
-      before.status,
+    "negative-control refuses to run: uncommitted changes to source it measures.\n\n" +
+      "Controls are applied to a worktree checked out at HEAD, so an uncommitted\n" +
+      "change to a guard would be measured against source that does not contain\n" +
+      "it — the result would look authoritative and mean nothing. Commit first, or\n" +
+      "pass --allow-dirty if you know the difference does not matter.\n\n" +
+      blocking.map((f) => `  ${f}`).join("\n"),
   );
   process.exit(2);
+}
+if (dirty.length > blocking.length) {
+  console.log(
+    `note: ${String(dirty.length - blocking.length)} uncommitted file(s) outside the build ` +
+      "are ignored; they cannot change a control's result",
+  );
 }
 const filter = process.argv.find((a) => !a.startsWith("--") && a !== process.argv[0] && a !== process.argv[1]);
 const selected = CONTROLS.filter((c) => filter === undefined || c.id.includes(filter));
