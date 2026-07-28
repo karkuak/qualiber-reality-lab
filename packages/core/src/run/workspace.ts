@@ -2061,6 +2061,22 @@ export class RunWorkspace {
       readonly artifact_schema_version: string;
     }[];
   }): { readonly revealedExpectationHashes: readonly Hash[]; readonly recordHash: Hash } {
+    // Idempotent replay (ADR-ERL2-018 §3): a reveal that already happened returns
+    // its durable record and opens nothing again. Without this the environment
+    // branch re-ran `alsoProduce` and refroze the exposure event with a later
+    // instant, turning an ordinary operator retry into `ARTIFACT_ALREADY_FROZEN`
+    // — and a reveal is exactly the operation that must never be repeated.
+    const already = this.hashForRole("judge-expectation-reveal");
+    if (already !== undefined) {
+      const record = this.artifact<JudgeExpectationRevealRecordV1>(
+        already,
+        "JudgeExpectationRevealRecordV1",
+      );
+      return {
+        revealedExpectationHashes: record.revealed_expectation_hashes,
+        recordHash: record.core_hash,
+      };
+    }
     if (this.hashForRole("subject-output-manifest") === undefined) {
       throw new Erl2Error(
         CODES.REVEAL_BEFORE_OUTPUT_FREEZE,
@@ -2722,10 +2738,22 @@ export class RunWorkspace {
     return { recorded: true, retainedExposureEvents: 0 };
   }
 
-  /** The signed artifacts this terminal chain covers, excluding the attestation. */
-  private signerInventoryEntries(
+  /**
+   * The signed artifacts this terminal chain covers, excluding the public
+   * terminal types the bundle already carries.
+   *
+   * `excludeSchemas` is the branch's own exclusion set: the pre-environment
+   * inventory excludes one public terminal type, the environment inventory
+   * excludes two (the attestation *and* the selection verification receipt), and
+   * `buildEnvironmentSignerInventory` refuses an entry for either. Both branches
+   * always exclude the inventory itself — an inventory vouching for itself
+   * vouches for nothing.
+   */
+  signerInventoryEntries(
     checkpoint: TrustedTimestampCheckpointV1,
+    excludeSchemas: readonly string[] = ["pre-environment-final-lab-attestation/v1"],
   ): readonly SignerInventoryEntryInput[] {
+    const excluded = new Set([...excludeSchemas, "signer-inventory/v2"]);
     const entries: SignerInventoryEntryInput[] = [];
     const at = (checkpoint.entries[0] as { security_timestamp: string }).security_timestamp;
     for (const artifact of [...this.index().values()].sort((a, b) =>
@@ -2735,8 +2763,7 @@ export class RunWorkspace {
         | { key_id: string; signed_hash: Hash }
         | undefined;
       if (signature === undefined) continue;
-      if (artifact.schemaVersion === "pre-environment-final-lab-attestation/v1") continue;
-      if (artifact.schemaVersion === "signer-inventory/v2") continue;
+      if (excluded.has(artifact.schemaVersion)) continue;
       entries.push({
         artifactSchemaVersion: artifact.schemaVersion,
         artifactCoreHash: artifact.coreHash,
@@ -2751,7 +2778,7 @@ export class RunWorkspace {
   }
 
   /** The retained run trust policy, mirrored into the run at preregistration. */
-  private requireTrustPolicyRef(): { readonly ref: ArtifactRef; readonly coreHash: Hash } {
+  requireTrustPolicyRef(): { readonly ref: ArtifactRef; readonly coreHash: Hash } {
     const value = [...this.index().values()].find(
       (a) => a.schemaVersion === "trust-policy-manifest/v2",
     );
@@ -2767,7 +2794,7 @@ export class RunWorkspace {
     };
   }
 
-  private receiptRef(): ArtifactRef {
+  receiptRef(): ArtifactRef {
     const hash = this.requireHashForRole("acquisition-preregistration-verification-receipt");
     const value = this.index().get(hash);
     /* c8 ignore next 3 */

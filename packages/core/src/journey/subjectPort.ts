@@ -108,6 +108,14 @@ export interface FakeSubjectBehaviour {
    * retained result, never a removed case.
    */
   readonly declaredOperations?: readonly string[];
+  /**
+   * A token the fake subject writes into its own output bytes.
+   *
+   * Development-only, and the point of it is the *opposite* of a feature: it
+   * makes the oracle leak reachable, so the canary scan on the subject-output
+   * surface can be shown to be load-bearing rather than merely present.
+   */
+  readonly leakCanaryId?: string;
   readonly unsupportedInputs?: readonly string[];
   readonly packageBytes?: Buffer;
 }
@@ -201,7 +209,10 @@ export class FakeSubjectPort implements SubjectPort {
     return {
       status,
       activeOperatorMs: 750,
-      outputBytes: Buffer.from(`${intent} output\n`, "utf8"),
+      outputBytes: Buffer.from(
+        `${intent} output\n${this.behaviour.leakCanaryId === undefined ? "" : `${this.behaviour.leakCanaryId}\n`}`,
+        "utf8",
+      ),
       ...(status === "failed" ? { errorCode: `SUBJECT_RUNTIME_${intent.toUpperCase()}_FAILED` } : {}),
       ...(status === "unsupported"
         ? { unsupportedInputs: undeclared ? [`operation:${OPERATION_FOR_INTENT[intent]}`] : unsupportedInputs }

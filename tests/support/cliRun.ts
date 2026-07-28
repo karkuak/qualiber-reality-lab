@@ -12,6 +12,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { coreHash } from "@erl2/integrity";
+import { DevelopmentBeaconSource } from "@erl2/core";
+import type { Hash } from "@erl2/contracts";
 import { buildGovernorRegistry, type GovernorRegistry } from "./governorRegistry.js";
 import { developmentKeyring } from "./keys.js";
 
@@ -29,14 +31,18 @@ export interface CliResult {
   };
 }
 
-export function erl2(args: readonly string[]): CliResult {
+export function erl2(
+  args: readonly string[],
+  options: { readonly developmentProfile?: boolean } = {},
+): CliResult {
   // These harnesses drive the development fake subject port, so they opt into the
   // explicit development profile that gates the `--fake-*` scripting flags
-  // (§11.8). The release surface (without this env var) refuses those flags.
-  const result = spawnSync(process.execPath, [cli, ...args], {
-    encoding: "utf8",
-    env: { ...process.env, ERL2_DEVELOPMENT_FAKE_SUBJECT: "1" },
-  });
+  // (§11.8). The release surface (without this env var) refuses those flags, and
+  // `developmentProfile: false` is how a test proves that.
+  const env = { ...process.env };
+  if (options.developmentProfile === false) delete env["ERL2_DEVELOPMENT_FAKE_SUBJECT"];
+  else env["ERL2_DEVELOPMENT_FAKE_SUBJECT"] = "1";
+  const result = spawnSync(process.execPath, [cli, ...args], { encoding: "utf8", env });
   let body: CliResult["body"];
   try {
     body = JSON.parse(result.stdout) as CliResult["body"];
@@ -187,30 +193,58 @@ export function writeLifecycle(runRoot: string, file = "lifecycle.json"): string
   return streamPath;
 }
 
-/** The verifier's own locally pinned trust configuration. */
-export function writeTrustConfig(runRoot: string, file = "trust-config.json"): string {
+/**
+ * The verifier's own locally pinned trust configuration.
+ *
+ * `randomnessSources` is empty by default because a pre-environment bundle
+ * carries no selection chain and therefore no randomness to authorize. An
+ * **environment** bundle does: its selection verification receipt is a mandatory
+ * member, so the verifier must hold the beacon's pinned registry entry, and
+ * Appendix C requires that entry to be the same authoritative state selection's
+ * `--source-trust-config` resolved. Supply `sourceTrustPolicyHash` for those.
+ */
+export function writeTrustConfig(
+  runRoot: string,
+  file = "trust-config.json",
+  options: { readonly sourceTrustPolicyHash?: Hash } = {},
+): string {
   const policy = JSON.parse(
     readFileSync(path.join(runRoot, "retained", "trust-policy.json"), "utf8"),
   ) as object;
+  const pinned =
+    options.sourceTrustPolicyHash === undefined
+      ? []
+      : [
+          new DevelopmentBeaconSource({
+            // The pinned entry is the beacon's public identity and keys; it does
+            // not depend on the seed, which is per-run.
+            seed: "erl2-verifier-pin",
+            firstRoundAt: "2026-07-01T00:00:00Z",
+          }).pinnedRegistryEntry(options.sourceTrustPolicyHash),
+        ];
   const configPath = path.join(runRoot, file);
   writeFileSync(
     configPath,
     JSON.stringify({
       rootKeyIds: [developmentKeyring().root.keyId],
       currentTrustHeadHash: coreHash(policy),
-      randomnessSources: [],
-      randomnessRegistryHeadHash: `sha256:${"0".repeat(64)}`,
+      randomnessSources: pinned,
+      randomnessRegistryHeadHash:
+        options.sourceTrustPolicyHash ?? (`sha256:${"0".repeat(64)}` as Hash),
     }),
   );
   return configPath;
 }
 
 /** Verifies the run's public bundle offline in a fresh process. */
-export function verifyBundle(runRoot: string): CliResult {
+export function verifyBundle(
+  runRoot: string,
+  options: { readonly sourceTrustPolicyHash?: Hash } = {},
+): CliResult {
   return erl2([
     "verify",
     "--public-bundle", path.join(runRoot, "retained", "public-bundle.json"),
-    "--root-config", writeTrustConfig(runRoot),
+    "--root-config", writeTrustConfig(runRoot, "trust-config.json", options),
     "--artifact-root", runRoot,
     "--lifecycle", writeLifecycle(runRoot),
     "--offline",

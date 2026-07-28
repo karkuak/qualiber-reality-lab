@@ -19,7 +19,7 @@ import { test } from "node:test";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { erl2, runToAcquired } from "../support/cliRun.js";
+import { erl2, runToAcquired, verifyBundle } from "../support/cliRun.js";
 import type { GovernorRegistry } from "../support/governorRegistry.js";
 
 interface Run {
@@ -178,10 +178,10 @@ function changed(before: Map<string, string>, after: Map<string, string>): reado
   return out.filter((p) => !p.includes("lease") && !/^source-trust\.json$/.test(p));
 }
 
-const TERMINAL = "generic_evaluation_index_frozen";
+const TERMINAL = "generic_finalized";
 const TOTAL_PHASES = 21;
 
-test("ENV-CLI: a run advances from case_selected to the generic evaluation index", () => {
+test("ENV-CLI: a run advances from case_selected to a finalized environment terminal", () => {
   const run = selectedRun();
   assert.equal(drive(run), TERMINAL);
 
@@ -212,12 +212,47 @@ test("ENV-CLI: a run advances from case_selected to the generic evaluation index
     "teardown-verification",
     "validity-result",
     "generic-evaluation-index",
+    "run-record",
+    "final-attestation",
+    "signer-inventory",
   ]) {
     assert.ok(roles.has(role), `the run produced no ${role}`);
   }
   // The pre-environment cleanup role is forbidden on this branch; its absence is
   // what keeps the two terminal variants mutually exclusive.
   assert.ok(!roles.has("pre-environment-cleanup"), "an environment run must not produce a pre-environment cleanup");
+});
+
+test("ENV-VERIFY: the environment public bundle verifies offline, as an external reader", () => {
+  const run = selectedRun();
+  assert.equal(drive(run), TERMINAL);
+
+  // The verifier needs the beacon's pinned registry entry because an environment
+  // bundle carries a selection verification receipt as a mandatory member — that
+  // is the whole difference between the two bundle variants.
+  const verified = verifyBundle(run.runRoot, {
+    sourceTrustPolicyHash: run.registry.sourceTrustPolicyHash,
+  });
+  assert.equal(verified.exitCode, 0, JSON.stringify(verified.body.errors));
+  const data = verified.body.data as {
+    verdict: string;
+    closure: { derived_terminal_variant: string; derived_terminal_phase: string; rejected_extra_hashes: string[]; missing_roles: string[] };
+  };
+  assert.equal(data.verdict, "valid");
+  assert.equal(data.closure.derived_terminal_variant, "environment");
+  assert.equal(data.closure.derived_terminal_phase, "remove");
+  assert.deepEqual(data.closure.missing_roles, []);
+  assert.deepEqual(data.closure.rejected_extra_hashes, []);
+});
+
+test("ENV-VERIFY: a verifier without the pinned beacon cannot authorize the selection chain", () => {
+  const run = selectedRun();
+  assert.equal(drive(run), TERMINAL);
+  // Fail-closed, and for the right reason: the randomness source's authority is
+  // the verifier's own pinned configuration, never anything the bundle carries.
+  const unpinned = verifyBundle(run.runRoot);
+  assert.notEqual(unpinned.exitCode, 0);
+  assert.equal(unpinned.body.errors[0]?.code, "RANDOMNESS_SOURCE_NOT_PINNED");
 });
 
 test("ENV-CLI: the environment is really torn down and the reservations released", () => {
@@ -401,4 +436,34 @@ test("ENV-SUBSTRATE: the driver's substrate lives outside the run root", () => {
   // whole run root, so substrate inside it would be indexed as evidence.
   const inside = [...manifest(run.runRoot).keys()].filter((p) => p.includes("substrate"));
   assert.deepEqual(inside, [], "no substrate state may live under the run root");
+});
+
+/*
+ * The oracle-canary scan on the subject-output surface, driven end to end.
+ *
+ * This is the case that makes the Slice 6.5-C coverage claim checkable rather
+ * than merely stated: a canary token really is written into the subject's own
+ * output bytes, and the run really does refuse before those bytes freeze. The
+ * scan reads what the subject *wrote*, not the outcome metadata about it — a
+ * leaked token appears in neither the manifest nor the outcome JSON.
+ */
+test("ENV-ORACLE: a canary in the subject's output bytes invalidates the run before it freezes", () => {
+  const run = selectedRun();
+  const canary = `erl2-canary-${"0f1e2d3c".repeat(4)}`;
+  // Every step up to the freeze runs normally; only the subject's output leaks.
+  for (const [name, argv] of environmentPlan(run).slice(0, 15)) {
+    const leaking = [...argv, "--fake-leak-canary", canary];
+    const result = erl2(leaking);
+    assert.equal(result.exitCode, 0, `${name}: ${JSON.stringify(result.body.errors)}`);
+  }
+
+  const before = manifest(run.runRoot);
+  const refused = erl2(["freeze-output", ...run.base]);
+  assert.notEqual(refused.exitCode, 0, "a leaked canary must invalidate the run before output freezes");
+  assert.equal(refused.body.errors[0]?.code, "JOURNEY_ORACLE_CANARY_LEAKED");
+  assert.deepEqual(
+    changed(before, manifest(run.runRoot)),
+    [],
+    "the refusal freezes no subject output",
+  );
 });

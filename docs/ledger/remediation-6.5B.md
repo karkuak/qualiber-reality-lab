@@ -1,6 +1,7 @@
-# Slice 6.5-B ledger — environment and journey orchestration
+# Slice 6.5-B/C/D/E ledger — environment and journey orchestration
 
-Companion to [ADR-ERL2-021](../adr/ADR-ERL2-021.md). This records what was built,
+Companion to [ADR-ERL2-021](../adr/ADR-ERL2-021.md) (6.5-B) and
+[ADR-ERL2-022](../adr/ADR-ERL2-022.md) (6.5-C/D/E). This records what was built,
 what was measured, and — the part that matters — what turned out **not** to be
 load-bearing when it was tested.
 
@@ -138,3 +139,86 @@ find fixtures/golden -type f | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 2
   traffic receipts" at activation. The traffic receipt is signed; the activation
   evidence is `EnvironmentOperationReceiptV1`, which the frozen schema does not
   sign. No V2 contract carries a signed controller receipt.
+
+
+---
+
+# 6.5-C / 6.5-D / 6.5-E
+
+## 6. What ships in the later cuts
+
+**6.5-E — the environment terminal.** `finalize-generic` on an environment run now
+freezes validity, the generic index, the run record, a timestamp checkpoint, the
+signer inventory, the final attestation and the public bundle, in the design's
+order, in one process. The bundle verifies offline: `erl2 verify --offline`
+returns exit 0, verdict `valid`, variant `environment`, no missing roles and no
+rejected extras.
+
+**6.5-D — the invalid environment terminal.** A Lab-owned environment failure now
+routes through `invalid_failure_detected → invalid_environment_cleanup_started →
+… → invalid_lab_run_record_frozen → invalidated`, freezing exactly one
+`InvalidLabRunRecordV1` after frontier-derived cleanup. Restoration and teardown
+failures take the mandatory emergency branch. `--fake-driver-fault` makes those
+paths reachable and is refused on the release surface.
+
+**6.5-C — oracle surfaces.** `LIVE_ORACLE_SCAN_SURFACES` grows from one to four:
+`adapter_request`, `lab_telemetry`, `mounted_file`, `subject_output_prefill`. The
+other four stay pending and stay named individually.
+
+## 7. Negative controls for the later cuts
+
+| Guard | Disabled how | Result |
+|---|---|---|
+| `verifyEnvironmentBundle` | made to `throw` unconditionally | **2 cases fail** — it is now live. In 6.5-B the same edit left 518/518 green. |
+| the `subject_output_prefill` canary scan | the whole `assertNoCanaryLeak` call removed from `freezeOutput` | `ENV-ORACLE` fails (11 pass / 1 fail) |
+| the restore **receipt-status** check | condition forced false | 5 of 8 invalid-terminal cases fail |
+| the mandatory **emergency route** for a restoration failure | `emergency: true` → `false` in the CLI routing | 4 of 8 invalid-terminal cases fail |
+| `assertRepeatableBaseline` (re-measured) | unchanged from §2 | still **not** load-bearing |
+| the five `case_selected` comparisons | unchanged from §2 | still **not** load-bearing |
+
+The emergency-route control was run by accident before it was run on purpose: the
+first negative-control batch was killed by a timeout mid-case and left the CLI
+patched, which surfaced as four unexplained failures on a supposedly clean tree.
+Recorded because the lesson is worth more than the result — a negative-control
+harness that restores by copying a snapshot taken *after* a previous run can
+snapshot the previous run's patch.
+
+## 8. Further defects found in existing code
+
+5. **`buildEnvironmentRestoration` ignored the compensation receipt.** `passed` was
+   derived from the before/after baselines and the residual set only, so a driver
+   reporting `status: "failed"` while leaving the environment measuring identically
+   produced `passed: true` over mutations it never reverted. The receipt's own
+   status is now checked first, and separately. Found by a negative control that
+   refused to fail.
+
+6. **The environment step runner discarded the subject's output bytes.**
+   `response.outputBytes` was dropped, so the only thing in a step outcome the
+   *subject* wrote was thrown away: the outcome recorded that a step happened, not
+   what it produced, and there was nothing to scan, evaluate or attribute. The
+   bytes are now frozen and referenced from the outcome.
+
+7. **A canary scan placed after the freeze is a report, not a gate.** The first
+   `subject_output_prefill` scan ran after the step-outcome copies had been
+   published, so a detected leak refused *and* left subject output on disk. It now
+   runs before anything freezes, which the byte-manifest assertion pins.
+
+8. **Four retained mirrors were unreachable from the lifecycle.** The archetype,
+   driver manifest, cutoff policy and comparison policy were frozen with no
+   produced role. Harmless for the environment closure (their schemas are
+   supporting) and fatal for the invalid-record closure, which counts exactly
+   those four as unaccounted. They are now recorded as produced.
+
+## 9. What is still not here
+
+- **No golden environment run.** The pinned evidence set still contains only
+  pre-environment and emergency-cleanup fixtures. A CLI-driven environment run
+  with its public bundle would be the natural next golden; the byte-pin coverage
+  is unchanged at 780/7 because nothing in the pinned set moved.
+- **`recover` and `rollback` are shipped but unexercised.** The fixture journey
+  commits neither intent, so both commands can only refuse.
+- **No evaluated domain plane.** Unchanged from §5: `evaluateDomain` itself
+  refuses without a revealed functional truth.
+- **Four oracle surfaces remain pending**, named individually in
+  `PENDING_ORACLE_SCAN_SURFACES` and asserted in the coverage test.
+- **No signed controller receipt.** Unchanged from §5.

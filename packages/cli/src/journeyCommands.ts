@@ -53,6 +53,7 @@ export const COMMON_FLAGS: readonly FlagSpec[] = [
   { name: "fake-acquire", kind: "string" },
   { name: "fake-verify-package", kind: "string" },
   { name: "adapter-entry", kind: "string" },
+  { name: "fake-leak-canary", kind: "string" },
 ];
 
 /**
@@ -71,12 +72,15 @@ function developmentFakeSubjectProfileEnabled(): boolean {
 
 function assertFakeFlagsUnavailableUnlessDevelopmentProfile(flags: ParsedFlags): void {
   const usesFakeFlag =
-    flags["fake-acquire"] !== undefined || flags["fake-verify-package"] !== undefined;
+    flags["fake-acquire"] !== undefined ||
+    flags["fake-verify-package"] !== undefined ||
+    flags["fake-leak-canary"] !== undefined;
   if (usesFakeFlag && !developmentFakeSubjectProfileEnabled()) {
     throw new Erl2Error(
       CODES.CFG_DEVELOPMENT_FLAG_UNAVAILABLE,
-      "--fake-acquire and --fake-verify-package are development-only shortcuts; they require the explicit " +
-        "development profile (ERL2_DEVELOPMENT_FAKE_SUBJECT=1) and are not reachable on the release surface",
+      "--fake-acquire, --fake-verify-package and --fake-leak-canary are development-only shortcuts; they " +
+        "require the explicit development profile (ERL2_DEVELOPMENT_FAKE_SUBJECT=1) and are not reachable " +
+        "on the release surface",
     );
   }
 }
@@ -277,9 +281,11 @@ function fakeSubjectBehaviour(flags: ParsedFlags): FakeSubjectBehaviour {
       "--fake-verify-package must be succeeded, failed or unsupported",
     );
   }
+  const leak = flags["fake-leak-canary"] as string | undefined;
   return {
     ...(acquire === undefined ? {} : { acquireStatus: acquire }),
     ...(verify === undefined ? {} : { packageVerificationStatus: verify }),
+    ...(leak === undefined ? {} : { leakCanaryId: leak }),
   };
 }
 

@@ -35,19 +35,41 @@ export const ORACLE_SCAN_SURFACES = [
 export type OracleScanSurface = (typeof ORACLE_SCAN_SURFACES)[number];
 
 /**
- * The surfaces actually canary-scanned on the *shipped* pre-environment path.
+ * The surfaces actually canary-scanned on a *shipped* path.
  *
- * Honest scope (review P2-11, §8.6): only the adapter request is on a live path
- * today — it is scanned before every dispatch (`assertRequestOracleClean`).  The
- * remaining surfaces (mounts, env, args, diagnostics, output prefill, network
- * egress, lab telemetry) belong to the environment/journey orchestration that
- * lands in Slice 6.5; the scanner and its fail-closed wrapper exist and are
- * tested, but they are NOT yet wired to those live surfaces, so this list must
- * not claim they are.  `SELECTED_SURFACE_ENFORCEMENT` below records that gap.
+ * Honest scope (review P2-11, §8.6). Slice 6.5-C added three, and only three,
+ * because only three now exist as real surfaces a run produces:
+ *
+ *   - `adapter_request` — every request before dispatch, and the execution plan
+ *     before it is retained (`assertRequestOracleClean`);
+ *   - `lab_telemetry` — every source snapshot before the observation bundle is
+ *     retained (`freezeObservation`);
+ *   - `mounted_file` — every canonical evidence entry the adapter can mount,
+ *     before the envelope is retained;
+ *   - `subject_output_prefill` — the whole subject output manifest and its step
+ *     outcomes, before the output freezes.
+ *
+ * The rest stay pending and stay named. `environment_variable` and
+ * `process_argument` are set by the Slice 5 adapter host, not by the environment
+ * walk; `diagnostics` needs a subject that emits them, and the development fake
+ * port emits none; `network_egress` needs a run that egresses, and no shipped
+ * path does. Wiring a scan to a surface no run produces would be a scan of
+ * nothing, reported as coverage — which is the exact dishonesty this split
+ * exists to prevent.
  */
-export const LIVE_ORACLE_SCAN_SURFACES: readonly OracleScanSurface[] = ["adapter_request"];
+export const LIVE_ORACLE_SCAN_SURFACES: readonly OracleScanSurface[] = [
+  "adapter_request",
+  "lab_telemetry",
+  "mounted_file",
+  "subject_output_prefill",
+];
 
-/** Surfaces whose live scan connection is pending the Slice 6.5 environment branch. */
+/**
+ * Surfaces whose live scan connection is still pending.
+ *
+ * They are not scanned, and this list is why the coverage claim can be checked
+ * rather than believed.
+ */
 export const PENDING_ORACLE_SCAN_SURFACES: readonly OracleScanSurface[] = ORACLE_SCAN_SURFACES.filter(
   (s) => !LIVE_ORACLE_SCAN_SURFACES.includes(s),
 );

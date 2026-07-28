@@ -40,10 +40,12 @@ import {
   ReservationAllocator,
   RunWorkspace,
   type EnvironmentKeyring,
+  type FakeDriverFaults,
 } from "@erl2/core";
 import {
   ArtifactIndex,
   deriveEnvironmentClosureProgress,
+  deriveEnvironmentPreFinalizationClosure,
   VERIFIER_RELEASE_HASH,
 } from "@erl2/public-verifier";
 import { developmentAgeIdentity, developmentKey } from "@erl2/integrity";
@@ -58,7 +60,51 @@ const ENVIRONMENT_FLAGS: readonly FlagSpec[] = [
   { name: "archetype", kind: "string" },
   { name: "comparison-policy", kind: "string" },
   { name: "cutoff-policy", kind: "string" },
+  { name: "fake-driver-fault", kind: "string" },
 ];
+
+/**
+ * Scripted environment-driver faults, for exercising the invalid terminal from
+ * the CLI.
+ *
+ * Same posture as `--fake-acquire`: a development-only shortcut that steers a
+ * failpoint of the *fake* driver, refused unless the explicit development
+ * profile is enabled, and unreachable on the release surface. Without it the
+ * emergency-cleanup branch could only be reached by a real substrate failure,
+ * which is not a thing a test can arrange.
+ */
+const DRIVER_FAULTS: Readonly<Record<string, FakeDriverFaults>> = {
+  "partial-provision": { provisionPartialAfter: 2 },
+  "contaminated-baseline": { contaminationCodes: ["PREEXISTING_RESIDUE"] },
+  "failed-probe": { failProbeIds: ["probe-network"] },
+  "failed-restore": { failRestore: true },
+  "failed-teardown": { failTeardown: true },
+  residue: { residualResourceIds: [] },
+};
+
+function driverFaults(flags: ParsedFlags, runId: string): FakeDriverFaults {
+  const name = flags["fake-driver-fault"] as string | undefined;
+  if (name === undefined) return {};
+  if (process.env["ERL2_DEVELOPMENT_FAKE_SUBJECT"] !== "1") {
+    throw new Erl2Error(
+      CODES.CFG_DEVELOPMENT_FLAG_UNAVAILABLE,
+      "--fake-driver-fault is a development-only shortcut; it requires the explicit development profile " +
+        "(ERL2_DEVELOPMENT_FAKE_SUBJECT=1) and is not reachable on the release surface",
+    );
+  }
+  const fault = DRIVER_FAULTS[name];
+  if (fault === undefined) {
+    throw new Erl2Error(
+      CODES.CFG_MISSING_REQUIRED,
+      `--fake-driver-fault must be one of ${Object.keys(DRIVER_FAULTS).sort().join(", ")}`,
+    );
+  }
+  // The residue fault names a concrete resource of *this* run, so it cannot be
+  // written as a static table entry.
+  return name === "residue"
+    ? { residualResourceIds: [`volume-${runId.slice(0, 8)}`] }
+    : fault;
+}
 
 function substrateRoot(flags: ParsedFlags): string {
   const supplied = flags["substrate-root"] as string | undefined;
@@ -133,6 +179,8 @@ function environmentKeyring(): EnvironmentKeyring {
     trafficSupervisor: developmentKey("traffic-supervisor"),
     runtimeAttestor: developmentKey("runtime-attestor"),
     vaultAuthorizer: developmentKey("vault-authorizer"),
+    timestampAuthority: developmentKey("timestamp"),
+    finalizer: developmentKey("finalizer"),
   };
 }
 
@@ -198,6 +246,7 @@ export function openEnvironment(argv: readonly string[], extra: readonly FlagSpe
     resourceKinds: archetype.topology.map((node) => node.node_id),
     evidenceSourceIds: archetype.evidence_sources.map((source) => source.source_id),
     substrate: new FileSubstrateStore(substrateRoot(flags)),
+    faults: driverFaults(flags, runId),
   });
 
   const run = new EnvironmentRun({
@@ -245,9 +294,60 @@ function output(ctx: EnvironmentContext, data: Record<string, unknown>): Journey
 
 // -- the phase commands ------------------------------------------------------
 
+/**
+ * Routes a Lab-owned environment failure to the invalid terminal.
+ *
+ * ERL2-FR-001: every durably accepted run that cannot reach a valid terminal must
+ * still reach *a* terminal. The command still returns its record hashes, because
+ * Appendix C forbids returning a terminal run state without them, and still exits
+ * on the failure's own code so a caller cannot read it as success.
+ */
+function invalidateEnvironmentAfter(
+  ctx: EnvironmentContext,
+  cause: Erl2Error,
+  phase: Parameters<EnvironmentRun["invalidate"]>[0]["phase"],
+  classification: Parameters<EnvironmentRun["invalidate"]>[0]["classification"],
+  emergency: boolean,
+): JourneyCommandOutput {
+  const record = ctx.run.invalidate({
+    phase,
+    classification,
+    failure: { code: cause.code, owner: "lab", message: cause.message.slice(0, 512) },
+    emergency,
+  });
+  return {
+    ...output(ctx, {
+      invalid_run_record_hash: record.core_hash,
+      terminal_state: record.terminal_state,
+      cleanup_variant: record.cleanup.variant,
+      cleanup_status: record.cleanup.status,
+      refusal_code: cause.code,
+    }),
+    terminalError: cause,
+  };
+}
+
+/** The Lab-owned failure codes each environment phase routes to its terminal. */
+function routed(
+  ctx: EnvironmentContext,
+  cause: unknown,
+  codes: readonly string[],
+  phase: Parameters<EnvironmentRun["invalidate"]>[0]["phase"],
+  classification: Parameters<EnvironmentRun["invalidate"]>[0]["classification"],
+  emergency: boolean,
+): JourneyCommandOutput {
+  if (!(cause instanceof Erl2Error) || !codes.includes(cause.code)) throw cause;
+  return invalidateEnvironmentAfter(ctx, cause, phase, classification, emergency);
+}
+
 export function provision(argv: readonly string[]): JourneyCommandOutput {
   const ctx = openEnvironment(argv);
-  const result = ctx.run.provision();
+  let result;
+  try {
+    result = ctx.run.provision();
+  } catch (cause) {
+    return routed(ctx, cause, [CODES.ENV_PROVISION_FAILED], "provisioning", "lab_invalidity", false);
+  }
   return output(ctx, {
     environment_instance_hash: result.inventory.core_hash,
     resource_count: result.inventory.resources.length,
@@ -257,7 +357,26 @@ export function provision(argv: readonly string[]): JourneyCommandOutput {
 
 export function baseline(argv: readonly string[]): JourneyCommandOutput {
   const ctx = openEnvironment(argv);
-  const fingerprint = ctx.run.baseline();
+  let fingerprint;
+  try {
+    fingerprint = ctx.run.baseline();
+  } catch (cause) {
+    // A contaminated or failing baseline is Lab-owned and never a subject defect
+    // (design §9): the environment was not clean, so nothing about the subject
+    // was measured.
+    return routed(
+      ctx,
+      cause,
+      [
+        CODES.BASELINE_CONTAMINATION_DETECTED,
+        CODES.BASELINE_PROBE_FAILED,
+        CODES.BASELINE_FINGERPRINT_MISMATCH,
+      ],
+      "baseline",
+      "lab_invalidity",
+      false,
+    );
+  }
   return output(ctx, {
     baseline_hash: fingerprint.core_hash,
     fingerprint_hash: fingerprint.fingerprint_hash,
@@ -345,7 +464,14 @@ export function freezeObservation(argv: readonly string[]): JourneyCommandOutput
 
 export function restore(argv: readonly string[]): JourneyCommandOutput {
   const ctx = openEnvironment(argv);
-  const restoration = ctx.run.restore();
+  let restoration;
+  try {
+    restoration = ctx.run.restore();
+  } catch (cause) {
+    // Design §12: a restoration failure MUST enter receipt-backed emergency
+    // cleanup. It has exactly one authorized route and this is it.
+    return routed(ctx, cause, [CODES.RESTORATION_FAILED], "environment_restoration", "cleanup_failure", true);
+  }
   return output(ctx, {
     environment_restoration_hash: restoration.core_hash,
     passed: restoration.passed,
@@ -355,7 +481,12 @@ export function restore(argv: readonly string[]): JourneyCommandOutput {
 
 export function destroy(argv: readonly string[]): JourneyCommandOutput {
   const ctx = openEnvironment(argv);
-  const result = ctx.run.destroy();
+  let result;
+  try {
+    result = ctx.run.destroy();
+  } catch (cause) {
+    return routed(ctx, cause, [CODES.TEARDOWN_FAILED], "teardown", "teardown_failure", true);
+  }
   return output(ctx, {
     teardown_hash: result.teardown.core_hash,
     passed: result.teardown.passed,
@@ -444,6 +575,13 @@ export function evaluateEnvironment(argv: readonly string[]): JourneyCommandOutp
  */
 export function finalizeEnvironment(argv: readonly string[]): JourneyCommandOutput {
   const ctx = openEnvironment(argv, [{ name: "claim-scope", kind: "string" }]);
+  const claimScope = (ctx.flags["claim-scope"] as string | undefined) ?? "T1";
+  if (claimScope !== "T1" && claimScope !== "T2" && claimScope !== "T3") {
+    throw new Erl2Error(
+      CODES.CFG_MISSING_REQUIRED,
+      "--claim-scope must be T1, T2 or T3; a base attestation never emits T4",
+    );
+  }
   const progress = deriveEnvironmentClosureProgress({
     lifecycle: ctx.workspace.lifecycle.all(),
     index: ArtifactIndex.scan(ctx.runRoot),
@@ -456,10 +594,31 @@ export function finalizeEnvironment(argv: readonly string[]): JourneyCommandOutp
     derivedMissingRoles: progress.missingRoles,
     derivedExtraHashes: progress.extraHashes,
   });
+  // Validity, index and terminal are one command, in the design's order: the
+  // index cites the validity result, the record cites the index, and nothing is
+  // signed until the closure derived by the verifier's own algorithm is complete.
+  const terminal = ctx.run.finalizeTerminal({
+    claimScope,
+    deriveClosure: (runRecord) =>
+      deriveEnvironmentPreFinalizationClosure({
+        lifecycle: ctx.workspace.lifecycle.all(),
+        index: ArtifactIndex.scan(ctx.runRoot),
+        verifierReleaseHash: VERIFIER_RELEASE_HASH,
+        verifiedAt: ctx.workspace.productionClock().now(),
+        runRecord,
+      }),
+  });
   return output(ctx, {
     validity_result_hash: result.validity.core_hash,
     validity_status: result.validity.status,
     generic_evaluation_index_hash: result.index.core_hash,
+    run_record_hash: terminal.runRecord.core_hash,
+    terminal_stage: terminal.runRecord.terminal_stage,
+    final_attestation_hash: terminal.attestation.core_hash,
+    claim_scope: terminal.attestation.claim_scope,
+    signer_inventory_hash: terminal.inventory.core_hash,
+    public_bundle_hash: terminal.bundle.core_hash,
+    public_bundle_path: "retained/public-bundle.json",
     derived_missing_roles: progress.missingRoles,
     derived_extra_hashes: progress.extraHashes,
   });
