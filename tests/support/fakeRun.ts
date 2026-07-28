@@ -225,7 +225,16 @@ function preregister(ctx: Ctx) {
     ],
   });
 
-  return { adapter, source, policy, prereg, verificationReceipt };
+  // The run trust policy is mirrored into the run at preregistration, exactly as
+  // the shipped producer does (`RunWorkspace.preregisterAcquisition`), so an
+  // offline verifier can resolve trust from the run alone on *both* terminal
+  // branches.  It is evidence, never authority: the verifier still authorizes it
+  // only against its own locally pinned root.  Without it an invalid record
+  // carries five signed members and no way to verify any of them (§6.4).
+  const trustPolicy = developmentTrustPolicy(ctx.keyring);
+  const trustPolicyPublished = publish(ctx, "retained/trust-policy.json", trustPolicy);
+
+  return { adapter, source, policy, prereg, verificationReceipt, trustPolicy, trustPolicyPublished };
 }
 
 // ---------------------------------------------------------------------------
@@ -691,8 +700,7 @@ export function runFakeValidPreEnvironmentRun(): FakeRunResult {
 
   // The run record's own event closes the chain; its lifecycle_head_hash refers
   // to the head *before* that event, which is what the verifier re-derives.
-  const trustPolicy = developmentTrustPolicy(keyring);
-  const trustPolicyPublished = publish(ctx, "retained/trust-policy.json", trustPolicy);
+  const { trustPolicy, trustPolicyPublished } = scaffold;
 
   const checkpoint = ctx.timestamps.anchor({
     artifactSchemaVersion: "pre-environment-lab-run-record/v1",

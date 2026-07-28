@@ -32,7 +32,7 @@ const MAX_REFERENCED_BYTES = 68_719_476_736; // 64 GiB, the ArtifactRef byte_len
 /** A content-addressed store filename: `<64 lowercase hex>.<ext>`. */
 const STORE_FILE = /(?:^|\/)sha256\/([0-9a-f]{64})\.[a-z0-9]+$/;
 
-interface Descriptor {
+export interface Descriptor {
   readonly declaredPath: string;
   readonly fileSha256: string;
   readonly byteLength?: number;
@@ -163,6 +163,20 @@ function collectStoreFiles(root: string, absolute: string, relative: string, out
   }
 }
 
+/**
+ * Every referenced-byte descriptor carried by an indexed artifact.  Exported so
+ * the retained-file accounting pass (`retainedFiles.ts`) resolves "is this file
+ * referenced?" from exactly the same descriptor set this module rehashes — the
+ * two checks cannot drift apart.
+ */
+export function collectReferencedDescriptors(index: ArtifactIndex): readonly Descriptor[] {
+  const descriptors: Descriptor[] = [];
+  for (const artifact of index.all()) {
+    collectDescriptors(artifact.value, artifact.logicalPath, descriptors);
+  }
+  return descriptors;
+}
+
 export interface ReferencedByteReport {
   readonly descriptorsChecked: number;
   readonly storeFilesChecked: number;
@@ -193,10 +207,7 @@ export function verifyReferencedBytes(index: ArtifactIndex): ReferencedByteRepor
   }
 
   // 2. Every referenced descriptor whose path is present must match its bytes.
-  const descriptors: Descriptor[] = [];
-  for (const artifact of index.all()) {
-    collectDescriptors(artifact.value, artifact.logicalPath, descriptors);
-  }
+  const descriptors = collectReferencedDescriptors(index);
   let descriptorsChecked = 0;
   for (const descriptor of descriptors) {
     const absolute = resolveBeneathRoot(root, descriptor.declaredPath, descriptor.origin);

@@ -635,35 +635,113 @@ for (const t of transcript) {
 //
 // `--verify` byte-compares the freshly, deterministically generated evidence in
 // `goldenRoot` against the committed pinned goldens under `fixtures/golden`,
-// WITHOUT mutating them. Two subtrees are explicitly EXCLUDED from the pin and
-// LOGGED (never silently dropped):
+// WITHOUT mutating them.
 //
-//   - `adapter-platform/**` — driven by a REAL out-of-process reference adapter.
-//     Its `request.frames` bake the absolute adapter-workspace path, and the
-//     hostile-adapter fixture writes a real OS `grandchild.pid`; neither can be
-//     made byte-stable across checkout paths and process launches, so this
-//     subtree is intentionally outside the byte-pin (prompt 6R-D option B).
-//   - `cli-transcript.json` — records absolute `--artifact-root`/path arguments
-//     of each CLI invocation, so it is path-dependent by construction.
+// Exclusions are per-FILE, never per-subtree, and are LOGGED (never silently
+// dropped). Generating twice into two directories and diffing shows exactly
+// seven files that cannot be byte-stable; every other file — including the whole
+// rest of the real out-of-process `adapter-platform/` evidence — is pinned:
+//
+//   - `**/request.frames` — the adapter host bakes the absolute
+//     adapter-workspace path into the request frames, so these vary with the
+//     checkout location.
+//   - `**/grandchild.pid` — the hostile-adapter fixture writes a REAL OS pid to
+//     prove the supervisor tree-kill; a pid varies per process launch.
+//   - `cli-transcript.json` — records the absolute `--artifact-root`/path
+//     arguments of each CLI invocation, so it is path-dependent by construction.
 //
 // Everything else — every fake-run terminal, the journey run, the generic
-// finalization runs, invalid records, bundles, lifecycle logs and root configs —
-// is byte-identical to the pin or `--verify` fails.
+// finalization runs, invalid records, bundles, lifecycle logs, root configs and
+// the real adapter protocol evidence — is byte-identical to the pin or
+// `--verify` fails.
 if (process.argv.includes("--verify")) {
   const pinned = path.join(root, "fixtures", "golden");
-  const EXCLUDE = (rel) => rel === "cli-transcript.json" || rel.startsWith(`adapter-platform${path.sep}`);
+  // Per-file exclusions as EXACT root-relative paths — never a basename, never a
+  // subtree. A basename rule (`request.frames`) silently unpins every same-named
+  // file anywhere in the tree, now and in future; an exact path unpins one file
+  // and nothing else.
+  const UNPINNABLE = [
+    {
+      path: "adapter-platform/hostile-adapter/run/adapter-workspace/op-acquire/output/grandchild.pid",
+      why: "a real OS pid from the supervisor tree-kill fixture",
+    },
+    {
+      path: "adapter-platform/hostile-adapter/run/adapter-workspace/op-acquire/request.frames",
+      why: "absolute adapter-workspace path baked into the frames",
+    },
+    {
+      path: "adapter-platform/reference-correct/run/adapter-workspace/op-acquire/request.frames",
+      why: "absolute adapter-workspace path baked into the frames",
+    },
+    {
+      path: "adapter-platform/reference-correct/run/adapter-workspace/op-verify-package/request.frames",
+      why: "absolute adapter-workspace path baked into the frames",
+    },
+    {
+      path: "adapter-platform/reference-limited/run/adapter-workspace/op-acquire/request.frames",
+      why: "absolute adapter-workspace path baked into the frames",
+    },
+    {
+      path: "adapter-platform/reference-limited/run/adapter-workspace/op-verify-package/request.frames",
+      why: "absolute adapter-workspace path baked into the frames",
+    },
+    { path: "cli-transcript.json", why: "absolute CLI path arguments" },
+  ];
+
+  // The exclusion manifest is itself pinned, and so is the resulting coverage.
+  //
+  // Without this, widening the pin was free: adding one entry named
+  // `run-record.json` dropped three files out of the comparison and still
+  // printed "evidence:verify OK". Exclusion growth is now a two-place edit —
+  // the list and this digest — so it can never happen silently, and it shows up
+  // in review as a deliberate change to a security-relevant constant. This is a
+  // speed bump backed by code review, NOT a cryptographic authorization.
+  const EXCLUSION_MANIFEST_DIGEST =
+    "5ac4efcb2a323dcfc93640a8bc7df819dd0126d165a990278b09a9da6da75342";
+  const EXPECTED_PINNED = 780;
+  const EXPECTED_EXCLUDED = 7;
+
+  const manifestDigest = createHash("sha256")
+    .update(JSON.stringify(UNPINNABLE.map((u) => [u.path, u.why]).sort()), "utf8")
+    .digest("hex");
+  if (manifestDigest !== EXCLUSION_MANIFEST_DIGEST) {
+    console.error(
+      `\nevidence:verify FAILED: the exclusion manifest changed.\n` +
+        `  expected digest ${EXCLUSION_MANIFEST_DIGEST}\n` +
+        `  actual   digest ${manifestDigest}\n` +
+        `Every exclusion removes a file from the byte-pin. If this change is intended,\n` +
+        `update EXCLUSION_MANIFEST_DIGEST (and EXPECTED_PINNED/EXPECTED_EXCLUDED) in the\n` +
+        `same commit and say why in the review.`,
+    );
+    process.exit(1);
+  }
+
+  const excluded = new Set(UNPINNABLE.map((u) => u.path));
+  const norm = (rel) => rel.split(path.sep).join("/");
+  const EXCLUDE = (rel) => excluded.has(norm(rel));
   const walk = (base) => {
     const out = [];
     const rec = (dir) => {
       for (const name of readdirSync(dir, { withFileTypes: true })) {
         const abs = path.join(dir, name.name);
         if (name.isDirectory()) rec(abs);
-        else out.push(path.relative(base, abs));
+        else out.push(norm(path.relative(base, abs)));
       }
     };
     rec(base);
     return out;
   };
+
+  // A stale exclusion is as dishonest as an unjustified one: it reads as covered
+  // ground while naming a file that no longer exists.
+  const allPinned = new Set(walk(pinned));
+  const stale = [...excluded].filter((p) => !allPinned.has(p));
+  if (stale.length > 0) {
+    for (const p of stale) console.error(`  STALE EXCLUSION  ${p} — no such file beneath fixtures/golden`);
+    console.error(`\nevidence:verify FAILED: ${String(stale.length)} exclusion(s) match nothing; remove them.`);
+    process.exit(1);
+  }
+
   const goldenFiles = new Set(walk(pinned).filter((r) => !EXCLUDE(r)));
   const freshFiles = new Set(walk(goldenRoot).filter((r) => !EXCLUDE(r)));
   const mismatches = [];
@@ -679,12 +757,21 @@ if (process.argv.includes("--verify")) {
     if (!a.equals(b)) mismatches.push(rel);
   }
   for (const rel of freshFiles) if (!goldenFiles.has(rel)) extra.push(rel);
-  const excludedCount =
-    walk(pinned).filter(EXCLUDE).length;
-  console.log(
-    `\nevidence:verify — pinned ${String(goldenFiles.size)} files, excluded ${String(excludedCount)} ` +
-      `(adapter-platform real-subprocess subtree + cli-transcript path log)`,
-  );
+  const excludedCount = walk(pinned).filter(EXCLUDE).length;
+  console.log(`\nevidence:verify — pinned ${String(goldenFiles.size)} files, excluded ${String(excludedCount)}:`);
+  for (const u of UNPINNABLE) console.log(`  excluded ${u.path} — ${u.why}`);
+
+  // Coverage is pinned too, so a file cannot quietly leave the comparison by any
+  // route — a widened exclusion, a deleted golden, or a renamed subtree.
+  if (goldenFiles.size !== EXPECTED_PINNED || excludedCount !== EXPECTED_EXCLUDED) {
+    console.error(
+      `\nevidence:verify FAILED: byte-pin coverage changed — ` +
+        `pinned ${String(goldenFiles.size)} (expected ${String(EXPECTED_PINNED)}), ` +
+        `excluded ${String(excludedCount)} (expected ${String(EXPECTED_EXCLUDED)}).\n` +
+        `If this change is intended, update EXPECTED_PINNED/EXPECTED_EXCLUDED in the same commit.`,
+    );
+    process.exit(1);
+  }
   if (mismatches.length || missing.length || extra.length) {
     for (const m of mismatches) console.error(`  BYTE MISMATCH  ${m}`);
     for (const m of missing) console.error(`  MISSING IN FRESH  ${m}`);

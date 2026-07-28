@@ -45,7 +45,9 @@ import {
   freezeOutput,
   freezePackage,
   preregisterAcquisition,
+  preregisterChallenge,
   reveal,
+  select,
   verifyPackage,
   type JourneyCommandOutput,
 } from "./journeyCommands.js";
@@ -90,13 +92,40 @@ function fail(command: string, error: Erl2Error): CommandResult {
   };
 }
 
+/**
+ * Reads a caller-supplied JSON document as a *typed* refusal on every failure
+ * mode.  `readFileSync` and `JSON.parse` throw plain `Error`/`SyntaxError`,
+ * which the top level used to rethrow — a missing or malformed `--public-bundle`,
+ * `--record` or `--root-config` escaped as a raw stack trace with exit 1 and no
+ * code, defeating the Appendix B/C guarantee that every outcome is a coded,
+ * Lab-owned envelope.
+ */
+function loadJsonDocument(documentPath: string, label: string): unknown {
+  const absolute = path.resolve(documentPath);
+  if (!existsSync(absolute)) {
+    throw new Erl2Error(CODES.CFG_MISSING_REQUIRED, `${label} not found: ${documentPath}`);
+  }
+  let text: string;
+  try {
+    text = readFileSync(absolute, "utf8");
+  } catch (error) {
+    throw new Erl2Error(CODES.CFG_MISSING_REQUIRED, `${label} could not be read: ${documentPath}`, {
+      cause: error,
+    });
+  }
+  try {
+    return parseStrictJson(text);
+  } catch (error) {
+    if (error instanceof Erl2Error) throw error;
+    throw new Erl2Error(CODES.SCHEMA_VALIDATION_FAILED, `${label} is not a valid JSON document`, {
+      cause: error,
+    });
+  }
+}
+
 /** Verifier-controlled local trust configuration, loaded only from `--root-config`. */
 function loadLocalTrust(configPath: string): LocalTrustConfiguration {
-  const absolute = path.resolve(configPath);
-  if (!existsSync(absolute)) {
-    throw new Erl2Error(CODES.CFG_MISSING_REQUIRED, `trust configuration not found: ${configPath}`);
-  }
-  const value = parseStrictJson(readFileSync(absolute, "utf8")) as Partial<LocalTrustConfiguration>;
+  const value = loadJsonDocument(configPath, "trust configuration") as Partial<LocalTrustConfiguration>;
   if (
     !Array.isArray(value.rootKeyIds) ||
     typeof value.currentTrustHeadHash !== "string" ||
@@ -109,11 +138,7 @@ function loadLocalTrust(configPath: string): LocalTrustConfiguration {
 }
 
 function loadLifecycle(streamPath: string): readonly LabLifecycleEventV1[] {
-  const absolute = path.resolve(streamPath);
-  if (!existsSync(absolute)) {
-    throw new Erl2Error(CODES.CFG_MISSING_REQUIRED, `lifecycle stream not found: ${streamPath}`);
-  }
-  const value = parseStrictJson(readFileSync(absolute, "utf8"));
+  const value = loadJsonDocument(streamPath, "lifecycle stream");
   if (!Array.isArray(value)) {
     throw new Erl2Error(CODES.VERIFY_RECORD_LIFECYCLE_GAP, "lifecycle stream must be a JSON array");
   }
@@ -127,6 +152,8 @@ const IMPLEMENTED_COMMANDS = new Set([
   "verify",
   "verify-record",
   "preregister-acquisition",
+  "preregister-challenge",
+  "select",
   "acquire",
   "freeze-package",
   "verify-package",
@@ -140,6 +167,8 @@ const IMPLEMENTED_COMMANDS = new Set([
 /** Journey, evaluation and finalization commands, keyed by their CLI name. */
 const JOURNEY_COMMANDS: Readonly<Record<string, (argv: readonly string[]) => JourneyCommandOutput>> = {
   "preregister-acquisition": preregisterAcquisition,
+  "preregister-challenge": preregisterChallenge,
+  select,
   acquire,
   "freeze-package": freezePackage,
   "verify-package": verifyPackage,
@@ -156,9 +185,7 @@ const JOURNEY_COMMANDS: Readonly<Record<string, (argv: readonly string[]) => Jou
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const PLANNED_COMMANDS = new Set([
-  "preregister-challenge",
   "commit-deep",
-  "select",
   "provision",
   "baseline",
   "plan",
@@ -251,7 +278,20 @@ export function runCommand(argv: readonly string[]): CommandResult {
     }
   } catch (error) {
     if (error instanceof Erl2Error) return fail(command, error);
-    throw error;
+    // Backstop: no command may terminate with an untyped exception.  An escaped
+    // throwable is by definition a Lab-owned failure, never a subject or adapter
+    // outcome, and is reported as a coded envelope with the Lab authority scope
+    // (design Appendix B/C, §20 failure ownership).
+    return fail(
+      command,
+      new Erl2Error(
+        CODES.LAB_UNEXPECTED_FAILURE,
+        `unexpected Lab failure while running ${command}: ${
+          error instanceof Error ? error.message.slice(0, 512) : "non-error throwable"
+        }`,
+        { owner: "lab", cause: error },
+      ),
+    );
   }
 }
 
@@ -364,7 +404,7 @@ function verify(argv: readonly string[]): CommandResult {
   if (flags["offline"] !== true) {
     throw new Erl2Error(CODES.VERIFY_OFFLINE_REQUIRED, "--offline is required; verification never uses the network");
   }
-  const bundle = parseStrictJson(readFileSync(path.resolve(requireString(flags, "public-bundle")), "utf8"));
+  const bundle = loadJsonDocument(requireString(flags, "public-bundle"), "public bundle");
   const result = verifyPublicBundle({
     bundle,
     artifactRoot: requireString(flags, "artifact-root"),
@@ -412,7 +452,7 @@ function verifyRecord(argv: readonly string[]): CommandResult {
   if (flags["offline"] !== true) {
     throw new Erl2Error(CODES.VERIFY_OFFLINE_REQUIRED, "--offline is required; verification never uses the network");
   }
-  const record = parseStrictJson(readFileSync(path.resolve(requireString(flags, "record")), "utf8"));
+  const record = loadJsonDocument(requireString(flags, "record"), "invalid run record");
   const closure = verifyInvalidRecord({
     record,
     artifactRoot: requireString(flags, "artifact-root"),

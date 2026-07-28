@@ -24,6 +24,7 @@ import {
   type TrustedTimestampCheckpointV1,
   type TrustPolicyManifestV2,
 } from "@erl2/contracts";
+import { verifySelectionChain } from "@erl2/core";
 import {
   coreHash,
   TrustEvaluator,
@@ -34,6 +35,9 @@ import { ArtifactIndex } from "./artifactIndex.js";
 import { derivePreEnvironmentClosure, deriveInvalidClosure } from "./closure.js";
 import { deriveEnvironmentClosure, deriveTerminalVariant } from "./environmentClosure.js";
 import { verifyReferencedBytes } from "./referencedBytes.js";
+import { verifyRetainedFileAccounting } from "./retainedFiles.js";
+import { verifySignedMembers } from "./signedMembers.js";
+import { assertNoSelectionArtifacts, deriveSelectionEvidence } from "./selectionEvidence.js";
 
 /**
  * Cross-checks an attestation binding hash against the retained artifact the
@@ -218,6 +222,38 @@ function verifyPreEnvironmentBundle(options: VerifyBundleOptions): BundleVerific
       currentlyTrusted: verdictAtSigning.currentlyTrusted,
     };
   }
+  // Supplement the closure's `rejected_extra_hashes` rule with the files the
+  // artifact index could not parse at all (a non-JSON payload, a strict-JSON
+  // refusal, a JSON array, an object with no `core_hash`).  Those are equally
+  // unaccounted retained bytes (ERL2-FR-020 / ERL2-AC-023, design §14 step 6-7).
+  // Derived *after* the closure so a genuinely missing mandatory role keeps its
+  // own, more fundamental cause rather than surfacing as its orphaned marker.
+  // §6.4 — every *other* signed member is verified too.  The attestation, the
+  // inventory, the trust root and the checkpoints were already checked above;
+  // this closes the five that rode in on hash closure alone (the acquisition
+  // source manifest, preregistration, its receipt, the adapter manifest and the
+  // generic run policy), cross-checks the inventory's claims against what is
+  // actually retained, and refuses any retained signed contract the verifier
+  // declares no authorized signer role for.
+  verifySignedMembers({
+    index,
+    trust,
+    asOf: attestation.finalized_at,
+    inventoryEntries: inventory.entries,
+  });
+  verifyRetainedFileAccounting(index);
+  // A pre-environment terminal has no selection, so retaining any selection
+  // contract is a branch crossover rather than a partial chain.
+  //
+  // Defense in depth, and honestly so: the closure's rejected-extra rule already
+  // refuses such an artifact first, because no pre-environment role can ever
+  // derive one. Verified by removing this line — the CLI still refuses. It is
+  // kept because the refusal it *replaces* is now gone: until the selection
+  // rows were declared (ADR-ERL2-020 §2), a stray selection member was caught as
+  // an undeclared signed contract. Declaring the roles removed that gate, and a
+  // named check for the crossover is cheaper than relying on a general rule to
+  // keep covering a specific hazard.
+  assertNoSelectionArtifacts(index);
   if (attestation.run_record_hash !== requiredHash(closure, "run-record")) {
     throw new Erl2Error(
       CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
@@ -419,6 +455,26 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
       currentlyTrusted: verdictAtSigning.currentlyTrusted,
     };
   }
+  // Supplement the closure's `rejected_extra_hashes` rule with the files the
+  // artifact index could not parse at all (a non-JSON payload, a strict-JSON
+  // refusal, a JSON array, an object with no `core_hash`).  Those are equally
+  // unaccounted retained bytes (ERL2-FR-020 / ERL2-AC-023, design §14 step 6-7).
+  // Derived *after* the closure so a genuinely missing mandatory role keeps its
+  // own, more fundamental cause rather than surfacing as its orphaned marker.
+  // §6.4 — every *other* signed member is verified too.  The attestation, the
+  // inventory, the trust root and the checkpoints were already checked above;
+  // this closes the five that rode in on hash closure alone (the acquisition
+  // source manifest, preregistration, its receipt, the adapter manifest and the
+  // generic run policy), cross-checks the inventory's claims against what is
+  // actually retained, and refuses any retained signed contract the verifier
+  // declares no authorized signer role for.
+  verifySignedMembers({
+    index,
+    trust,
+    asOf: attestation.finalized_at,
+    inventoryEntries: inventory.entries,
+  });
+  verifyRetainedFileAccounting(index);
   if (attestation.run_record_hash !== requiredHash(closure, "run-record")) {
     throw new Erl2Error(
       CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
@@ -443,6 +499,34 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
     throw new Erl2Error(
       CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
       "attestation attests a selection receipt the derived closure did not reach",
+    );
+  }
+
+  // -- §8.5: the selection chain, verified offline ---------------------------
+  //
+  // The evidence is assembled by the verifier from retained bytes, never from a
+  // producer-supplied member list, and the chain is then re-derived from scratch
+  // — pool root, source/request binding, derived index, rejection count. This is
+  // the third independent derivation of the same selection: the producer's, the
+  // auditor's (ADR-ERL2-020 §7), and this one.
+  const selectionEvidence = deriveSelectionEvidence(index, options.lifecycle);
+  const selection = verifySelectionChain(selectionEvidence, trust);
+
+  // The *verified* entry decides what this run answered — not any field the
+  // producer wrote. A bundle whose binding names a different entry than the
+  // chain derives is refused here rather than believed.
+  if (selection.selectedEntryHash !== selectionEvidence.binding.pool_entry_hash) {
+    throw new Erl2Error(
+      CODES.SELECTION_CHAIN_EDGE_UNCLOSED,
+      `the verified selection derives entry ${selection.selectedEntryHash}, but the retained ` +
+        `binding names ${selectionEvidence.binding.pool_entry_hash}`,
+    );
+  }
+  // And the receipt the attestation attests must be the one the chain verified.
+  if (coreHash(selectionEvidence.receipt) !== attestation.selection_receipt_hash) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
+      "the verified selection receipt is not the one the attestation attests",
     );
   }
 
@@ -517,5 +601,33 @@ export function verifyInvalidRecord(options: VerifyRecordOptions): MandatoryGrap
       `verify-record refuses an invalid closure: ${String(closure.rejected_extra_hashes.length)} unaccounted retained artifact(s)`,
     );
   }
+  // Supplement the closure's `rejected_extra_hashes` rule with the files the
+  // artifact index could not parse at all (a non-JSON payload, a strict-JSON
+  // refusal, a JSON array, an object with no `core_hash`).  Those are equally
+  // unaccounted retained bytes (ERL2-FR-020 / ERL2-AC-023, design §14 step 6-7).
+  // Derived *after* the closure so a genuinely missing mandatory role keeps its
+  // own, more fundamental cause rather than surfacing as its orphaned marker.
+  verifyRetainedFileAccounting(index);
+
+  // §6.4 on the invalid branch.  An invalid record carries no attestation and no
+  // signer inventory, but it does retain signed members (the acquisition source
+  // manifest, preregistration, its receipt, the adapter manifest, the generic run
+  // policy and — on a cancellation — the signed cancellation request).  None of
+  // them was signature-verified before this pass.  The run mirrors its trust
+  // policy at preregistration; it is authorized here only against the verifier's
+  // own locally pinned head, never accepted on its own say-so.
+  const mirrored = index.ofSchema("trust-policy-manifest/v2");
+  if (mirrored.length !== 1) {
+    throw new Erl2Error(
+      CODES.TRUST_HEAD_NOT_LOCALLY_PINNED,
+      `an invalid record must retain exactly one mirrored trust policy to authorize its signed members; found ${String(mirrored.length)}`,
+    );
+  }
+  const mirroredPolicy = index.typed<TrustPolicyManifestV2>(
+    (mirrored[0] as { coreHash: Hash }).coreHash,
+    "trust-policy-manifest/v2",
+  );
+  const recordTrust = new TrustEvaluator(mirroredPolicy, options.localTrust);
+  verifySignedMembers({ index, trust: recordTrust, asOf: record.invalidated_at });
   return closure;
 }

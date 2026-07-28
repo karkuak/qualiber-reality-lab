@@ -7,7 +7,21 @@
  */
 
 export { ArtifactIndex, type IndexedArtifact } from "./library/artifactIndex.js";
-export { verifyReferencedBytes, type ReferencedByteReport } from "./library/referencedBytes.js";
+export {
+  verifyReferencedBytes,
+  collectReferencedDescriptors,
+  type ReferencedByteReport,
+  type Descriptor,
+} from "./library/referencedBytes.js";
+export {
+  verifySignedMembers,
+  type SignedMemberOptions,
+  type SignedMemberReport,
+} from "./library/signedMembers.js";
+export {
+  verifyRetainedFileAccounting,
+  type RetainedAccountingReport,
+} from "./library/retainedFiles.js";
 export {
   derivePreEnvironmentClosure,
   derivePreFinalizationClosure,
@@ -32,3 +46,9 @@ export {
   type VerifyRecordOptions,
   type BundleVerificationResult,
 } from "./library/verify.js";
+export {
+  deriveSelectionEvidence,
+  assertNoSelectionArtifacts,
+  SELECTION_SCHEMAS,
+  type DerivedSelectionEvidence,
+} from "./library/selectionEvidence.js";

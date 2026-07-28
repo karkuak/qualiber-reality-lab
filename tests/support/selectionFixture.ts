@@ -242,6 +242,7 @@ export function buildSelectionFixture(): SelectionFixture {
     runId,
     request,
     requestHash,
+    roleAudit,
     policy,
     policyHash,
     pool,

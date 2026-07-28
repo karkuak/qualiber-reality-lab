@@ -71,15 +71,26 @@ npm run build
 npm test
 ```
 
-Generate the CLI and verifier evidence into `fixtures/golden/`:
+Generate the CLI and verifier evidence. Routine generation writes to a fresh
+temporary directory and **never** mutates the approved goldens under
+`fixtures/golden/`; only the explicit `evidence:update` rewrites them:
 
 ```bash
 npm run evidence
 ```
 
+Byte-compare a deterministic generation against the pinned goldens without
+touching them (780 files pinned; 7 are excluded with a printed reason — the
+adapter `request.frames` bake an absolute workspace path, `grandchild.pid` is a
+real OS pid, and `cli-transcript.json` records absolute CLI paths):
+
+```bash
+npm run evidence:verify
+```
+
 Run the generic journey from acquisition to frozen subject output. The registry
 is a governor-prepared directory of admitted artifacts; `fixtures/golden`
-contains a worked example produced by `npm run evidence`:
+contains a worked example produced by `npm run evidence:update`:
 
 ```bash
 node packages/cli/dist/src/bin.js preregister-acquisition --run-root ./run --registry ./registry --tier development --acquisition-source HASH --adapter HASH --acquisition-actor-script HASH --acquisition-actor-schema HASH --acquisition-step HASH --package-verification-step HASH --generic-policy HASH --trust-policy HASH --limits HASH --expires 2026-12-31T00:00:00Z

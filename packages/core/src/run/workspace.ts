@@ -37,6 +37,20 @@ import {
   type Hash,
   type Instant,
   type InvalidLabRunRecordV1,
+  type BeaconInclusionProofV1,
+  type BeaconSignatureProofV1,
+  type ChallengeManifestV1,
+  type ExternalBeaconRandomnessReceiptV1,
+  type RandomnessSourceTrustVerificationReportV1,
+  type SelectedChallengeJourneyBindingV1,
+  type SelectionCommitmentV2,
+  type SelectionProofV2,
+  type SelectionRequestV2,
+  type SelectionRoleSeparationAuditV1,
+  type ThresholdRevealReceiptV1,
+  type ExternalBeaconRandomnessPolicyV1,
+  type JourneyDefinitionV1,
+  type JourneySelectionPolicyV1,
   type JourneyStepCommitmentV1,
   type JourneyStepOutcomeV1,
   type JudgeExpectationRevealRecordV1,
@@ -73,7 +87,28 @@ import {
   type SigningKey,
 } from "@erl2/integrity";
 import { LifecycleLog, verifyLifecycleChain } from "../lifecycle/log.js";
-import { assertSubjectPortExecutable, TERMINAL_STATES, type LabState } from "../lifecycle/states.js";
+import type { BeaconRound } from "../selection/beacon.js";
+import type { SelectionPoolEntry } from "../selection/chain.js";
+import type { SelectionContext, SelectionProgress } from "../selection/stages.js";
+import { artifactHash, assertResumable, assertSelectionPreconditions, stepFrom } from "./selectionWalk.js";
+import { POOL_MANIFEST_PATH, poolEntryPath } from "./selectionContext.js";
+import type { SelectionPool } from "../selection/chain.js";
+
+/** Admission inputs the two pre-chain selection transitions consume. */
+export interface SelectionPreludeInput {
+  readonly request: SelectionRequestV2;
+  readonly roleAudit: SelectionRoleSeparationAuditV1;
+  /** Builds the pool. Invoked at most once per run, by construction. */
+  readonly buildPool: () => SelectionPool;
+  /** Loads a pool the run already froze; undefined before the pool step ran. */
+  readonly loadPool: () => SelectionPool | undefined;
+}
+import {
+  assertSubjectPortExecutable,
+  assertTransitionAllowed,
+  TERMINAL_STATES,
+  type LabState,
+} from "../lifecycle/states.js";
 import { GenericStepEngine, deriveStepClosure } from "../journey/engine.js";
 import { assertVisibleStepMatchesCommitment } from "../journey/steps.js";
 import { assertNoCanaryLeak, type OracleScanTarget } from "../journey/oracle.js";
@@ -84,6 +119,7 @@ import {
 import { AdmissionRegistry } from "../registry/admission.js";
 import { TimestampLog } from "../timestamps/log.js";
 import type { Clock } from "../runtime/seams.js";
+import { SteppingClock } from "../runtime/seams.js";
 import {
   assertClaimedOrderMatchesDerived,
   buildPreSelectionJourneyResult,
@@ -137,6 +173,24 @@ interface IndexedArtifact {
   readonly schemaVersion: string;
   readonly value: Record<string, unknown>;
 }
+
+/**
+ * Artifact fields that record when the Lab *produced* something, as opposed to
+ * a validity horizon (`expires_at`) or an external schedule
+ * (`round_observed_at`). Only these may move the selection clock forward.
+ */
+const SELECTION_PRODUCTION_INSTANTS = [
+  "created_at",
+  "requested_at",
+  "audited_at",
+  "checkpointed_at",
+  "wrapped_at",
+  "verified_at",
+  "committed_at",
+  "released_at",
+  "opened_at",
+  "proved_at",
+] as const;
 
 export class RunWorkspace {
   readonly runId: string;
@@ -194,6 +248,62 @@ export class RunWorkspace {
   }
 
   /** Reads a retained artifact by core hash, re-verifying its declared hash. */
+  /** Every artifact core hash recorded under `role`, in lifecycle order. */
+  hashesForRole(role: string): readonly Hash[] {
+    const out: Hash[] = [];
+    for (const event of this.lifecycle.all()) {
+      for (const produced of event.produced) {
+        if (produced.artifact_role === role) out.push(produced.artifact_core_hash);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * The clock selection stamps its artifacts with, anchored so that it is
+   * **monotonic across processes**.
+   *
+   * The run clock steps forward from the preregistration instant, which is right
+   * for a command that runs once. Selection is not one command: it advances over
+   * several processes, and each new process restarts that stepping clock at the
+   * same anchor. A resumed process therefore emitted timestamps *earlier* than
+   * the artifacts the previous process had already frozen, and the chain's own
+   * acyclic-time rule rejected the result
+   * (`SELECTION_TIME_OUT_OF_ORDER: randomness receipt must precede source-trust
+   * verification`).
+   *
+   * Anchoring on the latest instant the run has already durably recorded fixes
+   * it: a resumed step can only ever stamp forward. Found by driving the crash
+   * matrix through real processes; a single-process harness cannot see it,
+   * because it never restarts the clock.
+   */
+  selectionClock(): Clock {
+    // The anchor must dominate every instant the run has already recorded, from
+    // both clocks that write into it: the lifecycle log stamps events with the
+    // run clock, while selection artifacts carry their own production instant
+    // from this one. Considering only the lifecycle left the anchor behind the
+    // frozen receipt, and a resumed source-trust report was stamped before it
+    // (`SELECTION_TIME_OUT_OF_ORDER`).
+    //
+    // Only fields that record *work already done* count. An earlier draft
+    // scanned every ISO-looking value and absorbed `expires_at`, which dated
+    // every later artifact five months into the future; `round_observed_at` is
+    // likewise the beacon's schedule, not this run's progress.
+    let latest = 0;
+    const consider = (value: unknown): void => {
+      if (typeof value !== "string") return;
+      const at = Date.parse(value);
+      if (Number.isFinite(at) && at > latest) latest = at;
+    };
+    for (const event of this.lifecycle.all()) consider(event.occurred_at);
+    for (const artifact of this.index().values()) {
+      for (const field of SELECTION_PRODUCTION_INSTANTS) consider(artifact.value[field]);
+    }
+    if (latest === 0) return this.clock;
+    const anchor = new Date(Math.floor(latest / 1000) * 1000).toISOString();
+    return new SteppingClock(anchor.replace(/\.\d{3}Z$/, "Z"), 1000);
+  }
+
   artifact<T>(hash: Hash, contractName: string): T {
     const found = this.index().get(hash);
     if (!found) {
@@ -528,6 +638,12 @@ export class RunWorkspace {
    * its exact bytes.
    */
   freezePackage(): ArtifactRef {
+    // Pre-freeze state validation.  The lifecycle append below is what rejects an
+    // ineligible state, but it runs *after* the package bytes are already frozen
+    // into the retained set — so a refused post-terminal retry still wrote new
+    // retained evidence into a run that had already reached its terminal
+    // (remediation §8.2: a refusal causes zero new retained evidence).
+    assertSubjectPortExecutable(this.lifecycle.currentState);
     const record = this.artifact<SubjectAcquisitionRecordV1>(
       this.requireHashForRole("acquisition-record"),
       "SubjectAcquisitionRecordV1",
@@ -728,6 +844,458 @@ export class RunWorkspace {
   }
 
   /** Only a successful verification record may create the package manifest. */
+  /**
+   * Challenge preregistration — the one authorized continuation of a successful
+   * package verification (ADR-ERL2-013), and the state selection departs from.
+   *
+   * The governor authored the challenge family, the journeys, their step
+   * commitments and the two policies out of band; this mirrors the admitted
+   * artifacts into the run so an offline verifier can resolve the whole
+   * selection input set from the run alone, exactly as `preregisterAcquisition`
+   * mirrors the acquisition side.
+   *
+   * Nothing here chooses a candidate. The *family* is frozen; which member the
+   * run answers is decided only by `select`, from beacon randomness the Lab
+   * cannot predict. Freezing the family first is what makes the later selection
+   * checkable: the verifier can confirm the drawn entry was among exactly these
+   * admitted candidates and no other.
+   */
+  preregisterChallenge(input: {
+    readonly journeySelectionPolicyHash: Hash;
+    readonly randomnessPolicyHash: Hash;
+    readonly challengeManifestHashes: readonly Hash[];
+  }): { readonly challengeFamilyHashes: readonly Hash[] } {
+    // Pre-freeze state validation (ADR-ERL2-019 §4): a refused preregistration
+    // must add zero retained evidence, so the transition is checked before any
+    // byte is written rather than by the lifecycle append at the end.
+    assertTransitionAllowed(
+      this.lifecycle.currentState,
+      "challenge_preregistered",
+      "challenge_preregistered",
+    );
+    if (input.challengeManifestHashes.length === 0) {
+      throw new Erl2Error(
+        CODES.ADMISSION_ARTIFACT_UNKNOWN,
+        "challenge preregistration requires at least one admitted challenge manifest",
+      );
+    }
+
+    // Two strict phases. ADR-ERL2-019 §4 requires a refusal to add *zero*
+    // retained evidence, and an earlier draft of this method froze both policies
+    // before the challenge loop validated admission — so an unadmitted challenge
+    // hash was refused correctly and still left four files behind. Everything is
+    // resolved and checked first; nothing is written until all of it holds.
+    const pending: {
+      path: string;
+      value: object;
+      role: string;
+      hash: Hash;
+      schema: string;
+    }[] = [];
+
+    // Both policies are `policy_author`-signed (ADR-ERL2-020 §2a); the verifier
+    // authorizes them against its own pinned head, never against this mirror.
+    const journeySelectionPolicy = this.registry.require<JourneySelectionPolicyV1>(
+      input.journeySelectionPolicyHash,
+      "JourneySelectionPolicyV1",
+    );
+    pending.push({
+      path: "retained/journey-selection-policy.json",
+      value: journeySelectionPolicy,
+      role: "journey-selection-policy",
+      hash: input.journeySelectionPolicyHash,
+      schema: "journey-selection-policy/v1",
+    });
+
+    const randomnessPolicy = this.registry.require<ExternalBeaconRandomnessPolicyV1>(
+      input.randomnessPolicyHash,
+      "ExternalBeaconRandomnessPolicyV1",
+    );
+    pending.push({
+      path: "retained/selection-randomness-policy.json",
+      value: randomnessPolicy,
+      role: "selection-randomness-policy",
+      hash: input.randomnessPolicyHash,
+      schema: "external-beacon-randomness-policy/v1",
+    });
+
+    // Each admitted challenge, its journey, and that journey's step commitments.
+    // A challenge whose journey or commitments are not admitted is refused here
+    // rather than surfacing later as an unresolvable pool entry.
+    const seenSteps = new Set<Hash>();
+    const seenChallenges = new Set<Hash>();
+    for (const challengeHash of input.challengeManifestHashes) {
+      if (seenChallenges.has(challengeHash)) {
+        throw new Erl2Error(
+          CODES.ADMISSION_ARTIFACT_UNKNOWN,
+          `challenge ${challengeHash} is named twice in the family`,
+        );
+      }
+      seenChallenges.add(challengeHash);
+      const challenge = this.registry.require<ChallengeManifestV1>(
+        challengeHash,
+        "ChallengeManifestV1",
+      );
+      if (challenge.tier !== "development") {
+        // ERL2-OQ-007 fail-closed at admission: a held-out or blind challenge
+        // may not enter a development-beacon run. The selection kernels enforce
+        // this again (chain.ts / verify.ts) — this is the outermost of three
+        // gates, not the only one.
+        throw new Erl2Error(
+          CODES.ADMISSION_SUBJECT_PORT_NOT_DEVELOPMENT,
+          `challenge ${challenge.challenge_id} declares tier ${challenge.tier}; only development is admissible`,
+        );
+      }
+      const journey = this.registry.require<JourneyDefinitionV1>(
+        challenge.journey_hash,
+        "JourneyDefinitionV1",
+      );
+      if (
+        journey.ordered_step_commitment_hashes.length !==
+          challenge.journey_step_commitment_hashes.length ||
+        journey.ordered_step_commitment_hashes.some(
+          (stepHash: Hash, i: number) => stepHash !== challenge.journey_step_commitment_hashes[i],
+        )
+      ) {
+        throw new Erl2Error(
+          CODES.ADMISSION_ARTIFACT_UNKNOWN,
+          `challenge ${challenge.challenge_id} and its journey disagree on the ordered step commitments`,
+        );
+      }
+
+      pending.push(
+        {
+          path: `retained/challenge-manifests/${challenge.challenge_id}.json`,
+          value: challenge,
+          role: "challenge-manifest",
+          hash: challengeHash,
+          schema: "challenge-manifest/v1",
+        },
+        {
+          path: `retained/journey-definitions/${journey.journey_id}.json`,
+          value: journey,
+          role: "journey-definition",
+          hash: challenge.journey_hash,
+          schema: "journey-definition/v1",
+        },
+      );
+
+      for (const stepHash of journey.ordered_step_commitment_hashes) {
+        if (seenSteps.has(stepHash)) continue;
+        seenSteps.add(stepHash);
+        const commitment = this.registry.require<JourneyStepCommitmentV1>(
+          stepHash,
+          "JourneyStepCommitmentV1",
+        );
+        pending.push({
+          path: `retained/journey-step-commitments/${commitment.step_id}.json`,
+          value: commitment,
+          role: "journey-step-commitment",
+          hash: stepHash,
+          schema: "journey-step-commitment/v1",
+        });
+      }
+    }
+
+    // Phase 2 — every input resolved and every invariant held; only now write.
+    for (const item of pending) this.store.freezeJson(item.path, item.value, "INTERNAL");
+    const produced = pending.map((item) => ({
+      artifact_role: item.role,
+      artifact_core_hash: item.hash,
+      artifact_schema_version: item.schema,
+    }));
+
+    this.lifecycle.append({
+      eventType: "challenge_preregistered",
+      stateTo: "challenge_preregistered",
+      actorId: "operator",
+      commandId: "preregister-challenge",
+      operationId: "op-preregister-challenge",
+      produced,
+    });
+    return { challengeFamilyHashes: [...input.challengeManifestHashes] };
+  }
+
+  /**
+   * Rebuilds the selection progress a partially advanced run already earned,
+   * **from retained evidence only** (ADR-ERL2-020 §6).
+   *
+   * Resume must never trust memory: the process that produced these artifacts is
+   * gone. Every field is resolved from the role the lifecycle recorded and the
+   * frozen artifact that role names, so a run that was tampered with between
+   * invocations fails here rather than continuing on stale in-process values.
+   *
+   * `round` and `signatureProof` are the interesting cases. The beacon round is
+   * not an artifact; its randomness output is recovered from the frozen receipt,
+   * and the signature proof from the PUBLIC blob the receipt references. That is
+   * precisely what lets the walk continue without ever re-entering the beacon.
+   */
+  private rebuildSelectionProgress(ctx: SelectionContext): SelectionProgress {
+    const load = <T>(role: string, contract: string): T | undefined => {
+      const hash = this.hashForRole(role);
+      return hash === undefined ? undefined : this.artifact<T>(hash, contract);
+    };
+
+    const randomnessReceipt = load<ExternalBeaconRandomnessReceiptV1>(
+      "selection-randomness-receipt",
+      "ExternalBeaconRandomnessReceiptV1",
+    );
+    let randomness: { readonly randomnessOutput: Buffer } | undefined;
+    let signatureProof: BeaconSignatureProofV1 | undefined;
+    let inclusionProof: BeaconInclusionProofV1 | undefined;
+    if (randomnessReceipt !== undefined) {
+      // The receipt carries the observed output, which is all any later stage
+      // consumes — so the walk continues from what was durably recorded rather
+      // than asking the beacon again.
+      randomness = {
+        randomnessOutput: Buffer.from(randomnessReceipt.randomness_output_base64, "base64"),
+      };
+      // Both beacon proofs are rebuilt: the auditor's re-derivation verifies the
+      // native proof *and* its inclusion, so a resume that recovered only one of
+      // them could not reach the receipt at all.
+      signatureProof = assertContract<BeaconSignatureProofV1>(
+        "BeaconSignatureProofV1",
+        parseStrictJson(
+          this.store.read(randomnessReceipt.beacon_signature_proof.path).toString("utf8"),
+        ) as Record<string, unknown>,
+      );
+      inclusionProof = assertContract<BeaconInclusionProofV1>(
+        "BeaconInclusionProofV1",
+        parseStrictJson(
+          this.store.read(randomnessReceipt.beacon_inclusion_proof.path).toString("utf8"),
+        ) as Record<string, unknown>,
+      );
+    }
+
+    const commitment = load<SelectionCommitmentV2>("selection-commitment", "SelectionCommitmentV2");
+    // The selected entry and the derived index are recovered by matching the
+    // commitment's recorded entry against the rebuilt pool — never by re-running
+    // the derivation, which would silently paper over a pool that changed.
+    let selectedEntry: SelectionPoolEntry | undefined;
+    let derived: { readonly index: number; readonly rejectionCount: number } | undefined;
+    if (commitment !== undefined) {
+      const index = ctx.pool.entries.findIndex((e: SelectionPoolEntry) => e.entryHash === commitment.selected_entry_hash);
+      if (index < 0) {
+        throw new Erl2Error(
+          CODES.SELECTION_CHAIN_EDGE_UNCLOSED,
+          "the retained commitment names an entry the rebuilt pool does not contain",
+        );
+      }
+      selectedEntry = ctx.pool.entries[index] as SelectionPoolEntry;
+      const proof = load<SelectionProofV2>("selection-proof", "SelectionProofV2");
+      derived = {
+        index,
+        // The rejection count is only observable from the proof; before the proof
+        // exists the walk has not needed it.
+        rejectionCount: proof?.rejection_count ?? 0,
+      };
+    }
+
+    // `exactOptionalPropertyTypes` is on: an absent stage must be an *absent*
+    // key, not a key set to undefined, so a half-built progress can never be
+    // mistaken for a complete one.
+    const put = <T>(key: string, value: T | undefined): Record<string, T> =>
+      value === undefined ? {} : ({ [key]: value } as Record<string, T>);
+
+    return {
+      ...put("poolCheckpoint", load<TrustedTimestampCheckpointV1>(
+        "eligibility-pool-checkpoint",
+        "TrustedTimestampCheckpointV1",
+      )),
+      ...put("randomness", randomness),
+      ...put("signatureProof", signatureProof),
+      ...put("inclusionProof", inclusionProof),
+      ...put("randomnessReceipt", randomnessReceipt),
+      ...put("sourceTrustReport", load<RandomnessSourceTrustVerificationReportV1>(
+        "randomness-source-trust-report",
+        "RandomnessSourceTrustVerificationReportV1",
+      )),
+      ...put("derived", derived),
+      ...put("selectedEntry", selectedEntry),
+      ...put("commitment", commitment),
+      ...put("commitmentCheckpoint", load<TrustedTimestampCheckpointV1>(
+        "selection-commitment-checkpoint",
+        "TrustedTimestampCheckpointV1",
+      )),
+      ...put("thresholdRevealReceipt", load<ThresholdRevealReceiptV1>(
+        "threshold-reveal-receipt",
+        "ThresholdRevealReceiptV1",
+      )),
+      ...put("binding", load<SelectedChallengeJourneyBindingV1>(
+        "selected-challenge-journey-binding",
+        "SelectedChallengeJourneyBindingV1",
+      )),
+      ...put("bindingCheckpoint", load<TrustedTimestampCheckpointV1>(
+        "selected-binding-checkpoint",
+        "TrustedTimestampCheckpointV1",
+      )),
+      ...put("proof", load<SelectionProofV2>("selection-proof", "SelectionProofV2")),
+    } as SelectionProgress;
+  }
+
+  /**
+   * The two transitions that precede the chain proper: the role-separation audit
+   * and the ordered eligibility pool.
+   *
+   * They are not rows in `SELECTION_STEPS` because they consume admission inputs
+   * (custodians, the entry signer, the challenge family) rather than chain
+   * state, and because the pool is the one artifact that must be *built* exactly
+   * once — every later step is a pure function of what is already retained.
+   *
+   * Each is still a full durable transition: validate, produce, freeze, append.
+   * They count towards `maxSteps` so the crash matrix can stop between them.
+   */
+  private advanceSelectionPrelude(
+    input: SelectionPreludeInput,
+    budget: number,
+  ): { readonly stepsRun: number; readonly pool?: SelectionPool } {
+    let stepsRun = 0;
+    let built: SelectionPool | undefined;
+
+    if (this.lifecycle.currentState === "challenge_preregistered" && stepsRun < budget) {
+      assertTransitionAllowed(
+        this.lifecycle.currentState,
+        "selection_role_separation_audit_frozen",
+        "selection_role_separation_audit_frozen",
+      );
+      this.store.freezeJson("retained/selection/selection-request.json", input.request, "INTERNAL");
+      this.store.freezeJson("retained/selection/role-separation-audit.json", input.roleAudit, "INTERNAL");
+      this.lifecycle.append({
+        eventType: "selection_role_separation_audit_frozen",
+        stateTo: "selection_role_separation_audit_frozen",
+        actorId: "lab",
+        commandId: "select",
+        operationId: "op-selection-role-audit",
+        produced: [
+          {
+            artifact_role: "selection-request",
+            artifact_core_hash: artifactHash(input.request),
+            artifact_schema_version: "selection-request/v2",
+          },
+          {
+            artifact_role: "selection-role-separation-audit",
+            artifact_core_hash: artifactHash(input.roleAudit),
+            artifact_schema_version: "selection-role-separation-audit/v1",
+          },
+        ],
+      });
+      stepsRun += 1;
+    }
+
+    if (this.lifecycle.currentState === "selection_role_separation_audit_frozen" && stepsRun < budget) {
+      assertTransitionAllowed(
+        this.lifecycle.currentState,
+        "eligibility_pool_manifest_frozen",
+        "eligibility_pool_manifest_frozen",
+      );
+      // The pool is built exactly here and never again: its opening nonces and
+      // envelope ciphertexts are drawn, so a rebuild would produce a different
+      // pool and select a different challenge. Every later invocation loads it.
+      const pool = input.buildPool();
+      built = pool;
+      this.store.freezeJson(POOL_MANIFEST_PATH, pool.manifest, "INTERNAL");
+      for (const poolEntry of pool.entries) {
+        this.store.freezeJson(
+          poolEntryPath(poolEntry.entry.opaque_entry_handle),
+          poolEntry.entry,
+          "INTERNAL",
+        );
+      }
+      this.lifecycle.append({
+        eventType: "eligibility_pool_manifest_frozen",
+        stateTo: "eligibility_pool_manifest_frozen",
+        actorId: "lab",
+        commandId: "select",
+        operationId: "op-eligibility-pool",
+        produced: [
+          {
+            artifact_role: "eligibility-pool-manifest",
+            artifact_core_hash: pool.manifestHash,
+            artifact_schema_version: "eligibility-pool-manifest/v2",
+          },
+          ...pool.entries.map((poolEntry) => ({
+            artifact_role: "eligibility-pool-entry",
+            artifact_core_hash: poolEntry.entryHash,
+            artifact_schema_version: "eligibility-pool-entry/v2",
+          })),
+        ],
+      });
+      stepsRun += 1;
+    }
+    return built === undefined ? { stepsRun } : { stepsRun, pool: built };
+  }
+
+  /**
+   * Advances the selection walk as far as it can, one durable transition at a
+   * time (ADR-ERL2-020 §6).
+   *
+   * Every step validates the state it departs from, produces only its own
+   * artifacts, freezes them, and only then appends its lifecycle event — so a
+   * crash at any boundary leaves a run whose retained evidence says exactly how
+   * far it got. Re-invoking continues from there.
+   *
+   * `maxSteps` exists for the crash-injection suite, which needs to stop the
+   * walk at a chosen boundary. Production callers advance to completion.
+   */
+  advanceSelection(
+    ctx: SelectionContext,
+    maxSteps = Number.POSITIVE_INFINITY,
+    prelude?: SelectionPreludeInput,
+  ): {
+    readonly state: LabState;
+    readonly stepsRun: number;
+  } {
+    assertResumable(this.lifecycle.currentState);
+
+    // The prelude runs first because the pool does not exist until it does: the
+    // chain preconditions are *about* the pool, so checking them before it is
+    // built would read an absent manifest. The pool is built at most once and
+    // loaded on every later invocation.
+    const preludeResult =
+      prelude === undefined ? { stepsRun: 0, pool: undefined } : this.advanceSelectionPrelude(prelude, maxSteps);
+    let stepsRun = preludeResult.stepsRun;
+
+    const pool = preludeResult.pool ?? prelude?.loadPool();
+    if (pool === undefined) {
+      // The walk cannot proceed past the prelude without a pool; a caller that
+      // stopped inside the prelude simply has nothing more to do this pass.
+      return { state: this.lifecycle.currentState, stepsRun };
+    }
+    const walkCtx: SelectionContext = { ...ctx, pool };
+
+    // Re-checked on every resume, not just at the start: a run whose retained
+    // pool no longer binds its request must not continue merely because it
+    // already observed a round.
+    assertSelectionPreconditions(walkCtx);
+    let progress = this.rebuildSelectionProgress(walkCtx);
+    while (stepsRun < maxSteps) {
+      const step = stepFrom(this.lifecycle.currentState);
+      if (step === undefined) break;
+
+      const { next, artifacts } = step.run(walkCtx, progress);
+      // Freeze first, then record. The freeze is idempotent on replay; the
+      // lifecycle append is what makes the step durable.
+      for (const artifact of artifacts) {
+        this.store.freezeJson(artifact.path, artifact.value, "INTERNAL");
+      }
+      this.lifecycle.append({
+        eventType: step.to,
+        stateTo: step.to,
+        actorId: "lab",
+        commandId: "select",
+        operationId: `op-${step.to.replaceAll("_", "-")}`,
+        produced: artifacts.map((artifact) => ({
+          artifact_role: artifact.role,
+          artifact_core_hash: artifactHash(artifact.value),
+          artifact_schema_version: artifact.schema,
+        })),
+      });
+      progress = { ...progress, ...next };
+      stepsRun += 1;
+    }
+    return { state: this.lifecycle.currentState, stepsRun };
+  }
+
   freezePackageManifest(input: {
     readonly subjectId: string;
     readonly subjectVersion: string;
@@ -836,6 +1404,12 @@ export class RunWorkspace {
     readonly terminalStage: "acquire" | "verify_package";
     readonly unsupportedInputs?: readonly string[];
   }): PreEnvironmentSubjectOutputManifestV1 {
+    // Pre-freeze state validation (§8.2).  Without it a refused post-terminal
+    // `freeze-output` still froze `retained/subject-output-manifest.json` into a
+    // finished run — an artifact the terminal's closure never reached, which
+    // turned a previously verifying `InvalidLabRunRecordV1` into a
+    // `GRAPH_CLOSURE_EXTRA_ARTIFACT` refusal (reproduced through the CLI).
+    assertSubjectPortExecutable(this.lifecycle.currentState);
     const packageManifestHash = this.hashForRole("subject-package-manifest");
     if (packageManifestHash !== undefined) {
       throw new Erl2Error(

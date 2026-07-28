@@ -79,6 +79,37 @@ export interface SelectionChainEvidence {
   readonly receipt: SelectionVerificationReceiptV2;
 }
 
+/**
+ * The chain minus the verification receipt.
+ *
+ * The receipt attests that the chain verified, so whoever *produces* the receipt
+ * cannot have it as an input. Splitting the evidence here is what lets the
+ * confidential selection auditor re-derive the chain independently before
+ * signing (ADR-ERL2-020 §7), while the offline public verifier still checks the
+ * receipt afterwards through {@link verifySelectionChain}.
+ */
+export type SelectionChainCoreEvidence = Omit<SelectionChainEvidence, "receipt">;
+
+/** Every member the core verification dereferences. */
+const REQUIRED_CHAIN_MEMBERS = [
+  "request",
+  "roleAudit",
+  "policy",
+  "poolManifest",
+  "poolEntries",
+  "poolCheckpoint",
+  "randomnessReceipt",
+  "beaconSignatureProof",
+  "beaconInclusionProof",
+  "sourceTrustReport",
+  "commitment",
+  "commitmentCheckpoint",
+  "thresholdRevealReceipt",
+  "binding",
+  "bindingCheckpoint",
+  "proof",
+] as const;
+
 export interface SelectionVerificationOutcome {
   readonly selectedEntryHash: Hash;
   readonly derivedIndex: number;
@@ -91,10 +122,27 @@ function must(condition: boolean, code: string, message: string): void {
   if (!condition) throw new Erl2Error(code, message);
 }
 
-export function verifySelectionChain(
-  evidence: SelectionChainEvidence,
+export function verifySelectionChainCore(
+  evidence: SelectionChainCoreEvidence,
   trust: TrustEvaluator,
 ): SelectionVerificationOutcome {
+  // Every member must be present before anything dereferences one.
+  //
+  // The offline verifier's derivation already refuses an incomplete chain, so
+  // this is unreachable through that path — but `verifySelectionChain` is a
+  // public entry point, and a missing member used to surface as a raw
+  // `TypeError: Cannot read properties of undefined`. An untyped crash is never
+  // an acceptable verifier outcome (the same rule ADR-ERL2-019 §5 applies to the
+  // CLI). Found by the §15.4 missing-member mutation.
+  for (const member of REQUIRED_CHAIN_MEMBERS) {
+    if ((evidence as unknown as Record<string, unknown>)[member] === undefined) {
+      throw new Erl2Error(
+        CODES.SELECTION_CHAIN_EDGE_UNCLOSED,
+        `the selection chain is missing its ${member}`,
+      );
+    }
+  }
+
   const {
     request,
     roleAudit,
@@ -112,7 +160,6 @@ export function verifySelectionChain(
     binding,
     bindingCheckpoint,
     proof,
-    receipt,
   } = evidence;
 
   // --- Variant closure -----------------------------------------------------
@@ -281,6 +328,40 @@ export function verifySelectionChain(
   assertWrapperOwnership(randomnessReceipt, beaconSignatureProof);
 
   trust.assertRole(randomnessReceipt.wrapper_signature.key_id, "lab_verifier_association_signer");
+
+  // Revocation, for every signer the chain relies on.
+  //
+  // `assertRole` answers "is this key granted this role", never "is this key
+  // still trusted". Until the §15.4 revoked-signer mutation was written, a
+  // revoked selector produced a fully verifying chain: the role grant was intact
+  // and nothing consulted the revocation list. Each signer is evaluated at its
+  // own artifact's instant, so a key revoked after the fact still shows
+  // `validWhenSigned` while failing `currentlyTrusted`.
+  const assertNotRevoked = (keyId: string, at: string, what: string): void => {
+    const verdict = trust.evaluate(keyId, at);
+    if (!verdict.currentlyTrusted) {
+      throw new Erl2Error(
+        CODES.TRUST_KEY_REVOKED,
+        `${what} is signed by ${keyId}, which the verifier's pinned policy no longer trusts`,
+      );
+    }
+  };
+  assertNotRevoked(request.signature.key_id, request.requested_at, "the selection request");
+  assertNotRevoked(roleAudit.signature.key_id, roleAudit.audited_at, "the role-separation audit");
+  assertNotRevoked(poolManifest.signature.key_id, poolManifest.created_at, "the eligibility pool manifest");
+  assertNotRevoked(
+    randomnessReceipt.wrapper_signature.key_id,
+    randomnessReceipt.wrapped_at,
+    "the beacon association wrapper",
+  );
+  assertNotRevoked(
+    sourceTrustReport.signature.key_id,
+    sourceTrustReport.verified_at,
+    "the source-trust report",
+  );
+  assertNotRevoked(commitment.signature.key_id, commitment.committed_at, "the selection commitment");
+  assertNotRevoked(binding.signature.key_id, binding.opened_at, "the selected binding");
+  assertNotRevoked(proof.signature.key_id, proof.proved_at, "the selection proof");
   must(
     verifySignature(
       trust.publicKeyFor(randomnessReceipt.wrapper_signature.key_id),
@@ -444,37 +525,6 @@ export function verifySelectionChain(
     CODES.SELECTION_CHAIN_EDGE_UNCLOSED,
     "selection proof leaves an edge unclosed",
   );
-  must(
-    receipt.selection_proof_hash === proofHash &&
-      receipt.selection_commitment_hash === commitmentHash &&
-      receipt.selection_request_hash === requestHash &&
-      receipt.eligibility_pool_manifest_hash === poolManifestHash &&
-      receipt.selection_randomness_receipt_hash === randomnessReceiptHash &&
-      receipt.source_trust_verification_report_hash === sourceTrustReportHash &&
-      receipt.threshold_reveal_receipt_hash === revealReceiptHash &&
-      receipt.selected_binding_hash === bindingHash &&
-      receipt.pool_manifest_timestamp_checkpoint_hash === poolCheckpointHash &&
-      receipt.commitment_timestamp_checkpoint_hash === commitmentCheckpointHash &&
-      receipt.binding_timestamp_checkpoint_hash === bindingCheckpointHash &&
-      receipt.selection_role_separation_audit_hash === roleAuditHash &&
-      receipt.journey_selection_policy_hash === poolManifest.journey_selection_policy_hash &&
-      receipt.verified_selected_entry_hash === commitment.selected_entry_hash,
-    CODES.SELECTION_CHAIN_EDGE_UNCLOSED,
-    "selection verification receipt leaves an edge unclosed",
-  );
-
-  // Defense in depth (§11.10): read and enforce every receipt `checks` boolean.
-  // These are not the verification authority — the independent re-derivation
-  // above is — but a receipt is refused if it drops a check key or attests one
-  // as anything other than `true`, so it can never claim less than was proven.
-  for (const [name, value] of Object.entries(receipt.checks)) {
-    must(
-      value === true,
-      CODES.SELECTION_CHAIN_EDGE_UNCLOSED,
-      `selection receipt check ${name} is not attested verified`,
-    );
-  }
-
   return {
     selectedEntryHash: commitment.selected_entry_hash,
     derivedIndex: derived.index,
@@ -520,4 +570,51 @@ export function assertDisjointRoles(audit: SelectionRoleSeparationAuditV1): void
       "fewer reveal participants than the threshold",
     );
   }
+}
+
+/**
+ * The full chain, receipt included — what the offline public verifier runs.
+ *
+ * The core re-derivation is the authority; this adds the cross-checks that the
+ * receipt attests exactly the chain that was verified, and enforces every
+ * `checks` boolean as defense in depth (§11.10).
+ */
+export function verifySelectionChain(
+  evidence: SelectionChainEvidence,
+  trust: TrustEvaluator,
+): SelectionVerificationOutcome {
+  const outcome = verifySelectionChainCore(evidence, trust);
+  const { receipt, poolManifest, commitment } = evidence;
+
+  must(
+    receipt.selection_proof_hash === coreHash(evidence.proof) &&
+      receipt.selection_commitment_hash === coreHash(commitment) &&
+      receipt.selection_request_hash === coreHash(evidence.request) &&
+      receipt.eligibility_pool_manifest_hash === coreHash(poolManifest) &&
+      receipt.selection_randomness_receipt_hash === coreHash(evidence.randomnessReceipt) &&
+      receipt.source_trust_verification_report_hash === coreHash(evidence.sourceTrustReport) &&
+      receipt.threshold_reveal_receipt_hash === coreHash(evidence.thresholdRevealReceipt) &&
+      receipt.selected_binding_hash === coreHash(evidence.binding) &&
+      receipt.pool_manifest_timestamp_checkpoint_hash === coreHash(evidence.poolCheckpoint) &&
+      receipt.commitment_timestamp_checkpoint_hash === coreHash(evidence.commitmentCheckpoint) &&
+      receipt.binding_timestamp_checkpoint_hash === coreHash(evidence.bindingCheckpoint) &&
+      receipt.selection_role_separation_audit_hash === coreHash(evidence.roleAudit) &&
+      receipt.journey_selection_policy_hash === poolManifest.journey_selection_policy_hash &&
+      receipt.verified_selected_entry_hash === commitment.selected_entry_hash,
+    CODES.SELECTION_CHAIN_EDGE_UNCLOSED,
+    "selection verification receipt leaves an edge unclosed",
+  );
+
+  // Defense in depth (§11.10): read and enforce every receipt `checks` boolean.
+  // These are not the verification authority — the independent re-derivation
+  // above is — but a receipt is refused if it drops a check key or attests one
+  // as anything other than `true`, so it can never claim less than was proven.
+  for (const [name, value] of Object.entries(receipt.checks)) {
+    must(
+      value === true,
+      CODES.SELECTION_CHAIN_EDGE_UNCLOSED,
+      `selection receipt check ${name} is not attested verified`,
+    );
+  }
+  return outcome;
 }

@@ -67,6 +67,7 @@ export const ERL2_ERROR_PREFIXES = [
   "VERIFY_",
   "VERIFY_RECORD_",
   "CANCELLATION_",
+  "LAB_",
 ] as const;
 
 export type Erl2ErrorPrefix = (typeof ERL2_ERROR_PREFIXES)[number];
@@ -126,11 +127,30 @@ export const CODES = {
   SELECTION_CHAIN_POOL_ROOT_MISMATCH: "SELECTION_CHAIN_POOL_ROOT_MISMATCH",
   SELECTION_CHAIN_ENTRY_NOT_IN_POOL: "SELECTION_CHAIN_ENTRY_NOT_IN_POOL",
   SELECTION_CHAIN_HIDING_COMMITMENT_MISMATCH: "SELECTION_CHAIN_HIDING_COMMITMENT_MISMATCH",
+  /**
+   * Two selection roles are held by the same signing key.
+   *
+   * `selection-role-separation-audit/v1` pins `all_required_roles_disjoint: true`
+   * and `status: "passed"` as schema constants, so a *failing* audit cannot be
+   * represented at all. Refusing is therefore the only honest outcome: emitting
+   * the artifact would assert a separation the run does not have
+   * (CONFLICT-ERL2-002 C-2, ADR-ERL2-020 §4).
+   */
+  SELECTION_CHAIN_ROLE_SEPARATION_VIOLATED: "SELECTION_CHAIN_ROLE_SEPARATION_VIOLATED",
   SELECTION_TIME_CYCLIC_CHECKPOINT: "SELECTION_TIME_CYCLIC_CHECKPOINT",
   SELECTION_TIME_WRONG_TARGET: "SELECTION_TIME_WRONG_TARGET",
   SELECTION_TIME_OUT_OF_ORDER: "SELECTION_TIME_OUT_OF_ORDER",
   SELECTION_RANDOMNESS_BEFORE_POOL_CHECKPOINT: "SELECTION_RANDOMNESS_BEFORE_POOL_CHECKPOINT",
   SELECTION_RANDOMNESS_INDEX_MISMATCH: "SELECTION_RANDOMNESS_INDEX_MISMATCH",
+  /**
+   * A run durably recorded its intent to observe randomness but retains no
+   * frozen receipt, so the beacon may or may not already have produced a round.
+   * Resuming would risk a *second* draw, which would hand the Lab two outcomes
+   * to choose between — the exact attack the single-source binding prevents. The
+   * randomness policy's own `retry_policy` is `none_invalidate_run`, and this is
+   * where that is enforced: the run is refused, not retried (ADR-ERL2-020 §6).
+   */
+  SELECTION_RANDOMNESS_RETRY_FORBIDDEN: "SELECTION_RANDOMNESS_RETRY_FORBIDDEN",
   RANDOMNESS_SOURCE_MISMATCH: "RANDOMNESS_SOURCE_MISMATCH",
   RANDOMNESS_SOURCE_NOT_PINNED: "RANDOMNESS_SOURCE_NOT_PINNED",
   RANDOMNESS_SOURCE_REVOKED: "RANDOMNESS_SOURCE_REVOKED",
@@ -173,6 +193,8 @@ export const CODES = {
   TIMESTAMP_CHAIN_BROKEN: "TIMESTAMP_CHAIN_BROKEN",
   INVENTORY_ENTRY_MISSING: "INVENTORY_ENTRY_MISSING",
   INVENTORY_ENTRY_EXTRA: "INVENTORY_ENTRY_EXTRA",
+  /** A signer-inventory entry disagrees with the retained artifact it names. */
+  INVENTORY_ENTRY_MISMATCH: "INVENTORY_ENTRY_MISMATCH",
   BUNDLE_MEMBER_MISSING: "BUNDLE_MEMBER_MISSING",
   BUNDLE_MEMBER_EXTRA: "BUNDLE_MEMBER_EXTRA",
   /**
@@ -366,6 +388,14 @@ export const CODES = {
    * reachable on the default release surface (review §11.8, plan §8.5).
    */
   CFG_DEVELOPMENT_FLAG_UNAVAILABLE: "CFG_DEVELOPMENT_FLAG_UNAVAILABLE",
+  /**
+   * Backstop for an exception that is not already a typed refusal.  The CLI's
+   * top level must never exit with a raw stack trace and no code: every command
+   * outcome is a typed, Lab-owned envelope (design Appendix B/C, §20 failure
+   * ownership).  Reaching this code is a Lab defect, never a subject or adapter
+   * outcome — it is owner `lab` by construction.
+   */
+  LAB_UNEXPECTED_FAILURE: "LAB_UNEXPECTED_FAILURE",
 
   // A run that was durably accepted and then cancelled reaches the mandatory
   // cancellation terminal (design v2 §12, Appendix B exit 12).

@@ -1,8 +1,11 @@
 # Slice 6R — Integrity and Recovery Remediation: finding-disposition ledger
 
-> Remaining work (P3 cluster §11.1–§11.14, evidence-determinism follow-ups,
-> isolation probe-signing, and the §16 handoff) is scoped for a fresh session in
-> [`external-reality-lab-slice-6R-continuation-prompt.md`](../../external-reality-lab-slice-6R-continuation-prompt.md).
+> **Pass 4 (2026-07-26) — independent re-audit of the fixed build.** Every claim
+> below was re-reproduced against the *current* build through the shipped CLI in
+> fresh processes. Six further defects were found and fixed; they are recorded in
+> the "Pass-4 findings" section at the end of this ledger and in
+> [ADR-ERL2-019](../adr/ADR-ERL2-019.md). Four of them are the same invariants as
+> P1-1 / P2-3 / §8.2, closed only along the exact path the review had walked.
 
 Scope: remediate the independently reviewed defects in `Independent-Code-Review.md`
 through Slice 6. Authority precedence per the remediation prompt (ADR > design >
@@ -347,3 +350,63 @@ orchestration). No production path is weakened: the selection chain producer
 None confirmed by the review; none introduced. Opaque execution remains refused
 at two independent gates; threshold-VRF, held-out/blind, Compose, container
 launcher all remain fail-closed. Not touched.
+
+
+---
+
+# Pass 4 — independent re-audit of the remediated build (2026-07-26)
+
+Method: rather than re-reading the earlier passes' claims, an adversarial battery
+was run against the **fixed** build through the shipped `erl2` binary in fresh
+processes, plus a live CLI lifecycle probe. Baseline before this pass: **418
+tests pass / 0 fail / 0 skipped**; goldens `229d0cda…`. Final: **443 pass / 0
+fail / 0 skipped**; goldens `e5ca1028…`.
+
+Every earlier claim that was re-tested held, with the exceptions below.
+
+| ID | Finding (all reproduced first-hand through the CLI) | Class | Root cause | Fix | Regression evidence |
+|----|----|----|----|----|----|
+| 6R-P4-1 | **Unindexable retained extras escape the rejected-extra rule.** A rogue `.bin`, a duplicate-key `.json`, a `.json` with no `core_hash`, and a JSON array each left `erl2 verify --offline` at **exit 0 / `valid`** | Blocker (same invariant as P1-1: ERL2-FR-020 / AC-023, design §14 step 6-7) | `ArtifactIndex.walk` silently `continue`s on any file it cannot index, so the closure's `rejected_extra_hashes` rule never sees it. The P1-1 fix closed only the *indexable* extra | New `retainedFiles.ts`: every regular file under `retained/` must be an indexed artifact, a freeze marker of one, a referenced descriptor path, or a declared content-addressed payload. Runs **after** closure derivation so a missing role keeps its own cause (§11.12) | `MUT-6R-EXTRA-a…h` (8 cases, fresh-process CLI). 7 fail if the check is removed |
+| 6R-P4-2 | **Five retained signed members were never signature-verified** — acquisition source manifest, preregistration, its receipt, subject adapter manifest, generic run policy. One flipped base64 character left the bundle at **exit 0 / `valid`** | Blocker (§6.4; completion gate "every applicable signed member is verified") | Only the attestation, inventory, trust root and checkpoints were verified. A signature is excluded from `core_hash` by design, so the hash chain *cannot* catch this | New `signedMembers.ts`: a **verifier-owned** schema → {role, signing domain, security instant} table; every signed retained artifact is verified; an undeclared signed contract is refused outright | `MUT-6R-SIGNER` (5 cases + an undeclared-contract case). All 5 fail if the pass is removed |
+| 6R-P4-3 | **`verify-record` verified no signatures at all**, though an invalid record retains five-plus signed members | Blocker (§6.4) | `verifyInvalidRecord` accepted `localTrust` and never built a `TrustEvaluator` | Builds one from the mirrored `retained/trust-policy.json`, authorized only against the locally pinned head; refuses a record with no authorizable head rather than skipping verification. `fakeRun.ts` aligned with the shipped producer (which always mirrored the policy); three `invalid-run-*` goldens regenerated | `MUT-6R-SIGNER` invalid-record cases, incl. "removing the mirrored trust policy does not disable record signature checks" |
+| 6R-P4-4 | **A *refused* post-terminal command still wrote retained evidence.** `freeze-output` on a cancelled run returned exit 11 **and** froze `retained/subject-output-manifest.json`, turning that run's verifying `InvalidLabRunRecordV1` into a `GRAPH_CLOSURE_EXTRA_ARTIFACT` refusal | Blocker (§8.2 "a refusal causes zero new retained evidence"; ADR-018 §4 stated this but did not implement it here) | `assertSubjectPortExecutable` was wired into the two *port-dispatching* entrypoints only. `freezePackage()` / `freezeSubjectOutput()` froze bytes first and only then appended the event that rejects the state — the review's own "freeze before lifecycle append" sub-finding, partially fixed | Pre-freeze guard at the top of both | `POST-TERMINAL-NO-WRITE`: every refused post-terminal command adds zero retained evidence. Fails if either guard is removed |
+| 6R-P4-5 | **The CLI could still exit untyped.** A missing/malformed `--public-bundle`, `--record` or `--root-config` escaped as a raw `ENOENT`/`SyntaxError` stack trace, exit 1, no code, no envelope | Medium (design Appendix B/C; §9.2 "stable error code"; §11.9's general case) | `runCommand` rethrew non-`Erl2Error`; `bin.ts` had no top-level guard; `readFileSync`/`JSON.parse` throw plain errors | One typed `loadJsonDocument` helper; a `runCommand` backstop; a `bin.ts` guard; append-only `LAB_` prefix + `LAB_UNEXPECTED_FAILURE` | `tests/e2e/typedRefusals.test.ts` (8 cases): one parseable envelope, catalogued prefix, Lab scope, empty stderr, envelope exit == process exit |
+| 6R-P4-6 | **The evidence byte-pin excluded 166 files when only 7 are nondeterministic.** The whole real-adapter subtree was unpinned | Medium (§9.1 honesty/coverage) | Whole-subtree exclusion instead of per-file | Per-file exclusions with printed causes: `request.frames` (absolute workspace path), `grandchild.pid` (real OS pid), `cli-transcript.json` (absolute CLI paths) | `evidence:verify` — **780 pinned / 7 excluded** (was 621 / 166); two independent generations byte-identical |
+
+## Pass-4 re-reproductions of earlier claims (all held)
+
+| Earlier claim | Independent re-check | Result |
+|----|----|----|
+| P1-1 rejected extra | rogue self-consistent JSON into a real-CLI valid bundle | exit 10 `GRAPH_CLOSURE_EXTRA_ARTIFACT` |
+| P2-2 raw bytes | binary byte flip; truncation; in-root payload substitution; descriptor path escape with a *recomputed* `core_hash` | exit 10 `ARTIFACT_HASH_MISMATCH` / `PATH_ESCAPES_ROOT` |
+| P2-3 inventory signature | surgical same-length tamper with the byte layer repaired first | exit 10 `TRUST_SIGNATURE_INVALID` (the existing `tamperSignedMember` isolation test is genuine) |
+| P2-4 invalid-record closure | rogue extra in an invalid record | exit 10 `GRAPH_CLOSURE_EXTRA_ARTIFACT` |
+| P1-2 delayed replay | live CLI: `acquire` → sleep 1.7 s → `acquire` | exit 0, idempotent, **no** fabricated adapter finding, run not wedged |
+| Cancellation | live CLI `cancel` from a nonterminal state | exit 12 `CANCELLATION_REQUESTED`; 1 invalid record; **0** findings; 1 signed request; refusing again → exit 11 |
+| §11.9 torn snapshot | truncated `state/snapshot.json`, then `status` | exit 0, rebuilt from the event log |
+| P2-1 isolation | `doctor`; then substrate-lock signature tamper | `locally_observed_unauthenticated` / `launcher_available=false`; tampered → not qualified |
+| Selection | `erl2 select` | exit 2 `POLICY_COMMAND_NOT_IMPLEMENTED` (unorchestrated, OQ-007 enforced in-kernel) |
+| Lifecycle stream | event deletion / duplication / reorder | exit 10 `VERIFY_RECORD_LIFECYCLE_GAP` |
+| Crossover | attestation into an invalid record; invalid record into a valid bundle | exit 11 `INVALID_TERMINAL_ATTESTATION_FORBIDDEN` / exit 10 `GRAPH_CLOSURE_EXTRA_ARTIFACT` |
+
+One earlier ledger claim was **imprecise**: the P2-10 row and the 6R-D section
+record two different post-`evidence:update` golden manifests (`5879fe1d…` vs
+`bbda627c…`). Neither matches the tree as found (`229d0cda…`). The manifest is
+now `e5ca1028…`; treat the earlier two values as stale.
+
+## Remaining limitations after pass 4
+
+- **§8.5 environment offline selection verification stays unwired** (Slice 6.5
+  owns it), but the posture is now stronger than "recorded": retaining any signed
+  selection contract is refused, because the verifier declares no authorized
+  signer role for it. Declaring those roles is part of wiring
+  `verifySelectionChain` into the environment offline path.
+- **Attestation binding cross-checks are defense in depth, not independently
+  exercised.** Re-pointing a binding at a different real retained artifact is
+  caught first by the attestation's own stale `core_hash`; isolating the
+  cross-check would require re-signing a self-consistent bundle with the
+  finalizer key.
+- **Node version.** This host runs Node v26.4.0; the project targets Node 22.
+  Cross-platform / Node-22 byte equivalence is asserted by CI, not on this tree.
+- **Seven evidence files remain unpinnable** for the named, structural reasons
+  above.

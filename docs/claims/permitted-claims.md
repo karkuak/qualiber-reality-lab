@@ -66,6 +66,27 @@ journey and adapter kernels only**.
   A run driven entirely through the shipped CLI finalizes and its
   `PublicVerificationBundleV2` verifies in a fresh process with the trust head
   taken only from locally pinned configuration.
+- **Complete retained-artifact accounting may be claimed** (ADR-ERL2-019). The
+  offline verifier refuses any file retained beneath the artifact root that is
+  not an indexed artifact, the freeze marker of one, a referenced descriptor
+  path, or a declared content-addressed payload — including files the artifact
+  index cannot parse (non-JSON bytes, strict-JSON refusals, JSON arrays, objects
+  without a `core_hash`).
+- **Complete signed-member verification may be claimed for the shipped terminals**
+  (ADR-ERL2-019). Every retained artifact carrying a signature is verified
+  against a *verifier-owned* expected signer role and signing domain — on the
+  valid bundle and on the invalid record — and a retained signed contract for
+  which the verifier declares no authorized role is refused. This is verified for
+  the nine signed members of a pre-environment bundle and the six of an invalid
+  record; it is **not** a claim about the environment or selection branches,
+  which are unshipped.
+- **A totally typed CLI surface may be claimed.** Every `erl2` invocation emits
+  exactly one parseable envelope carrying a catalogued Appendix B code and
+  `authority_scope: "lab_orchestration_only"`; no input produces an untyped exit
+  or a raw stack trace.
+- **"A refusal writes no evidence" may be claimed for the shipped commands.**
+  Every post-terminal command is refused before any freeze and adds zero retained
+  artifacts (ADR-ERL2-019 §4).
 
 ## What may NOT be claimed
 

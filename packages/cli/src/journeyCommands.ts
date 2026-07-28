@@ -42,6 +42,7 @@ import { ArtifactStore, developmentAgeIdentity, developmentKey } from "@erl2/int
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parseFlags, requireString, type FlagSpec, type ParsedFlags } from "./args.js";
+import { assembleSelection, loadSourceTrustConfig } from "./selectCommand.js";
 
 const COMMON_FLAGS: readonly FlagSpec[] = [
   { name: "run-root", kind: "string", required: true },
@@ -251,6 +252,25 @@ function fakeSubjectBehaviour(flags: ParsedFlags): FakeSubjectBehaviour {
     ...(acquire === undefined ? {} : { acquireStatus: acquire }),
     ...(verify === undefined ? {} : { packageVerificationStatus: verify }),
   };
+}
+
+/** A repeated `--flag <hash>`, validated exactly as a single `hash()` is. */
+function hashList(flags: ParsedFlags, name: string): readonly Hash[] {
+  const values = flags[name];
+  if (!Array.isArray(values) || values.length === 0) {
+    throw new Erl2Error(CODES.CFG_MISSING_REQUIRED, `flag --${name} is required`);
+  }
+  const seen = new Set<string>();
+  return values.map((value) => {
+    if (!/^sha256:[0-9a-f]{64}$/.test(value)) {
+      throw new Erl2Error(CODES.CFG_MISSING_REQUIRED, `--${name} must be a sha256 core hash`);
+    }
+    if (seen.has(value)) {
+      throw new Erl2Error(CODES.CFG_DUPLICATE_FLAG, `--${name} names ${value} more than once`);
+    }
+    seen.add(value);
+    return value as Hash;
+  });
 }
 
 function hash(flags: ParsedFlags, name: string): Hash {
@@ -650,5 +670,86 @@ export function cancel(argv: readonly string[]): JourneyCommandOutput {
     // A cancelled run still returns its record hash (Appendix C) but exits on the
     // cancellation class so a caller cannot read it as success.
     terminalError: new Erl2Error(CODES.CANCELLATION_REQUESTED, "run cancelled at operator request"),
+  };
+}
+
+/**
+ * `erl2 preregister-challenge` — the one authorized continuation of a
+ * successful package verification (ADR-ERL2-013), and the state `select`
+ * departs from.
+ *
+ * `--challenge` is repeatable and names the admitted challenge family by core
+ * hash. The whole family is frozen; nothing here picks a member. Which one the
+ * run answers is decided only by `select`, from beacon randomness, which is what
+ * makes the later selection checkable offline.
+ */
+export function preregisterChallenge(argv: readonly string[]): JourneyCommandOutput {
+  const flags = parseFlags(argv, [
+    ...COMMON_FLAGS,
+    { name: "journey-selection-policy", kind: "string", required: true },
+    { name: "randomness-policy", kind: "string", required: true },
+    { name: "challenge", kind: "string-list", required: true },
+  ]);
+  const runId = requireString(flags, "run");
+  const workspace = openWorkspace(flags, runId);
+  const challengeManifestHashes = hashList(flags, "challenge");
+  const result = workspace.preregisterChallenge({
+    journeySelectionPolicyHash: hash(flags, "journey-selection-policy"),
+    randomnessPolicyHash: hash(flags, "randomness-policy"),
+    challengeManifestHashes,
+  });
+  return {
+    runId,
+    state: workspace.lifecycle.currentState,
+    data: {
+      challenge_family_size: result.challengeFamilyHashes.length,
+      challenge_manifest_hashes: result.challengeFamilyHashes,
+    },
+  };
+}
+
+/**
+ * `erl2 select` — advance the durable selection walk (ADR-ERL2-020 §6).
+ *
+ * Idempotent and resumable by construction: it continues from whatever the last
+ * process durably reached, and a completed selection is a no-op. `--max-steps`
+ * exists so an operator (and the crash suite) can stop at a chosen boundary; it
+ * bounds work, it never skips a step.
+ */
+export function select(argv: readonly string[]): JourneyCommandOutput {
+  const flags = parseFlags(argv, [
+    ...COMMON_FLAGS,
+    { name: "source-trust-config", kind: "string", required: true },
+    { name: "expires", kind: "string", required: true },
+    { name: "max-steps", kind: "string" },
+  ]);
+  const runId = requireString(flags, "run");
+  const workspace = openWorkspace(flags, runId);
+
+  const rawMax = flags["max-steps"] as string | undefined;
+  const maxSteps = rawMax === undefined ? Number.POSITIVE_INFINITY : Number(rawMax);
+  if (!Number.isInteger(maxSteps) && maxSteps !== Number.POSITIVE_INFINITY) {
+    throw new Erl2Error(CODES.CFG_MISSING_REQUIRED, "--max-steps must be an integer");
+  }
+
+  const { ctx, prelude } = assembleSelection({
+    workspace,
+    sourceTrust: loadSourceTrustConfig(requireString(flags, "source-trust-config")),
+    expiresAt: requireString(flags, "expires"),
+  });
+  const result = workspace.advanceSelection(ctx, maxSteps, prelude);
+
+  const bindingHash = workspace.hashForRole("selected-challenge-journey-binding");
+  return {
+    runId,
+    state: result.state,
+    data: {
+      steps_run: result.stepsRun,
+      selection_complete: result.state === "selection_receipt_verified",
+      ...(bindingHash === undefined ? {} : { selected_binding_hash: bindingHash }),
+      ...(workspace.hashForRole("selection-verification-receipt") === undefined
+        ? {}
+        : { selection_receipt_hash: workspace.hashForRole("selection-verification-receipt") }),
+    },
   };
 }

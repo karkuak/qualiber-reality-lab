@@ -20,11 +20,12 @@ import {
   ageRecipientOf,
   ArtifactStore,
   developmentAgeIdentity,
+  hashBytes,
   jcsBytes,
   sealSigned,
   type AgeIdentity,
 } from "@erl2/integrity";
-import { commitJourneyStep, type CommittedStep } from "@erl2/core";
+import { commitJourneyStep, DEVELOPMENT_BEACON_SOURCE_ID, type CommittedStep } from "@erl2/core";
 import { developmentKeyring, developmentTrustPolicy, type DevelopmentKeyring } from "./keys.js";
 import { REFERENCE_CORRECT_MANIFEST, REFERENCE_LIMITED_MANIFEST } from "./adapterFixtures.js";
 
@@ -47,6 +48,26 @@ export interface GovernorRegistry {
   readonly packageVerificationStep: CommittedStep;
   readonly environmentSteps: ReadonlyMap<JourneyIntent, CommittedStep>;
   readonly canaryIds: readonly string[];
+  /** The real signed journey selection policy (ADR-ERL2-020 §2a, C-3). */
+  readonly journeySelectionPolicyHash: Hash;
+  /** The admitted external-beacon randomness policy and its pinned source trust head. */
+  readonly randomnessPolicyHash: Hash;
+  readonly sourceTrustPolicyHash: Hash;
+  /** Candidate-independent roots over the admitted challenge family. */
+  readonly challengeFamilyHash: Hash;
+  readonly journeyFamilyRootHash: Hash;
+  readonly challengeCandidates: readonly ChallengeCandidate[];
+}
+
+/** One admitted member of the challenge family selection may draw. */
+export interface ChallengeCandidate {
+  readonly challengeId: string;
+  readonly steps: number;
+  readonly exposureEpoch: number;
+  readonly challengeManifestHash: Hash;
+  readonly journeyHash: Hash;
+  readonly personaScriptHash: Hash;
+  readonly orderedStepCommitmentHashes: readonly Hash[];
 }
 
 const CREATED_AT = "2026-07-01T00:00:00Z";
@@ -58,6 +79,20 @@ const CREATED_AT = "2026-07-01T00:00:00Z";
 function h(label: string): Hash {
   return `sha256:${createHash("sha256").update(`erl2-fixture:${label}`, "utf8").digest("hex")}`;
 }
+
+/**
+ * The admitted challenge family selection draws from.
+ *
+ * Members differ in step count and exposure epoch so a selection landing on any
+ * of them is distinguishable downstream — a family of identical candidates would
+ * make a wrong selection unobservable. Order here is presentation only: the
+ * family roots hash the *sorted set*, so admission order cannot bias selection.
+ */
+const CHALLENGE_FAMILY = [
+  { challengeId: "a", steps: 2, exposureEpoch: 3 },
+  { challengeId: "b", steps: 1, exposureEpoch: 11 },
+  { challengeId: "c", steps: 3, exposureEpoch: 0 },
+] as const;
 
 const ENVIRONMENT_INTENTS: readonly JourneyIntent[] = [
   "install",
@@ -218,6 +253,139 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
     environmentSteps.set(intent, commit(intent.replaceAll("_", "-"), intent, "functional"));
   }
 
+  // -- challenge family and the real journey selection policy ---------------
+  //
+  // ADR-ERL2-020 §2a / CONFLICT-ERL2-002 C-3: `journey-selection-policy/v1` had
+  // no producer anywhere — every call site passed the placeholder
+  // `h("journey-selection-policy")`, so its authorized signer could not be
+  // derived from evidence and its row stayed unencoded. This is that producer.
+  //
+  // The family roots are deliberately **candidate-independent**: each is a hash
+  // over the *sorted set* of the family's member hashes, so admitting the
+  // candidates in any order yields the same root and no candidate is privileged
+  // by registry construction. Selection must be free to land on any member.
+  //
+  // These are governor-authored admission inputs, not Lab-produced protocol
+  // commitments, so they take a plain content hash. Adding a `HASH_DOMAINS`
+  // entry is an ADR-class change (domains.ts:1-8) and is not warranted here —
+  // the values these replace were undomained placeholders already.
+  const familyRoot = (label: string, members: readonly Hash[]): Hash =>
+    hashBytes(jcsBytes({ family: label, members: [...members].sort() }));
+
+  // Each family member gets a *real* signed journey definition and challenge
+  // manifest, not a placeholder hash, so the family roots below are computed over
+  // artifacts that actually exist and `preregister-challenge` has something to
+  // mirror. Members draw disjoint step commitments so a selection landing on the
+  // wrong candidate is observable downstream.
+  const stepPool = [...environmentSteps.values()];
+  let stepCursor = 0;
+  const challengeCandidates: ChallengeCandidate[] = CHALLENGE_FAMILY.map((candidate) => {
+    const steps = stepPool.slice(stepCursor, stepCursor + candidate.steps);
+    stepCursor += candidate.steps;
+    const orderedStepCommitmentHashes = steps.map((s) => s.commitmentHash);
+    const personaScriptHash = h(`persona-${candidate.challengeId}`);
+
+    const journey = sealSigned(
+      {
+        schema_version: "journey-definition/v1" as const,
+        journey_id: `erl2-development-journey-${candidate.challengeId}`,
+        version: 1,
+        domain: "software_delivery_operations" as const,
+        persona_script_hash: personaScriptHash,
+        ordered_step_commitment_hashes: orderedStepCommitmentHashes,
+        prerequisite_policy_hash: h("prerequisite-policy"),
+        assistance_policy_hash: h("assistance-policy"),
+      },
+      keyring.challengeGovernor,
+    );
+    const journeyHash = admit(`journey-definition-${candidate.challengeId}`, journey);
+
+    const challenge = sealSigned(
+      {
+        schema_version: "challenge-manifest/v1" as const,
+        challenge_id: `erl2-development-challenge-${candidate.challengeId}`,
+        version: 1,
+        domain: "software_delivery_operations" as const,
+        archetype_hashes: [h("archetype-clean-greenfield")],
+        journey_hash: journeyHash,
+        journey_step_commitment_hashes: orderedStepCommitmentHashes,
+        truth_commitment_hash: h(`truth-commitment-${candidate.challengeId}`),
+        evidence_policy_hash: h("evidence-policy"),
+        cutoff_policy_hash: h("cutoff-policy"),
+        required_domain_capabilities: [],
+        // ERL2-OQ-007 fail-closed: the admitted family is `development` only.
+        tier: "development" as const,
+        exposure_epoch: candidate.exposureEpoch,
+        admission_proof_hash: h(`admission-proof-${candidate.challengeId}`),
+      },
+      keyring.challengeGovernor,
+    );
+    const challengeManifestHash = admit(`challenge-manifest-${candidate.challengeId}`, challenge);
+
+    return {
+      challengeId: candidate.challengeId,
+      steps: candidate.steps,
+      exposureEpoch: candidate.exposureEpoch,
+      challengeManifestHash,
+      journeyHash,
+      personaScriptHash,
+      orderedStepCommitmentHashes,
+    };
+  });
+
+  const challengeFamilyHash = familyRoot(
+    "challenge",
+    challengeCandidates.map((c) => c.challengeManifestHash),
+  );
+  const journeyFamilyRootHash = familyRoot(
+    "journey",
+    challengeCandidates.map((c) => c.journeyHash),
+  );
+
+  const journeySelectionPolicy = sealSigned(
+    {
+      schema_version: "journey-selection-policy/v1" as const,
+      policy_id: "erl2-development-journey-selection-policy",
+      challenge_family_hash: challengeFamilyHash,
+      journey_family_root_hash: journeyFamilyRootHash,
+      allowed_intents: [...ENVIRONMENT_INTENTS],
+      journey_schema_hash: h("journey-schema"),
+      step_commitment_schema_hash: h("step-commitment-schema"),
+      actor_policy_hash: h("actor-policy"),
+      actor_policy_schema_hash: h("actor-policy-schema"),
+      admission_policy_hash: h("admission-policy"),
+    },
+    // ADR-ERL2-020 §2a: `policy_author`, not `challenge_governor`. A policy the
+    // challenge governor both authored and selected under would collapse the
+    // separation the role audit asserts.
+    keyring.policyAuthor,
+  );
+  const journeySelectionPolicyHash = admit("journey-selection-policy", journeySelectionPolicy);
+
+  // The randomness policy is admitted here too, so `preregister-challenge` can
+  // mirror it from the registry rather than a run reconstructing it. Its signer
+  // is `policy_author` for the same reason as the journey selection policy
+  // (ADR-ERL2-020 §2a): the governor must not author the randomness policy that
+  // governs its own selection.
+  const sourceTrustPolicyHash = h("source-trust-policy");
+  const randomnessPolicy = sealSigned(
+    {
+      schema_version: "external-beacon-randomness-policy/v1" as const,
+      policy_id: "erl2-development-beacon-policy",
+      source_kind: "external_beacon" as const,
+      source_id: DEVELOPMENT_BEACON_SOURCE_ID,
+      source_trust_policy_hash: sourceTrustPolicyHash,
+      beacon_trust_configuration_hash: h("beacon-trust-configuration"),
+      round_rule: "first_finalized_round_after_pool_checkpoint" as const,
+      finality_rule_hash: h("finality-rule"),
+      retry_policy: "none_invalidate_run" as const,
+      required_operator_separation_policy_hash: h("operator-separation-policy"),
+      randomness_domain: "ERL2-SELECTION-RANDOMNESS-V1" as const,
+    },
+    keyring.policyAuthor,
+  );
+  const randomnessPolicyHash = admit("selection-randomness-policy", randomnessPolicy);
+
   return {
     root,
     vaultRoot,
@@ -236,5 +404,11 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
     packageVerificationStep,
     environmentSteps,
     canaryIds,
+    journeySelectionPolicyHash,
+    randomnessPolicyHash,
+    sourceTrustPolicyHash,
+    challengeFamilyHash,
+    journeyFamilyRootHash,
+    challengeCandidates,
   };
 }

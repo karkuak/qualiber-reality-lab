@@ -8,7 +8,10 @@
  */
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
+import { readdirSync, existsSync } from "node:fs";
+import path from "node:path";
 import { assertSubjectPortExecutable, type LabState } from "@erl2/core";
+import { erl2, runToAcquired } from "../support/cliRun.js";
 
 // Every external-execution entrypoint the review enumerates, plus the terminal
 // and invalidation states.
@@ -56,4 +59,56 @@ test("POST-REVEAL-GUARD: subject execution is permitted while a step is legitima
   for (const state of ALLOWED) {
     assert.doesNotThrow(() => assertSubjectPortExecutable(state), `execution must be permitted in ${state}`);
   }
+});
+
+/*
+ * §8.2 — a refusal causes zero new retained evidence.
+ *
+ * The guard above was wired into the two *port-dispatching* entrypoints
+ * (`acquire`, `verify-package`) but not into the two *artifact-freezing* ones.
+ * `freezePackage` and `freezeSubjectOutput` froze their bytes first and only
+ * then appended the lifecycle event that rejects an ineligible state — so a
+ * post-terminal retry was correctly refused with exit 11 and *still* wrote into
+ * the finished run.  Reproduced through the CLI: a refused post-terminal
+ * `freeze-output` froze `retained/subject-output-manifest.json` into a cancelled
+ * run and turned its previously verifying `InvalidLabRunRecordV1` into a
+ * `GRAPH_CLOSURE_EXTRA_ARTIFACT` refusal.
+ */
+test("POST-TERMINAL-NO-WRITE: every refused post-terminal command adds zero retained evidence", () => {
+  const run = runToAcquired();
+  const base = [
+    "--run-root", run.runRoot,
+    "--registry", run.registry.root,
+    "--tier", "development",
+    "--run", run.runId,
+  ];
+  const cancelled = erl2(["cancel", ...base, "--reason", "operator_abort"]);
+  assert.equal(cancelled.exitCode, 12, JSON.stringify(cancelled.body.errors));
+
+  const retainedDir = path.join(run.runRoot, "retained");
+  const snapshot = (): readonly string[] =>
+    existsSync(retainedDir) ? [...readdirSync(retainedDir)].sort() : [];
+  const before = snapshot();
+
+  const attempts: readonly (readonly [string, readonly string[]])[] = [
+    ["freeze-package", ["freeze-package", ...base]],
+    [
+      "verify-package",
+      ["verify-package", ...base, "--fake-verify-package", "failed", "--subject-id", "s", "--subject-version", "0.1.0"],
+    ],
+    ["freeze-output", ["freeze-output", ...base, "--terminal-stage", "verify_package"]],
+  ];
+  for (const [label, argv] of attempts) {
+    const result = erl2(argv);
+    assert.equal(
+      result.body.errors[0]?.code,
+      "STATE_POST_REVEAL_EXECUTION_FORBIDDEN",
+      `${label} must be refused by the pre-dispatch guard: ${JSON.stringify(result.body.errors)}`,
+    );
+    assert.deepEqual(snapshot(), before, `${label} must add no retained evidence`);
+  }
+
+  // Exactly one terminal record, and no fabricated finding.
+  assert.equal(before.filter((n) => n === "invalid-run-record.json").length, 1);
+  assert.equal(before.filter((n) => n.startsWith("finding-")).length, 0);
 });

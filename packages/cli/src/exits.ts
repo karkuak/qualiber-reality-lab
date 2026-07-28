@@ -77,5 +77,8 @@ export function exitForCode(code: string): number {
     return EXIT.TRUST_OR_TAMPER;
   }
   if (code.startsWith("STATE_POST_REVEAL_") || code.startsWith("INVALID_")) return EXIT.FORBIDDEN_STATE;
+  // An unexpected Lab failure has no dedicated Appendix B exit; it takes the
+  // documented fallback so the *code* — not the exit — carries the true cause.
+  if (code.startsWith("LAB_")) return EXIT.USAGE_OR_CONFIG;
   return EXIT.USAGE_OR_CONFIG;
 }

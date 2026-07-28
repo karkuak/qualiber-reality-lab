@@ -487,3 +487,8 @@ export {
   type PreEnvironmentRunRecordInput,
   type SignerInventoryEntryInput,
 } from "./terminal/finalize.js";
+export { buildRoleSeparationAudit, buildSelectionRequest, loadSelectionPool, POOL_MANIFEST_PATH, poolEntryPath } from "./run/selectionContext.js";
+export { SELECTION_STEPS, assertResumable, stepFrom, type SelectionStep } from "./run/selectionWalk.js";
+export type { SelectionPreludeInput } from "./run/workspace.js";
+export type { SelectionContext, SelectionProgress } from "./selection/stages.js";
+export type { SelectionPool, SelectionPoolEntry } from "./selection/chain.js";
