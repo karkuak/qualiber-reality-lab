@@ -237,3 +237,41 @@ test("ENV-MUT: an environment command on a run that never selected a case is ref
   assert.equal(result.body.errors[0]?.code, "POLICY_CONFLICT");
   assert.match(result.body.errors[0]?.message ?? "", /departs from case_selected/);
 });
+
+/*
+ * The half of the activation guard that nothing exercised.
+ *
+ * `activate` requires a connect step whose outcome is `succeeded`. Every earlier
+ * case reached only the *undefined* half — a connect that had never run — so
+ * disabling the succeeded check changed no test result, and the negative-control
+ * campaign said so. This is the missing case: a connect that ran and failed.
+ */
+test("ENV-MUT: activation is refused after a connect that failed", () => {
+  const run = selectedRun();
+  provisioned(run);
+  for (const command of ["baseline", "plan", "install", "configure", "authenticate"]) {
+    assert.equal(erl2([command, ...run.base]).exitCode, 0, command);
+  }
+  // The subject reports a failed connection. A failed step is a retained outcome
+  // and the journey continues, so the run reaches activation with a connect
+  // outcome that exists and did not succeed.
+  const connected = erl2(["connect", ...run.base, "--fake-step-status", "connect=failed"]);
+  assert.equal(connected.exitCode, 0, JSON.stringify(connected.body.errors));
+  assert.equal((connected.body.data as { status: string }).status, "failed");
+  assert.equal(erl2(["execute-subject", ...run.base]).exitCode, 0, "discover still runs");
+
+  const refused = erl2(["activate", ...run.base]);
+  assert.notEqual(refused.exitCode, 0, "a challenge may not go live over a failed connection");
+  assert.equal(refused.body.errors[0]?.code, "POLICY_CONFLICT");
+  assert.match(refused.body.errors[0]?.message ?? "", /succeeded connect step/);
+});
+
+test("ENV-MUT: --fake-step-status is unreachable without the development profile", () => {
+  const run = selectedRun();
+  const result = erl2(
+    ["provision", ...run.base, "--archetype", run.registry.archetypeHash, "--fake-step-status", "connect=failed"],
+    { developmentProfile: false },
+  );
+  assert.notEqual(result.exitCode, 0);
+  assert.equal(result.body.errors[0]?.code, "CFG_DEVELOPMENT_FLAG_UNAVAILABLE");
+});

@@ -54,10 +54,14 @@ const CONTROLS = [
     what: "activation requires a succeeded connect outcome",
     file: "packages/core/src/run/environmentRun.ts",
     // Removes only the *succeeded* requirement, keeping the undefined check.
+    //
     // `if (false)` would compile until 6.5-E, which added an activation receipt
-    // that reads `connected.core_hash` after the block — with the guard gone TS
-    // can no longer narrow it, the patched tree stops building, and a control
-    // that cannot build measures nothing. The campaign caught exactly that.
+    // reading `connected.core_hash` after the block — with the guard gone TS can
+    // no longer narrow it and the patched tree stops building. And splitting the
+    // guard this way found something better: the first version of this control
+    // passed, because the only case any test reached was a connect that had never
+    // run. `ENV-MUT: activation is refused after a connect that failed` now covers
+    // the half that was unexercised.
     find: 'if (connected === undefined || connected.status !== "succeeded") {',
     replace: "if (connected === undefined) {",
     tests: ["tests/dist/adversarial/environmentCommands.test.js"],
@@ -67,11 +71,13 @@ const CONTROLS = [
     id: "freeze-output-outstanding-step-guard",
     what: "subject output cannot freeze while a committed step is owed",
     file: "packages/core/src/run/environmentRun.ts",
-    // `&& false` rather than `false`: the first conjunct still narrows
-    // `remaining` for the message inside the block, so the patch disables the
-    // guard at runtime without breaking the type-check.
+    // `String(1) === "2"` rather than `false`: a literal `false` lets TypeScript
+    // mark the block unreachable and skip narrowing entirely, so `remaining` in
+    // the block's own message reverts to its declared optional type and the patch
+    // will not compile. An opaque boolean keeps the branch reachable to the type
+    // checker and false at runtime.
     find: "if (remaining !== undefined) {",
-    replace: "if (remaining !== undefined && false) {",
+    replace: 'if (remaining !== undefined && String(1) === "2") {',
     tests: ["tests/dist/adversarial/environmentCommands.test.js"],
     expect: "fail",
   },
@@ -79,10 +85,9 @@ const CONTROLS = [
     id: "step-order-guard",
     what: "a named step command may not reorder the committed journey",
     file: "packages/core/src/run/environmentRun.ts",
-    // Appended rather than replaced, for the same reason: every reference the
-    // block's message needs stays in the condition.
+    // Same technique, same reason.
     find: "if (intent !== undefined && step.intent !== intent) {",
-    replace: "if (intent !== undefined && step.intent !== intent && false) {",
+    replace: 'if (intent !== undefined && step.intent !== intent && String(1) === "2") {',
     tests: ["tests/dist/e2e/environmentRun.test.js"],
     expect: "fail",
   },

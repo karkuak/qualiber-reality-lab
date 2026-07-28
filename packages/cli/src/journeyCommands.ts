@@ -54,6 +54,7 @@ export const COMMON_FLAGS: readonly FlagSpec[] = [
   { name: "fake-verify-package", kind: "string" },
   { name: "adapter-entry", kind: "string" },
   { name: "fake-leak-canary", kind: "string" },
+  { name: "fake-step-status", kind: "string" },
 ];
 
 /**
@@ -74,11 +75,13 @@ function assertFakeFlagsUnavailableUnlessDevelopmentProfile(flags: ParsedFlags):
   const usesFakeFlag =
     flags["fake-acquire"] !== undefined ||
     flags["fake-verify-package"] !== undefined ||
-    flags["fake-leak-canary"] !== undefined;
+    flags["fake-leak-canary"] !== undefined ||
+    flags["fake-step-status"] !== undefined;
   if (usesFakeFlag && !developmentFakeSubjectProfileEnabled()) {
     throw new Erl2Error(
       CODES.CFG_DEVELOPMENT_FLAG_UNAVAILABLE,
-      "--fake-acquire, --fake-verify-package and --fake-leak-canary are development-only shortcuts; they " +
+      "--fake-acquire, --fake-verify-package, --fake-leak-canary and --fake-step-status are " +
+        "development-only shortcuts; they " +
         "require the explicit development profile (ERL2_DEVELOPMENT_FAKE_SUBJECT=1) and are not reachable " +
         "on the release surface",
     );
@@ -283,9 +286,40 @@ function fakeSubjectBehaviour(flags: ParsedFlags): FakeSubjectBehaviour {
   }
   const leak = flags["fake-leak-canary"] as string | undefined;
   return {
+    ...stepStatus(flags),
     ...(acquire === undefined ? {} : { acquireStatus: acquire }),
     ...(verify === undefined ? {} : { packageVerificationStatus: verify }),
     ...(leak === undefined ? {} : { leakCanaryId: leak }),
+  };
+}
+
+/**
+ * `--fake-step-status <intent>=<status>`, the development-only way to make one
+ * journey intent fail or come back unsupported.
+ *
+ * It exists so a property like "activation requires a *succeeded* connect" can be
+ * proven rather than asserted. Without it the only reachable case is a connect
+ * that never ran, which exercises the guard's undefined half and leaves its
+ * succeeded half untested — which is exactly what the negative-control campaign
+ * caught.
+ */
+function stepStatus(flags: ParsedFlags): {
+  readonly stepStatus?: NonNullable<FakeSubjectBehaviour["stepStatus"]>;
+} {
+  const raw = flags["fake-step-status"] as string | undefined;
+  if (raw === undefined) return {};
+  const [intent, status] = raw.split("=");
+  if (
+    intent === undefined ||
+    (status !== "succeeded" && status !== "failed" && status !== "unsupported")
+  ) {
+    throw new Erl2Error(
+      CODES.CFG_MISSING_REQUIRED,
+      "--fake-step-status must be <intent>=succeeded|failed|unsupported",
+    );
+  }
+  return {
+    stepStatus: { [intent]: status } as NonNullable<FakeSubjectBehaviour["stepStatus"]>,
   };
 }
 
