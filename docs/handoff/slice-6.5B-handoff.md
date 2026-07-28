@@ -9,11 +9,15 @@ Verify every claim here rather than trusting it. The commands to do so are in §
   6.5-B, C, D and E.
 - `npm run clean && npm install && npm run build && npm run typecheck && npm run verify:generated && npm test && npm run purity && npm run evidence && npm run evidence:verify`
   exits **0**.
-- **535 tests pass / 0 fail / 0 skipped**; **24** architecture/purity tests.
-- `evidence:verify` pins **780** files, **7** excluded by exact path — unchanged
-  coverage.
+- **541 tests pass / 0 fail / 0 skipped**; **24** architecture/purity tests.
+- `evidence:verify` pins **781** files, **7** excluded by exact path. The one
+  added file is the environment run's deterministic closure summary; no exclusion
+  was widened.
+- `npm run negative-control` runs all ten controls in a disposable worktree and
+  proves the working tree is unchanged afterwards. Its first real run found two
+  defects in the controls themselves — see the ledger §10a.
 - Golden tree manifest, **deliberately regenerated** (see §4):
-  `2f88eb5ca70b0135fa2e13797c3a231a9029f53b015f268be9411cfa93206cf7`
+  `b84b9275b3bfa6fe8c11270c26e5ea7ccbb1e5e42845b41c423fabc6c3bd268c`
 - Host runs Node v26.4.0; the project targets Node 22. Node-22 byte equivalence is
   asserted by CI, not on this host.
 

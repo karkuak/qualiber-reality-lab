@@ -44,7 +44,8 @@ rather than quietly kept as if they were proven.
 |---|---|---|
 | `activate` requires a **succeeded connect outcome** | condition forced false | `ENV-MUT: activation is refused until the journey has actually connected` fails (8 pass / 1 fail) |
 | `freeze-output` requires **no committed step outstanding** | condition forced false | `ENV-MUT: subject output cannot freeze while a committed step is still owed` fails (8 pass / 1 fail) |
-| a named step command may not **reorder** the journey | intent comparison forced false | `ENV-ORDER` fails (8 pass / 1 fail) |
+| a named step command may not **reorder** the journey | intent comparison forced false | `ENV-ORDER` fails (11 pass / 1 fail) |
+| `activate` requires a connect that **succeeded** (not merely one that ran) | succeeded requirement dropped, undefined check kept | `ENV-MUT: activation is refused after a connect that failed` fails (10 pass / 1 fail) — a case that did not exist until the campaign showed the guard was half-untested |
 | the driver's **durable substrate** | `FileSubstrateStore` replaced by the in-memory one | 8 of 9 e2e cases and 5 of 9 adversarial cases fail — the whole path collapses |
 | **`assertRepeatableBaseline`** (two baseline probes must agree) | removed, second probe aliased to the first | **suite stays green (9 pass / 0 fail)** |
 | the five **`case_selected`** binding-vs-manifest comparisons | all five removed | **suite stays green (18 pass / 0 fail)** |
@@ -252,6 +253,37 @@ the others.
 
 Byte-pin coverage is now **781 pinned / 7 excluded** — one file added, no exclusion
 widened, `EXCLUSION_MANIFEST_DIGEST` unchanged.
+
+## 10a. What the harness found on its first real run
+
+Two defects, both in the *controls* rather than in the product, and both of the
+kind that had been reported as passing evidence.
+
+**Three controls had stopped compiling.** `if (false)` disabled each guard by
+making its block unreachable, which worked until 6.5-E added code reading the
+variables those guards narrow — the activation receipt reads
+`connected.core_hash` after the connect guard, and the freeze-output and
+step-order blocks interpolate the value their own condition narrows. TypeScript
+refused the patched tree. The earlier ad-hoc campaign ran
+`npm run build >/dev/null 2>&1` and would have run the suite against a **stale
+dist**, reporting a dead control as a clean result.
+
+Appending `&& false` does not fix it either: a literal `false` lets TypeScript
+mark the block unreachable and skip narrowing altogether, so the block's own
+message reverts to the declared optional type. The patches use an opaque boolean
+— reachable to the type checker, false at runtime.
+
+**And the repaired connect control passed, which was the better finding.**
+`activate` requires a connect step whose outcome is `succeeded`. Every test
+reached only the *undefined* half — a connect that had never run — so the
+succeeded requirement, which design §12 states directly, was unexercised in
+shipped 6.5-D code. `--fake-step-status <intent>=<status>` makes a failed
+connection reachable from the CLI, gated behind the same development profile as
+the other fake flags, and `ENV-MUT: activation is refused after a connect that
+failed` now covers it.
+
+A control that cannot fail is a claim, not evidence. Both of these had been
+recorded as evidence.
 
 ## 11. The negative-control harness
 
