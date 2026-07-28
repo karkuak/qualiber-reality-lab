@@ -109,7 +109,7 @@ import {
   TERMINAL_STATES,
   type LabState,
 } from "../lifecycle/states.js";
-import { GenericStepEngine, deriveStepClosure } from "../journey/engine.js";
+import { GenericStepEngine, deriveStepClosure, type RunStepOptions } from "../journey/engine.js";
 import { assertVisibleStepMatchesCommitment } from "../journey/steps.js";
 import { assertNoCanaryLeak, type OracleScanTarget } from "../journey/oracle.js";
 import {
@@ -260,8 +260,12 @@ export class RunWorkspace {
   }
 
   /**
-   * The clock selection stamps its artifacts with, anchored so that it is
-   * **monotonic across processes**.
+   * The clock every multi-process phase stamps its artifacts with, anchored so
+   * that it is **monotonic across processes**.
+   *
+   * Named for selection when selection was the only such phase; the environment
+   * walk has exactly the same property and the same failure mode, so it shares
+   * this clock rather than restarting the run clock in each new process.
    *
    * The run clock steps forward from the preregistration instant, which is right
    * for a command that runs once. Selection is not one command: it advances over
@@ -277,7 +281,7 @@ export class RunWorkspace {
    * matrix through real processes; a single-process harness cannot see it,
    * because it never restarts the clock.
    */
-  selectionClock(): Clock {
+  productionClock(): Clock {
     // The anchor must dominate every instant the run has already recorded, from
     // both clocks that write into it: the lifecycle log stamps events with the
     // run clock, while selection artifacts carry their own production instant
@@ -1296,6 +1300,86 @@ export class RunWorkspace {
     return { state: this.lifecycle.currentState, stepsRun };
   }
 
+  /**
+   * The transition the design labels "manifest, persona, journey and ordered
+   * steps verified" (§12): `selection_receipt_verified -> case_selected`.
+   *
+   * It is not one of ADR-ERL2-020 §6's ten chain stages, and deliberately so.
+   * Those stages are pure functions of the chain's own artifacts; this one
+   * checks the opened binding against the **admitted** `ChallengeManifestV1` and
+   * `JourneyDefinitionV1` the run mirrored at challenge preregistration. That
+   * comparison is only available to something holding the run's retained
+   * evidence, which is why it lives on the workspace rather than in the chain
+   * kernel.
+   *
+   * Design §15 states the obligation precisely: the reveal authority MUST prove
+   * that the opened `JourneyDefinitionV1.persona_script_hash`,
+   * `ChallengeManifestV1.journey_hash` and `journey_step_commitment_hashes`
+   * equal `SelectedChallengeJourneyBindingV1`. A mismatch means the chain opened
+   * a challenge the family never admitted, so the run must not reach an
+   * environment. It produces no artifact — like the randomness *request*, it
+   * exists so the verification is durably recorded before anything acts on it.
+   *
+   * **The five comparisons below are defense in depth, not load-bearing on any
+   * path a CLI caller can reach.** Disabling all five leaves the whole suite
+   * green; that was measured, not assumed. The producer builds each pool entry
+   * *from* the admitted challenge manifest and journey definition, so the opened
+   * payload agrees with them by construction, and a run whose retained copies
+   * were tampered with fails earlier on the artifact store's own hash check.
+   * They would fire against a pool forged outside the shipped producer. Do not
+   * restate this as a proven guard: the honest claim is that the check exists
+   * and nothing currently exercises it.
+   */
+  advanceCaseSelection(): { readonly state: LabState; readonly stepsRun: number } {
+    // Already done, or not yet reachable: either way this pass runs no step, so
+    // a replay is a no-op and a partially advanced walk simply has nothing here
+    // to do yet.
+    if (this.lifecycle.currentState !== "selection_receipt_verified") {
+      return { state: this.lifecycle.currentState, stepsRun: 0 };
+    }
+    const bindingHash = this.requireHashForRole("selected-challenge-journey-binding");
+    const binding = this.artifact<SelectedChallengeJourneyBindingV1>(
+      bindingHash,
+      "SelectedChallengeJourneyBindingV1",
+    );
+    const challenge = this.artifact<ChallengeManifestV1>(
+      binding.challenge_manifest_hash,
+      "ChallengeManifestV1",
+    );
+    const journey = this.artifact<JourneyDefinitionV1>(binding.journey_hash, "JourneyDefinitionV1");
+
+    const disagree = (what: string): never => {
+      throw new Erl2Error(
+        CODES.SELECTION_CHAIN_EDGE_UNCLOSED,
+        `the opened selection binding and the admitted challenge family disagree on ${what}; ` +
+          "the chain opened a case this family never admitted",
+      );
+    };
+    if (challenge.journey_hash !== binding.journey_hash) disagree("the journey");
+    if (journey.persona_script_hash !== binding.persona_script_hash) disagree("the persona script");
+    if (challenge.exposure_epoch !== binding.exposure_epoch) disagree("the exposure epoch");
+    // Ordered, not set-equal: the journey's step order is the order the plan
+    // will execute, so a reordering is a different case even with equal members.
+    const sameOrder = (a: readonly Hash[], b: readonly Hash[]): boolean =>
+      a.length === b.length && a.every((value, index) => value === b[index]);
+    if (!sameOrder(challenge.journey_step_commitment_hashes, binding.ordered_step_commitment_hashes)) {
+      disagree("the ordered step commitments of the challenge manifest");
+    }
+    if (!sameOrder(journey.ordered_step_commitment_hashes, binding.ordered_step_commitment_hashes)) {
+      disagree("the ordered step commitments of the journey definition");
+    }
+
+    this.lifecycle.append({
+      eventType: "case_selected",
+      stateTo: "case_selected",
+      actorId: "reveal-service",
+      commandId: "select",
+      operationId: "op-case-selected",
+      requiredHashes: [bindingHash, binding.challenge_manifest_hash, binding.journey_hash],
+    });
+    return { state: this.lifecycle.currentState, stepsRun: 1 };
+  }
+
   freezePackageManifest(input: {
     readonly subjectId: string;
     readonly subjectVersion: string;
@@ -1959,6 +2043,23 @@ export class RunWorkspace {
   revealJudgeExpectations(input: {
     readonly vaultRoot: string;
     readonly judgeIdentity: AgeIdentity;
+    /**
+     * Artifacts that belong to the *same* durable transition as the reveal.
+     *
+     * The environment branch has exactly one: the `ExposureEventV1` that demotes
+     * the opened challenge. Exposure is not a consequence of the reveal, it *is*
+     * the reveal — recording it in a later event would leave a window in which a
+     * challenge was opened and nothing said so. The hook runs only after every
+     * reveal check has passed, so a refused reveal still freezes nothing.
+     */
+    readonly alsoProduce?: (context: {
+      readonly revealedExpectationHashes: readonly Hash[];
+      readonly recordHash: Hash;
+    }) => readonly {
+      readonly artifact_role: string;
+      readonly artifact_core_hash: Hash;
+      readonly artifact_schema_version: string;
+    }[];
   }): { readonly revealedExpectationHashes: readonly Hash[]; readonly recordHash: Hash } {
     if (this.hashForRole("subject-output-manifest") === undefined) {
       throw new Erl2Error(
@@ -2026,6 +2127,8 @@ export class RunWorkspace {
       { ...base, core_hash: coreHash(base) },
     );
     this.store.freezeJson("retained/judge-expectation-reveal.json", record, "INTERNAL");
+    const additional =
+      input.alsoProduce?.({ revealedExpectationHashes: revealed, recordHash: record.core_hash }) ?? [];
     this.lifecycle.append({
       eventType: "judge_journey_expectation_revealed",
       stateTo: "judge_journey_expectation_revealed",
@@ -2039,6 +2142,7 @@ export class RunWorkspace {
           artifact_core_hash: record.core_hash,
           artifact_schema_version: "judge-expectation-reveal-record/v1",
         },
+        ...additional,
       ],
     });
     return { revealedExpectationHashes: revealed, recordHash: record.core_hash };
@@ -2707,7 +2811,7 @@ export class RunWorkspace {
 
   // -- helpers --------------------------------------------------------------
 
-  private visibleStepFor(commitment: JourneyStepCommitmentV1): SubjectVisibleJourneyStepV1 {
+  visibleStepFor(commitment: JourneyStepCommitmentV1): SubjectVisibleJourneyStepV1 {
     const step = this.registry.require<SubjectVisibleJourneyStepV1>(
       commitment.visible_step_hash,
       "SubjectVisibleJourneyStepV1",
@@ -2716,7 +2820,7 @@ export class RunWorkspace {
     return step;
   }
 
-  private visibleStepRef(step: SubjectVisibleJourneyStepV1): ArtifactRef {
+  visibleStepRef(step: SubjectVisibleJourneyStepV1): ArtifactRef {
     return this.store.freezeJson(
       `subject-visible/steps/${step.step_id}.json`,
       step,
@@ -2729,7 +2833,7 @@ export class RunWorkspace {
    * the subject port. Known canaries come from the admitted commitments; the
    * scan also refuses any well-formed canary it does not recognise.
    */
-  private assertRequestOracleClean(what: string, request: unknown): void {
+  assertRequestOracleClean(what: string, request: unknown): void {
     const targets: OracleScanTarget[] = [
       { surface: "adapter_request", label: what, bytes: JSON.stringify(request) },
     ];
@@ -2743,6 +2847,24 @@ export class RunWorkspace {
    */
   knownCanaryIds(): readonly string[] {
     return [];
+  }
+
+  /**
+   * The subject seam, for a phase that builds and dispatches its own step
+   * request. The environment walk does: an `AdapterStepRequestV1` carries the
+   * execution plan and the canonical envelope, neither of which exists on the
+   * acquisition path, so it cannot reuse `acquire()`'s request builder.
+   */
+  get subject(): SubjectPort {
+    return this.port;
+  }
+
+  /** Runs one step through the generic submachine, the only way a step exists. */
+  runJourneyStep(options: RunStepOptions): {
+    readonly outcome: JourneyStepOutcomeV1;
+    readonly ref: ArtifactRef;
+  } {
+    return this.engine.runStep(options);
   }
 
   /** Ordered step-outcome closure derived from lifecycle evidence. */

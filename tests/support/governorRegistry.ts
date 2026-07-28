@@ -46,8 +46,12 @@ export interface GovernorRegistry {
   readonly acquisitionActorSchemaHash: Hash;
   readonly acquisitionStep: CommittedStep;
   readonly packageVerificationStep: CommittedStep;
-  readonly environmentSteps: ReadonlyMap<JourneyIntent, CommittedStep>;
   readonly canaryIds: readonly string[];
+  /** Environment admission inputs (Slice 6.5-B). */
+  readonly archetypeHash: Hash;
+  readonly equivalenceProfileHash: Hash;
+  readonly comparisonPolicyHash: Hash;
+  readonly cutoffPolicyHash: Hash;
   /** The real signed journey selection policy (ADR-ERL2-020 §2a, C-3). */
   readonly journeySelectionPolicyHash: Hash;
   /** The admitted external-beacon randomness policy and its pinned source trust head. */
@@ -64,6 +68,8 @@ export interface ChallengeCandidate {
   readonly challengeId: string;
   readonly steps: number;
   readonly exposureEpoch: number;
+  /** The ordered intents this candidate's journey commits, in execution order. */
+  readonly intents: readonly JourneyIntent[];
   readonly challengeManifestHash: Hash;
   readonly journeyHash: Hash;
   readonly personaScriptHash: Hash;
@@ -89,12 +95,23 @@ function h(label: string): Hash {
  * family roots hash the *sorted set*, so admission order cannot bias selection.
  */
 const CHALLENGE_FAMILY = [
-  { challengeId: "a", steps: 2, exposureEpoch: 3 },
-  { challengeId: "b", steps: 1, exposureEpoch: 11 },
-  { challengeId: "c", steps: 3, exposureEpoch: 0 },
+  { challengeId: "a", exposureEpoch: 3 },
+  { challengeId: "b", exposureEpoch: 11 },
+  { challengeId: "c", exposureEpoch: 0 },
 ] as const;
 
-const ENVIRONMENT_INTENTS: readonly JourneyIntent[] = [
+/**
+ * The ordered intents every admitted candidate commits.
+ *
+ * Each candidate commits its *own instance* of every step — `a-install` is a
+ * different commitment from `b-install` — so a selection landing on the wrong
+ * candidate stays observable downstream while every candidate remains a
+ * complete, runnable environment journey. An earlier fixture distinguished
+ * candidates by step *count* instead, which made two of the three unable to
+ * reach activation at all and hid the environment path behind whichever
+ * candidate the beacon happened to pick.
+ */
+const ENVIRONMENT_JOURNEY: readonly JourneyIntent[] = [
   "install",
   "configure",
   "authenticate",
@@ -102,12 +119,21 @@ const ENVIRONMENT_INTENTS: readonly JourneyIntent[] = [
   "discover",
   "exercise",
   "observe",
-  "diagnose_decide",
-  "recover",
-  "upgrade",
-  "rollback",
   "remove",
 ];
+
+/**
+ * The intents whose judge expectation carries functional mechanism truth.
+ *
+ * Everything else is journey-scope: whether the subject installed, connected or
+ * uninstalled cleanly is a journey fact, not a mechanism one. This split is what
+ * lets a run whose functional truth stays sealed still open the expectations for
+ * its unsupported steps (design §12, §15).
+ */
+const FUNCTIONAL_TRUTH_INTENTS: ReadonlySet<JourneyIntent> = new Set<JourneyIntent>([
+  "exercise",
+  "diagnose_decide",
+]);
 
 export interface BuildGovernorRegistryOptions {
   /**
@@ -201,6 +227,125 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
   );
   const genericRunPolicyHash = admit("generic-run-policy", runPolicy);
 
+  // -- environment admission inputs (Slice 6.5-B) ----------------------------
+  //
+  // The clean-greenfield archetype used to be a bare placeholder hash on every
+  // challenge manifest, which meant `provision` had nothing to resolve: the
+  // topology, evidence sources and cleanup contract a run is provisioned against
+  // existed only as a name. This is the real admitted artifact those names now
+  // refer to.
+  //
+  // Its evidence sources are exactly the ones the fake driver serves, so the
+  // baseline's declared source set and the capture's snapshot set are the same
+  // set by construction rather than by coincidence.
+  const archetype = sealSigned(
+    {
+      schema_version: "environment-archetype/v1" as const,
+      archetype_id: "erl2-clean-greenfield",
+      version: 1,
+      domain: "software_delivery_operations" as const,
+      topology: [
+        { node_id: "project", kind: "project-root", version_constraint: "*" },
+        { node_id: "network", kind: "isolated-network", version_constraint: "*" },
+        { node_id: "volume", kind: "scratch-volume", version_constraint: "*" },
+        { node_id: "container", kind: "service-container", version_constraint: "*" },
+        { node_id: "port", kind: "loopback-port", version_constraint: "*" },
+      ],
+      evidence_sources: [
+        { source_id: "deployment-log", kind: "deployment", required: true },
+        { source_id: "service-metric", kind: "metric", required: true },
+        { source_id: "change-record", kind: "change", required: true },
+      ],
+      organization_metadata_schema: "erl2-generic-organization/v1",
+      access_constraints: [{ constraint_id: "loopback-only", kind: "egress", scope: "loopback" }],
+      normal_disorder: [],
+      resource_budget: {
+        cpu_millis: 8_000,
+        memory_mib: 16_384,
+        disk_mib: 40_960,
+        runtime_ms: 2_700_000,
+      },
+      cleanup_contract_hash: h("cleanup-contract-clean-greenfield"),
+      compatibility_tags: ["clean-greenfield"],
+      admission_proof_hash: h("admission-proof-archetype"),
+    },
+    // The development policy grants the challenge governor both governor roles
+    // and reports that concentration rather than hiding it (ADR-ERL2-020 §4).
+    keyring.challengeGovernor,
+  );
+  const archetypeHash = admit("environment-archetype", archetype);
+
+  // The equivalence profile a live envelope is projected under: which volatile
+  // fields are ignored, which invariants must hold, and which omissions are
+  // forbidden. It is admitted before any run so a run cannot choose the terms it
+  // will be compared under.
+  const equivalenceProfile = sealSigned(
+    {
+      schema_version: "evidence-equivalence-profile/v1" as const,
+      profile_id: "erl2-development-equivalence",
+      challenge_family_hash: h("challenge-family-placeholder"),
+      semantic_fact_schema_hash: h("semantic-fact-schema"),
+      normalization_rule_hashes: [h("normalize-timestamps"), h("normalize-instance-ids")],
+      ignored_volatile_field_paths: ["started_at", "ended_at", "inventoried_at"],
+      required_invariant_ids: ["every-declared-source-has-a-state"],
+      forbidden_omission_classes: ["declared-source-absent"],
+    },
+    keyring.policyAuthor,
+  );
+  const equivalenceProfileHash = admit("evidence-equivalence-profile", equivalenceProfile);
+
+  // `live_ecosystem`, not `replay_comparison`.
+  //
+  // Replay mode means every run binds one *pre-admitted* comparison-level
+  // envelope whose bytes are identical across subjects (§13). A run that observes
+  // its own provisioned environment does not have that envelope and must not
+  // claim it: it produces its own `LiveCanonicalEvidenceEnvelopeV1` under this
+  // equivalence profile. Cross-environment equivalence is a claim about two runs,
+  // so no `SemanticEvidenceEquivalenceReceiptV1` is produced here — a single run
+  // has nothing to be equivalent to.
+  const comparisonPolicy = sealSigned(
+    {
+      schema_version: "comparison-policy/v1" as const,
+      policy_id: "erl2-development-comparison",
+      mode: "live_ecosystem" as const,
+      selection_eligibility: "blind_capable" as const,
+      equivalence_profile_hash: equivalenceProfileHash,
+      independent_equivalence_verifier_hash: h("independent-equivalence-verifier-unactivated"),
+    },
+    keyring.policyAuthor,
+  );
+  const comparisonPolicyHash = admit("comparison-policy", comparisonPolicy);
+
+  // The bounds the cutoff is checked against. `realizeCutoff` refuses a warmup
+  // or observation window outside them, and refuses a wall/monotonic divergence
+  // beyond `maximum_monotonic_wall_divergence_ms`, so these are the numbers that
+  // make the derived cutoff falsifiable rather than declarative.
+  const cutoffPolicy = sealSigned(
+    {
+      schema_version: "cutoff-policy/v1" as const,
+      policy_id: "erl2-development-cutoff",
+      version: 1,
+      clock: "host_utc" as const,
+      instant_rule: "traffic_process_started_at_plus_warmup_ms_plus_observation_ms" as const,
+      inclusion: "event_time_lt_and_ingestion_time_lte" as const,
+      max_skew_ms: 5_000,
+      late_arrival_grace_ms: 30_000,
+      maximum_selection_to_traffic_start_ms: 3_600_000,
+      maximum_timestamp_submission_delay_ms: 60_000,
+      maximum_process_milestone_skew_ms: 60_000,
+      maximum_monotonic_wall_divergence_ms: 1_000,
+      maximum_warmup_ms: 60_000,
+      maximum_observation_ms: 600_000,
+      minimum_observation_ms: 1_000,
+      event_time_required: true as const,
+      ingestion_time_required: true as const,
+      valid_from: CREATED_AT,
+      valid_until: "2030-01-01T00:00:00Z",
+    },
+    keyring.policyAuthor,
+  );
+  const cutoffPolicyHash = admit("cutoff-policy", cutoffPolicy);
+
   const recipients = [ageRecipientOf(judgeIdentity)];
   const canaryIds: string[] = [];
 
@@ -248,10 +393,6 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
 
   const acquisitionStep = commit("acquire", "acquire", "journey_only");
   const packageVerificationStep = commit("verify-package", "verify_package", "journey_only");
-  const environmentSteps = new Map<JourneyIntent, CommittedStep>();
-  for (const intent of ENVIRONMENT_INTENTS) {
-    environmentSteps.set(intent, commit(intent.replaceAll("_", "-"), intent, "functional"));
-  }
 
   // -- challenge family and the real journey selection policy ---------------
   //
@@ -277,11 +418,14 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
   // artifacts that actually exist and `preregister-challenge` has something to
   // mirror. Members draw disjoint step commitments so a selection landing on the
   // wrong candidate is observable downstream.
-  const stepPool = [...environmentSteps.values()];
-  let stepCursor = 0;
   const challengeCandidates: ChallengeCandidate[] = CHALLENGE_FAMILY.map((candidate) => {
-    const steps = stepPool.slice(stepCursor, stepCursor + candidate.steps);
-    stepCursor += candidate.steps;
+    const steps = ENVIRONMENT_JOURNEY.map((intent) =>
+      commit(
+        `${candidate.challengeId}-${intent.replaceAll("_", "-")}`,
+        intent,
+        FUNCTIONAL_TRUTH_INTENTS.has(intent) ? "functional" : "journey_only",
+      ),
+    );
     const orderedStepCommitmentHashes = steps.map((s) => s.commitmentHash);
     const personaScriptHash = h(`persona-${candidate.challengeId}`);
 
@@ -306,7 +450,7 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
         challenge_id: `erl2-development-challenge-${candidate.challengeId}`,
         version: 1,
         domain: "software_delivery_operations" as const,
-        archetype_hashes: [h("archetype-clean-greenfield")],
+        archetype_hashes: [archetypeHash],
         journey_hash: journeyHash,
         journey_step_commitment_hashes: orderedStepCommitmentHashes,
         truth_commitment_hash: h(`truth-commitment-${candidate.challengeId}`),
@@ -324,8 +468,9 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
 
     return {
       challengeId: candidate.challengeId,
-      steps: candidate.steps,
+      steps: steps.length,
       exposureEpoch: candidate.exposureEpoch,
+      intents: [...ENVIRONMENT_JOURNEY],
       challengeManifestHash,
       journeyHash,
       personaScriptHash,
@@ -348,7 +493,7 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
       policy_id: "erl2-development-journey-selection-policy",
       challenge_family_hash: challengeFamilyHash,
       journey_family_root_hash: journeyFamilyRootHash,
-      allowed_intents: [...ENVIRONMENT_INTENTS],
+      allowed_intents: [...ENVIRONMENT_JOURNEY],
       journey_schema_hash: h("journey-schema"),
       step_commitment_schema_hash: h("step-commitment-schema"),
       actor_policy_hash: h("actor-policy"),
@@ -402,8 +547,11 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
     acquisitionActorSchemaHash: h("acquisition-actor-schema"),
     acquisitionStep,
     packageVerificationStep,
-    environmentSteps,
     canaryIds,
+    archetypeHash,
+    equivalenceProfileHash,
+    comparisonPolicyHash,
+    cutoffPolicyHash,
     journeySelectionPolicyHash,
     randomnessPolicyHash,
     sourceTrustPolicyHash,

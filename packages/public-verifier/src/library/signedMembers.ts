@@ -146,6 +146,31 @@ const SIGNED_MEMBER_RULES = new Map<string, SignedMemberRule>([
     { role: "confidential_selection_auditor", securityTimestampField: "verified_at" },
   ],
   ["challenge-manifest/v1", { role: "challenge_governor" }],
+  // -- V2 environment branch (ADR-ERL2-021) ---------------------------------
+  //
+  // Derived from each `sealSigned(...)` call site in the shipped environment
+  // producer, on the same fail-closed terms as the selection rows: a signed
+  // environment contract absent from this table stays refused.
+  //
+  // The cutoff is derived from three *separately* signed artifacts by design
+  // (§13), so they take three different roles. Collapsing them onto one signer
+  // would make "wall, monotonic, supervisor and runtime-attestor bounds must
+  // agree" a statement about one operator's own bookkeeping.
+  ["comparison-policy/v1", { role: "policy_author" }],
+  ["evidence-equivalence-profile/v1", { role: "policy_author" }],
+  ["cutoff-policy/v1", { role: "policy_author", securityTimestampField: "valid_from" }],
+  [
+    "traffic-process-start-receipt/v1",
+    { role: "traffic_supervisor", securityTimestampField: "process_started_at" },
+  ],
+  ["runtime-milestone/v1", { role: "runtime_attestor", securityTimestampField: "occurred_at" }],
+  [
+    // Not the challenge governor: an exposure event demotes the governor's own
+    // challenge, and an authority that can silently record its own demotion is
+    // the one thing the exposure ledger exists to prevent.
+    "exposure-event/v1",
+    { role: "vault_authorizer", securityTimestampField: "occurred_at" },
+  ],
   ["journey-step-commitment/v1", { role: "challenge_governor", securityTimestampField: "committed_at" }],
 ]);
 

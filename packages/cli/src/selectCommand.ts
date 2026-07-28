@@ -145,7 +145,7 @@ export function assembleSelection(input: {
   );
   const { workspace, sourceTrust } = input;
   const keys = selectionKeys();
-  const clock = workspace.selectionClock();
+  const clock = workspace.productionClock();
 
   const role = (name: string): Hash => {
     const hash = workspace.hashForRole(name);

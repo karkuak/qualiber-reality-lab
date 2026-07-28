@@ -111,6 +111,12 @@ export {
   type FakeDriverFaults,
 } from "./environment/fakeDriver.js";
 export {
+  FileSubstrateStore,
+  MemorySubstrateStore,
+  type SubstrateState,
+  type SubstrateStore,
+} from "./environment/substrate.js";
+export {
   ReservationAllocator,
   type ReservationKind,
   type ReclaimedLease,
@@ -492,3 +498,11 @@ export { SELECTION_STEPS, assertResumable, stepFrom, type SelectionStep } from "
 export type { SelectionPreludeInput } from "./run/workspace.js";
 export type { SelectionContext, SelectionProgress } from "./selection/stages.js";
 export type { SelectionPool, SelectionPoolEntry } from "./selection/chain.js";
+export {
+  EnvironmentRun,
+  ENVIRONMENT_PHASES,
+  type CommittedJourneyStep,
+  type EnvironmentKeyring,
+  type EnvironmentPhase,
+  type EnvironmentRunOptions,
+} from "./run/environmentRun.js";

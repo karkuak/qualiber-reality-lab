@@ -36,7 +36,15 @@ const EXPECTED_REFUSALS = new Set<string>([
   "preregister-acquisition|3|ADMISSION_SUBJECT_PORT_NOT_DEVELOPMENT",
   "acquire|6|ADAPTER_DEADLINE_EXCEEDED",
   "finalize-generic|10|GRAPH_CLOSURE_MISSING_ROLE",
-  "select|2|POLICY_COMMAND_NOT_IMPLEMENTED",
+  // `erl2 select --request x`. Design Appendix C spells the flag `--request`,
+  // but ADR-ERL2-020 §5 made `select` advance a *run* rather than take a
+  // free-standing request, so the shipped flag is `--run`. The refusal is
+  // therefore an unknown flag — and it stayed pinned as
+  // POLICY_COMMAND_NOT_IMPLEMENTED for a whole slice after `select` shipped,
+  // because `cli-transcript.json` is one of the byte-pin's seven exclusions and
+  // nothing else compared it. Corrected here; the divergence between Appendix C
+  // and the shipped flag is reported in the 6.5-B handoff.
+  "select|2|CFG_UNKNOWN_FLAG",
 ]);
 
 test("EXPECTED-REFUSALS: every recorded refusal is a known, stable, authority-scoped refusal", () => {

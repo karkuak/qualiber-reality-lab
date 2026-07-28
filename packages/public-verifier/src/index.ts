@@ -33,6 +33,7 @@ export {
 } from "./library/closure.js";
 export {
   deriveEnvironmentClosure,
+  deriveEnvironmentClosureProgress,
   deriveEnvironmentPreFinalizationClosure,
   deriveEnvironmentTerminalStage,
   deriveTerminalVariant,

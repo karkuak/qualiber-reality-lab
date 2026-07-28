@@ -205,7 +205,7 @@
       "run_id": "019f1af9-b400-7111-9111-111111111111",
       "state": "generic_finalized",
       "data": {
-        "lifecycle_head_hash": "sha256:e9cf4fcf46e4558c6bbf519cd38f08771d89828a2b9820d2e25517f9d0590ebc"
+        "lifecycle_head_hash": "sha256:95ca7b9ca58e3d7d71f087c84d731815b20ba25090de7b55db3f0c65d69151e7"
       }
     },
     "stderr": ""
@@ -234,10 +234,10 @@
       "findings": [],
       "errors": [],
       "run_id": "019f1af9-b400-7111-9111-111111111111",
-      "record_hash": "sha256:172f939f85dd8d99e103bf12c1d5a76482f6ac7f4f034d3378c34240de680af5",
+      "record_hash": "sha256:c3600c5a33378190b3f62683fdb0dca1ef741df5a071836d2931e9fc668932bb",
       "data": {
         "verdict": "valid",
-        "trust_head_hash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+        "trust_head_hash": "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
         "valid_when_signed": true,
         "currently_trusted": true,
         "closure": {
@@ -246,8 +246,8 @@
           "run_id": "019f1af9-b400-7111-9111-111111111111",
           "derived_terminal_phase": "verify_package",
           "derived_terminal_variant": "pre_environment",
-          "lifecycle_head_hash": "sha256:e9cf4fcf46e4558c6bbf519cd38f08771d89828a2b9820d2e25517f9d0590ebc",
-          "verified_trust_head_hash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+          "lifecycle_head_hash": "sha256:95ca7b9ca58e3d7d71f087c84d731815b20ba25090de7b55db3f0c65d69151e7",
+          "verified_trust_head_hash": "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
           "required_hashes_by_role": [
             {
               "role": "acquisition-preregistration",
@@ -331,7 +331,7 @@
             {
               "role": "final-attestation",
               "ordered_hashes": [
-                "sha256:172f939f85dd8d99e103bf12c1d5a76482f6ac7f4f034d3378c34240de680af5"
+                "sha256:c3600c5a33378190b3f62683fdb0dca1ef741df5a071836d2931e9fc668932bb"
               ]
             },
             {
@@ -350,9 +350,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-26T17:39:26Z",
+          "verified_at": "2026-07-28T15:34:36Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:4eae425df61967736fea445f3898638aa14107e80824185e0d98a2f9446609bb"
+          "core_hash": "sha256:41b6b9cf18786b1d8a30c887d2bfd905e7ad5bacf0a964b2e2fba903e961f240"
         }
       }
     },
@@ -447,9 +447,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-26T17:39:26Z",
+          "verified_at": "2026-07-28T15:34:36Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:548e361abaf292b578183124b443a0b2f65ccb7ec6445486ef97a9d3594abbac"
+          "core_hash": "sha256:d64afdcfd84bfce219b20e31217f6474a9abf4030a801785df5fd4372617de97"
         }
       }
     },
@@ -515,9 +515,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-26T17:39:27Z",
+          "verified_at": "2026-07-28T15:34:37Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:87ed30c0484d99887e362f882d7b6d66425924b633c86aed9bbb9a756b07e6d8"
+          "core_hash": "sha256:5cb6cfa293882c99949e4e1eb084810c36b4a4a34425d58bc5acc5922b7bcf14"
         }
       }
     },
@@ -598,9 +598,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-26T17:39:27Z",
+          "verified_at": "2026-07-28T15:34:37Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:bb023096c9b0632c5fc4912623818194e2f3eec0d590b76aeb363ad348cb8acf"
+          "core_hash": "sha256:051afff0c33275ca9b04188763483ca58c391a73a9896b55905920187042ffca"
         }
       }
     },
@@ -644,7 +644,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "development",
       "--run",
@@ -662,9 +662,9 @@
       "--package-verification-step",
       "sha256:66e56f58a0f142d0d3114821befababf905ed4e783dbb90b25e98b13143a14b7",
       "--generic-policy",
-      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "sha256:7f0be05945e8a480159d75b21cd2d8695f240818e45bd9bb9fc75ccbfafa4276",
       "--trust-policy",
-      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
       "--limits",
       "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
       "--expires",
@@ -682,7 +682,7 @@
       "run_id": "00000000-0000-7000-8000-000000000001",
       "state": "acquisition_preregistered",
       "data": {
-        "acquisition_preregistration_hash": "sha256:e2813c787cd8e03ce87e0631afb8ff321316a54ccfa7000ae413f46d86da0ec1",
+        "acquisition_preregistration_hash": "sha256:8e982b6924ab21efc9ce2ab32d612e872971baaa9430e9f79b07b39456100eee",
         "selected_case_identity": "absent"
       }
     },
@@ -695,7 +695,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "development",
       "--run",
@@ -713,7 +713,7 @@
       "run_id": "00000000-0000-7000-8000-000000000001",
       "state": "step_outcome_frozen",
       "data": {
-        "acquisition_record_hash": "sha256:7a1fca4ac587d1c033f98bbe104811818422fc8a31c8598e67b83cd727e40246",
+        "acquisition_record_hash": "sha256:b5bf8aa595a1c5831a7913c924e3b92199953179bf690eed754b652d9549eeb6",
         "status": "completed",
         "attempts": 1,
         "active_operator_ms": 2000,
@@ -734,7 +734,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "development",
       "--run",
@@ -765,7 +765,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "development",
       "--run",
@@ -789,7 +789,7 @@
       "run_id": "00000000-0000-7000-8000-000000000001",
       "state": "step_outcome_frozen",
       "data": {
-        "package_verification_record_hash": "sha256:1e68c433bef737163bf3c9ac479f84f428e6bf69e547068f9808f36fbbe74436",
+        "package_verification_record_hash": "sha256:602bc0e3985be7e1caa9d95784fe675ce47e52147e74ab4d5b6a35bf7672a29d",
         "status": "failed"
       }
     },
@@ -802,7 +802,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "development",
       "--run",
@@ -822,13 +822,13 @@
       "run_id": "00000000-0000-7000-8000-000000000001",
       "state": "subject_output_frozen",
       "data": {
-        "subject_output_hash": "sha256:4852ce95560428d39cc1cec963788777102edf5f0003278267ae6386561fe38a",
+        "subject_output_hash": "sha256:a02b61411dd06daa40207ce1d2af784f307c5c63013f4e2a33b05f05806e2741",
         "terminal_stage": "verify_package",
         "step_outcome_hashes": [
-          "sha256:16d65b17fc2019328f9b25cb5d7d8560e8d4665fe231a16370995fa43a41ce31",
-          "sha256:659902119d2fb471cae23f7ad696613475900aa3b401ca6d96940c6b5df57b4e"
+          "sha256:8a6048f29e79660137be107ae87bebe1e31723a27c65b1f22172e0b6b6bfcf0b",
+          "sha256:d257d0eab02114927d3a99aedf699e67d917cd8d09e4fe3c64bbe893ad720d24"
         ],
-        "tree_hash": "sha256:c67490420b3895aa6777d94dc9ab3d6116f8cdc1ba67480cc1dfafde7ab83926"
+        "tree_hash": "sha256:7b051601f699a4b7c4ad5fa82e5cea6fc70294128b514ae1754b35e861310216"
       }
     },
     "stderr": ""
@@ -840,7 +840,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "development",
       "--run",
@@ -858,9 +858,9 @@
       "--package-verification-step",
       "sha256:66e56f58a0f142d0d3114821befababf905ed4e783dbb90b25e98b13143a14b7",
       "--generic-policy",
-      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "sha256:7f0be05945e8a480159d75b21cd2d8695f240818e45bd9bb9fc75ccbfafa4276",
       "--trust-policy",
-      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
       "--limits",
       "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
       "--expires",
@@ -878,7 +878,7 @@
       "run_id": "00000000-0000-7000-8000-000000000002",
       "state": "acquisition_preregistered",
       "data": {
-        "acquisition_preregistration_hash": "sha256:ef1f912e644c2c60a4697838f09b95042b46e3c4be507eef571d1e78c6ac596f",
+        "acquisition_preregistration_hash": "sha256:8f7516dba825fec233ac4084994e40dbc00096329bebdf6548f4adaeb8c7de5a",
         "selected_case_identity": "absent"
       }
     },
@@ -891,7 +891,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "development",
       "--run",
@@ -909,7 +909,7 @@
       "run_id": "00000000-0000-7000-8000-000000000002",
       "state": "step_outcome_frozen",
       "data": {
-        "acquisition_record_hash": "sha256:6da9d1a59d4520223ae2c58b51e4c69495bc807ad0c834ad2dc68fca65a2d5a9",
+        "acquisition_record_hash": "sha256:82985b257e079d940f0dbe7ecd423e951f2a0fb988f1f7d7d229a5e9fe9aa76a",
         "status": "completed",
         "attempts": 1,
         "active_operator_ms": 2000,
@@ -930,7 +930,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "development",
       "--run",
@@ -961,7 +961,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "development",
       "--run",
@@ -983,9 +983,9 @@
       "run_id": "00000000-0000-7000-8000-000000000002",
       "state": "package_manifest_frozen",
       "data": {
-        "package_verification_record_hash": "sha256:53e02ff0de0b9ed4ac10db45394c32d2431da527cc4cc621cc174b3195844340",
+        "package_verification_record_hash": "sha256:ee30dee6744806f79f73e6dab840c1522e76c4c0774379a56b61525c1746a829",
         "status": "completed",
-        "subject_package_manifest_hash": "sha256:b8f39581aa499f6d0e35a67d8e572cd44586c038fdb03ddb5182eb52e2952245",
+        "subject_package_manifest_hash": "sha256:39a2b90983eeefa87d304b0695057ab31e5575f83b3480b2af15052cc2a065e4",
         "package_file_sha256": "sha256:20ba17871efe2aae1c673976c39fd06a920e6afbb64a5d31424baf8d945bf515",
         "next_authorized_state": "challenge_preregistered"
       }
@@ -999,7 +999,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "development",
       "--run",
@@ -1031,7 +1031,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/failed-acquisition",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "development",
       "--run",
@@ -1049,9 +1049,9 @@
       "--package-verification-step",
       "sha256:66e56f58a0f142d0d3114821befababf905ed4e783dbb90b25e98b13143a14b7",
       "--generic-policy",
-      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "sha256:7f0be05945e8a480159d75b21cd2d8695f240818e45bd9bb9fc75ccbfafa4276",
       "--trust-policy",
-      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
       "--limits",
       "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
       "--expires",
@@ -1069,7 +1069,7 @@
       "run_id": "00000000-0000-7000-8000-000000000003",
       "state": "acquisition_preregistered",
       "data": {
-        "acquisition_preregistration_hash": "sha256:ced3cbfc65aeaa10fd73663e8d7bfb32e1b62cabd4a7bae2690fb86e9caa5a85",
+        "acquisition_preregistration_hash": "sha256:ad57a314185216e579b46b08ba5f29533a6b87a4c2ccf8228618e2cdd236794a",
         "selected_case_identity": "absent"
       }
     },
@@ -1082,7 +1082,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/failed-acquisition",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "development",
       "--run",
@@ -1102,7 +1102,7 @@
       "run_id": "00000000-0000-7000-8000-000000000003",
       "state": "invalidated",
       "data": {
-        "acquisition_record_hash": "sha256:e95e4a78199f1d5af01ce15cab60f4aac0c2ce33a331ba67af5cd32c55a4f221",
+        "acquisition_record_hash": "sha256:946cb75867f072283d76f507c34400ee08a1e95188e2d793afa348b0c6151cc1",
         "status": "failed",
         "attempts": 1,
         "active_operator_ms": 1500,
@@ -1111,7 +1111,7 @@
           "doc-install-overview"
         ],
         "authentication_prompt_count": 1,
-        "invalid_run_record_hash": "sha256:a0c4b168aefa803a424641e694858d562182da737018dee3581501bde47c7ce6",
+        "invalid_run_record_hash": "sha256:67489ef170d90dea07cfe892f242e72dadff5309543f0750224a5b9f3bc49355",
         "terminal_state": "invalidated",
         "cleanup_variant": "pre_environment"
       }
@@ -1125,7 +1125,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/held-out-refused",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-6AVLTq",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-X3DtYA",
       "--tier",
       "held_out",
       "--acquisition-source",
@@ -1141,9 +1141,9 @@
       "--package-verification-step",
       "sha256:66e56f58a0f142d0d3114821befababf905ed4e783dbb90b25e98b13143a14b7",
       "--generic-policy",
-      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "sha256:7f0be05945e8a480159d75b21cd2d8695f240818e45bd9bb9fc75ccbfafa4276",
       "--trust-policy",
-      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
       "--limits",
       "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
       "--expires",
@@ -1173,7 +1173,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Q66N3a",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Y8Ur7G",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1193,9 +1193,9 @@
       "--package-verification-step",
       "sha256:f8e65ec1bf2c8dbcfabdbaa4cc890651e68e36dfbc9650acd47238a8dfb364e7",
       "--generic-policy",
-      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "sha256:7f0be05945e8a480159d75b21cd2d8695f240818e45bd9bb9fc75ccbfafa4276",
       "--trust-policy",
-      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
       "--limits",
       "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
       "--expires",
@@ -1213,7 +1213,7 @@
       "run_id": "00000000-0000-7000-8000-000000000004",
       "state": "acquisition_preregistered",
       "data": {
-        "acquisition_preregistration_hash": "sha256:7a515a1048a3aba74f0bcdd5eb89f27bbe7d1aa588b0ffce8233039c09e417d6",
+        "acquisition_preregistration_hash": "sha256:54df2e0f77194138aa387c4875b9b2fd610c9560d920f5f863c937d8b116b795",
         "selected_case_identity": "absent"
       }
     },
@@ -1226,7 +1226,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Q66N3a",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Y8Ur7G",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1246,7 +1246,7 @@
       "run_id": "00000000-0000-7000-8000-000000000004",
       "state": "step_outcome_frozen",
       "data": {
-        "acquisition_record_hash": "sha256:c2b3343513680bbaebcfe7a862bf92ff65087833246659fd135b9ca3897429b9",
+        "acquisition_record_hash": "sha256:4155e388bddd3f56842778fc9399fc531dfb1c45992038d943716fef27177667",
         "status": "completed",
         "attempts": 1,
         "active_operator_ms": 1800,
@@ -1267,7 +1267,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Q66N3a",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Y8Ur7G",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1300,7 +1300,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Q66N3a",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Y8Ur7G",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1324,9 +1324,9 @@
       "run_id": "00000000-0000-7000-8000-000000000004",
       "state": "package_manifest_frozen",
       "data": {
-        "package_verification_record_hash": "sha256:1604bf9d1a1fc4af905820a34dbd8664a754b61935a7cffdbc8e3da794708798",
+        "package_verification_record_hash": "sha256:bda06e4e96333b42158ff526b63d2dc03a37e8d09acd01ae62b90afad5206e06",
         "status": "completed",
-        "subject_package_manifest_hash": "sha256:80b89887879d67fcc2fc1acb3d8cf94c1244bf77cefceed674a99201f210bbf8",
+        "subject_package_manifest_hash": "sha256:398062c147072ecc6b27c77ad70b724437c0c524a0d159c943ebbbaba2504aea",
         "package_file_sha256": "sha256:a97fd7922960016fa30fce51d7c0fd695c3688f02dee28ee44c98aab9bcb430c",
         "next_authorized_state": "challenge_preregistered"
       }
@@ -1340,7 +1340,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Q66N3a",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Y8Ur7G",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1374,7 +1374,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Q66N3a",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Y8Ur7G",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1394,9 +1394,9 @@
       "--package-verification-step",
       "sha256:f8e65ec1bf2c8dbcfabdbaa4cc890651e68e36dfbc9650acd47238a8dfb364e7",
       "--generic-policy",
-      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "sha256:7f0be05945e8a480159d75b21cd2d8695f240818e45bd9bb9fc75ccbfafa4276",
       "--trust-policy",
-      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
       "--limits",
       "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
       "--expires",
@@ -1414,7 +1414,7 @@
       "run_id": "00000000-0000-7000-8000-000000000005",
       "state": "acquisition_preregistered",
       "data": {
-        "acquisition_preregistration_hash": "sha256:4cc8a67474c86fe0a7888b34860b332737dffc0d4f91c3f06831121094891bd3",
+        "acquisition_preregistration_hash": "sha256:c52701326bc3830fc90ebcf619f880f32f3d617ed3819d7c63fb0e92f49b5065",
         "selected_case_identity": "absent"
       }
     },
@@ -1427,7 +1427,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Q66N3a",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Y8Ur7G",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1447,7 +1447,7 @@
       "run_id": "00000000-0000-7000-8000-000000000005",
       "state": "step_outcome_frozen",
       "data": {
-        "acquisition_record_hash": "sha256:5f06ede4c6b1b676a536ce267728dbaa22c4c39cff9ebe6ef1d2aadd6b90de75",
+        "acquisition_record_hash": "sha256:8b42750a44b5d5b49e5665ad002c1acd9273e7ccd553349a8bb591998e1185e8",
         "status": "completed",
         "attempts": 1,
         "active_operator_ms": 1200,
@@ -1467,7 +1467,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Q66N3a",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Y8Ur7G",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1500,7 +1500,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Q66N3a",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Y8Ur7G",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1524,7 +1524,7 @@
       "run_id": "00000000-0000-7000-8000-000000000005",
       "state": "step_outcome_frozen",
       "data": {
-        "package_verification_record_hash": "sha256:8f29291b90b1e8adb443f772b99f29dd0fa9901d46dccad7762d1e9d8f56ffad",
+        "package_verification_record_hash": "sha256:d471a350f799eb7ae81640625d9905192211614a080d75b8f5ddc9fbb9fa5047",
         "status": "unsupported"
       }
     },
@@ -1537,7 +1537,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Q66N3a",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Y8Ur7G",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1559,13 +1559,13 @@
       "run_id": "00000000-0000-7000-8000-000000000005",
       "state": "subject_output_frozen",
       "data": {
-        "subject_output_hash": "sha256:65c657a799bf536abb52bee8995dca667b31df38a3c6f178dd170866476735ca",
+        "subject_output_hash": "sha256:c414f25ab10cc571090cd68e2aff8bcbfcd424b74972500a7d2b6e35bd8601a9",
         "terminal_stage": "verify_package",
         "step_outcome_hashes": [
-          "sha256:87591eaf1a78239c54c40458f9baa4d63a8395808a90598a961ac30459939196",
-          "sha256:f6d00835bdbe497e005312f87db41566f4c0bd0fd09fa1dfca733a633404b211"
+          "sha256:cc899eb4096015ea05a171b6d2b804c1322c44b132e86efe2a6fbb05a7ce9c37",
+          "sha256:7ca804ceea8a54d08a8032926ee3d667ae5746fa44f44da12294801d8d0a711a"
         ],
-        "tree_hash": "sha256:2dcbbcd4c8d78f8cb2401317191b737c5341f18b9ece26374e7e7c004de11318"
+        "tree_hash": "sha256:2a448ef6922186395c0b72200acae1cd3e1d66764044fcf4a72b9805bbd2a4a7"
       }
     },
     "stderr": ""
@@ -1577,7 +1577,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Q66N3a",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Y8Ur7G",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1597,9 +1597,9 @@
       "--package-verification-step",
       "sha256:f8e65ec1bf2c8dbcfabdbaa4cc890651e68e36dfbc9650acd47238a8dfb364e7",
       "--generic-policy",
-      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "sha256:7f0be05945e8a480159d75b21cd2d8695f240818e45bd9bb9fc75ccbfafa4276",
       "--trust-policy",
-      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
       "--limits",
       "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
       "--expires",
@@ -1617,7 +1617,7 @@
       "run_id": "00000000-0000-7000-8000-000000000006",
       "state": "acquisition_preregistered",
       "data": {
-        "acquisition_preregistration_hash": "sha256:b7ee18e5a9266b4bbd480258281dae3a7ff91ebe2eba35c497ad65dd1b2407ce",
+        "acquisition_preregistration_hash": "sha256:40a11906dd141e7c58a984ba644cdf7e2dae29be74964cef889cdfe0e0af4a73",
         "selected_case_identity": "absent"
       }
     },
@@ -1630,7 +1630,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Q66N3a",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-Y8Ur7G",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1655,10 +1655,10 @@
       "run_id": "00000000-0000-7000-8000-000000000006",
       "state": "invalidated",
       "data": {
-        "invalid_run_record_hash": "sha256:73720953047b0c689c96c9b52e0968055fa55bc2b81ffcc2ee36d1d766ef8ad2",
+        "invalid_run_record_hash": "sha256:b47b7b5dddb186a930ec94cd962a2041746600129b2e01f8ea0b12c2c97fd5ad",
         "terminal_state": "invalidated",
         "cleanup_variant": "none",
-        "adapter_failure_finding_hash": "sha256:5601c0f7bee034537be02510cbba60742f358042ca3098ab7383fc540f28ec38",
+        "adapter_failure_finding_hash": "sha256:e20def380a501e228592f1a2f43974ac158f41d4b364a99dd52d2bf0ca60d7b2",
         "refusal_code": "ADAPTER_DEADLINE_EXCEEDED"
       }
     },
@@ -1696,27 +1696,27 @@
           "run_id": "00000000-0000-7000-8000-000000000006",
           "derived_terminal_phase": {
             "kind": "lifecycle_phase",
-            "lifecycle_event_hash": "sha256:6a3e7a08b23c7205f81ffc2df170bb09854c392907e1823e48bbbfec81777e7b",
+            "lifecycle_event_hash": "sha256:70b5617fa61b731ae794ae36c6930b98d9ce730c5a7e5d5eb4e5ff5dcb249f41",
             "phase": "acquisition"
           },
           "derived_terminal_variant": "invalid",
-          "lifecycle_head_hash": "sha256:b846ee4dd128486ed8416ed2221a590476a15856d3e1552ab2b9e47c1f623e00",
+          "lifecycle_head_hash": "sha256:bcd1f11f06acfac1e9c19e9c104a1da1fbb56bfcaf6feedb6ebafbfaccd4e1e9",
           "required_hashes_by_role": [
             {
               "role": "invalid-run-record",
               "ordered_hashes": [
-                "sha256:73720953047b0c689c96c9b52e0968055fa55bc2b81ffcc2ee36d1d766ef8ad2"
+                "sha256:b47b7b5dddb186a930ec94cd962a2041746600129b2e01f8ea0b12c2c97fd5ad"
               ]
             },
             {
               "role": "reached-evidence",
               "ordered_hashes": [
-                "sha256:b7ee18e5a9266b4bbd480258281dae3a7ff91ebe2eba35c497ad65dd1b2407ce",
+                "sha256:40a11906dd141e7c58a984ba644cdf7e2dae29be74964cef889cdfe0e0af4a73",
                 "sha256:350bc17945bf2e7b13a17a284ff2c13532cc6da16c4cfa013d9fe28b5a84393e",
-                "sha256:b9cbeb8e9bcacc7266d1fd11c36d53929d5bb9bf850ab9f60bf00062ecc56059",
+                "sha256:eac74c99cc8d0d51646599f2fcdc87aa545bb9ddb86ecacd19a1111c2569d986",
                 "sha256:9b54e82999d6ca798f9abb54b6b01af2c4ed4a421d0769748f577ac667968aa6",
-                "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
-                "sha256:5601c0f7bee034537be02510cbba60742f358042ca3098ab7383fc540f28ec38"
+                "sha256:7f0be05945e8a480159d75b21cd2d8695f240818e45bd9bb9fc75ccbfafa4276",
+                "sha256:e20def380a501e228592f1a2f43974ac158f41d4b364a99dd52d2bf0ca60d7b2"
               ]
             },
             {
@@ -1727,9 +1727,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-26T17:40:07Z",
+          "verified_at": "2026-07-28T15:35:19Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:c875306b20c4371b9e2b2cac21a1f94d39761adf92edf428e18c65297f997454"
+          "core_hash": "sha256:8f9ba0dae6f2830105744858d76c7f1cdc62163e437febca88ab4ff0da8b39f0"
         }
       }
     },
@@ -1742,7 +1742,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bUfZNE",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ntOGua",
       "--tier",
       "development",
       "--run",
@@ -1760,9 +1760,9 @@
       "--package-verification-step",
       "sha256:c10db6c27f23bff84ebaf595bb48e83a483562f5c27f6ee2fdfbb560aa09a46c",
       "--generic-policy",
-      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "sha256:7f0be05945e8a480159d75b21cd2d8695f240818e45bd9bb9fc75ccbfafa4276",
       "--trust-policy",
-      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
       "--limits",
       "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
       "--expires",
@@ -1780,7 +1780,7 @@
       "run_id": "00000000-0000-7000-8000-000000000007",
       "state": "acquisition_preregistered",
       "data": {
-        "acquisition_preregistration_hash": "sha256:b1ddb80efaaa3f7d32fbae3c0c110f5d25988db4a9edbae061c0b28159cc36e0",
+        "acquisition_preregistration_hash": "sha256:3049c0261a0370066f25178fc45f6261ad29e2d570de75426f06665763d05e76",
         "selected_case_identity": "absent"
       }
     },
@@ -1793,7 +1793,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bUfZNE",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ntOGua",
       "--tier",
       "development",
       "--run",
@@ -1811,7 +1811,7 @@
       "run_id": "00000000-0000-7000-8000-000000000007",
       "state": "step_outcome_frozen",
       "data": {
-        "acquisition_record_hash": "sha256:a50a35fc864bc84e071dc31a0e6ab3577833d570cdf73e8cd09e2cc98a37bf24",
+        "acquisition_record_hash": "sha256:9010379bb7910dafcb5c50ead4c76d77ee95a0abc606a127b94282f183de24b5",
         "status": "completed",
         "attempts": 1,
         "active_operator_ms": 2000,
@@ -1832,7 +1832,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bUfZNE",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ntOGua",
       "--tier",
       "development",
       "--run",
@@ -1863,7 +1863,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bUfZNE",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ntOGua",
       "--tier",
       "development",
       "--run",
@@ -1887,7 +1887,7 @@
       "run_id": "00000000-0000-7000-8000-000000000007",
       "state": "step_outcome_frozen",
       "data": {
-        "package_verification_record_hash": "sha256:48c257231319296cc0c4f1cfa1922fcdeab4c9549a1c52c31b4c70106d7960e4",
+        "package_verification_record_hash": "sha256:ee791f583d91c8e689c094bf3bfb11c63f120d15f238a2684a5059fcf7238482",
         "status": "failed"
       }
     },
@@ -1900,7 +1900,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bUfZNE",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ntOGua",
       "--tier",
       "development",
       "--run",
@@ -1920,13 +1920,13 @@
       "run_id": "00000000-0000-7000-8000-000000000007",
       "state": "subject_output_frozen",
       "data": {
-        "subject_output_hash": "sha256:2f456b5f81d61d7ec15f788a33a0db18b259a6df9bdc72609dfe3752720e2e9e",
+        "subject_output_hash": "sha256:df35b325c1b98585a07b21a0a23a8a421c4f0ad44e370c8493246b4490cb7ea1",
         "terminal_stage": "verify_package",
         "step_outcome_hashes": [
-          "sha256:724ffe41ddc3e7dad9e7f73cddfb7a5f02c9c8ea4850c2ab1e35e4d95c64d651",
-          "sha256:cdbb34d930a2d17a15328b80c53a549f586343337832261d121547b93abd9888"
+          "sha256:77bad711f968746760b3fb2b56a4dae0b86515e800e802ce01544c1ba39a87aa",
+          "sha256:326a59e8d053bddf574a8ed79fe00f4293b6621efb89d7294fbca12f75c146d5"
         ],
-        "tree_hash": "sha256:7c0df4365bcf17fc7362e3d1136689ea8b1cf88c37e3b2a7ec1afdb1fa03f069"
+        "tree_hash": "sha256:2433e1927f3316877c4a6d54a6e29a1b20ee8a6d237fdfc6f5535ad0579698c6"
       }
     },
     "stderr": ""
@@ -1938,13 +1938,13 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bUfZNE",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ntOGua",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000007",
       "--vault",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-vAkvMg"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-UBW61i"
     ],
     "exit_code": 0,
     "stdout": {
@@ -1958,7 +1958,7 @@
       "run_id": "00000000-0000-7000-8000-000000000007",
       "state": "judge_journey_expectation_revealed",
       "data": {
-        "reveal_record_hash": "sha256:e0feee6a7692d21f40bc7d0a0636ae15e36966a0a49ff657d294ce1b73523d16",
+        "reveal_record_hash": "sha256:b0a2273af1718fdd5e95ea3034ae0cf2a59b71cf09f4f20700be733413b480e1",
         "revealed_expectation_hashes": [
           "sha256:e4797e248ff46ed035096af7bef42772f98eaaa29ee5f14b07afa1f17ad24029"
         ],
@@ -1974,7 +1974,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bUfZNE",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ntOGua",
       "--tier",
       "development",
       "--run",
@@ -1992,22 +1992,22 @@
       "run_id": "00000000-0000-7000-8000-000000000007",
       "state": "generic_precleanup_results_complete",
       "data": {
-        "journey_result_hash": "sha256:1eae1192cbd601391ea7356d7e0de960c86869b24bc292907a20eeca0d49f1ab",
+        "journey_result_hash": "sha256:fb22e79a910f8bd0c3ba456ab06c8c8e05ebfbb32d766f5720442270318c9b73",
         "journey_status": "evaluated",
-        "domain_result_hash": "sha256:53b885d53120bf33ef336fa2404aa00dedb02f3b2f05eed7138800954374cba6",
+        "domain_result_hash": "sha256:7e56f1421ce78c39c6868a0106bc49c8041ac15ec6f09623eb97747f108a1a54",
         "domain_status": "not_applicable",
         "domain_not_applicable_reason": "pre_environment_terminal",
-        "precleanup_result_join_hash": "sha256:27a1ab7b0b35fbe23fe6bb3cf59d9d0e71eb194a23085c6c6f1e67937950ebee",
+        "precleanup_result_join_hash": "sha256:a5bb340dece994e1826a5b6f871eb6f3b82389b73688d6ef286d68443446ddb4",
         "domain_variant": "not_applicable",
         "metric_result_hashes": [
           "sha256:4ce920cdccedc608ef1977e270b886e0c97d291b7e1f42e5fa5e5b7e1545510a",
-          "sha256:f2d29721223a16b05986b25cf29eebf56852e5882b9a6705799adc08734289a0",
-          "sha256:b7bd39ab20c6fbf2f3b2aa374f833a8fb29abb6fe31684649d2a8e3139108193",
+          "sha256:838b7284745242544c079b219b7f30b4102a33a32389095a26228a2c1a1eecc0",
+          "sha256:2353e51ec78d89827baf1ad90193144ee85ff547c1749ba8729cf12beaa3aeb2",
           "sha256:477738c3c81ef3628bc2b9df772ec8b24dc83970f0b742944487558a8e71d159",
           "sha256:b1d74c8869180217ea1f942b2452ec956914e5248569def587043fefead46fe9",
           "sha256:6db60a1036e772bec8b19bda9e0171161893743270fa128c5662d780ddb88a7e",
-          "sha256:c0aa24fe60e3abfdd533631da4373946b5bcca579d08668bb886b8844d02ee30",
-          "sha256:ca964e738831e77fd07f774c7d045ba15222fd7a1d480332646912e4b25dad50",
+          "sha256:940a4cd220ce6c35fc10eb9687a06f2b5f561d96495cabd2af754d07e0ae2094",
+          "sha256:2926eabc77f122ace408c8c94d10a235bc4fbeea597fc272a306048f8a6f8d69",
           "sha256:205a6d3a075aca985b3bdabd43e45350db3ae60b26727b7c638f54384c33e58f"
         ],
         "metric_results": [
@@ -2077,7 +2077,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-bUfZNE",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ntOGua",
       "--tier",
       "development",
       "--run",
@@ -2097,14 +2097,14 @@
       "run_id": "00000000-0000-7000-8000-000000000007",
       "state": "generic_finalized",
       "data": {
-        "run_record_hash": "sha256:6acbbd62446116a81b56b86f011534814d81a12feaa61bb2d5d2b35cdbce506e",
+        "run_record_hash": "sha256:02ee09b35c6701c148b47787fa7c37018ae925e79d7e795757f96dd2c9f3cfa0",
         "terminal_stage": "verify_package",
-        "validity_result_hash": "sha256:f53653e77dc3eee0db4582ba5b1482081558f3ebfaff88ef3f0af5679c8e3410",
+        "validity_result_hash": "sha256:919690ca7bd499fc34731772638762ce0521a3743bbd66155a77a1de7de806bc",
         "validity_status": "valid",
-        "generic_evaluation_index_hash": "sha256:d3a45c773fbdf24832273a793c2f0f119dfe8f1abd36d9eb151dcf27ba7bcaba",
-        "final_attestation_hash": "sha256:0c427939e301e61afb30c03462907cfcc1acfb59408a5b1084ef0360c5fc26ad",
+        "generic_evaluation_index_hash": "sha256:5bdc3197059ffb935d87aaeaa24e2dcfc7dea0045fac0bab554799020693ad6d",
+        "final_attestation_hash": "sha256:f8204fa3657f00f5d071a4b319ec37900fcce15b5bb9d2433ab9fc80fb76bc06",
         "claim_scope": "T1",
-        "public_bundle_hash": "sha256:b3869c4f46d13c6f905377eaf503a20245cb4d83c68157ba03684ee32ccb3add",
+        "public_bundle_hash": "sha256:31798e0c0f87e3a336e4a217a5ebebabc5ccf41e03fe7628ef4df93bfcbd37bc",
         "public_bundle_path": "retained/public-bundle.json"
       }
     },
@@ -2134,10 +2134,10 @@
       "findings": [],
       "errors": [],
       "run_id": "00000000-0000-7000-8000-000000000007",
-      "record_hash": "sha256:0c427939e301e61afb30c03462907cfcc1acfb59408a5b1084ef0360c5fc26ad",
+      "record_hash": "sha256:f8204fa3657f00f5d071a4b319ec37900fcce15b5bb9d2433ab9fc80fb76bc06",
       "data": {
         "verdict": "valid",
-        "trust_head_hash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+        "trust_head_hash": "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
         "valid_when_signed": true,
         "currently_trusted": true,
         "closure": {
@@ -2146,13 +2146,13 @@
           "run_id": "00000000-0000-7000-8000-000000000007",
           "derived_terminal_phase": "verify_package",
           "derived_terminal_variant": "pre_environment",
-          "lifecycle_head_hash": "sha256:e3a6cc83864459f3f7f961377db984e790ec66be51b93bc34453f069756c21bc",
-          "verified_trust_head_hash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+          "lifecycle_head_hash": "sha256:108ab4ec444447d395bf5c178f876d9cb98eb9e73d35aa6356b8cb855b7da690",
+          "verified_trust_head_hash": "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
           "required_hashes_by_role": [
             {
               "role": "acquisition-preregistration",
               "ordered_hashes": [
-                "sha256:b1ddb80efaaa3f7d32fbae3c0c110f5d25988db4a9edbae061c0b28159cc36e0"
+                "sha256:3049c0261a0370066f25178fc45f6261ad29e2d570de75426f06665763d05e76"
               ]
             },
             {
@@ -2164,115 +2164,115 @@
             {
               "role": "acquisition-record",
               "ordered_hashes": [
-                "sha256:a50a35fc864bc84e071dc31a0e6ab3577833d570cdf73e8cd09e2cc98a37bf24"
+                "sha256:9010379bb7910dafcb5c50ead4c76d77ee95a0abc606a127b94282f183de24b5"
               ]
             },
             {
               "role": "package-verification-record",
               "ordered_hashes": [
-                "sha256:48c257231319296cc0c4f1cfa1922fcdeab4c9549a1c52c31b4c70106d7960e4"
+                "sha256:ee791f583d91c8e689c094bf3bfb11c63f120d15f238a2684a5059fcf7238482"
               ]
             },
             {
               "role": "journey-step-outcome",
               "ordered_hashes": [
-                "sha256:724ffe41ddc3e7dad9e7f73cddfb7a5f02c9c8ea4850c2ab1e35e4d95c64d651",
-                "sha256:cdbb34d930a2d17a15328b80c53a549f586343337832261d121547b93abd9888"
+                "sha256:77bad711f968746760b3fb2b56a4dae0b86515e800e802ce01544c1ba39a87aa",
+                "sha256:326a59e8d053bddf574a8ed79fe00f4293b6621efb89d7294fbca12f75c146d5"
               ]
             },
             {
               "role": "subject-output-manifest",
               "ordered_hashes": [
-                "sha256:2f456b5f81d61d7ec15f788a33a0db18b259a6df9bdc72609dfe3752720e2e9e"
+                "sha256:df35b325c1b98585a07b21a0a23a8a421c4f0ad44e370c8493246b4490cb7ea1"
               ]
             },
             {
               "role": "journey-result",
               "ordered_hashes": [
-                "sha256:1eae1192cbd601391ea7356d7e0de960c86869b24bc292907a20eeca0d49f1ab"
+                "sha256:fb22e79a910f8bd0c3ba456ab06c8c8e05ebfbb32d766f5720442270318c9b73"
               ]
             },
             {
               "role": "domain-result",
               "ordered_hashes": [
-                "sha256:53b885d53120bf33ef336fa2404aa00dedb02f3b2f05eed7138800954374cba6"
+                "sha256:7e56f1421ce78c39c6868a0106bc49c8041ac15ec6f09623eb97747f108a1a54"
               ]
             },
             {
               "role": "precleanup-result-join",
               "ordered_hashes": [
-                "sha256:27a1ab7b0b35fbe23fe6bb3cf59d9d0e71eb194a23085c6c6f1e67937950ebee"
+                "sha256:a5bb340dece994e1826a5b6f871eb6f3b82389b73688d6ef286d68443446ddb4"
               ]
             },
             {
               "role": "pre-environment-cleanup",
               "ordered_hashes": [
-                "sha256:146d690f864190508b7c0a2a0f1b67e6fd33fab87f89ed5812da64e9c14b2964"
+                "sha256:bbf353527fd48de1984eeeef7ecaba31695932fd14512a54b5a366c12eba7d9c"
               ]
             },
             {
               "role": "validity-result",
               "ordered_hashes": [
-                "sha256:f53653e77dc3eee0db4582ba5b1482081558f3ebfaff88ef3f0af5679c8e3410"
+                "sha256:919690ca7bd499fc34731772638762ce0521a3743bbd66155a77a1de7de806bc"
               ]
             },
             {
               "role": "generic-evaluation-index",
               "ordered_hashes": [
-                "sha256:d3a45c773fbdf24832273a793c2f0f119dfe8f1abd36d9eb151dcf27ba7bcaba"
+                "sha256:5bdc3197059ffb935d87aaeaa24e2dcfc7dea0045fac0bab554799020693ad6d"
               ]
             },
             {
               "role": "run-record",
               "ordered_hashes": [
-                "sha256:6acbbd62446116a81b56b86f011534814d81a12feaa61bb2d5d2b35cdbce506e"
+                "sha256:02ee09b35c6701c148b47787fa7c37018ae925e79d7e795757f96dd2c9f3cfa0"
               ]
             },
             {
               "role": "final-attestation",
               "ordered_hashes": [
-                "sha256:0c427939e301e61afb30c03462907cfcc1acfb59408a5b1084ef0360c5fc26ad"
+                "sha256:f8204fa3657f00f5d071a4b319ec37900fcce15b5bb9d2433ab9fc80fb76bc06"
               ]
             },
             {
               "role": "signer-inventory",
               "ordered_hashes": [
-                "sha256:52b4a6bfbbc7f2e00b7369396f3129f15edc72d4f867ffa77ebce5e4ab79fdee"
+                "sha256:1aead7449eae8a2a3f3c9c8e4bf7c8e6a3969b78050c488df73f89a1ccfdeb73"
               ]
             },
             {
               "role": "finding",
               "ordered_hashes": [
-                "sha256:54f02750c051f8a2e5a1dab935ba1fce074880e9578ac0cfe0959cee7f61873c"
+                "sha256:ffeb389979d1033095a77ec0d11877de05e939c67711a895aaea9dc192fc0dd6"
               ]
             },
             {
               "role": "metric-result",
               "ordered_hashes": [
                 "sha256:4ce920cdccedc608ef1977e270b886e0c97d291b7e1f42e5fa5e5b7e1545510a",
-                "sha256:f2d29721223a16b05986b25cf29eebf56852e5882b9a6705799adc08734289a0",
-                "sha256:b7bd39ab20c6fbf2f3b2aa374f833a8fb29abb6fe31684649d2a8e3139108193",
+                "sha256:838b7284745242544c079b219b7f30b4102a33a32389095a26228a2c1a1eecc0",
+                "sha256:2353e51ec78d89827baf1ad90193144ee85ff547c1749ba8729cf12beaa3aeb2",
                 "sha256:477738c3c81ef3628bc2b9df772ec8b24dc83970f0b742944487558a8e71d159",
                 "sha256:b1d74c8869180217ea1f942b2452ec956914e5248569def587043fefead46fe9",
                 "sha256:6db60a1036e772bec8b19bda9e0171161893743270fa128c5662d780ddb88a7e",
-                "sha256:c0aa24fe60e3abfdd533631da4373946b5bcca579d08668bb886b8844d02ee30",
-                "sha256:ca964e738831e77fd07f774c7d045ba15222fd7a1d480332646912e4b25dad50",
+                "sha256:940a4cd220ce6c35fc10eb9687a06f2b5f561d96495cabd2af754d07e0ae2094",
+                "sha256:2926eabc77f122ace408c8c94d10a235bc4fbeea597fc272a306048f8a6f8d69",
                 "sha256:205a6d3a075aca985b3bdabd43e45350db3ae60b26727b7c638f54384c33e58f"
               ]
             },
             {
               "role": "judge-expectation-reveal",
               "ordered_hashes": [
-                "sha256:e0feee6a7692d21f40bc7d0a0636ae15e36966a0a49ff657d294ce1b73523d16"
+                "sha256:b0a2273af1718fdd5e95ea3034ae0cf2a59b71cf09f4f20700be733413b480e1"
               ]
             }
           ],
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-26T17:40:09Z",
+          "verified_at": "2026-07-28T15:35:22Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:d3cf312f9206e3425953c5ef88ba227ebba7b8068351c74e6a724da26306e22e"
+          "core_hash": "sha256:6b2592e078a2d8d4958538c02ede96393c397356d2fd6799544fde43b7d72582"
         }
       }
     },
@@ -2316,7 +2316,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-2o62av",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yIAais",
       "--tier",
       "development",
       "--run",
@@ -2334,9 +2334,9 @@
       "--package-verification-step",
       "sha256:e868b0c9e1547444637f45bdf2eaf0bda1ed4ce64e07b0066c8749a2cfb8989d",
       "--generic-policy",
-      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "sha256:7f0be05945e8a480159d75b21cd2d8695f240818e45bd9bb9fc75ccbfafa4276",
       "--trust-policy",
-      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
       "--limits",
       "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
       "--expires",
@@ -2354,7 +2354,7 @@
       "run_id": "00000000-0000-7000-8000-000000000008",
       "state": "acquisition_preregistered",
       "data": {
-        "acquisition_preregistration_hash": "sha256:5296bb4df7bd0c964a5ea2f5bbc964db43a784f9d82f6fd1ba65e275b10a33aa",
+        "acquisition_preregistration_hash": "sha256:d5d2c5658ab37608542b35b533404f540b3634e485c14295540fedb1f11414db",
         "selected_case_identity": "absent"
       }
     },
@@ -2367,7 +2367,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-2o62av",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yIAais",
       "--tier",
       "development",
       "--run",
@@ -2385,7 +2385,7 @@
       "run_id": "00000000-0000-7000-8000-000000000008",
       "state": "step_outcome_frozen",
       "data": {
-        "acquisition_record_hash": "sha256:e7fc4621e61f5f2a01820121cf800594a99025026d90f0cb963a03b74e12ebb1",
+        "acquisition_record_hash": "sha256:dd894f63a25a8e51122718dbb0b29860916ca35e857475f3b9bf4c99750f9ac0",
         "status": "completed",
         "attempts": 1,
         "active_operator_ms": 2000,
@@ -2406,7 +2406,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-2o62av",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yIAais",
       "--tier",
       "development",
       "--run",
@@ -2437,7 +2437,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-2o62av",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yIAais",
       "--tier",
       "development",
       "--run",
@@ -2461,7 +2461,7 @@
       "run_id": "00000000-0000-7000-8000-000000000008",
       "state": "step_outcome_frozen",
       "data": {
-        "package_verification_record_hash": "sha256:73d300688abcc86fb6ada8f6fcb81d0a82487e7b4b87e061efd61577b3a71947",
+        "package_verification_record_hash": "sha256:dbd3ceacfae8b76922d64c14adda949e62437766837bc970dcad4e68a531b600",
         "status": "unsupported"
       }
     },
@@ -2474,7 +2474,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-2o62av",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yIAais",
       "--tier",
       "development",
       "--run",
@@ -2494,13 +2494,13 @@
       "run_id": "00000000-0000-7000-8000-000000000008",
       "state": "subject_output_frozen",
       "data": {
-        "subject_output_hash": "sha256:cd4fc4de09ae1694fc2ed3f3d91fd857fb3ed944ad41f7a972e336018fba9d10",
+        "subject_output_hash": "sha256:7b7159ea70bfaace857541f33725e98871f88b95998d157e6706e0ce660bfb1b",
         "terminal_stage": "verify_package",
         "step_outcome_hashes": [
-          "sha256:cc2242661c8fa296ccf5baf17f323036c6c15d7a2017bb2145343fad91c80e17",
-          "sha256:9046f107d29c8808d5c2f15aabdf15f50d623846238bd76854d9b0e848a345cc"
+          "sha256:4d340182dc128810bc786cff0e91852ebff45871db9228596cba09731ad88dfb",
+          "sha256:3813893d953a98e522af488aed5311cf649ee9588f9556d881f6eb2c326c6f2c"
         ],
-        "tree_hash": "sha256:42b077c19f67172be6ee77fb68ea7adec59ff41014cfb66f3a38258842b25d7f"
+        "tree_hash": "sha256:4a5911409a89981e81c52c51e623da29f5846ec9bdf006a5538e9694163873f2"
       }
     },
     "stderr": ""
@@ -2512,13 +2512,13 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-2o62av",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yIAais",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000008",
       "--vault",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-fwhyQt"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-X4Ikri"
     ],
     "exit_code": 0,
     "stdout": {
@@ -2532,7 +2532,7 @@
       "run_id": "00000000-0000-7000-8000-000000000008",
       "state": "judge_journey_expectation_revealed",
       "data": {
-        "reveal_record_hash": "sha256:5cebba7f8e08200bff2b9f5703b22dcf6fa7e6ed7c1b5cd0e6f009a29c8c283c",
+        "reveal_record_hash": "sha256:9d042a98c09170202c1594569a4effae67a1cf0111d0fa12418d9bd85fdb4ec2",
         "revealed_expectation_hashes": [
           "sha256:c4f84acaa6ade35eeda63f9c5e974bc0f56750d62abebef68559dfd8f27e69ac"
         ],
@@ -2548,7 +2548,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-2o62av",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yIAais",
       "--tier",
       "development",
       "--run",
@@ -2566,23 +2566,23 @@
       "run_id": "00000000-0000-7000-8000-000000000008",
       "state": "generic_precleanup_results_complete",
       "data": {
-        "journey_result_hash": "sha256:1309bb7cd68daec7911847041d7c4af7c0237839eaa08362d9557c2612acf298",
+        "journey_result_hash": "sha256:f7195bca45a3b4de1e41cd3616cd258dda7aa8bd1c3785395bd5ec888db9834c",
         "journey_status": "evaluated",
-        "domain_result_hash": "sha256:d48fbb4c57f3a9a8531194315cdaa85d4cebae39db9f38514ba091101c310259",
+        "domain_result_hash": "sha256:224c864b4c73be879431c63b16f709afdf60b925eb7683507f12e0f286673688",
         "domain_status": "not_applicable",
         "domain_not_applicable_reason": "pre_environment_terminal",
-        "precleanup_result_join_hash": "sha256:d57c8445d835c7330273c46557e45c067e7622d3a4e21f2f5bb488950c14c260",
+        "precleanup_result_join_hash": "sha256:d61e1c9c2bcc354245f39c8a2a5f2f6e7baf7c5fa78acec236e182095af1f2ef",
         "domain_variant": "not_applicable",
         "metric_result_hashes": [
           "sha256:2c38add23371db58483968a5bb532dcb5cfbd4a7cd1fe7b8d4bfb94a8c7e15ac",
-          "sha256:b920f8de1d64dce4ba830abc674726350450b10c55ada9160fa15af8df2ecdce",
-          "sha256:21b87b17c8d5a425280925ea02165180a44bf8e1ba3a98468fd27ba5fa85259c",
+          "sha256:04541a6781cd7df56f4cc0ce9248e89b1635cca2f48535db4e554f5b9d26145a",
+          "sha256:d6d4893cb53cfefb30bc3e2e6740c7ae85df5c40c21f8549f877ae66cd3fc2de",
           "sha256:18a82b4dfda4b1807cf3b915a14954983e75491fcac967431c572acabcd61534",
           "sha256:e3283094361f4786f0a35b04411ea1b66c1f79c61ec80586b18a9811b1fb6c7d",
           "sha256:76b178227876faa40c577b965e89616beb1d5345be39a35f43adcb02d4dae6d0",
-          "sha256:fdd3a076f37159c19bc1113b53a682b41e4d97c1cbb02035b47b6f328db0f970",
-          "sha256:515c7e284a385f5d877c5daaa36f9f935139c4c553d1116bc05e34a53bf5e997",
-          "sha256:c05e0b67f8ba1b06b6b3d13d692ef3b31af7f390cdbc74bb10ae855739fb308d"
+          "sha256:3dbdffa2397b7c5fd64ef2deb5d3c17f72d81c95c042d790bedb88151e97c2dd",
+          "sha256:d1c70e4a390b4903e0cc502c3a37ad074e077f798cc92665328a9dabf60b51de",
+          "sha256:bbbee362f794929168055ebc292cdf358da5249c225c5071d39822e9d777e061"
         ],
         "metric_results": [
           {
@@ -2651,7 +2651,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-2o62av",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yIAais",
       "--tier",
       "development",
       "--run",
@@ -2671,14 +2671,14 @@
       "run_id": "00000000-0000-7000-8000-000000000008",
       "state": "generic_finalized",
       "data": {
-        "run_record_hash": "sha256:4de3d972f26a203e5413955aa8a670f567d0a48767aead705efbfebbf3d17080",
+        "run_record_hash": "sha256:d9179c03d269fe0ff0b69af1ceac65b42fa11b2d818094532ffc20ea8a90871d",
         "terminal_stage": "verify_package",
-        "validity_result_hash": "sha256:a2859ab64f2b04182e50e7aad4649b4dc49d64729745788fc2da76094959ddb6",
+        "validity_result_hash": "sha256:b6dcf080e5a1ef118eb2039a96d51a9256d916f4117feace2abd526bff7a339f",
         "validity_status": "valid",
-        "generic_evaluation_index_hash": "sha256:3666a3506c876e3ac847f8fdc27ae252d6fd15a5e12c9c3f91e308f9e6eb4b9d",
-        "final_attestation_hash": "sha256:969c4756062c3746f1c853b7871fa83b926362491cd79141972b2167bdf48b6a",
+        "generic_evaluation_index_hash": "sha256:a186d132ab5eca93465d770485ac6d5c59d033752d8086dcdeae4bb0372950ab",
+        "final_attestation_hash": "sha256:3bffd6223329927e05c3e56443870b2544e0e0c5ce6482e0d3d93587df6867df",
         "claim_scope": "T1",
-        "public_bundle_hash": "sha256:e3498cb065642d2b7f911b4a354e094644e0dffbae75226186a569d162dfe355",
+        "public_bundle_hash": "sha256:1dec77c1401496e798a4e96b822e2b21605569657209c5958e2c2093dab85fd3",
         "public_bundle_path": "retained/public-bundle.json"
       }
     },
@@ -2708,10 +2708,10 @@
       "findings": [],
       "errors": [],
       "run_id": "00000000-0000-7000-8000-000000000008",
-      "record_hash": "sha256:969c4756062c3746f1c853b7871fa83b926362491cd79141972b2167bdf48b6a",
+      "record_hash": "sha256:3bffd6223329927e05c3e56443870b2544e0e0c5ce6482e0d3d93587df6867df",
       "data": {
         "verdict": "valid",
-        "trust_head_hash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+        "trust_head_hash": "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
         "valid_when_signed": true,
         "currently_trusted": true,
         "closure": {
@@ -2720,13 +2720,13 @@
           "run_id": "00000000-0000-7000-8000-000000000008",
           "derived_terminal_phase": "verify_package",
           "derived_terminal_variant": "pre_environment",
-          "lifecycle_head_hash": "sha256:1ceedf70f0883834f8c5a50c528c227e4a7efd61b3222c63dc35f2ce390c4fef",
-          "verified_trust_head_hash": "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+          "lifecycle_head_hash": "sha256:c571dbd4a3b53d68018d4d0c7418c335b8ef7a49cfe0373c7d97c68902c93e8c",
+          "verified_trust_head_hash": "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
           "required_hashes_by_role": [
             {
               "role": "acquisition-preregistration",
               "ordered_hashes": [
-                "sha256:5296bb4df7bd0c964a5ea2f5bbc964db43a784f9d82f6fd1ba65e275b10a33aa"
+                "sha256:d5d2c5658ab37608542b35b533404f540b3634e485c14295540fedb1f11414db"
               ]
             },
             {
@@ -2738,115 +2738,115 @@
             {
               "role": "acquisition-record",
               "ordered_hashes": [
-                "sha256:e7fc4621e61f5f2a01820121cf800594a99025026d90f0cb963a03b74e12ebb1"
+                "sha256:dd894f63a25a8e51122718dbb0b29860916ca35e857475f3b9bf4c99750f9ac0"
               ]
             },
             {
               "role": "package-verification-record",
               "ordered_hashes": [
-                "sha256:73d300688abcc86fb6ada8f6fcb81d0a82487e7b4b87e061efd61577b3a71947"
+                "sha256:dbd3ceacfae8b76922d64c14adda949e62437766837bc970dcad4e68a531b600"
               ]
             },
             {
               "role": "journey-step-outcome",
               "ordered_hashes": [
-                "sha256:cc2242661c8fa296ccf5baf17f323036c6c15d7a2017bb2145343fad91c80e17",
-                "sha256:9046f107d29c8808d5c2f15aabdf15f50d623846238bd76854d9b0e848a345cc"
+                "sha256:4d340182dc128810bc786cff0e91852ebff45871db9228596cba09731ad88dfb",
+                "sha256:3813893d953a98e522af488aed5311cf649ee9588f9556d881f6eb2c326c6f2c"
               ]
             },
             {
               "role": "subject-output-manifest",
               "ordered_hashes": [
-                "sha256:cd4fc4de09ae1694fc2ed3f3d91fd857fb3ed944ad41f7a972e336018fba9d10"
+                "sha256:7b7159ea70bfaace857541f33725e98871f88b95998d157e6706e0ce660bfb1b"
               ]
             },
             {
               "role": "journey-result",
               "ordered_hashes": [
-                "sha256:1309bb7cd68daec7911847041d7c4af7c0237839eaa08362d9557c2612acf298"
+                "sha256:f7195bca45a3b4de1e41cd3616cd258dda7aa8bd1c3785395bd5ec888db9834c"
               ]
             },
             {
               "role": "domain-result",
               "ordered_hashes": [
-                "sha256:d48fbb4c57f3a9a8531194315cdaa85d4cebae39db9f38514ba091101c310259"
+                "sha256:224c864b4c73be879431c63b16f709afdf60b925eb7683507f12e0f286673688"
               ]
             },
             {
               "role": "precleanup-result-join",
               "ordered_hashes": [
-                "sha256:d57c8445d835c7330273c46557e45c067e7622d3a4e21f2f5bb488950c14c260"
+                "sha256:d61e1c9c2bcc354245f39c8a2a5f2f6e7baf7c5fa78acec236e182095af1f2ef"
               ]
             },
             {
               "role": "pre-environment-cleanup",
               "ordered_hashes": [
-                "sha256:87ebf6149d49d4270ebd8c264b36bbc8e2ceb21d6b10bd305c17d67b1255eb8a"
+                "sha256:7ce028de129a57c3638c4226e4d055ac082688c063ec4c1f3b0b1ce3b15fffd3"
               ]
             },
             {
               "role": "validity-result",
               "ordered_hashes": [
-                "sha256:a2859ab64f2b04182e50e7aad4649b4dc49d64729745788fc2da76094959ddb6"
+                "sha256:b6dcf080e5a1ef118eb2039a96d51a9256d916f4117feace2abd526bff7a339f"
               ]
             },
             {
               "role": "generic-evaluation-index",
               "ordered_hashes": [
-                "sha256:3666a3506c876e3ac847f8fdc27ae252d6fd15a5e12c9c3f91e308f9e6eb4b9d"
+                "sha256:a186d132ab5eca93465d770485ac6d5c59d033752d8086dcdeae4bb0372950ab"
               ]
             },
             {
               "role": "run-record",
               "ordered_hashes": [
-                "sha256:4de3d972f26a203e5413955aa8a670f567d0a48767aead705efbfebbf3d17080"
+                "sha256:d9179c03d269fe0ff0b69af1ceac65b42fa11b2d818094532ffc20ea8a90871d"
               ]
             },
             {
               "role": "final-attestation",
               "ordered_hashes": [
-                "sha256:969c4756062c3746f1c853b7871fa83b926362491cd79141972b2167bdf48b6a"
+                "sha256:3bffd6223329927e05c3e56443870b2544e0e0c5ce6482e0d3d93587df6867df"
               ]
             },
             {
               "role": "signer-inventory",
               "ordered_hashes": [
-                "sha256:f45ae1f5e96bdb92b9d6f3dfea04700a88605c5009cdcedea0e6b8e973d3bc7f"
+                "sha256:ebe3e78d2fbbda239131e39e71e724355ebefa9b40bfd8c46a7c1174c8afce7b"
               ]
             },
             {
               "role": "finding",
               "ordered_hashes": [
-                "sha256:cacc6ef520a4a007eb6eaba8a46674d0d957f72c0e8ec593de9f958213c2e58a"
+                "sha256:ce6506d3cbe4878b5a4cdea9bd0e6b1f7d60360808f0078eefca303cad606662"
               ]
             },
             {
               "role": "metric-result",
               "ordered_hashes": [
                 "sha256:2c38add23371db58483968a5bb532dcb5cfbd4a7cd1fe7b8d4bfb94a8c7e15ac",
-                "sha256:b920f8de1d64dce4ba830abc674726350450b10c55ada9160fa15af8df2ecdce",
-                "sha256:21b87b17c8d5a425280925ea02165180a44bf8e1ba3a98468fd27ba5fa85259c",
+                "sha256:04541a6781cd7df56f4cc0ce9248e89b1635cca2f48535db4e554f5b9d26145a",
+                "sha256:d6d4893cb53cfefb30bc3e2e6740c7ae85df5c40c21f8549f877ae66cd3fc2de",
                 "sha256:18a82b4dfda4b1807cf3b915a14954983e75491fcac967431c572acabcd61534",
                 "sha256:e3283094361f4786f0a35b04411ea1b66c1f79c61ec80586b18a9811b1fb6c7d",
                 "sha256:76b178227876faa40c577b965e89616beb1d5345be39a35f43adcb02d4dae6d0",
-                "sha256:fdd3a076f37159c19bc1113b53a682b41e4d97c1cbb02035b47b6f328db0f970",
-                "sha256:515c7e284a385f5d877c5daaa36f9f935139c4c553d1116bc05e34a53bf5e997",
-                "sha256:c05e0b67f8ba1b06b6b3d13d692ef3b31af7f390cdbc74bb10ae855739fb308d"
+                "sha256:3dbdffa2397b7c5fd64ef2deb5d3c17f72d81c95c042d790bedb88151e97c2dd",
+                "sha256:d1c70e4a390b4903e0cc502c3a37ad074e077f798cc92665328a9dabf60b51de",
+                "sha256:bbbee362f794929168055ebc292cdf358da5249c225c5071d39822e9d777e061"
               ]
             },
             {
               "role": "judge-expectation-reveal",
               "ordered_hashes": [
-                "sha256:5cebba7f8e08200bff2b9f5703b22dcf6fa7e6ed7c1b5cd0e6f009a29c8c283c"
+                "sha256:9d042a98c09170202c1594569a4effae67a1cf0111d0fa12418d9bd85fdb4ec2"
               ]
             }
           ],
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-26T17:40:12Z",
+          "verified_at": "2026-07-28T15:35:25Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:1a32b95cebc0ad13d3988f1b05086545eebaa931c906fe047a51678ea1562564"
+          "core_hash": "sha256:f01d83de87f1ad96c59296000dac72ec8d26be2d2dd71c69089b112c0b6ac62e"
         }
       }
     },
@@ -2890,7 +2890,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lPmejA",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-5WLoMn",
       "--tier",
       "development",
       "--run",
@@ -2908,9 +2908,9 @@
       "--package-verification-step",
       "sha256:3b8ef697ddeecd369ef7a4d5dcdb9be1a4ddce390e9be8ec9707f62519afd959",
       "--generic-policy",
-      "sha256:a8bafb971566bd829ef94f79212cde7cc149a4696672646f1382f26acd552eea",
+      "sha256:7f0be05945e8a480159d75b21cd2d8695f240818e45bd9bb9fc75ccbfafa4276",
       "--trust-policy",
-      "sha256:b078cc4da302c820c48971a87e05cf1a77957f291da8ec86d52c39b4821e2ab1",
+      "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a",
       "--limits",
       "sha256:815ca5dd8aa87142c47c3a7dab76dcb193e3659ec973d9ebef55008812bfc920",
       "--expires",
@@ -2928,7 +2928,7 @@
       "run_id": "00000000-0000-7000-8000-000000000009",
       "state": "acquisition_preregistered",
       "data": {
-        "acquisition_preregistration_hash": "sha256:a5fbb4265874337f3fb1e1625379538173fd8c9c44e9863a05551f6721db3141",
+        "acquisition_preregistration_hash": "sha256:099d2d94288a13b3ef4b3fe159dc3e93cc2ba6afb5b7dd38dfbec65594a23798",
         "selected_case_identity": "absent"
       }
     },
@@ -2941,7 +2941,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lPmejA",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-5WLoMn",
       "--tier",
       "development",
       "--run",
@@ -2959,7 +2959,7 @@
       "run_id": "00000000-0000-7000-8000-000000000009",
       "state": "step_outcome_frozen",
       "data": {
-        "acquisition_record_hash": "sha256:47b66e9384600c25ab4be5bd6a7e6bade6b53e2ee2f5a8bacc54d5912c3529d8",
+        "acquisition_record_hash": "sha256:c28231fb153955e9d19bee53e2b8ed450e7790f3112ddeb46a290843bbf3a437",
         "status": "completed",
         "attempts": 1,
         "active_operator_ms": 2000,
@@ -2980,7 +2980,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lPmejA",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-5WLoMn",
       "--tier",
       "development",
       "--run",
@@ -3011,7 +3011,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lPmejA",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-5WLoMn",
       "--tier",
       "development",
       "--run",
@@ -3035,7 +3035,7 @@
       "run_id": "00000000-0000-7000-8000-000000000009",
       "state": "step_outcome_frozen",
       "data": {
-        "package_verification_record_hash": "sha256:810caa217010030cb460f51252f9c9ff19d9d80a88b5f40d079b89740615efe1",
+        "package_verification_record_hash": "sha256:b3c6c0177597a2e39003c79646a418f79419846dc443f02672e9f9b32764545e",
         "status": "failed"
       }
     },
@@ -3048,7 +3048,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lPmejA",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-5WLoMn",
       "--tier",
       "development",
       "--run",
@@ -3068,13 +3068,13 @@
       "run_id": "00000000-0000-7000-8000-000000000009",
       "state": "subject_output_frozen",
       "data": {
-        "subject_output_hash": "sha256:973fb62c58b9552c1cceb2c820eccb777c5dd2283f0ab59f16cb938b819b16f5",
+        "subject_output_hash": "sha256:638171ed593e39a123c4343566bf0df2d769d24de28cdcffa331078879600db1",
         "terminal_stage": "verify_package",
         "step_outcome_hashes": [
-          "sha256:86d27a48219f629d2d27c6486347a32885e73e264fb2838c3676fd443c78b2f6",
-          "sha256:2fcd25b6fcca7e80395d4cf3b45a3a0ee532d015496b54c507c95181dd338425"
+          "sha256:e1f974b1f9f7a8046637ecc273d21c8f0b2d01bd40647f3c70e03fc34f47ba51",
+          "sha256:55177a1fc36fde39a1f21170c51068a85693934db82e7fb3c0421ba7c5443a00"
         ],
-        "tree_hash": "sha256:f269b2ed353e089b47f6e2c91db35dd6e976e4b705c11bf49ab8f1ded0519760"
+        "tree_hash": "sha256:793939f8e5ec2b958a7e98cdd84bfe7c21b9a6d1daa6dec6c33887550fb817f1"
       }
     },
     "stderr": ""
@@ -3086,13 +3086,13 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lPmejA",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-5WLoMn",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000009",
       "--vault",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-ihFxGS"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-oyMSlj"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3106,7 +3106,7 @@
       "run_id": "00000000-0000-7000-8000-000000000009",
       "state": "judge_journey_expectation_revealed",
       "data": {
-        "reveal_record_hash": "sha256:8f01598312ea8e990b8a1d86ae4281c8dc83e68b70e715c9b6978443614435be",
+        "reveal_record_hash": "sha256:eaf253e135938355014ca250249117cfcd46a36f94dc8167c427a83b0496eea3",
         "revealed_expectation_hashes": [
           "sha256:7c5ea9d2d31a3d06247f2ea3ddd2a051de9d979b26122552eef1141c363ae0af"
         ],
@@ -3122,7 +3122,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lPmejA",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-5WLoMn",
       "--tier",
       "development",
       "--run",
@@ -3164,8 +3164,8 @@
       "findings": [],
       "errors": [
         {
-          "code": "POLICY_COMMAND_NOT_IMPLEMENTED",
-          "message": "command select belongs to a slice that has not shipped; it is not silently skipped"
+          "code": "CFG_UNKNOWN_FLAG",
+          "message": "unknown flag --request"
         }
       ]
     },

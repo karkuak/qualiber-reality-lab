@@ -26,6 +26,7 @@ import {
 import { coreHash, domainHash, HASH_DOMAINS, sealSigned, type SigningKey } from "@erl2/integrity";
 import type { Clock } from "../runtime/seams.js";
 import { buildBaselineFingerprint, type EvidenceSourceState } from "./cleanControl.js";
+import { MemorySubstrateStore, type SubstrateState, type SubstrateStore } from "./substrate.js";
 import {
   assertDriverEnabled,
   assertNarrowSelector,
@@ -63,6 +64,15 @@ export interface FakeDriverOptions {
   /** Resource kinds this archetype provisions, in order. */
   readonly resourceKinds?: readonly string[];
   readonly evidenceSourceIds?: readonly string[];
+  /**
+   * Where the driver remembers its substrate.
+   *
+   * Omitted, it remembers only within this process — right for the in-process
+   * contract suite, wrong for the CLI, where provision, restore and destroy are
+   * three separate processes and an in-process map makes a fresh `destroy`
+   * report a clean teardown over resources it never looked at.
+   */
+  readonly substrate?: SubstrateStore;
 }
 
 const DEFAULT_KINDS = ["project", "network", "volume", "container", "port"] as const;
@@ -93,9 +103,7 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
   private readonly kinds: readonly string[];
   private readonly sourceIds: readonly string[];
   private readonly archetypeHash: Hash;
-  private readonly live = new Map<string, EnvironmentResourceV1[]>();
-  private readonly instanceHash = new Map<string, Hash>();
-  private readonly mutations = new Map<string, string[]>();
+  private readonly substrate: SubstrateStore;
 
   constructor(options: FakeDriverOptions) {
     this.clock = options.clock;
@@ -104,6 +112,33 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
     this.sourceIds = options.evidenceSourceIds ?? DEFAULT_SOURCES;
     this.archetypeHash = options.archetypeHash;
     this.manifest = fakeDriverManifest(options.signingKey, this.kinds);
+    this.substrate = options.substrate ?? new MemorySubstrateStore();
+  }
+
+  /** What the substrate says about this run, or the empty substrate. */
+  private state(runId: string): SubstrateState {
+    return this.substrate.load(runId) ?? { resources: [], mutations: [] };
+  }
+
+  /** Whether this run has ever been provisioned on this substrate. */
+  private provisioned(runId: string): boolean {
+    return this.substrate.load(runId) !== undefined;
+  }
+
+  private liveResources(runId: string): readonly EnvironmentResourceV1[] {
+    return this.state(runId).resources;
+  }
+
+  private liveInstanceHash(runId: string): Hash {
+    return this.state(runId).instanceHash ?? this.archetypeHash;
+  }
+
+  private appliedMutations(runId: string): readonly string[] {
+    return this.state(runId).mutations;
+  }
+
+  private put(runId: string, patch: Partial<SubstrateState>): void {
+    this.substrate.save(runId, { ...this.state(runId), ...patch });
   }
 
   private manifestHash(): Hash {
@@ -165,7 +200,7 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
     const base = {
       schema_version: "environment-resource-inventory/v1" as const,
       run_id: runId,
-      environment_instance_hash: this.instanceHash.get(runId) ?? this.archetypeHash,
+      environment_instance_hash: this.liveInstanceHash(runId),
       driver_manifest_hash: this.manifestHash(),
       resources: [...resources],
       inventoried_at: this.clock.now(),
@@ -179,7 +214,7 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
   provision(request: ProvisionRequest): ProvisionResult {
     assertDriverEnabled(this.manifest);
     assertOperationSupported(this.manifest, "provision");
-    if (this.live.has(request.runId)) {
+    if (this.provisioned(request.runId)) {
       throw new Erl2Error(CODES.ENV_PROVISION_FAILED, `run ${request.runId} is already provisioned`);
     }
     const resources = this.resourcesFor(request.runId);
@@ -189,8 +224,7 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
       run_id: request.runId,
       resource_ids: resources.map((r) => r.resource_id),
     });
-    this.instanceHash.set(request.runId, instanceHash);
-    this.live.set(request.runId, resources);
+    this.put(request.runId, { instanceHash, resources });
     const partial = resources.length < this.kinds.length;
 
     return {
@@ -213,7 +247,7 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
   probe(request: ProbeRequest): EnvironmentBaselineFingerprintV1 {
     assertDriverEnabled(this.manifest);
     assertOperationSupported(this.manifest, "probe");
-    const resources = this.live.get(request.runId) ?? [];
+    const resources = this.liveResources(request.runId);
     const failing = new Set(this.faults.failProbeIds ?? []);
     const probes: EnvironmentProbeResultV1[] = resources.map((resource) => {
       const probeId = `probe-${resource.kind}`;
@@ -240,7 +274,7 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
 
     return buildBaselineFingerprint({
       runId: request.runId,
-      environmentInstanceHash: this.instanceHash.get(request.runId) ?? this.archetypeHash,
+      environmentInstanceHash: this.liveInstanceHash(request.runId),
       archetypeHash: this.archetypeHash,
       driverManifestHash: this.manifestHash(),
       probes,
@@ -255,7 +289,7 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
   mutate(request: MutateRequest): EnvironmentOperationReceiptV1 {
     assertDriverEnabled(this.manifest);
     assertOperationSupported(this.manifest, "mutate");
-    const resources = this.live.get(request.runId) ?? [];
+    const resources = this.liveResources(request.runId);
     const target = resources.find((r) => r.resource_id === request.targetResourceId);
     if (!target) {
       throw new Erl2Error(
@@ -264,9 +298,8 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
       );
     }
     assertOwnedByRun(request.runId, target);
-    const applied = this.mutations.get(request.runId) ?? [];
-    applied.push(request.mutationId);
-    this.mutations.set(request.runId, applied);
+    const applied = [...this.appliedMutations(request.runId), request.mutationId];
+    this.put(request.runId, { mutations: applied });
     return this.receipt({
       runId: request.runId,
       operation: "mutate",
@@ -282,25 +315,25 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
   restore(request: RestoreRequest): EnvironmentOperationReceiptV1 {
     assertDriverEnabled(this.manifest);
     assertOperationSupported(this.manifest, "restore");
-    const applied = this.mutations.get(request.runId) ?? [];
+    const applied = this.appliedMutations(request.runId);
     if (this.faults.failRestore === true) {
       return this.receipt({
         runId: request.runId,
         operation: "restore",
         operationId: request.operationId,
-        targetIdentityHash: this.instanceHash.get(request.runId) ?? this.archetypeHash,
+        targetIdentityHash: this.liveInstanceHash(request.runId),
         before: { mutations: applied },
         after: { mutations: applied },
         status: "failed",
         errorCode: CODES.RESTORATION_FAILED,
       });
     }
-    this.mutations.set(request.runId, []);
+    this.put(request.runId, { mutations: [] });
     return this.receipt({
       runId: request.runId,
       operation: "restore",
       operationId: request.operationId,
-      targetIdentityHash: this.instanceHash.get(request.runId) ?? this.archetypeHash,
+      targetIdentityHash: this.liveInstanceHash(request.runId),
       before: { mutations: applied },
       after: { mutations: [] },
       status: "succeeded",
@@ -310,7 +343,7 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
   destroy(request: DestroyRequest): DestroyResult {
     assertDriverEnabled(this.manifest);
     assertOperationSupported(this.manifest, "destroy");
-    const resources = this.live.get(request.runId) ?? [];
+    const resources = this.liveResources(request.runId);
     // Cleanup targets exact validated identities; a wildcard selector is refused.
     for (const resource of resources) {
       assertOwnedByRun(request.runId, resource);
@@ -322,7 +355,7 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
           runId: request.runId,
           operation: "destroy",
           operationId: request.operationId,
-          targetIdentityHash: this.instanceHash.get(request.runId) ?? this.archetypeHash,
+          targetIdentityHash: this.liveInstanceHash(request.runId),
           before: { resources: resources.map((r) => r.identity_hash) },
           after: { resources: resources.map((r) => r.identity_hash) },
           status: "failed",
@@ -332,13 +365,13 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
       };
     }
     const residue = resources.filter((r) => !r.destroyable);
-    this.live.set(request.runId, residue);
+    this.put(request.runId, { resources: residue });
     return {
       receipt: this.receipt({
         runId: request.runId,
         operation: "destroy",
         operationId: request.operationId,
-        targetIdentityHash: this.instanceHash.get(request.runId) ?? this.archetypeHash,
+        targetIdentityHash: this.liveInstanceHash(request.runId),
         before: { resources: resources.map((r) => r.identity_hash) },
         after: { resources: residue.map((r) => r.identity_hash) },
         status: residue.length === 0 ? "succeeded" : "failed",
@@ -351,6 +384,6 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
   inspect(runId: string): EnvironmentResourceInventoryV1 {
     assertDriverEnabled(this.manifest);
     assertOperationSupported(this.manifest, "inspect");
-    return this.inventoryOf(runId, this.live.get(runId) ?? []);
+    return this.inventoryOf(runId, this.liveResources(runId));
   }
 }

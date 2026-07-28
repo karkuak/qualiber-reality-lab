@@ -139,6 +139,11 @@ const SUPPORTING_SCHEMAS: ReadonlySet<string> = new Set([
   "comparison-policy/v1",
   "cutoff-policy/v1",
   "monotonic-clock-domain/v1",
+  // The cutoff's three independently signed inputs. A reader must hold them to
+  // re-derive `ObservationBundleV2.cutoff`, but none of them is a separately
+  // roled output of the terminal (Slice 6.5-B, ADR-ERL2-021).
+  "traffic-process-start-receipt/v1",
+  "runtime-milestone/v1",
   "evidence-equivalence-profile/v1",
   "metric-definition/v1",
 ]);
@@ -382,6 +387,67 @@ export function deriveEnvironmentClosure(
     ...report,
     core_hash: coreHash(report),
   });
+}
+
+/**
+ * How complete the environment closure is *before* the validity result and the
+ * generic index exist.
+ *
+ * The environment validity gate set includes `mandatory-graph-closed`, but the
+ * closure cannot be derived against the terminal run record at that point: the
+ * record cites the index, the index cites the validity result, and the validity
+ * result is what is being computed. Rather than inventing a second, weaker
+ * completeness check for that moment, this runs the *same* role derivation with
+ * the three finalizer-produced roles and the two not-yet-produced ones excluded.
+ * A role missing here is missing in the final derivation too.
+ */
+export function deriveEnvironmentClosureProgress(
+  input: ClosureInput,
+): { readonly missingRoles: readonly string[]; readonly extraHashes: readonly Hash[] } {
+  verifyLifecycleChain(input.lifecycle);
+  const roles = derivedRolesFromLifecycle(input.lifecycle);
+  const notYetProduced = new Set([
+    ...FINALIZER_PRODUCED_ROLES,
+    "validity-result",
+    "generic-evaluation-index",
+  ]);
+
+  for (const forbidden of ENVIRONMENT_FORBIDDEN_ROLES) {
+    if ((roles.get(forbidden) ?? []).length > 0) {
+      throw new Erl2Error(
+        CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
+        `an environment terminal cannot close over a ${forbidden}; that role belongs to the pre-environment branch`,
+      );
+    }
+  }
+  assertCaptureGroupComplete(roles);
+
+  const missing: string[] = [];
+  const required = new Set<Hash>();
+  for (const role of ENVIRONMENT_ROLES) {
+    if (notYetProduced.has(role)) continue;
+    const derived = roles.get(role) ?? [];
+    if (derived.length === 0) {
+      missing.push(role);
+      continue;
+    }
+    for (const hash of derived) {
+      input.index.get(hash);
+      required.add(hash);
+    }
+  }
+  for (const role of ENVIRONMENT_OPTIONAL_ROLES) {
+    for (const hash of roles.get(role) ?? []) {
+      input.index.get(hash);
+      required.add(hash);
+    }
+  }
+  const extraHashes = input.index
+    .all()
+    .filter((a) => !required.has(a.coreHash))
+    .filter((a) => !SUPPORTING_SCHEMAS.has(a.schemaVersion))
+    .map((a) => a.coreHash);
+  return { missingRoles: missing, extraHashes };
 }
 
 export interface EnvironmentPreFinalizationVerdict {

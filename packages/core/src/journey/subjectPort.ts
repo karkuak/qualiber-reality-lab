@@ -25,6 +25,30 @@ import { assertNoOracleFields } from "./oracle.js";
 
 export const FAKE_SUBJECT_PORT_ID = "fake-subject";
 
+/**
+ * The adapter-manifest operation name each journey intent asks for.
+ *
+ * `SubjectAdapterManifestV1.operations` is the subject's own declaration of what
+ * it implements; this is the mapping that lets a port answer `unsupported` from
+ * that declaration instead of from a scripted flag.
+ */
+const OPERATION_FOR_INTENT: Readonly<Record<JourneyIntent, string>> = {
+  acquire: "acquire",
+  verify_package: "verify-package",
+  install: "install",
+  configure: "configure",
+  authenticate: "authenticate",
+  connect: "connect",
+  discover: "discover",
+  exercise: "exercise",
+  observe: "observe",
+  diagnose_decide: "diagnose-decide",
+  recover: "recover",
+  upgrade: "upgrade",
+  rollback: "rollback",
+  remove: "remove",
+};
+
 /** Executable fail-closed guard: a fake subject may never drive a real tier. */
 export function assertDevelopmentSubjectPort(tier: Tier, portId: string): void {
   if (tier !== "development" && portId === FAKE_SUBJECT_PORT_ID) {
@@ -75,6 +99,15 @@ export interface FakeSubjectBehaviour {
   readonly packageVerificationStatus?: "succeeded" | "failed" | "unsupported";
   /** Per-intent overrides for the environment journey. */
   readonly stepStatus?: Partial<Record<JourneyIntent, "succeeded" | "failed" | "unsupported">>;
+  /**
+   * The operations the subject's adapter manifest declares it supports.
+   *
+   * Supplied, an intent outside the list is answered `unsupported` — the honest
+   * outcome for a step the subject never claimed to implement, and a real one
+   * rather than a scripted failpoint. ERL2-FR-005: an unsupported result is a
+   * retained result, never a removed case.
+   */
+  readonly declaredOperations?: readonly string[];
   readonly unsupportedInputs?: readonly string[];
   readonly packageBytes?: Buffer;
 }
@@ -161,14 +194,18 @@ export class FakeSubjectPort implements SubjectPort {
 
   step(request: AdapterStepRequestV1, intent: JourneyIntent): SubjectStepResponse {
     this.observe(`adapter step request (${intent})`, request);
-    const status = this.behaviour.stepStatus?.[intent] ?? "succeeded";
+    const declared = this.behaviour.declaredOperations;
+    const undeclared = declared !== undefined && !declared.includes(OPERATION_FOR_INTENT[intent]);
+    const status = this.behaviour.stepStatus?.[intent] ?? (undeclared ? "unsupported" : "succeeded");
     const unsupportedInputs = this.behaviour.unsupportedInputs ?? [];
     return {
       status,
       activeOperatorMs: 750,
       outputBytes: Buffer.from(`${intent} output\n`, "utf8"),
       ...(status === "failed" ? { errorCode: `SUBJECT_RUNTIME_${intent.toUpperCase()}_FAILED` } : {}),
-      ...(status === "unsupported" ? { unsupportedInputs } : {}),
+      ...(status === "unsupported"
+        ? { unsupportedInputs: undeclared ? [`operation:${OPERATION_FOR_INTENT[intent]}`] : unsupportedInputs }
+        : {}),
     };
   }
 

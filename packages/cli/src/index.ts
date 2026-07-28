@@ -51,6 +51,29 @@ import {
   verifyPackage,
   type JourneyCommandOutput,
 } from "./journeyCommands.js";
+import {
+  activate,
+  authenticate,
+  baseline,
+  configure,
+  connect,
+  destroy,
+  evaluateEnvironment,
+  executeSubject,
+  finalizeEnvironment,
+  freezeEnvironmentOutput,
+  freezeObservation,
+  install,
+  journey,
+  observe,
+  plan,
+  provision,
+  recover,
+  remove,
+  restore,
+  revealEnvironment,
+  rollback,
+} from "./environmentCommands.js";
 import { AUTHORITY_SCOPE, EXIT, exitForCode } from "./exits.js";
 
 export interface CommandResult {
@@ -162,30 +185,7 @@ const IMPLEMENTED_COMMANDS = new Set([
   "evaluate",
   "finalize-generic",
   "cancel",
-]);
-
-/** Journey, evaluation and finalization commands, keyed by their CLI name. */
-const JOURNEY_COMMANDS: Readonly<Record<string, (argv: readonly string[]) => JourneyCommandOutput>> = {
-  "preregister-acquisition": preregisterAcquisition,
-  "preregister-challenge": preregisterChallenge,
-  select,
-  acquire,
-  "freeze-package": freezePackage,
-  "verify-package": verifyPackage,
-  "freeze-output": freezeOutput,
-  reveal,
-  evaluate,
-  "finalize-generic": finalizeGeneric,
-  cancel,
-};
-
-/**
- * Commands the design defines but whose slice has not shipped.  They refuse
- * with a stable code so a caller can never mistake absence for success.
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const PLANNED_COMMANDS = new Set([
-  "commit-deep",
+  // Slice 6.5-B: the environment and journey path.
   "provision",
   "baseline",
   "plan",
@@ -203,6 +203,65 @@ const PLANNED_COMMANDS = new Set([
   "remove",
   "restore",
   "destroy",
+]);
+
+/**
+ * Whether this run has entered the environment branch.
+ *
+ * Read from the run's own durable evidence rather than from a flag: the
+ * execution plan is the point of no return — a run that froze one has an
+ * environment, and `freeze-output`, `reveal`, `evaluate` and `finalize-generic`
+ * must then take their environment variants. A caller cannot select the branch,
+ * and cannot mistakenly finalize an environment run through the pre-environment
+ * terminal, which closes over a disjoint member set.
+ */
+function isEnvironmentRun(argv: readonly string[]): boolean {
+  const runRoot = flagValue(argv, "run-root");
+  if (runRoot === undefined) return false;
+  return existsSync(path.join(path.resolve(runRoot), "retained", "execution-plan.json"));
+}
+
+/** Journey, evaluation and finalization commands, keyed by their CLI name. */
+const JOURNEY_COMMANDS: Readonly<Record<string, (argv: readonly string[]) => JourneyCommandOutput>> = {
+  "preregister-acquisition": preregisterAcquisition,
+  "preregister-challenge": preregisterChallenge,
+  select,
+  acquire,
+  "freeze-package": freezePackage,
+  "verify-package": verifyPackage,
+  // Branch-dispatched: the two terminals close over disjoint member sets, so the
+  // run's own evidence decides which variant runs (never a flag).
+  "freeze-output": (argv) => (isEnvironmentRun(argv) ? freezeEnvironmentOutput(argv) : freezeOutput(argv)),
+  reveal: (argv) => (isEnvironmentRun(argv) ? revealEnvironment(argv) : reveal(argv)),
+  evaluate: (argv) => (isEnvironmentRun(argv) ? evaluateEnvironment(argv) : evaluate(argv)),
+  "finalize-generic": (argv) => (isEnvironmentRun(argv) ? finalizeEnvironment(argv) : finalizeGeneric(argv)),
+  cancel,
+  provision,
+  baseline,
+  plan,
+  install,
+  configure,
+  authenticate,
+  connect,
+  activate,
+  journey,
+  observe,
+  "freeze-observation": freezeObservation,
+  "execute-subject": executeSubject,
+  recover,
+  rollback,
+  remove,
+  restore,
+  destroy,
+};
+
+/**
+ * Commands the design defines but whose slice has not shipped.  They refuse
+ * with a stable code so a caller can never mistake absence for success.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const PLANNED_COMMANDS = new Set([
+  "commit-deep",
   "evaluate-deep",
   "finalize-deep",
   "verify-customer",

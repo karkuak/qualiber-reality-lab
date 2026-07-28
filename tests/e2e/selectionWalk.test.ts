@@ -149,11 +149,15 @@ function changed(before: Map<string, string>, after: Map<string, string>): reado
   );
 }
 
-const TERMINAL = "selection_receipt_verified";
-/** Prelude (role audit, pool) plus the eleven chain transitions. */
-const TOTAL_STEPS = 13;
+const TERMINAL = "case_selected";
+/**
+ * Prelude (role audit, pool), the eleven chain transitions, and the design's own
+ * last selection transition — `selection_receipt_verified -> case_selected`,
+ * which checks the opened binding against the admitted challenge family.
+ */
+const TOTAL_STEPS = 14;
 
-test("SELECT-CLI: an uninterrupted select reaches the verification receipt", () => {
+test("SELECT-CLI: an uninterrupted select reaches the selected case", () => {
   const run = preregisteredRun();
   const result = erl2(selectArgv(run));
   assert.equal(result.exitCode, 0, JSON.stringify(result.body.errors));

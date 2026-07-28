@@ -70,7 +70,7 @@ function selectedRun(): SelectedRun {
     "--expires", "2026-12-31T00:00:00Z",
   ]);
   assert.equal(selected.exitCode, 0, JSON.stringify(selected.body.errors));
-  assert.equal(selected.body.state, "selection_receipt_verified");
+  assert.equal(selected.body.state, "case_selected");
   return { runRoot: run.runRoot, registry: run.registry };
 }
 

@@ -44,7 +44,7 @@ import path from "node:path";
 import { parseFlags, requireString, type FlagSpec, type ParsedFlags } from "./args.js";
 import { assembleSelection, loadSourceTrustConfig } from "./selectCommand.js";
 
-const COMMON_FLAGS: readonly FlagSpec[] = [
+export const COMMON_FLAGS: readonly FlagSpec[] = [
   { name: "run-root", kind: "string", required: true },
   { name: "registry", kind: "string", required: true },
   { name: "run", kind: "string" },
@@ -140,7 +140,7 @@ function runClock(runRoot: string): Clock {
   return new SystemClock();
 }
 
-function openWorkspace(flags: ParsedFlags, runId: string): RunWorkspace {
+export function openWorkspace(flags: ParsedFlags, runId: string): RunWorkspace {
   const runRoot = requireString(flags, "run-root");
   const registry = AdmissionRegistry.open(requireString(flags, "registry"));
   const clock = runClock(runRoot);
@@ -175,7 +175,15 @@ function subjectPort(
     // The scripting flags are refused unless the explicit development profile is
     // enabled — they are not reachable on the release surface (§11.8).
     assertFakeFlagsUnavailableUnlessDevelopmentProfile(flags);
-    return new FakeSubjectPort(fakeSubjectBehaviour(flags));
+    return new FakeSubjectPort({
+      ...fakeSubjectBehaviour(flags),
+      // The fake subject answers `unsupported` for any journey intent its own
+      // adapter manifest does not declare. That is a real outcome derived from
+      // the subject's admitted declaration, not a scripted failpoint — and it is
+      // what makes "every intent has a legal unsupported outcome" reachable on
+      // the release surface, where the `--fake-*` flags are not.
+      ...declaredOperations(flags, runRoot, registry),
+    });
   }
   if (flags["fake-acquire"] !== undefined || flags["fake-verify-package"] !== undefined) {
     throw new Erl2Error(
@@ -224,6 +232,27 @@ function adapterManifestHash(flags: ParsedFlags, runRoot: string): Hash {
     }
   }
   return hash(flags, "adapter");
+}
+
+/**
+ * The operations the run's own adapter manifest declares, when the run has
+ * durably bound one. Before preregistration there is nothing to read, and the
+ * port simply has no declaration to answer from.
+ */
+function declaredOperations(
+  flags: ParsedFlags,
+  runRoot: string,
+  registry: AdmissionRegistry,
+): { readonly declaredOperations?: readonly string[] } {
+  let manifestHash: Hash;
+  try {
+    manifestHash = adapterManifestHash(flags, runRoot);
+  } catch {
+    return {};
+  }
+  if (registry.tryGet(manifestHash) === undefined) return {};
+  const manifest = registry.require<SubjectAdapterManifestV1>(manifestHash, "SubjectAdapterManifestV1");
+  return { declaredOperations: manifest.operations };
 }
 
 /**
@@ -738,14 +767,23 @@ export function select(argv: readonly string[]): JourneyCommandOutput {
     expiresAt: requireString(flags, "expires"),
   });
   const result = workspace.advanceSelection(ctx, maxSteps, prelude);
+  // The design's own last selection transition: `selection_receipt_verified ->
+  // case_selected`, which checks the opened binding against the admitted
+  // challenge family. It counts against `--max-steps` like every other durable
+  // transition, so the crash matrix can stop in front of it.
+  const cased =
+    result.stepsRun < maxSteps
+      ? workspace.advanceCaseSelection()
+      : { state: result.state, stepsRun: 0 };
+  const stepsRun = result.stepsRun + cased.stepsRun;
 
   const bindingHash = workspace.hashForRole("selected-challenge-journey-binding");
   return {
     runId,
-    state: result.state,
+    state: cased.state,
     data: {
-      steps_run: result.stepsRun,
-      selection_complete: result.state === "selection_receipt_verified",
+      steps_run: stepsRun,
+      selection_complete: cased.state === "case_selected",
       ...(bindingHash === undefined ? {} : { selected_binding_hash: bindingHash }),
       ...(workspace.hashForRole("selection-verification-receipt") === undefined
         ? {}

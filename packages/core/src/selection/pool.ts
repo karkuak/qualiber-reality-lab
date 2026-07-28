@@ -76,8 +76,17 @@ export interface BuiltPool {
   readonly entries: readonly BuiltPoolEntry[];
 }
 
-/** Fixed ciphertext plaintext size; one value for the whole pool. */
-const FIXED_PAYLOAD_PLAINTEXT_BYTES = 1024;
+/**
+ * Fixed ciphertext plaintext size; one value for the whole pool.
+ *
+ * It must exceed the largest admitted payload, because a candidate whose payload
+ * did not fit would be refused rather than padded — and a family that could only
+ * admit short journeys would make journey *length* a selection-visible property.
+ * It is raised, never narrowed to fit: the padding is what makes every entry's
+ * selector-visible length identical, so shrinking it towards the current maximum
+ * would leak how close the largest candidate is to the bound.
+ */
+const FIXED_PAYLOAD_PLAINTEXT_BYTES = 2048;
 const ZERO_HASH: Hash = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
 /** `pool/entries/<handle>.age`: 43-char handle keeps every path the same length. */
 const ENTRY_PATH_PREFIX = "commitments/pool/entries/";

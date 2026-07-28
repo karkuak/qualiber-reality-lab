@@ -38,6 +38,10 @@ export interface DevelopmentKeyring {
   readonly finalizer: SigningKey;
   readonly adapterOwner: SigningKey;
   readonly entrySigner: SigningKey;
+  /** Environment-branch roles (Slice 6.5-B, ADR-ERL2-021). */
+  readonly trafficSupervisor: SigningKey;
+  readonly runtimeAttestor: SigningKey;
+  readonly vaultAuthorizer: SigningKey;
   readonly custodianSigners: readonly SigningKey[];
   readonly custodians: readonly CustodianKey[];
 }
@@ -57,6 +61,9 @@ export function developmentKeyring(): DevelopmentKeyring {
     finalizer: developmentKey("finalizer"),
     adapterOwner: developmentKey("adapter-owner"),
     entrySigner: developmentKey("entry-signer"),
+    trafficSupervisor: developmentKey("traffic-supervisor"),
+    runtimeAttestor: developmentKey("runtime-attestor"),
+    vaultAuthorizer: developmentKey("vault-authorizer"),
     custodianSigners: [
       developmentKey("custodian-a"),
       developmentKey("custodian-b"),
@@ -106,6 +113,13 @@ export function developmentTrustPolicy(keyring: DevelopmentKeyring): TrustPolicy
       keyEntry(keyring.finalizer, ["final_attestation_signer"]),
       keyEntry(keyring.adapterOwner, ["adapter_owner"]),
       keyEntry(keyring.entrySigner, ["truth_custodian"]),
+      // The environment branch's three independently signing roles. They are
+      // separate keys, not aliases of the governor: the cutoff must be checkable
+      // without trusting any one of them, and the exposure record must not be
+      // issued by the authority whose challenge it demotes.
+      keyEntry(keyring.trafficSupervisor, ["traffic_supervisor"]),
+      keyEntry(keyring.runtimeAttestor, ["runtime_attestor"]),
+      keyEntry(keyring.vaultAuthorizer, ["vault_authorizer"]),
       ...keyring.custodianSigners.map((k) => keyEntry(k, ["reveal_custodian"])),
     ],
     revocations: [] as never[],
