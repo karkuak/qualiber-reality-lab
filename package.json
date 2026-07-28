@@ -35,6 +35,7 @@
     "test:e2e": "npm run build && node --test \"tests/dist/e2e/**/*.test.js\"",
     "verify:generated": "node scripts/generate-types.mjs --check",
     "purity": "npm run build && node --test \"tests/dist/architecture/**/*.test.js\"",
+    "negative-control": "node scripts/negative-control.mjs",
     "qualify:isolation": "npm run build && node scripts/qualify-isolation.mjs",
     "erl2": "node packages/cli/dist/src/bin.js",
     "evidence": "npm run build && node scripts/generate-evidence.mjs",

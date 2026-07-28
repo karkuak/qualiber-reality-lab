@@ -175,7 +175,9 @@ function retainedHashOfSchema(workspace: RunWorkspace, schemaVersion: string): H
  */
 function environmentKeyring(): EnvironmentKeyring {
   return {
-    controller: developmentKey("challenge-governor"),
+    // Its own key, not the governor's: the governor provisions the environment,
+    // the controller decides a challenge goes live in it (ADR-ERL2-023).
+    controller: developmentKey("controller"),
     trafficSupervisor: developmentKey("traffic-supervisor"),
     runtimeAttestor: developmentKey("runtime-attestor"),
     vaultAuthorizer: developmentKey("vault-authorizer"),
@@ -429,7 +431,10 @@ export const remove = (argv: readonly string[]): JourneyCommandOutput => step(ar
 export function activate(argv: readonly string[]): JourneyCommandOutput {
   const ctx = openEnvironment(argv);
   const result = ctx.run.activate();
-  return output(ctx, { activation_receipt_hash: result.receiptHash });
+  return output(ctx, {
+    mutation_receipt_hash: result.receiptHash,
+    activation_receipt_hash: result.activationReceiptHash,
+  });
 }
 
 export function journey(argv: readonly string[]): JourneyCommandOutput {

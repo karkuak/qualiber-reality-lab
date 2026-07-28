@@ -195,6 +195,7 @@ test("ENV-CLI: a run advances from case_selected to a finalized environment term
     "execution-plan",
     "journey-step-outcome",
     "mutation-receipt",
+    "challenge-activation-receipt",
     "traffic-process-start-receipt",
     "runtime-milestone",
     "source-snapshot",

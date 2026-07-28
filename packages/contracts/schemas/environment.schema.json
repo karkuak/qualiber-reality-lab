@@ -804,6 +804,63 @@
           "$ref": "erl2:common#/$defs/Signature"
         }
       }
+    },
+    "ChallengeActivationReceiptV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "$comment": "Signed controller evidence that the selected challenge was activated in the provisioned environment (design v2 \u00a712 'activate/start/cutoff: signed controller and traffic receipts'). Additive contract ERL2-C-155 (ADR-ERL2-023); no existing schema changed. The controller is a separated role: the driver's own EnvironmentOperationReceiptV1 records what the substrate did and carries no signature, so it cannot attest who authorized the activation.",
+      "required": [
+        "schema_version",
+        "receipt_id",
+        "run_id",
+        "selected_challenge_journey_binding_hash",
+        "environment_instance_hash",
+        "execution_plan_hash",
+        "environment_fingerprint_hash",
+        "connection_step_outcome_hash",
+        "mutation_receipt_hash",
+        "activated_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "challenge-activation-receipt/v1"
+        },
+        "receipt_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "selected_challenge_journey_binding_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "environment_instance_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "execution_plan_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "environment_fingerprint_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "connection_step_outcome_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "mutation_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "activated_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
     }
   }
 }

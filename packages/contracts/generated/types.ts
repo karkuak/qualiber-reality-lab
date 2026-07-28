@@ -802,6 +802,21 @@ export type EnvironmentCleanupContractV1 = {
   readonly signature: Signature;
 };
 
+export type ChallengeActivationReceiptV1 = {
+  readonly schema_version: "challenge-activation-receipt/v1";
+  readonly receipt_id: Id;
+  readonly run_id: RunId;
+  readonly selected_challenge_journey_binding_hash: Hash;
+  readonly environment_instance_hash: Hash;
+  readonly execution_plan_hash: Hash;
+  readonly environment_fingerprint_hash: Hash;
+  readonly connection_step_outcome_hash: Hash;
+  readonly mutation_receipt_hash: Hash;
+  readonly activated_at: Instant;
+  readonly core_hash: Hash;
+  readonly signature: Signature;
+};
+
 // ---- erl2:evaluation : ERL2 data-only evaluation pack, metric definition and metric result contracts ----
 
 export type MetricThresholdClass = "measurement" | "information" | "ordinary_gate" | "hard_safety";

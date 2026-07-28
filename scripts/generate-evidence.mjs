@@ -612,6 +612,234 @@ transcript.push(
   }
 }
 
+// --- slice 6.5: a real valid ENVIRONMENT terminal, end to end ---------------
+//
+// The canonical evidence for the milestone: `case_selected` through
+// `generic_finalized` and then offline verification, every artifact produced by
+// the shipped commands in separate processes. Nothing here is hand-assembled.
+//
+// ## Why this run is not byte-pinned, and what is pinned instead
+//
+// It cannot be. An environment run contains a selection chain, and every pool
+// entry is a threshold envelope whose content key, nonce and X25519 ephemerals
+// come from the CSPRNG inside `sealThresholdEnvelope`. Making *those* derivable
+// is the one affordance that would let an observer reconstruct a sealed entry, so
+// the trade is refused: the envelope keeps its CSPRNG and the run keeps its
+// irreducible nondeterminism. `ERL2_EVIDENCE_RANDOM` seeds the pool's opening
+// nonces and handles (so entry identities are stable) but deliberately stops at
+// the envelope boundary.
+//
+// What is pinned is the part that *is* deterministic and is what a reviewer
+// actually needs to see hold: the ordered lifecycle event types, the closure's
+// required roles and their multiplicities, the derived terminal variant and
+// stage, and the verifier's verdict. A regression that dropped a role, added an
+// unaccounted artifact, reordered the walk or changed the verdict fails the pin;
+// a fresh CSPRNG draw does not.
+{
+  const { buildGovernorRegistry } = await import(
+    path.join(root, "tests", "dist", "support", "governorRegistry.js")
+  );
+  const { developmentKeyring } = await import(path.join(root, "tests", "dist", "support", "keys.js"));
+  const { coreHash } = await import(path.join(root, "packages", "integrity", "dist", "src", "index.js"));
+  const { DevelopmentBeaconSource } = await import(
+    path.join(root, "packages", "core", "dist", "src", "index.js")
+  );
+  const { statSync } = await import("node:fs");
+
+  process.env.ERL2_EVIDENCE_RANDOM = "erl2-evidence-selection";
+  const registry = buildGovernorRegistry({ random: seededRandom("environment") });
+
+  // The run itself is built OUTSIDE the golden tree, because its bytes cannot be
+  // pinned. Only the deterministic summary below lands in `fixtures/golden`.
+  const envDir = mkdtempSync(path.join(tmpdir(), "erl2-environment-run-"));
+  const goldenEnvDir = path.join(goldenRoot, "environment-run");
+  rmSync(goldenEnvDir, { recursive: true, force: true });
+  mkdirSync(goldenEnvDir, { recursive: true });
+  const runRoot = path.join(envDir, "run");
+  mkdirSync(runRoot, { recursive: true });
+  const runId = fixedRunId();
+  const common = ["--run-root", runRoot, "--registry", registry.root, "--tier", "development"];
+  const withRun = [...common, "--run", runId];
+
+  // The substrate and the global allocator live *outside* the run root, because
+  // the artifact index scans the whole run root and substrate state inside it
+  // would be indexed as evidence. They are therefore not part of the golden.
+  const substrateRoot = path.join(envDir, "substrate");
+  const reservationRoot = path.join(envDir, "reservations");
+  const scoped = [...withRun, "--substrate-root", substrateRoot, "--reservation-root", reservationRoot];
+
+  const sourceTrust = path.join(envDir, "source-trust.json");
+  writeFileSync(
+    sourceTrust,
+    `${JSON.stringify(
+      {
+        sourceTrustPolicyHash: registry.sourceTrustPolicyHash,
+        randomnessRegistryHeadHash: registry.sourceTrustPolicyHash,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  const plan = [
+    ["preregister-acquisition", [
+      "preregister-acquisition", ...withRun,
+      "--acquisition-source", registry.sourceManifestHash,
+      "--adapter", registry.adapterManifestHash,
+      "--acquisition-actor-script", registry.acquisitionActorScriptHash,
+      "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
+      "--acquisition-step", registry.acquisitionStep.commitmentHash,
+      "--package-verification-step", registry.packageVerificationStep.commitmentHash,
+      "--generic-policy", registry.genericRunPolicyHash,
+      "--trust-policy", registry.runTrustPolicyHash,
+      "--limits", registry.limitsHash,
+      "--expires", "2026-12-31T00:00:00Z",
+    ]],
+    ["acquire", ["acquire", ...withRun]],
+    ["freeze-package", ["freeze-package", ...withRun]],
+    ["verify-package", ["verify-package", ...withRun, "--subject-id", "fake-subject", "--subject-version", "0.1.0"]],
+    ["preregister-challenge", [
+      "preregister-challenge", ...withRun,
+      "--journey-selection-policy", registry.journeySelectionPolicyHash,
+      "--randomness-policy", registry.randomnessPolicyHash,
+      ...registry.challengeCandidates.flatMap((c) => ["--challenge", c.challengeManifestHash]),
+    ]],
+    ["select", ["select", ...withRun, "--source-trust-config", sourceTrust, "--expires", "2026-12-31T00:00:00Z"]],
+    ["provision", ["provision", ...scoped, "--archetype", registry.archetypeHash]],
+    ["baseline", ["baseline", ...scoped]],
+    ["plan", ["plan", ...scoped]],
+    ["install", ["install", ...scoped]],
+    ["configure", ["configure", ...scoped]],
+    ["authenticate", ["authenticate", ...scoped]],
+    ["connect", ["connect", ...scoped]],
+    ["execute-subject", ["execute-subject", ...scoped]],
+    ["activate", ["activate", ...scoped]],
+    ["journey", [
+      "journey", ...scoped,
+      "--comparison-policy", registry.comparisonPolicyHash,
+      "--cutoff-policy", registry.cutoffPolicyHash,
+    ]],
+    ["observe", ["observe", ...scoped]],
+    ["freeze-observation", ["freeze-observation", ...scoped]],
+    ["execute-subject", ["execute-subject", ...scoped]],
+    ["execute-subject", ["execute-subject", ...scoped]],
+    ["remove", ["remove", ...scoped]],
+    ["freeze-output", ["freeze-output", ...scoped]],
+    ["reveal", ["reveal", ...scoped, "--vault", registry.vaultRoot]],
+    ["evaluate", ["evaluate", ...scoped]],
+    ["restore", ["restore", ...scoped]],
+    ["destroy", ["destroy", ...scoped]],
+    ["finalize-generic", ["finalize-generic", ...scoped, "--claim-scope", "T1"]],
+  ];
+  for (const [name, argv] of plan) {
+    const result = runCli(argv);
+    transcript.push(result);
+    if (result.exit_code !== 0) {
+      throw new Error(
+        `environment evidence run failed at ${name}: ${JSON.stringify(result.stdout?.errors ?? result.stderr)}`,
+      );
+    }
+  }
+
+  // The lifecycle stream an external verifier is handed.
+  const events = [];
+  const walk = (dir) => {
+    for (const name of readdirSync(dir).sort()) {
+      const child = path.join(dir, name);
+      if (statSync(child).isDirectory()) {
+        walk(child);
+        continue;
+      }
+      if (!name.endsWith(".json") || name.endsWith(".frozen")) continue;
+      const value = JSON.parse(readFileSync(child, "utf8"));
+      if (value.schema_version === "lab-lifecycle-event/v1") events.push(value);
+    }
+  };
+  walk(runRoot);
+  events.sort((a, b) => a.sequence - b.sequence);
+  writeFileSync(path.join(envDir, "lifecycle.json"), `${JSON.stringify(events, null, 2)}\n`);
+
+  // The verifier's own locally pinned configuration. An environment bundle
+  // carries a selection verification receipt as a mandatory member, so unlike the
+  // pre-environment configs this one must pin the beacon's registry entry.
+  const policy = JSON.parse(readFileSync(path.join(runRoot, "retained", "trust-policy.json"), "utf8"));
+  const rootConfig = {
+    rootKeyIds: [developmentKeyring().root.keyId],
+    currentTrustHeadHash: coreHash(policy),
+    randomnessSources: [
+      new DevelopmentBeaconSource({
+        seed: "erl2-evidence-pin",
+        firstRoundAt: "2026-07-01T00:00:00Z",
+      }).pinnedRegistryEntry(registry.sourceTrustPolicyHash),
+    ],
+    randomnessRegistryHeadHash: registry.sourceTrustPolicyHash,
+  };
+  writeFileSync(path.join(envDir, "root-config.json"), `${JSON.stringify(rootConfig, null, 2)}\n`);
+
+  // Offline verification, in a fresh process, exactly as an external consumer
+  // would run it — and the negative that proves the beacon pin is load-bearing.
+  const verified = runCli([
+    "verify",
+    "--public-bundle", path.join(runRoot, "retained", "public-bundle.json"),
+    "--root-config", path.join(envDir, "root-config.json"),
+    "--artifact-root", runRoot,
+    "--lifecycle", path.join(envDir, "lifecycle.json"),
+    "--offline",
+  ]);
+  transcript.push(verified);
+  const unpinned = path.join(envDir, "root-config-unpinned.json");
+  writeFileSync(
+    unpinned,
+    `${JSON.stringify({ ...rootConfig, randomnessSources: [] }, null, 2)}\n`,
+  );
+  const refused = runCli([
+    "verify",
+    "--public-bundle", path.join(runRoot, "retained", "public-bundle.json"),
+    "--root-config", unpinned,
+    "--artifact-root", runRoot,
+    "--lifecycle", path.join(envDir, "lifecycle.json"),
+    "--offline",
+  ]);
+  transcript.push(refused);
+
+  if (verified.exit_code !== 0) {
+    throw new Error(`environment bundle did not verify: ${JSON.stringify(verified.stdout?.errors)}`);
+  }
+
+  // The deterministic summary: hash-free by construction, so it pins the shape of
+  // the milestone rather than one CSPRNG draw of it.
+  const closure = verified.stdout.data.closure;
+  const roleCounts = closure.required_hashes_by_role.map((r) => ({
+    role: r.role,
+    count: r.ordered_hashes.length,
+  }));
+  const summary = {
+    what: "erl2 environment terminal, produced by the shipped CLI and verified offline",
+    pinned: "shape only — see the generator comment for why the bytes cannot be",
+    verdict: verified.stdout.data.verdict,
+    derived_terminal_variant: closure.derived_terminal_variant,
+    derived_terminal_phase: closure.derived_terminal_phase,
+    missing_roles: closure.missing_roles,
+    rejected_extra_count: closure.rejected_extra_hashes.length,
+    required_roles: roleCounts,
+    lifecycle_event_types: events.map((e) => e.event_type),
+    lifecycle_states: events.map((e) => e.state_to),
+    produced_roles: events.flatMap((e) => (e.produced ?? []).map((x) => x.artifact_role)),
+    offline_verification: {
+      with_pinned_beacon: { exit_code: verified.exit_code, code: null },
+      without_pinned_beacon: {
+        exit_code: refused.exit_code,
+        code: refused.stdout?.errors?.[0]?.code ?? null,
+      },
+    },
+  };
+  writeFileSync(
+    path.join(goldenEnvDir, "closure-summary.json"),
+    `${JSON.stringify(summary, null, 2)}\n`,
+  );
+  delete process.env.ERL2_EVIDENCE_RANDOM;
+}
+
 // Negative: a command from an unshipped slice refuses rather than no-ops.
 transcript.push(runCli(["select", "--request", "x"]));
 
@@ -698,7 +926,7 @@ if (process.argv.includes("--verify")) {
   // speed bump backed by code review, NOT a cryptographic authorization.
   const EXCLUSION_MANIFEST_DIGEST =
     "5ac4efcb2a323dcfc93640a8bc7df819dd0126d165a990278b09a9da6da75342";
-  const EXPECTED_PINNED = 780;
+  const EXPECTED_PINNED = 781;
   const EXPECTED_EXCLUDED = 7;
 
   const manifestDigest = createHash("sha256")

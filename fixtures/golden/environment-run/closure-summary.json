@@ -1,0 +1,442 @@
+{
+  "what": "erl2 environment terminal, produced by the shipped CLI and verified offline",
+  "pinned": "shape only — see the generator comment for why the bytes cannot be",
+  "verdict": "valid",
+  "derived_terminal_variant": "environment",
+  "derived_terminal_phase": "remove",
+  "missing_roles": [],
+  "rejected_extra_count": 0,
+  "required_roles": [
+    {
+      "role": "acquisition-preregistration",
+      "count": 1
+    },
+    {
+      "role": "acquisition-source-manifest",
+      "count": 1
+    },
+    {
+      "role": "acquisition-record",
+      "count": 1
+    },
+    {
+      "role": "package-verification-record",
+      "count": 1
+    },
+    {
+      "role": "subject-package-manifest",
+      "count": 1
+    },
+    {
+      "role": "selection-request",
+      "count": 1
+    },
+    {
+      "role": "eligibility-pool-manifest",
+      "count": 1
+    },
+    {
+      "role": "selection-commitment",
+      "count": 1
+    },
+    {
+      "role": "selected-challenge-journey-binding",
+      "count": 1
+    },
+    {
+      "role": "selection-proof",
+      "count": 1
+    },
+    {
+      "role": "selection-verification-receipt",
+      "count": 1
+    },
+    {
+      "role": "environment-reservation-lease",
+      "count": 4
+    },
+    {
+      "role": "environment-resource-inventory",
+      "count": 1
+    },
+    {
+      "role": "environment-baseline",
+      "count": 1
+    },
+    {
+      "role": "execution-plan",
+      "count": 1
+    },
+    {
+      "role": "journey-step-outcome",
+      "count": 10
+    },
+    {
+      "role": "subject-output-manifest",
+      "count": 1
+    },
+    {
+      "role": "journey-result",
+      "count": 1
+    },
+    {
+      "role": "domain-result",
+      "count": 1
+    },
+    {
+      "role": "precleanup-result-join",
+      "count": 1
+    },
+    {
+      "role": "environment-restoration",
+      "count": 1
+    },
+    {
+      "role": "teardown-verification",
+      "count": 1
+    },
+    {
+      "role": "validity-result",
+      "count": 1
+    },
+    {
+      "role": "generic-evaluation-index",
+      "count": 1
+    },
+    {
+      "role": "run-record",
+      "count": 1
+    },
+    {
+      "role": "final-attestation",
+      "count": 1
+    },
+    {
+      "role": "signer-inventory",
+      "count": 1
+    },
+    {
+      "role": "metric-result",
+      "count": 9
+    },
+    {
+      "role": "judge-expectation-reveal",
+      "count": 1
+    },
+    {
+      "role": "observation-bundle",
+      "count": 1
+    },
+    {
+      "role": "canonical-evidence-envelope",
+      "count": 1
+    },
+    {
+      "role": "adapter-translation-receipt",
+      "count": 1
+    },
+    {
+      "role": "source-snapshot",
+      "count": 3
+    },
+    {
+      "role": "environment-operation-receipt",
+      "count": 2
+    },
+    {
+      "role": "mutation-receipt",
+      "count": 1
+    },
+    {
+      "role": "compensation-receipt",
+      "count": 1
+    }
+  ],
+  "lifecycle_event_types": [
+    "acquisition_preregistered",
+    "subject_acquisition_planned",
+    "subject_acquisition_started",
+    "subject_acquisition_completed",
+    "subject_acquisition_outcome_frozen",
+    "subject_package_frozen",
+    "subject_package_verification_planned",
+    "subject_package_verification_started",
+    "subject_package_verification_completed",
+    "subject_package_verification_outcome_frozen",
+    "package_manifest_frozen",
+    "challenge_preregistered",
+    "selection_role_separation_audit_frozen",
+    "eligibility_pool_manifest_frozen",
+    "eligibility_pool_checkpointed",
+    "independent_randomness_requested",
+    "selection_randomness_receipt_frozen",
+    "randomness_source_trust_verified",
+    "selection_committed",
+    "selection_commitment_checkpointed",
+    "threshold_reveal_receipt_frozen",
+    "selected_challenge_journey_binding_frozen",
+    "selected_binding_checkpointed",
+    "selection_proof_frozen",
+    "selection_receipt_verified",
+    "case_selected",
+    "environment_provisioned",
+    "baseline_verified",
+    "execution_plan_frozen",
+    "subject_install_planned",
+    "subject_install_started",
+    "subject_install_completed",
+    "subject_install_outcome_frozen",
+    "subject_config_planned",
+    "subject_config_started",
+    "subject_config_completed",
+    "subject_config_outcome_frozen",
+    "subject_authentication_planned",
+    "subject_authentication_started",
+    "subject_authentication_unsupported",
+    "subject_authentication_outcome_frozen",
+    "subject_connection_planned",
+    "subject_connection_started",
+    "subject_connection_completed",
+    "subject_connection_outcome_frozen",
+    "subject_discovery_planned",
+    "subject_discovery_started",
+    "subject_discovery_unsupported",
+    "subject_discovery_outcome_frozen",
+    "challenge_activated",
+    "traffic_or_journey_started",
+    "evidence_cutoff_realized",
+    "observation_frozen",
+    "canonical_evidence_envelope_frozen",
+    "adapter_translation_frozen",
+    "subject_interaction_planned",
+    "subject_interaction_started",
+    "subject_interaction_completed",
+    "subject_interaction_outcome_frozen",
+    "subject_observation_planned",
+    "subject_observation_started",
+    "subject_observation_unsupported",
+    "subject_observation_outcome_frozen",
+    "subject_uninstall_planned",
+    "subject_uninstall_started",
+    "subject_uninstall_completed",
+    "subject_uninstall_outcome_frozen",
+    "subject_output_frozen",
+    "judge_journey_expectation_revealed",
+    "nonfunctional_journey_result_frozen",
+    "domain_not_applicable_frozen",
+    "generic_precleanup_results_complete",
+    "lab_cleanup_started",
+    "environment_restored",
+    "teardown_started",
+    "teardown_verified",
+    "environment_validity_result_frozen",
+    "generic_evaluation_index_frozen",
+    "generic_finalized"
+  ],
+  "lifecycle_states": [
+    "acquisition_preregistered",
+    "step_planned",
+    "step_started",
+    "step_succeeded",
+    "step_outcome_frozen",
+    "subject_package_frozen",
+    "step_planned",
+    "step_started",
+    "step_succeeded",
+    "step_outcome_frozen",
+    "package_manifest_frozen",
+    "challenge_preregistered",
+    "selection_role_separation_audit_frozen",
+    "eligibility_pool_manifest_frozen",
+    "eligibility_pool_checkpointed",
+    "independent_randomness_requested",
+    "selection_randomness_receipt_frozen",
+    "randomness_source_trust_verified",
+    "selection_committed",
+    "selection_commitment_checkpointed",
+    "threshold_reveal_receipt_frozen",
+    "selected_challenge_journey_binding_frozen",
+    "selected_binding_checkpointed",
+    "selection_proof_frozen",
+    "selection_receipt_verified",
+    "case_selected",
+    "environment_provisioned",
+    "baseline_verified",
+    "execution_plan_frozen",
+    "step_planned",
+    "step_started",
+    "step_succeeded",
+    "step_outcome_frozen",
+    "step_planned",
+    "step_started",
+    "step_succeeded",
+    "step_outcome_frozen",
+    "step_planned",
+    "step_started",
+    "step_unsupported",
+    "step_outcome_frozen",
+    "step_planned",
+    "step_started",
+    "step_succeeded",
+    "step_outcome_frozen",
+    "step_planned",
+    "step_started",
+    "step_unsupported",
+    "step_outcome_frozen",
+    "challenge_activated",
+    "traffic_or_journey_started",
+    "evidence_cutoff_realized",
+    "observation_frozen",
+    "canonical_evidence_envelope_frozen",
+    "adapter_translation_frozen",
+    "step_planned",
+    "step_started",
+    "step_succeeded",
+    "step_outcome_frozen",
+    "step_planned",
+    "step_started",
+    "step_unsupported",
+    "step_outcome_frozen",
+    "step_planned",
+    "step_started",
+    "step_succeeded",
+    "step_outcome_frozen",
+    "subject_output_frozen",
+    "judge_journey_expectation_revealed",
+    "nonfunctional_journey_result_frozen",
+    "domain_not_applicable_frozen",
+    "generic_precleanup_results_complete",
+    "lab_cleanup_started",
+    "environment_restored",
+    "teardown_started",
+    "teardown_verified",
+    "environment_validity_result_frozen",
+    "generic_evaluation_index_frozen",
+    "generic_finalized"
+  ],
+  "produced_roles": [
+    "acquisition-preregistration",
+    "acquisition-source-manifest",
+    "acquisition-preregistration-verification-receipt",
+    "adapter-manifest",
+    "generic-run-policy",
+    "journey-step-outcome",
+    "acquisition-record",
+    "journey-step-outcome",
+    "package-verification-record",
+    "subject-package-manifest",
+    "journey-selection-policy",
+    "selection-randomness-policy",
+    "challenge-manifest",
+    "journey-definition",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "challenge-manifest",
+    "journey-definition",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "challenge-manifest",
+    "journey-definition",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "journey-step-commitment",
+    "selection-request",
+    "selection-role-separation-audit",
+    "eligibility-pool-manifest",
+    "eligibility-pool-entry",
+    "eligibility-pool-entry",
+    "eligibility-pool-entry",
+    "eligibility-pool-checkpoint",
+    "selection-randomness-receipt",
+    "randomness-source-trust-report",
+    "selection-commitment",
+    "selection-commitment-checkpoint",
+    "threshold-reveal-receipt",
+    "selected-challenge-journey-binding",
+    "selected-binding-checkpoint",
+    "selection-proof",
+    "selection-verification-receipt",
+    "environment-reservation-lease",
+    "environment-reservation-lease",
+    "environment-reservation-lease",
+    "environment-reservation-lease",
+    "environment-resource-inventory",
+    "environment-operation-receipt",
+    "environment-archetype",
+    "environment-driver-manifest",
+    "environment-baseline",
+    "execution-plan",
+    "journey-step-outcome",
+    "journey-step-outcome",
+    "journey-step-outcome",
+    "journey-step-outcome",
+    "journey-step-outcome",
+    "mutation-receipt",
+    "challenge-activation-receipt",
+    "monotonic-clock-domain",
+    "traffic-process-start-receipt",
+    "runtime-milestone",
+    "cutoff-policy",
+    "comparison-policy",
+    "source-snapshot",
+    "source-snapshot",
+    "source-snapshot",
+    "observation-bundle",
+    "canonical-evidence-envelope",
+    "adapter-translation-receipt",
+    "journey-step-outcome",
+    "journey-step-outcome",
+    "journey-step-outcome",
+    "subject-output-manifest",
+    "judge-expectation-reveal",
+    "exposure-event",
+    "metric-result",
+    "metric-result",
+    "metric-result",
+    "metric-result",
+    "metric-result",
+    "metric-result",
+    "metric-result",
+    "metric-result",
+    "metric-result",
+    "journey-result",
+    "domain-result",
+    "precleanup-result-join",
+    "compensation-receipt",
+    "environment-restoration",
+    "environment-operation-receipt",
+    "teardown-verification",
+    "validity-result",
+    "generic-evaluation-index",
+    "run-record",
+    "final-attestation",
+    "signer-inventory"
+  ],
+  "offline_verification": {
+    "with_pinned_beacon": {
+      "exit_code": 0,
+      "code": null
+    },
+    "without_pinned_beacon": {
+      "exit_code": 3,
+      "code": "RANDOMNESS_SOURCE_NOT_PINNED"
+    }
+  }
+}

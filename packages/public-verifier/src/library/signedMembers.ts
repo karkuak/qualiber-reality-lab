@@ -156,6 +156,14 @@ const SIGNED_MEMBER_RULES = new Map<string, SignedMemberRule>([
   // (§13), so they take three different roles. Collapsing them onto one signer
   // would make "wall, monotonic, supervisor and runtime-attestor bounds must
   // agree" a statement about one operator's own bookkeeping.
+  [
+    // ADR-ERL2-023: the controller's own attestation that it activated the
+    // selected challenge. Not `environment_governor`: the governor provisions the
+    // environment, the controller decides a challenge goes live in it, and design
+    // §12 names them as separate receipts.
+    "challenge-activation-receipt/v1",
+    { role: "controller", securityTimestampField: "activated_at" },
+  ],
   ["comparison-policy/v1", { role: "policy_author" }],
   ["evidence-equivalence-profile/v1", { role: "policy_author" }],
   ["cutoff-policy/v1", { role: "policy_author", securityTimestampField: "valid_from" }],

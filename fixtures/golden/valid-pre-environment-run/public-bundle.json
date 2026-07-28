@@ -8,10 +8,10 @@
       "path": "retained/final-attestation.json",
       "media_type": "application/json",
       "byte_length": 1784,
-      "file_sha256": "sha256:5b6d6273ecadd1c9bca47fd9cfc7e929f4d8ca6352b3f265efd935f5026a2a01",
+      "file_sha256": "sha256:a91ebc01b6576f4f1ecb09b51a329366ab2396aab3e68c6c83bb961643226a35",
       "classification": "INTERNAL"
     },
-    "artifact_core_hash": "sha256:c3600c5a33378190b3f62683fdb0dca1ef741df5a071836d2931e9fc668932bb"
+    "artifact_core_hash": "sha256:8744f499022698f30973a52ef9d153ccbbbdcc173b9bfe71ff63aaf893c6034e"
   },
   "acquisition_preregistration_verification_receipt": {
     "artifact": {
@@ -37,11 +37,11 @@
     "artifact": {
       "path": "retained/trust-policy.json",
       "media_type": "application/json",
-      "byte_length": 8240,
-      "file_sha256": "sha256:99cbecb15b14a9cc1a0aeeeccdef84d0f1ff29e6f3833592b9249444f961d3f3",
+      "byte_length": 8634,
+      "file_sha256": "sha256:af0df018287c2549358f439749d9e61411d77204b64d77f102ba4168b1d656ac",
       "classification": "INTERNAL"
     },
-    "artifact_core_hash": "sha256:14e71df2243a5a5c3f0b50a59d673f403567f7710bb32497ead28bdb4eb8032a"
+    "artifact_core_hash": "sha256:6c528ab0e034c3a774d7d19f65eb6c0be74a6edbce9427c22582d920a1d14afb"
   },
   "acquisition_timestamp_checkpoint_chain": [
     {
@@ -59,5 +59,5 @@
   "execution_verification_mode": "finalizer_verdict_only",
   "execution_artifacts": [],
   "created_at": "2026-07-01T00:00:30Z",
-  "core_hash": "sha256:e568798aae4e1583869f03d62fc9791a3a5b81e83c1eaf6b1a87533219b53314"
+  "core_hash": "sha256:49f94dd7a267322035af55e27a68f9a4788b333749e0e4b40e9e73c88e40e736"
 }

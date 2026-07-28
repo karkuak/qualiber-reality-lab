@@ -934,7 +934,7 @@
     {
       "acceptance_id": "ERL2-AC-011",
       "status": "partial",
-      "evidence": "tests/e2e/genericFinalization.test.ts measures attempts, retries, active and elapsed time, documentation steps, interventions and unsupported retention through the Lab-owned journey metric catalogue. Live environment records still need the slice 3/4 environment branch."
+      "evidence": "tests/e2e/genericFinalization.test.ts measures attempts, retries, active and elapsed time, documentation steps, interventions and unsupported retention through the Lab-owned journey metric catalogue. Slice 6.5 adds the environment branch: the same catalogue measures a run that reaches a finalized environment terminal, at development tier against the fake driver."
     },
     {
       "acceptance_id": "ERL2-AC-012",

@@ -38,7 +38,8 @@ export interface DevelopmentKeyring {
   readonly finalizer: SigningKey;
   readonly adapterOwner: SigningKey;
   readonly entrySigner: SigningKey;
-  /** Environment-branch roles (Slice 6.5-B, ADR-ERL2-021). */
+  /** Environment-branch roles (Slice 6.5-B/E, ADR-ERL2-021, ADR-ERL2-023). */
+  readonly controller: SigningKey;
   readonly trafficSupervisor: SigningKey;
   readonly runtimeAttestor: SigningKey;
   readonly vaultAuthorizer: SigningKey;
@@ -61,6 +62,7 @@ export function developmentKeyring(): DevelopmentKeyring {
     finalizer: developmentKey("finalizer"),
     adapterOwner: developmentKey("adapter-owner"),
     entrySigner: developmentKey("entry-signer"),
+    controller: developmentKey("controller"),
     trafficSupervisor: developmentKey("traffic-supervisor"),
     runtimeAttestor: developmentKey("runtime-attestor"),
     vaultAuthorizer: developmentKey("vault-authorizer"),
@@ -117,6 +119,7 @@ export function developmentTrustPolicy(keyring: DevelopmentKeyring): TrustPolicy
       // separate keys, not aliases of the governor: the cutoff must be checkable
       // without trusting any one of them, and the exposure record must not be
       // issued by the authority whose challenge it demotes.
+      keyEntry(keyring.controller, ["controller"]),
       keyEntry(keyring.trafficSupervisor, ["traffic_supervisor"]),
       keyEntry(keyring.runtimeAttestor, ["runtime_attestor"]),
       keyEntry(keyring.vaultAuthorizer, ["vault_authorizer"]),

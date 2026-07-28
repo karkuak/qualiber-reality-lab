@@ -36,6 +36,7 @@ import {
   type AdapterStepRequestV1,
   type AdapterTranslationReceiptV1,
   type ArtifactRef,
+  type ChallengeActivationReceiptV1,
   type ChallengeManifestV1,
   type ComparisonPolicyV1,
   type CutoffPolicyV1,
@@ -751,13 +752,16 @@ export class EnvironmentRun {
    * implied by the state this phase departs from; the third is checked here
    * against the *outcome* of the connect step, not against an operator's claim.
    */
-  activate(): { readonly receiptHash: Hash } {
+  activate(): { readonly receiptHash: Hash; readonly activationReceiptHash: Hash } {
     // "Already activated" is read from evidence, not from state ordering: the
     // state this phase departs from (`step_outcome_frozen`) recurs on every
     // journey step, so only the retained activation receipt distinguishes a run
     // that has activated from one that has not.
     if (this.ws.hashForRole("mutation-receipt") !== undefined) {
-      return { receiptHash: this.ws.requireHashForRole("mutation-receipt") };
+      return {
+        receiptHash: this.ws.requireHashForRole("mutation-receipt"),
+        activationReceiptHash: this.ws.requireHashForRole("challenge-activation-receipt"),
+      };
     }
     this.enter("activate", false);
     const connected = this.connectOutcome();
@@ -788,23 +792,56 @@ export class EnvironmentRun {
         { owner: "lab" },
       );
     }
+    // Design §12 asks for a **signed controller receipt** alongside the traffic
+    // receipt, and no V2 contract carried one: `EnvironmentOperationReceiptV1`
+    // records what the substrate did and has no signature field, so it can say
+    // that a mutation happened but not who authorized it. ADR-ERL2-023 adds this
+    // additive contract for exactly that gap.
+    const baselineHash = this.ws.requireHashForRole("environment-baseline");
+    const activation = assertContract<ChallengeActivationReceiptV1>(
+      "ChallengeActivationReceiptV1",
+      sealSigned(
+        {
+          schema_version: "challenge-activation-receipt/v1" as const,
+          receipt_id: `activation-${this.runId.slice(0, 8)}`,
+          run_id: this.runId,
+          selected_challenge_journey_binding_hash: this.ws.requireHashForRole(
+            "selected-challenge-journey-binding",
+          ),
+          environment_instance_hash: this.environmentInstanceHash(),
+          execution_plan_hash: this.ws.requireHashForRole("execution-plan"),
+          environment_fingerprint_hash: baselineHash,
+          connection_step_outcome_hash: connected.core_hash,
+          mutation_receipt_hash: receipt.core_hash,
+          activated_at: this.now(),
+        },
+        this.keys.controller,
+      ),
+    );
+
     this.ws.store.freezeJson(`${RETAINED}/mutation-activate.json`, receipt, "INTERNAL");
+    this.ws.store.freezeJson(`${RETAINED}/activation-receipt.json`, activation, "INTERNAL");
     this.ws.lifecycle.append({
       eventType: "challenge_activated",
       stateTo: "challenge_activated",
       actorId: "controller",
       commandId: "activate",
       operationId: "op-activate",
-      requiredHashes: [connected.core_hash, this.ws.requireHashForRole("environment-baseline")],
+      requiredHashes: [connected.core_hash, baselineHash],
       produced: [
         {
           artifact_role: "mutation-receipt",
           artifact_core_hash: receipt.core_hash,
           artifact_schema_version: "environment-operation-receipt/v1",
         },
+        {
+          artifact_role: "challenge-activation-receipt",
+          artifact_core_hash: activation.core_hash,
+          artifact_schema_version: "challenge-activation-receipt/v1",
+        },
       ],
     });
-    return { receiptHash: receipt.core_hash };
+    return { receiptHash: receipt.core_hash, activationReceiptHash: activation.core_hash };
   }
 
   /** The resource the controller mutates: the archetype's own project root. */

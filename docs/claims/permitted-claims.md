@@ -17,6 +17,20 @@ and the attestation schema mechanically restricts `claim_scope` to T1–T3.
 > verification, deterministic commitment, commitment checkpoint, threshold
 > reveal, selected-only opening, binding checkpoint, proof and verification
 > receipt — is implemented and independently re-derived by the verifier.
+>
+> Slice 6.5 adds the environment branch. A run driven entirely through the
+> shipped CLI advances from `case_selected` to `generic_finalized` — reservation,
+> provisioning, clean baseline, execution plan, the committed journey, challenge
+> activation, traffic start, evidence cutoff, observation, canonical envelope,
+> translation, subject-output freeze, reveal, evaluation, restoration, teardown,
+> residue verification, validity, generic index and the environment terminal —
+> and its `EnvironmentPublicVerificationBundleV2` verifies offline in a fresh
+> process. A run whose environment fails freezes exactly one
+> `InvalidLabRunRecordV1` after frontier-derived cleanup, with restoration and
+> teardown failures routed through receipt-backed emergency cleanup.
+>
+> Every word of that is bounded by the scope below: **development tier, the fake
+> environment driver, a trusted reference subject, non-blind selection.**
 
 Slice 3 adds the environment driver interface, a deterministic fake driver, a
 repeatable clean control, run-scoped resource isolation and the independently
@@ -38,6 +52,34 @@ Lab finding and exactly one invalid terminal that verifies offline.
 
 That is **engineering feasibility evidence for the integrity, environment,
 journey and adapter kernels only**.
+
+### Slice 6.5 — the environment branch, end to end
+
+The one claim this slice earns, stated at exactly its width:
+
+> A **development-tier** run against the **fake environment driver** with a
+> **trusted reference subject** reaches an offline-verifiable environment
+> terminal, and a failing one reaches an offline-verifiable invalid terminal.
+
+- **A valid *environment* terminal may be claimed** — but only as above. The run
+  is produced by the shipped commands in separate processes, its bundle verifies
+  offline with the trust head and the randomness-source registry taken only from
+  locally pinned configuration, and the derived closure reports zero missing roles
+  and zero rejected extras.
+- **Crash-resumability of the environment walk may be claimed.** Every one of the
+  twenty-one phase boundaries has been interrupted and resumed from retained
+  evidence, with exactly one of each once-only artifact however the run was cut.
+- **"A refusal writes no evidence" may be claimed for the environment commands**,
+  measured by full-tree byte manifest on a fresh run and again mid-path.
+- **The mandatory emergency route may be claimed.** A restoration or teardown
+  failure enters receipt-backed emergency cleanup: every independently safe action
+  the frontier derived is attempted and receipted, every unsafe action skipped with
+  a reason and no receipt.
+- **Four oracle-canary surfaces are scanned live** — adapter request, Lab
+  telemetry, mounted evidence entry, and subject output — and a canary planted in
+  a subject's own output bytes refuses the run before anything freezes. Four
+  surfaces remain unscanned and are named individually in
+  `PENDING_ORACLE_SCAN_SURFACES`.
 
 ### Slice 6 — generic evaluation, terminal closure and finalization
 
@@ -78,8 +120,9 @@ journey and adapter kernels only**.
   valid bundle and on the invalid record — and a retained signed contract for
   which the verifier declares no authorized role is refused. This is verified for
   the nine signed members of a pre-environment bundle and the six of an invalid
-  record; it is **not** a claim about the environment or selection branches,
-  which are unshipped.
+  record. Since Slice 6.5 it also covers the environment bundle's signed members
+  and the selection chain's, each against a role declared in ADR-ERL2-020 §2,
+  ADR-ERL2-021 §2 or ADR-ERL2-023.
 - **A totally typed CLI surface may be claimed.** Every `erl2` invocation emits
   exactly one parseable envelope carrying a catalogued Appendix B code and
   `authority_scope: "lab_orchestration_only"`; no input produces an untyped exit
@@ -131,20 +174,38 @@ journey and adapter kernels only**.
   its canonical round and output; the ERL association is a separate Lab/verifier
   signature.
 
-### Slice 6 limits
+### Slice 6 / 6.5 limits
 
-- **No valid *environment* terminal claim.** Only the pre-environment valid
-  terminal is produced end to end. The environment branch needs the selection,
-  provisioning, activation and observation commands that belong to the slice 3/4
-  environment branch and have not shipped, so no `EnvironmentLabRunRecordV1`,
-  `EnvironmentFinalLabAttestationV1` or environment `PublicVerificationBundleV2`
-  is produced by a real run. Their contracts, closure roles and refusals exist
-  and are exercised; the *runs* do not.
+- **No claim beyond the four-part bound.** The environment terminal above is
+  development tier, fake driver, trusted reference subject, non-blind selection.
+  It is evidence that the *mechanism* closes, not that any environment, subject or
+  ecosystem was measured.
+- **No real-ecosystem claim.** The environment is the deterministic fake driver.
+  Its resources, probes and evidence sources are fixtures; no substrate was
+  provisioned, no service ran, and the three "evidence sources" the observation
+  captures produce zero records by construction. The Compose driver stays disabled
+  (ERL2-OQ-005).
+- **No robustness claim from the environment branch.** One archetype
+  (clean-greenfield), one driver, one journey shape. Failure paths are reached by
+  scripted driver faults, not by an environment that failed on its own.
+- **No claim that the retained environment run is byte-reproducible.** It is not,
+  and deliberately: every eligibility-pool entry is a threshold envelope whose key
+  material comes from the CSPRNG. The pinned golden is the *shape* — ordered
+  walk, closure roles and multiplicities, terminal variant and stage, verdict —
+  not the bytes.
+- **No subject-quality claim from an unsupported step.** Three of the journey's
+  intents come back `unsupported` because the fixture adapter manifest does not
+  declare them. That is a true statement about a declaration, not about a
+  subject's capability.
+
 - **No evaluated-domain claim from a real run.** `DomainResultEvaluatedV1` is
-  implemented and exercised against real reference-adapter projections, but a
-  run that produces one requires the environment branch above. Every run the CLI
-  can complete today produces `DomainResultNotApplicableV1` with the reason
-  `pre_environment_terminal`, which is the honest outcome, not a score.
+  implemented and exercised against real reference-adapter projections, but no
+  run the CLI can complete produces one. `evaluateDomain` itself refuses without a
+  revealed functional truth, and a development run reveals only journey-scope
+  judge expectations, so every completed run produces
+  `DomainResultNotApplicableV1` — `pre_environment_terminal` on the
+  pre-environment branch, `functional_evidence_unavailable` on the environment
+  branch. That is the honest outcome, not a score.
 - **No deep-plane claim.** `DeepResultV1` is not implemented. Only its ancestry
   boundary is protected: no generic or base contract has a deep member.
 - **No strong-isolation claim for opaque subjects.** ERL2-OQ-008 is still

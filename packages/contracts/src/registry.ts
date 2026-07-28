@@ -135,6 +135,9 @@ export const CONTRACTS: readonly ContractDescriptor[] = [
   d("ERL2-C-056", "EnvironmentLabRunRecordV1", "terminal", "environment-lab-run-record/v1"),
   d("ERL2-C-057", "InvalidLabRunRecordV1", "terminal", "invalid-lab-run-record/v1"),
   d("ERL2-C-063", "CancellationRequestV1", "terminal", "cancellation-request/v1"),
+  // Additive: the signed controller activation receipt design v2 §12 requires and
+  // no V2 contract carried (ADR-ERL2-023). No existing schema changed shape.
+  d("ERL2-C-155", "ChallengeActivationReceiptV1", "environment", "challenge-activation-receipt/v1"),
   d("ERL2-C-058", "LabRunRecordV1", "terminal", undefined, true),
   d("ERL2-C-059", "MandatoryGraphClosureReportV1", "terminal", "mandatory-graph-closure-report/v1"),
   d("ERL2-C-060", "PreEnvironmentFinalLabAttestationV1", "terminal", "pre-environment-final-lab-attestation/v1"),

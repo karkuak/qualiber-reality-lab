@@ -1,7 +1,8 @@
 # Slice 6.5-B/C/D/E ledger — environment and journey orchestration
 
-Companion to [ADR-ERL2-021](../adr/ADR-ERL2-021.md) (6.5-B) and
-[ADR-ERL2-022](../adr/ADR-ERL2-022.md) (6.5-C/D/E). This records what was built,
+Companion to [ADR-ERL2-021](../adr/ADR-ERL2-021.md) (6.5-B),
+[ADR-ERL2-022](../adr/ADR-ERL2-022.md) (6.5-C/D/E) and
+[ADR-ERL2-023](../adr/ADR-ERL2-023.md) (the two design discrepancies). This records what was built,
 what was measured, and — the part that matters — what turned out **not** to be
 load-bearing when it was tested.
 
@@ -222,3 +223,80 @@ snapshot the previous run's patch.
 - **Four oracle surfaces remain pending**, named individually in
   `PENDING_ORACLE_SCAN_SURFACES` and asserted in the coverage test.
 - **No signed controller receipt.** Unchanged from §5.
+
+
+---
+
+# Branch close-out
+
+## 10. The pinned environment golden, and why it is a shape and not bytes
+
+`fixtures/golden/environment-run/closure-summary.json` is produced by driving the
+shipped CLI from preregistration to `generic_finalized` and verifying the bundle
+offline. It pins the ordered lifecycle event types and states, the closure's
+required roles and their multiplicities, the derived terminal variant and stage,
+the verdict, and both offline-verification outcomes.
+
+**It does not pin the run's bytes, and it cannot.** Every eligibility-pool entry is
+a threshold envelope whose content key, nonce and X25519 ephemerals come from the
+CSPRNG inside `sealThresholdEnvelope`. Threading a seeded RNG through that is the
+one affordance that would let an observer reconstruct a sealed entry, so the trade
+was refused: the envelope keeps its CSPRNG and the golden keeps to what is
+genuinely reproducible.
+
+`ERL2_EVIDENCE_RANDOM` was added to seed the pool's *opening nonces and handles*
+so entry identities are stable, and deliberately stops at the envelope boundary.
+It is read only by the CLI composition root, is per-run rather than global, and
+cannot reach a tier other than `development` because both selection kernels refuse
+the others.
+
+Byte-pin coverage is now **781 pinned / 7 excluded** — one file added, no exclusion
+widened, `EXCLUSION_MANIFEST_DIGEST` unchanged.
+
+## 11. The negative-control harness
+
+`npm run negative-control` runs the whole campaign in a `git worktree` checked out
+at HEAD in a temp directory. Restoration is `git checkout -- .` — from the object
+store, not from a copy the script made. The run ends by recomputing a digest over
+every tracked file and failing if the working tree changed at all, and it refuses
+to start against a dirty tree, because a control applied to a worktree at HEAD
+would be measuring source that does not contain an uncommitted guard.
+
+Results are written to `docs/ledger/negative-controls.json`, and a control whose
+patch no longer applies is a **campaign failure**, not a silent skip: a guard that
+moved, was renamed or was deleted needs a human.
+
+Two of the ten controls record `expect: "pass"`. That is the point of recording an
+expectation at all — see §2.
+
+## 12. The two design discrepancies, closed
+
+Both are decided in ADR-ERL2-023 rather than left as "documented":
+
+- **Appendix C's `select --request`** is amended to `--run`. No deprecated alias:
+  an alias would suggest a request can be supplied from outside, which is the
+  input ADR-ERL2-020 §6 removed so a second `select` cannot draw a second beacon
+  round. The refusal is now pinned in `expectedRefusals.test.ts`.
+- **§12's signed controller receipt** now exists as the additive contract
+  `challenge-activation-receipt/v1` (`ERL2-C-155`), signed by `controller` and
+  citing the unsigned driver receipt by hash. The driver receipt stays unsigned on
+  purpose: a driver is untrusted infrastructure, and the Lab's conclusion should
+  come from what it observed rather than from what the driver attested.
+
+## 13. Claims brought back in line
+
+`README.md`, `docs/claims/permitted-claims.md` and `docs/ledger/requirements.json`
+all still said the environment terminal was unreachable. They now permit exactly
+one new claim, at exactly its width:
+
+> A **development-tier** run against the **fake environment driver** with a
+> **trusted reference subject** reaches an offline-verifiable environment
+> terminal, and a failing one reaches an offline-verifiable invalid terminal.
+
+The claim document gained explicit refusals to go with it: no real-ecosystem
+claim (the driver's evidence sources produce zero records by construction), no
+robustness claim (one archetype, one journey shape, failures reached by scripted
+driver faults), no byte-reproducibility claim, and no subject-quality claim from
+an unsupported step — three of the journey's intents come back `unsupported`
+because the fixture adapter manifest does not declare them, which is a true
+statement about a declaration and not about a subject.

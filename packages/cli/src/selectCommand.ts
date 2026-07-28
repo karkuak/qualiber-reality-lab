@@ -50,6 +50,7 @@ import {
   DevelopmentBeaconSource,
   loadSelectionPool,
   RunWorkspace,
+  SeededRandom,
   SystemRandom,
   TimestampLog,
   type SelectionContext,
@@ -119,6 +120,29 @@ function selectionKeys(): {
     evaluator: developmentKey("evaluator"),
     custodianSigners: CUSTODIAN_LABELS.map((label) => developmentKey(`custodian-${label}`)),
   };
+}
+
+/**
+ * The randomness the eligibility pool draws its opening nonces and envelope
+ * ciphertexts from.
+ *
+ * The CSPRNG, always — except when generating pinned evidence, where the
+ * composition root sets `ERL2_EVIDENCE_RANDOM` to a fixed label so a CLI-driven
+ * golden run is byte-reproducible. This is the same mechanism, and the same
+ * confinement, as `ERL2_EVIDENCE_CLOCK`: read only here in the CLI composition
+ * root, never by core, and per-run rather than global, so two evidence runs still
+ * draw different pools.
+ *
+ * It cannot weaken a real selection. Held-out and blind tiers are refused inside
+ * both selection kernels (ERL2-OQ-007), so the only tier this can reach is
+ * `development`, where the beacon is Lab-operated anyway and the run makes no
+ * blindness claim.
+ */
+function selectionRandom(runId: string): SystemRandom | SeededRandom {
+  const label = process.env["ERL2_EVIDENCE_RANDOM"];
+  return label === undefined || label.length === 0
+    ? new SystemRandom()
+    : new SeededRandom(`${label}:${runId}`);
 }
 
 export interface SelectionAssembly {
@@ -291,7 +315,7 @@ export function assembleSelection(input: {
       entrySignerKey: keys.entrySigner,
       store: workspace.store,
       clock,
-      random: new SystemRandom(),
+      random: selectionRandom(workspace.runId),
       expiresAt: input.expiresAt,
     });
     return { manifest: built.manifest, manifestHash: built.manifestHash, entries: built.entries };

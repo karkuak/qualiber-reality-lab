@@ -142,6 +142,7 @@ const SUPPORTING_SCHEMAS: ReadonlySet<string> = new Set([
   // The cutoff's three independently signed inputs. A reader must hold them to
   // re-derive `ObservationBundleV2.cutoff`, but none of them is a separately
   // roled output of the terminal (Slice 6.5-B, ADR-ERL2-021).
+  "challenge-activation-receipt/v1",
   "traffic-process-start-receipt/v1",
   "runtime-milestone/v1",
   "evidence-equivalence-profile/v1",

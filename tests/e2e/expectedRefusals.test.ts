@@ -45,6 +45,11 @@ const EXPECTED_REFUSALS = new Set<string>([
   // nothing else compared it. Corrected here; the divergence between Appendix C
   // and the shipped flag is reported in the 6.5-B handoff.
   "select|2|CFG_UNKNOWN_FLAG",
+  // The environment bundle's mandatory selection verification receipt cannot be
+  // authorized without the verifier's own pinned beacon entry. Fail-closed, and
+  // recorded so a regression that started accepting an unpinned source shows up
+  // here as a missing refusal rather than as a quieter run.
+  "verify|3|RANDOMNESS_SOURCE_NOT_PINNED",
 ]);
 
 test("EXPECTED-REFUSALS: every recorded refusal is a known, stable, authority-scoped refusal", () => {

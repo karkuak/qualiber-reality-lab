@@ -27,14 +27,26 @@ catalogue, journey and domain evaluation, the pre-cleanup result join, Lab-owned
 validity gates, the generic evaluation index, and a valid pre-environment
 terminal whose public bundle verifies offline. Four certified reference subjects
 now exist: correct, limited, misleading and inconclusive.
-Slices 7–12 are not started.
 
-**The valid *environment* terminal is not reachable end to end.** Its contracts,
-closure roles and refusals exist and are exercised, but producing one needs the
-selection, provisioning, activation and observation commands that belong to the
-slice 3/4 environment branch, which has not shipped. Every run the CLI can
-complete today ends at a pre-environment terminal and produces
-`DomainResultNotApplicableV1` with the reason `pre_environment_terminal`.
+Slice 6.5 adds the selection and environment branches: `select` advances the
+durable selection walk to `case_selected`, and seventeen phase commands take a run
+from there to a finalized environment terminal whose
+`EnvironmentPublicVerificationBundleV2` verifies offline. A run whose environment
+fails freezes exactly one `InvalidLabRunRecordV1` after frontier-derived cleanup,
+with restoration and teardown failures routed through receipt-backed emergency
+cleanup. Slices 7–12 are not started.
+
+**What that environment terminal is, exactly.** It is a **development-tier** run
+against the **fake environment driver** with a **trusted reference subject** and
+**non-blind** selection. It is evidence that the mechanism closes — one archetype,
+one driver, one journey shape, evidence sources that produce zero records by
+construction. It is not evidence about any real ecosystem, any subject's quality,
+or robustness of any kind. `DomainResultEvaluatedV1` remains unreachable: a
+development run reveals only journey-scope judge expectations, so every completed
+run produces `DomainResultNotApplicableV1` — `pre_environment_terminal` on the
+early branch, `functional_evidence_unavailable` on the environment branch.
+See [`docs/claims/permitted-claims.md`](docs/claims/permitted-claims.md) for the
+claim boundary in full.
 
 Four slices shipped under their documented rollbacks. **The Compose driver is
 disabled** because ERL2-OQ-005 is unresolved, so the fake driver is the only

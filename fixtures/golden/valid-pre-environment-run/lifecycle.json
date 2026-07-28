@@ -432,7 +432,7 @@
       },
       {
         "artifact_role": "final-attestation",
-        "artifact_core_hash": "sha256:c3600c5a33378190b3f62683fdb0dca1ef741df5a071836d2931e9fc668932bb",
+        "artifact_core_hash": "sha256:8744f499022698f30973a52ef9d153ccbbbdcc173b9bfe71ff63aaf893c6034e",
         "artifact_schema_version": "pre-environment-final-lab-attestation/v1"
       },
       {
@@ -441,6 +441,6 @@
         "artifact_schema_version": "signer-inventory/v2"
       }
     ],
-    "core_hash": "sha256:95ca7b9ca58e3d7d71f087c84d731815b20ba25090de7b55db3f0c65d69151e7"
+    "core_hash": "sha256:d549ea27caf57d9c9bdb129e4384007765dd805e6dce3b45d55b0fbb1ebf93fb"
   }
 ]
