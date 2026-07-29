@@ -128,6 +128,14 @@ export {
   type RestorationProbeVerdict,
 } from "./environment/restorationProbe.js";
 export {
+  buildResidueProbe,
+  deriveResidueProbeOutcome,
+  residueProbeClean,
+  type ObservedResourceIdentity,
+  type ResidueObservations,
+  type ResidueProbeVerdict,
+} from "./environment/residueProbe.js";
+export {
   assertSubstrateBinding,
   buildSubstrateBinding,
   reservationNamespaceHash,
@@ -475,6 +483,12 @@ export {
   buildPreEnvironmentValidity,
   type GateResult,
 } from "./evaluation/validity.js";
+export {
+  ENVIRONMENT_PHASE_GATE,
+  gateForEnvironmentFailurePhase,
+  isEnvironmentFailurePhase,
+  type EnvironmentFailurePhase,
+} from "./evaluation/invalidityAttribution.js";
 export {
   DEEP_ANCESTRY_FORBIDDEN_FIELDS,
   assertNoDeepAncestry,

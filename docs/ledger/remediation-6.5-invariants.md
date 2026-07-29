@@ -127,6 +127,16 @@ lease and the derived snapshot.
 > item this section lists as open, are closed by
 > [ADR-ERL2-025](../adr/ADR-ERL2-025.md), [ADR-ERL2-026](../adr/ADR-ERL2-026.md)
 > and [`remediation-6.5-false-attestation.md`](remediation-6.5-false-attestation.md).
+>
+> A later audit again found less than §1's table claims. The cleanup row — P1-1,
+> P1-2, P1-5, P1-6, P1-11 — held on the **emergency** branch only; the five
+> failure phases that are not restoration or teardown kept an unconditional
+> whole-environment destroy over a frontier they never read, and the offline
+> verifier returned early on their cleanup variant. That is closed by
+> [ADR-ERL2-027](../adr/ADR-ERL2-027.md) and
+> [`remediation-6.5-cleanup.md`](remediation-6.5-cleanup.md), whose §1 carries the
+> audit.
+>
 > Editing this section into something it never said would destroy the record of
 > what was claimed when — which is the point of keeping it.
 

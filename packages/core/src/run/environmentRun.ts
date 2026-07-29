@@ -125,6 +125,7 @@ import {
   type ExpectedRevertedMutation,
 } from "../environment/restorationProbe.js";
 import { freezeResourceFrontier, safeActions } from "../environment/frontier.js";
+import { buildResidueProbe } from "../environment/residueProbe.js";
 import { buildEmergencyCleanup } from "../cleanup/cleanup.js";
 import { buildEnvironmentRestoration, buildTeardownVerification, type TeardownCheck } from "../cleanup/cleanup.js";
 import { realizeCutoff, freezeSourceSnapshot, freezeObservation, type RealizedCutoff } from "../capture/capture.js";
@@ -133,6 +134,7 @@ import { buildSelectedJourneyResult } from "../evaluation/journey.js";
 import { buildDomainNotApplicable, missingDomainAncestors } from "../evaluation/domain.js";
 import { buildGenericEvaluationIndex, buildPrecleanupResultJoin, deriveJoinOrdering } from "../evaluation/join.js";
 import { buildEnvironmentValidity, type GateResult } from "../evaluation/validity.js";
+import { gateForEnvironmentFailurePhase } from "../evaluation/invalidityAttribution.js";
 import { JOURNEY_PLANE_METRICS } from "../evaluation/genericMetrics.js";
 import { verifyLifecycleChain } from "../lifecycle/log.js";
 import { assertNoCanaryLeak } from "../journey/oracle.js";
@@ -2809,11 +2811,21 @@ export class EnvironmentRun {
     };
     readonly emergency: boolean;
   }): InvalidLabRunRecordV1 {
+    // The gate named is the one this phase's evidence supports, and which its
+    // failure therefore falsifies. It used to be keyed on the *cleanup branch*
+    // — `input.emergency ? "restoration-verified" : "environment-baseline-clean"`
+    // — so a provisioning failure named a baseline gate the run never evaluated
+    // and a teardown failure named a restoration gate that had passed
+    // (ADR-ERL2-027 §4.5). The verifier re-derives this from the record's own
+    // `failed_phase` and refuses any other gate.
+    //
+    // Frozen here, before the frontier and before any cleanup dispatch: a
+    // cleanup that then fails adds its own evidence and never replaces the cause.
     const findingHash = this.ws.freezeInvalidityFinding({
       findingId: `environment-${input.phase.replaceAll("_", "-")}-failure`,
       category: "lab_invalid",
       summary: `${input.failure.code}: ${input.failure.message}`.slice(0, 512),
-      failedGateIds: [input.emergency ? "restoration-verified" : "environment-baseline-clean"],
+      failedGateIds: [gateForEnvironmentFailurePhase(input.phase)],
       proofRefs: [this.instanceHashForCleanup()],
     });
 
@@ -2892,9 +2904,15 @@ export class EnvironmentRun {
     });
     this.ws.store.freezeJson(`${RETAINED}/resource-frontier.json`, frontier, "INTERNAL");
 
-    const cleanup = input.emergency
-      ? this.emergencyCleanup(frontier, trigger)
-      : this.boundedEnvironmentCleanup(frontier);
+    // One executor, both routes. `emergency` decides which lifecycle states the
+    // terminal passes through and which trigger the frontier records — it does
+    // **not** decide which safety rules apply. Until ADR-ERL2-027 it did: the
+    // bounded route swung an unconditional whole-environment `driver.destroy()`
+    // over a frontier it had just frozen and never read, which destroyed
+    // resources that frontier had classified `contain_residual` and aborted
+    // outright on a foreign one (review P1-1, P1-5 — closed on the emergency
+    // branch by ADR-ERL2-024 §4.5 and left open on this one).
+    const cleanup = this.frontierDerivedCleanup(frontier, trigger, input.emergency);
 
     const reached: { artifact_role: string; artifact_hash: Hash; reached_event_hash: Hash }[] = [];
     for (const event of this.ws.lifecycle.all()) {
@@ -3177,9 +3195,14 @@ export class EnvironmentRun {
     });
     this.ws.store.freezeJson(`${RETAINED}/resource-frontier.json`, frontier, "INTERNAL");
 
-    const cleanup = emergency
-      ? this.emergencyCleanup(frontier, "teardown_failure")
-      : this.boundedEnvironmentCleanup(frontier);
+    // The same executor the failure path uses, for the same reason: a
+    // cancellation is a failure the operator chose, and it owes the substrate
+    // exactly what any other invalid terminal owes it (ADR-ERL2-027 §4.1).
+    const cleanup = this.frontierDerivedCleanup(
+      frontier,
+      emergency ? "teardown_failure" : "invalid_environment_failure",
+      emergency,
+    );
 
     const reached: { artifact_role: string; artifact_hash: Hash; reached_event_hash: Hash }[] = [];
     for (const event of this.ws.lifecycle.all()) {
@@ -3291,29 +3314,32 @@ export class EnvironmentRun {
    * only when every observed frontier member is an authorized target, so it can
    * never destroy something the derived action set did not authorize.
    */
-  private emergencyCleanup(
+  private frontierDerivedCleanup(
     frontier: EnvironmentResourceFrontierV1,
     trigger: "restoration_failure" | "teardown_failure" | "invalid_environment_failure",
+    emergency: boolean,
   ): {
-    readonly variant: "emergency_environment";
+    readonly variant: "emergency_environment" | "environment" | "partial_environment";
     readonly status: "attempted_succeeded" | "attempted_failed";
     readonly attemptHashes: readonly Hash[];
     readonly resultHash: Hash;
   } {
-    this.ws.lifecycle.append({
-      eventType: "emergency_cleanup_started",
-      stateTo: "emergency_cleanup_started",
-      actorId: "operator",
-      commandId: "cleanup",
-      operationId: "op-emergency-cleanup-start",
-      produced: [
-        {
-          artifact_role: "environment-resource-frontier",
-          artifact_core_hash: frontier.core_hash,
-          artifact_schema_version: "environment-resource-frontier/v1",
-        },
-      ],
-    });
+    if (emergency) {
+      this.ws.lifecycle.append({
+        eventType: "emergency_cleanup_started",
+        stateTo: "emergency_cleanup_started",
+        actorId: "operator",
+        commandId: "cleanup",
+        operationId: "op-emergency-cleanup-start",
+        produced: [
+          {
+            artifact_role: "environment-resource-frontier",
+            artifact_core_hash: frontier.core_hash,
+            artifact_schema_version: "environment-resource-frontier/v1",
+          },
+        ],
+      });
+    }
 
     const safe = safeActions(frontier);
     const attemptHashes: Hash[] = [];
@@ -3450,9 +3476,53 @@ export class EnvironmentRun {
       }
     }
 
-    // The frontier is re-probed after every attempt, so residue is what is
-    // *now* there rather than what the frontier said before cleanup started.
-    const stillPresent = new Set(this.driver.inspect(this.runId).resources.map((r) => r.resource_id));
+    // The substrate is re-observed after the last dispatch, and the observation
+    // is *retained* rather than consumed in-process (ADR-ERL2-027 §4.3).
+    //
+    // Until this contract existed, the only post-cleanup evidence was
+    // `remaining_resources`, which the producer derives from its own action
+    // outcomes — so an empty residue was unfalsifiable offline, and a resource
+    // that vanished with no authorized action was undetectable. The probe closes
+    // over the *pre-action* frontier and the *derived* authorized-target set, so
+    // an offline reader can reproduce both answers.
+    const observedAfter = this.driver
+      .inspect(this.runId)
+      .resources.map((r) => ({ resourceId: r.resource_id, identityHash: r.identity_hash }));
+    // `assertBoundSubstrate` ran before the frontier was frozen, so a binding
+    // exists by the time control reaches here. Re-reading it rather than
+    // asserting it is not defensiveness for its own sake: the probe's whole
+    // claim is *which substrate was observed*, and a probe that could not name
+    // one would be an observation of nowhere.
+    const binding = this.retainedSubstrateBinding();
+    if (binding === undefined) {
+      throw new Erl2Error(
+        CODES.ENV_SUBSTRATE_BINDING_MISSING,
+        "cleanup reached the residue probe with no retained substrate binding; the observation " +
+          "could not be attributed to any substrate",
+        { owner: "lab" },
+      );
+    }
+    const probe = buildResidueProbe({
+      runId: this.runId,
+      substrateBindingHash: binding.core_hash,
+      environmentInstanceHash: this.instanceHashForCleanup(),
+      resourceFrontierHash: frontier.core_hash,
+      observedBefore: frontier.observed_resources.map((r) => ({
+        resourceId: r.resource_id,
+        identityHash: r.identity_hash,
+      })),
+      observedAfter,
+      // What the Lab *authorized*, not what happened to succeed. An action that
+      // was derived safe and then failed still authorized its target, so a
+      // target that vanished anyway is accounted for; an action the frontier
+      // never derived authorized nothing, which is the case this set exists for.
+      authorizedTargets: safe.map((a) => a.target_resource_id),
+      probeStatus: "observed",
+      probedAt: this.now(),
+    });
+    this.ws.store.freezeJson(`${RETAINED}/cleanup-residue-probe.json`, probe, "INTERNAL");
+
+    const stillPresent = new Set(observedAfter.map((r) => r.resourceId));
     // Every resource whose action was skipped or failed must appear here with an
     // explicit containment status: silence is not containment.
     const failedTargets = new Set(
@@ -3466,48 +3536,97 @@ export class EnvironmentRun {
       ...frontier.derived_actions.filter((a) => !a.independently_safe).map((a) => a.target_resource_id),
       ...failedTargets,
     ]);
-    const emergency = buildEmergencyCleanup({
-      runId: this.runId,
-      environmentInstanceHash: this.instanceHashForCleanup(),
-      trigger,
-      frontier,
-      resourceFrontierEventHash: frontier.core_hash,
-      attempts,
-      remainingResources: frontier.observed_resources
-        .filter((r) => unresolved.has(r.resource_id))
-        .map((r) => ({
-          kind: r.kind,
-          identity_hash: r.identity_hash,
-          containment_status: stillPresent.has(r.resource_id)
-            ? ("uncontained" as const)
-            : ("contained" as const),
-        })),
-      completedAt: this.now(),
-    });
-    this.ws.store.freezeJson("retained/emergency-cleanup-verification.json", emergency, "INTERNAL");
-    this.ws.lifecycle.append({
-      eventType: "emergency_cleanup_terminal",
-      stateTo: "emergency_cleanup_terminal",
-      actorId: "operator",
-      commandId: "cleanup",
-      operationId: "op-emergency-cleanup-terminal",
-      produced: [
-        ...produced,
-        {
-          artifact_role: "emergency-cleanup-verification",
-          artifact_core_hash: emergency.core_hash,
-          artifact_schema_version: "emergency-cleanup-verification/v1",
-        },
-      ],
-    });
+    // A frontier that derived no action at all describes a cleanup with nothing
+    // to do, and `EmergencyCleanupVerificationV1.actions` has `minItems: 1` — the
+    // contract already refuses to describe one. The residue probe is the result
+    // in that case, and it is not a weaker record: it is the observation that
+    // says the substrate really was empty, which is the claim being made.
+    const verification =
+      frontier.derived_actions.length === 0
+        ? undefined
+        : buildEmergencyCleanup({
+            runId: this.runId,
+            environmentInstanceHash: this.instanceHashForCleanup(),
+            trigger,
+            frontier,
+            resourceFrontierEventHash: frontier.core_hash,
+            attempts,
+            remainingResources: frontier.observed_resources
+              .filter((r) => unresolved.has(r.resource_id))
+              .map((r) => ({
+                kind: r.kind,
+                identity_hash: r.identity_hash,
+                containment_status: stillPresent.has(r.resource_id)
+                  ? ("uncontained" as const)
+                  : ("contained" as const),
+              })),
+            completedAt: this.now(),
+          });
+    if (verification !== undefined) {
+      this.ws.store.freezeJson("retained/emergency-cleanup-verification.json", verification, "INTERNAL");
+    }
+
+    const residueProduced = {
+      artifact_role: "cleanup-residue-probe",
+      artifact_core_hash: probe.core_hash,
+      artifact_schema_version: "cleanup-residue-probe/v1",
+    };
+    const verificationProduced =
+      verification === undefined
+        ? []
+        : [
+            {
+              artifact_role: "emergency-cleanup-verification",
+              artifact_core_hash: verification.core_hash,
+              artifact_schema_version: "emergency-cleanup-verification/v1",
+            },
+          ];
+    this.ws.lifecycle.append(
+      emergency
+        ? {
+            eventType: "emergency_cleanup_terminal",
+            stateTo: "emergency_cleanup_terminal",
+            actorId: "operator",
+            commandId: "cleanup",
+            operationId: "op-emergency-cleanup-terminal",
+            produced: [...produced, residueProduced, ...verificationProduced],
+          }
+        : {
+            eventType: "invalid_cleanup_terminal",
+            stateTo: "invalid_cleanup_terminal",
+            actorId: "operator",
+            commandId: "cleanup",
+            operationId: "op-invalid-cleanup-terminal",
+            produced: [
+              // The bounded route has no `*_cleanup_started` event after the
+              // frontier is frozen, so the frontier is reached here. It must be
+              // reached somewhere: an artifact the lifecycle never produced is an
+              // unaccounted retained byte, and the closure derivation rejects it.
+              {
+                artifact_role: "environment-resource-frontier",
+                artifact_core_hash: frontier.core_hash,
+                artifact_schema_version: "environment-resource-frontier/v1",
+              },
+              ...produced,
+              residueProduced,
+              ...verificationProduced,
+            ],
+          },
+    );
+    // Residue is what the substrate reported, not what the action list implies.
+    const residue = probe.residual_resources.length;
     // The terminal stays reachable even when cleanup did not complete:
     // `attempted_failed` with retained residue is a *result*, and stranding the
     // run instead would violate ERL2-FR-001.
     return {
-      variant: "emergency_environment",
-      status: emergency.remaining_resources.length === 0 ? "attempted_succeeded" : "attempted_failed",
+      variant: emergency
+        ? ("emergency_environment" as const)
+        : residue === 0
+          ? ("environment" as const)
+          : ("partial_environment" as const),
+      status: residue === 0 ? "attempted_succeeded" : "attempted_failed",
       attemptHashes,
-      resultHash: emergency.core_hash,
+      resultHash: verification?.core_hash ?? probe.core_hash,
     };
   }
 
@@ -3551,52 +3670,6 @@ export class EnvironmentRun {
       ...base,
       core_hash: coreHash(base),
     });
-  }
-
-  /**
-   * The non-emergency branch: a failure before or during setup, where the
-   * environment can simply be destroyed.
-   *
-   * The variant is `partial_environment` when resources remain and `environment`
-   * when none do — derived from a post-destroy inspection, not from the caller.
-   */
-  private boundedEnvironmentCleanup(frontier: EnvironmentResourceFrontierV1): {
-    readonly variant: "environment" | "partial_environment";
-    readonly status: "attempted_succeeded" | "attempted_failed";
-    readonly attemptHashes: readonly Hash[];
-    readonly resultHash: Hash;
-  } {
-    const receipt = this.driver.destroy({
-      runId: this.runId,
-      operationId: "op-invalid-destroy",
-    }).receipt;
-    this.ws.store.freezeJson(`${RETAINED}/invalid-cleanup-receipt.json`, receipt, "INTERNAL");
-    const remaining = this.driver.inspect(this.runId).resources.length;
-    this.ws.lifecycle.append({
-      eventType: "invalid_cleanup_terminal",
-      stateTo: "invalid_cleanup_terminal",
-      actorId: "operator",
-      commandId: "cleanup",
-      operationId: "op-invalid-cleanup-terminal",
-      produced: [
-        {
-          artifact_role: "environment-resource-frontier",
-          artifact_core_hash: frontier.core_hash,
-          artifact_schema_version: "environment-resource-frontier/v1",
-        },
-        {
-          artifact_role: "environment-operation-receipt",
-          artifact_core_hash: receipt.core_hash,
-          artifact_schema_version: "environment-operation-receipt/v1",
-        },
-      ],
-    });
-    return {
-      variant: remaining === 0 ? "environment" : "partial_environment",
-      status: remaining === 0 ? "attempted_succeeded" : "attempted_failed",
-      attemptHashes: [receipt.core_hash],
-      resultHash: receipt.core_hash,
-    };
   }
 
   /** The Lab-owned environment validity gates, derived from retained evidence. */

@@ -71,6 +71,30 @@ public bundle is refused with `VERIFY_RECORD_EXPECTED_INVALID_RECORD` or
   cleanup, with a receipt for every attempted action and a reason and no receipt
   for every independently unsafe skip.
 
+Since ADR-ERL2-027 the cleanup derivation runs on **every** invalid environment
+terminal, not only the emergency one, and the verifier rebuilds the expectation
+rather than reading it:
+
+- the expected safe-action set is recomputed from the pre-action frontier, so an
+  omitted action (`EMERGENCY_ACTION_SAFE_ACTION_SKIPPED`) and one relabelled
+  unsafe are both refused;
+- an aggregate destruction is accepted only when every observed frontier member
+  derives an authorized action (`EMERGENCY_ACTION_UNDECLARED_TARGET`);
+- the independent post-cleanup observation must exist, be about this run, this
+  substrate binding and this frontier, and its `observed_before` must be the
+  frontier's own — a probe assembled over an inventory taken *after* a
+  destruction is `RESIDUE_PROBE_MISSING`;
+- a resource present in the frontier and absent afterwards that was never an
+  authorized target is `RESIDUE_UNDECLARED_DESTRUCTION`, which is the
+  offline-detectable form of destroy-first-classify-afterwards;
+- an action reported `succeeded` whose target is still observed, one reported
+  `failed` whose target is gone, a `remaining_resources` set that disagrees with
+  the observation, and a record whose `cleanup.status` reads
+  `attempted_succeeded` over a non-empty observed residue are all refused;
+- the primary finding must name the gate its own `failed_phase` falsifies
+  (`INVALID_REASON_PHASE_MISMATCH`) and must be Lab-owned with no subject
+  attribution and no scoreable plane (`INVALID_REASON_FABRICATED_FINDING`).
+
 ## When verification fails
 
 Do not weaken the check. Record the refusal code, retain the bundle unchanged,

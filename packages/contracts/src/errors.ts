@@ -384,6 +384,29 @@ export const CODES = {
    */
   EMERGENCY_ACTION_UNDECLARED_TARGET: "EMERGENCY_ACTION_UNDECLARED_TARGET",
 
+  // -- slice 6.5 remediation: one cleanup discipline and an independently
+  //    observed residue (ADR-ERL2-027; review P1-1, P1-3, P1-5, P1-6) ---------
+  /**
+   * An invalid environment terminal that froze a resource frontier retains no
+   * `cleanup-residue-probe/v1`, or retains one that is not about that frontier:
+   * another run, another substrate binding, another frontier, or an
+   * `observed_before` that disagrees with the frontier it names.
+   *
+   * Without it the post-cleanup residue is derived by the producer from the
+   * producer's own action outcomes, so an empty one is unfalsifiable offline
+   * (ADR-ERL2-027 §1.6).
+   */
+  RESIDUE_PROBE_MISSING: "RESIDUE_PROBE_MISSING",
+  /**
+   * A resource present in the pre-action frontier is absent afterwards and was
+   * never the authorized target of an attempted safe action.
+   *
+   * This is the offline-detectable form of destroy-first-classify-afterwards: a
+   * post-cleanup inventory alone cannot tell an authorized destruction from an
+   * unauthorized one, because the resource is absent in both (review P1-1).
+   */
+  RESIDUE_UNDECLARED_DESTRUCTION: "RESIDUE_UNDECLARED_DESTRUCTION",
+
   // -- slice 6.5 remediation: independently probed restoration and the
   //    evidence-derived claim ceiling (ADR-ERL2-025/026; review P1-4, P2) ----
   /**

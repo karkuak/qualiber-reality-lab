@@ -108,18 +108,46 @@ The one claim this slice earns, stated at exactly its width:
   substrate is a typed refusal before any cleanup evidence freezes. This closes
   the review's P0-1: before it, a run could be torn down and finalized against an
   empty directory and the resulting bundle verified at exit 0.
-- **The mandatory emergency route may be claimed.** A restoration or teardown
-  failure enters receipt-backed emergency cleanup: every independently safe action
-  the frontier derived is attempted **individually** and receipted, every unsafe
-  action skipped with a reason and no receipt, and a foreign or shared resource
-  fails exactly its own action rather than aborting the branch.
+- **One cleanup discipline may be claimed for every invalid environment
+  terminal.** Every failure phase — not only restoration and teardown — freezes
+  its frontier before it acts, attempts every independently safe action
+  **individually** and receipts each attempt, and skips every unsafe action with
+  a reason and no receipt. A foreign or shared resource fails or skips exactly its
+  own action rather than aborting the branch, and a run that meets one still
+  reaches exactly one invalid record. A whole-environment dispatch happens only
+  when the driver offers no narrower granularity and every observed frontier
+  member is an authorized target. Before ADR-ERL2-027 this held on the emergency
+  branch only: the other five phases issued an unconditional whole-environment
+  destroy over a frontier they had just frozen and never read, which destroyed
+  resources that frontier had classified `contain_residual` and aborted outright
+  on a foreign one (review P1-1, P1-5).
+- **The post-cleanup residue may be claimed to rest on an observation rather than
+  on the producer's own account of what it did.** The substrate is re-observed
+  after the last dispatch and a `CleanupResidueProbeV1` retains that observation
+  beside the pre-action frontier and the derived authorized-target set, so an
+  offline reader recomputes both what survived and what left without
+  authorization. A fabricated empty residue and a resource that vanished with no
+  authorized action against it are typed refusals. It may **not** be claimed that
+  the Lab takes an independent census of the substrate: the observation is the
+  driver's `inspect`, and what the Lab owns is that its record agrees with what it
+  observed at two separate moments. A consistently lying driver remains
+  undetectable, and nothing retained by one process can change that.
+- **The invalid terminal's finding may be claimed to name what actually failed.**
+  The gate it cites is a total, deterministic function of the run's own failure
+  phase, re-applied offline to the record's own `failed_phase`; it is Lab-owned
+  with no subject attribution and no scoreable plane; and it is frozen before the
+  frontier, so a cleanup that then fails adds evidence and never replaces the
+  cause. Before this the gate was chosen by *cleanup branch*, so a provisioning
+  failure cited a baseline gate the run never evaluated (review P1-3).
 - **Branch-specific cancellation may be claimed.** `erl2 cancel` routes on the
   run's own evidence: a run holding an environment enumerates its actual frontier
   and can never record cleanup as `not_required`.
 - **Offline verification of environment validity and cleanup may be claimed to be
   independent.** The verifier re-derives the validity verdict, the restoration and
-  teardown outcomes and the emergency action set from retained bytes, and refuses
-  a producer field that disagrees with them. It may **not** be claimed that the
+  teardown outcomes and the cleanup action set from retained bytes — on **every**
+  invalid environment terminal since ADR-ERL2-027, where it previously returned
+  early on any non-emergency variant (review P1-6) — and refuses a producer field
+  that disagrees with them. It may **not** be claimed that the
   verifier re-runs every Lab validity *gate*: several read evidence a public
   reader does not hold, so what is checked is that the retained gate set is
   self-consistent and corroborated by the retained findings.
@@ -273,6 +301,15 @@ The one claim this slice earns, stated at exactly its width:
   intents come back `unsupported` because the fixture adapter manifest does not
   declare them. That is a true statement about a declaration, not about a
   subject's capability.
+- **No claim that a golden's own verification outcome is pinned.** The exit codes
+  of the `verify-record` and `verify` calls the evidence harness makes are
+  recorded only in `fixtures/golden/cli-transcript.json`, which is **excluded**
+  from the byte pin because it carries absolute CLI paths. ADR-ERL2-027's work
+  broke the `invalid-run-emergency-cleanup` fixture badly enough that its
+  verification began failing with `INVALID_REASON_PHASE_MISMATCH`, and
+  `evidence:verify` still reported OK. The fixture is repaired and the codes are
+  now asserted by named tests, but the *pin* does not cover them and a future
+  change can move them silently. Recorded as an open gap rather than closed.
 
 - **No evaluated-domain claim from a real run.** `DomainResultEvaluatedV1` is
   implemented and exercised against real reference-adapter projections, but no

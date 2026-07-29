@@ -79,7 +79,36 @@ export interface FakeDriverFaults {
   readonly residualResourceIds?: readonly string[];
   /** Resources it claims are shared, so the frontier must contain rather than destroy. */
   readonly sharedResourceIds?: readonly string[];
+  /**
+   * Resource kinds the substrate carries **on behalf of another run**.
+   *
+   * A resource whose `run_scoped_name` embeds a different run id and whose
+   * `identity_hash` derives from that name: internally consistent, and owned by
+   * somebody else. `assertOwnedByRun` fails for it, which means
+   * `FakeEnvironmentDriver.destroy` — which validates ownership of *every* live
+   * resource before touching any — throws rather than returning.
+   *
+   * This exists because without it the invariant cannot be measured.
+   * `sharedResourceIds` marks a resource `shared_with_other_runs`, which the
+   * frontier correctly classifies as unsafe, but whose `run_scoped_name` still
+   * embeds *this* run — so `assertOwnedByRun` passes and the whole-environment
+   * destroy never throws on it. The only test claiming to prove "a foreign
+   * resource no longer aborts cleanup" (review P1-5) used that fault, so it was
+   * proving something about shared resources and nothing about foreign ones
+   * (ADR-ERL2-027 §1.5, §4.7).
+   */
+  readonly foreignResourceKinds?: readonly string[];
 }
+
+/**
+ * The run a `foreignResourceKinds` resource belongs to.
+ *
+ * A fixed, obviously-not-ours UUID rather than a random one: the fault has to
+ * produce the same bytes on every run for a golden to be stable, and a resource
+ * that is foreign must be foreign for a *reason a reader can see* rather than
+ * because a hash happened not to match.
+ */
+const FOREIGN_RUN_ID = "00000000-0000-4000-8000-0000000f0e19";
 
 export interface FakeDriverOptions {
   readonly clock: Clock;
@@ -239,7 +268,7 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
 
   private resourcesFor(runId: string): EnvironmentResourceV1[] {
     const limit = this.faults.provisionPartialAfter ?? this.kinds.length;
-    return this.kinds.slice(0, limit).map((kind) => {
+    const own = this.kinds.slice(0, limit).map((kind) => {
       const runScopedName = `erl2-${kind}-${runId}`;
       return {
         resource_id: `${kind}-${runId.slice(0, 8)}`,
@@ -252,6 +281,20 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
           : {}),
       };
     });
+    // Another run's resources, sitting in the same substrate. They are named and
+    // hashed for *that* run, so they are internally consistent and provably not
+    // ours — which is the whole point: `assertOwnedByRun` must be able to fail.
+    const foreign = (this.faults.foreignResourceKinds ?? []).map((kind) => {
+      const runScopedName = `erl2-${kind}-${FOREIGN_RUN_ID}`;
+      return {
+        resource_id: `${kind}-${FOREIGN_RUN_ID.slice(0, 8)}`,
+        kind,
+        run_scoped_name: runScopedName,
+        identity_hash: resourceIdentityHash(FOREIGN_RUN_ID, kind, runScopedName),
+        destroyable: true,
+      };
+    });
+    return [...own, ...foreign];
   }
 
   private inventoryOf(runId: string, resources: readonly EnvironmentResourceV1[]): EnvironmentResourceInventoryV1 {

@@ -926,7 +926,15 @@ if (process.argv.includes("--verify")) {
   // speed bump backed by code review, NOT a cryptographic authorization.
   const EXCLUSION_MANIFEST_DIGEST =
     "5ac4efcb2a323dcfc93640a8bc7df819dd0126d165a990278b09a9da6da75342";
-  const EXPECTED_PINNED = 781;
+  // 781 -> 787 under ADR-ERL2-027: the `invalid-run-emergency-cleanup` fixture
+  // gains three retained artifacts, each pinned as content plus its `.frozen`
+  // marker. `cleanup-residue-probe.json` is the new contract (ERL2-C-158);
+  // `substrate-binding.json` and `environment-archetype.json` are the binding
+  // ADR-ERL2-024 §10 said these goldens would gain "where they model a run that
+  // provisioned", and the archetype it names — neither of which was ever added,
+  // so the fixture's cleanup verdicts could be attributed to no substrate at all.
+  // The exclusion manifest is unchanged; the pin grew, it did not narrow.
+  const EXPECTED_PINNED = 787;
   const EXPECTED_EXCLUDED = 7;
 
   const manifestDigest = createHash("sha256")

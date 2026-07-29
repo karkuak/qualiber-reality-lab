@@ -147,6 +147,12 @@ export const CONTRACTS: readonly ContractDescriptor[] = [
   // post-compensation state, so the observation gets its own identity rather
   // than an optional field on a frozen schema.
   d("ERL2-C-157", "RestorationProbeV1", "environment", "restoration-probe/v1"),
+  // ADR-ERL2-027 §6.1: additive, on the same terms as ERL2-C-157. The emergency
+  // cleanup verification is frozen, and its `remaining_resources` is a
+  // producer-derived summary of the producer's own action outcomes — which is
+  // exactly why the independent post-cleanup observation needs its own identity
+  // rather than an optional field on a frozen schema.
+  d("ERL2-C-158", "CleanupResidueProbeV1", "environment", "cleanup-residue-probe/v1"),
   d("ERL2-C-058", "LabRunRecordV1", "terminal", undefined, true),
   d("ERL2-C-059", "MandatoryGraphClosureReportV1", "terminal", "mandatory-graph-closure-report/v1"),
   d("ERL2-C-060", "PreEnvironmentFinalLabAttestationV1", "terminal", "pre-environment-final-lab-attestation/v1"),

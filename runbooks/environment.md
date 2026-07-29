@@ -54,22 +54,47 @@ Cleanup targets exact validated identities. A wildcard or unscoped selector is
 refused with `ENV_BROAD_DELETE_REJECTED`; ambient project discovery does not
 exist.
 
-When restoration or teardown fails:
+**Every** invalid environment terminal takes the same route — not only a
+restoration or teardown failure (ADR-ERL2-027 §4.1). The `emergency` flag decides
+which lifecycle states the terminal passes through and which trigger the frontier
+records; it does not decide which safety rules apply. Until ADR-ERL2-027 it did,
+and the other five failure phases reached an unconditional whole-environment
+`driver.destroy()` issued one line after the frontier was frozen and without
+reading it.
 
-1. Freeze the frontier with `freezeResourceFrontier`. It records what the driver
-   *observed*.
-2. The safe-action set is **derived here**, not supplied by the driver. A
+1. Freeze the failure's own Lab-owned finding, **before** anything else. It names
+   the gate its phase falsifies (`ENVIRONMENT_PHASE_GATE`), so a cleanup that
+   later fails adds evidence and never replaces the cause.
+2. Freeze the frontier with `freezeResourceFrontier`. It records what the driver
+   *observed*, before any dispatch.
+3. The safe-action set is **derived here**, not supplied by the driver. A
    resource is independently safe to act on only when it is provably this run's,
    marked destroyable, and not shared with another run. Anything else becomes a
    `contain_residual` action marked unsafe with a reason.
-3. Attempt every independently safe action and freeze a receipt for each — for
-   failures as well as successes.
-4. Record each unsafe skip with a reason and **no** receipt.
-5. Freeze `EmergencyCleanupVerificationV1`, and only then the invalid record.
+4. Attempt every independently safe action, each inside its own failure boundary,
+   and freeze a receipt for each — for failures as well as successes. A foreign
+   or unsafe resource fails or skips exactly one action; it never stops the
+   others.
+5. Record each unsafe skip with a reason and **no** receipt.
+6. Re-observe the substrate and freeze `CleanupResidueProbeV1`. This is the
+   independent post-cleanup observation: without it the residue is derived by the
+   producer from its own action outcomes, so an empty one cannot be contradicted.
+7. Freeze `EmergencyCleanupVerificationV1` (skipped when the frontier derived no
+   action — the contract's `actions` has `minItems: 1`), and only then the
+   invalid record.
+
+A whole-environment dispatch is permitted only when the driver offers no narrower
+granularity **and** every observed frontier member derives an authorized action.
+Otherwise the affected actions are recorded `failed` with
+`EMERGENCY_ACTION_UNDECLARED_TARGET` and nothing is dispatched.
 
 `erl2 verify-record` refuses a restoration or teardown failure that reached the
-invalid record without this path (`EMERGENCY_CLEANUP_BYPASSED`), and
-`assertFrontierActionsDerivable` refuses a frontier whose action list was edited.
+invalid record without this path (`EMERGENCY_CLEANUP_BYPASSED`),
+`assertFrontierActionsDerivable` refuses a frontier whose action list was edited,
+and the residue probe makes two further lies offline-detectable:
+`RESIDUE_PROBE_MISSING` when the observation is absent or is about another run,
+substrate or frontier, and `RESIDUE_UNDECLARED_DESTRUCTION` when a resource left
+the substrate without an authorized action against it.
 
 ## Enabling Compose (ERL2-OQ-005)
 

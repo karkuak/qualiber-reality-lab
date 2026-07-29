@@ -40,11 +40,14 @@ export {
   type EnvironmentPreFinalizationVerdict,
 } from "./library/environmentClosure.js";
 export {
+  assertActionsAgreeWithResidue,
   assertCleanupApplicable,
+  assertInvalidFindingAttribution,
   assertSubstrateBindingConsistent,
   deriveEmergencyCleanup,
   deriveEnvironmentSemantics,
   deriveInvalidEnvironmentSemantics,
+  deriveResidueProbe,
   deriveRestorationOutcome,
   deriveTeardownOutcome,
   deriveValidityOutcome,

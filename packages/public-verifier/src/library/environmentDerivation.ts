@@ -33,6 +33,7 @@
 import {
   CODES,
   Erl2Error,
+  type CleanupResidueProbeV1,
   type EmergencyCleanupVerificationV1,
   type EnvironmentOperationReceiptV1,
   type EnvironmentResourceFrontierV1,
@@ -47,7 +48,10 @@ import {
 } from "@erl2/contracts";
 import {
   assertFrontierActionsDerivable,
+  deriveResidueProbeOutcome,
   deriveRestorationProbeOutcome,
+  gateForEnvironmentFailurePhase,
+  isEnvironmentFailurePhase,
   restorationProbePassed,
   safeActions,
 } from "@erl2/core";
@@ -626,6 +630,303 @@ export function deriveEmergencyCleanup(options: {
   };
 }
 
+// -- 4a. the independently observed residue ----------------------------------
+
+/**
+ * Re-derives the post-cleanup observation and everything it makes checkable
+ * (ADR-ERL2-027 §4.3/§4.6).
+ *
+ * Before this contract existed the only post-cleanup evidence was
+ * `EmergencyCleanupVerificationV1.remaining_resources`, which the producer
+ * derives from its own action outcomes. Two lies were therefore unfalsifiable
+ * offline:
+ *
+ *  - **an empty residue**, because a cleanup that marked every action
+ *    `succeeded` produced one and the residue cross-check is vacuous when
+ *    nothing is unresolved;
+ *  - **an unauthorized destruction**, because a post-cleanup inventory cannot
+ *    distinguish a resource destroyed *because the Lab authorized it* from one
+ *    destroyed anyway — it is absent in both (review P1-1).
+ *
+ * The expectation is rebuilt here from the *pre-action* frontier and from
+ * `safeActions`, never from the probe's own `authorized_targets`: a probe that
+ * writes its own authorization would authorize whatever it destroyed.
+ */
+export function deriveResidueProbe(options: {
+  readonly probe: CleanupResidueProbeV1;
+  readonly frontier: EnvironmentResourceFrontierV1;
+  readonly runId: string;
+  readonly substrateBindingHash?: Hash;
+}): { readonly residual: readonly string[] } {
+  const { probe, frontier } = options;
+
+  if (probe.run_id !== options.runId) {
+    throw new Erl2Error(
+      CODES.RESIDUE_PROBE_MISSING,
+      `the cleanup residue probe names run ${probe.run_id}; this terminal is run ${options.runId}`,
+    );
+  }
+  if (
+    options.substrateBindingHash !== undefined &&
+    probe.substrate_binding_hash !== options.substrateBindingHash
+  ) {
+    // An observation of another substrate says nothing about this one, and the
+    // binding is the only thing that names which substrate was observed at all.
+    throw new Erl2Error(
+      CODES.RESIDUE_PROBE_MISSING,
+      `the cleanup residue probe names substrate binding ${probe.substrate_binding_hash}; this run ` +
+        `bound ${options.substrateBindingHash}`,
+    );
+  }
+  if (probe.resource_frontier_hash !== frontier.core_hash) {
+    throw new Erl2Error(
+      CODES.RESIDUE_PROBE_MISSING,
+      "the cleanup residue probe closes over a resource frontier other than the one this run froze",
+    );
+  }
+
+  // `observed_before` must be the frontier's own observation. This is what stops
+  // a probe assembled over an inventory taken *after* a destruction: such a probe
+  // would show nothing missing, because the destruction already happened before
+  // its "before".
+  const frontierResources = new Map(
+    frontier.observed_resources.map((r) => [r.resource_id, r.identity_hash]),
+  );
+  const probeBefore = new Map(probe.observed_before.map((r) => [r.resource_id, r.identity_hash]));
+  if (probeBefore.size !== probe.observed_before.length) {
+    throw new Erl2Error(
+      CODES.RESIDUE_PROBE_MISSING,
+      "the cleanup residue probe observes the same resource twice before cleanup",
+    );
+  }
+  for (const [resourceId, identity] of frontierResources) {
+    const observed = probeBefore.get(resourceId);
+    if (observed === undefined) {
+      throw new Erl2Error(
+        CODES.RESIDUE_PROBE_MISSING,
+        `the cleanup residue probe does not observe resource ${resourceId}, which the pre-action ` +
+          `frontier did; a probe that starts from a smaller world cannot see what left it`,
+      );
+    }
+    if (observed !== identity) {
+      throw new Erl2Error(
+        CODES.RESIDUE_PROBE_MISSING,
+        `the cleanup residue probe gives resource ${resourceId} identity ${observed}; the frontier ` +
+          `observed ${identity}`,
+      );
+    }
+  }
+  for (const resourceId of probeBefore.keys()) {
+    if (!frontierResources.has(resourceId)) {
+      throw new Erl2Error(
+        CODES.RESIDUE_PROBE_MISSING,
+        `the cleanup residue probe observes resource ${resourceId} before cleanup, which the ` +
+          `pre-action frontier never did`,
+      );
+    }
+  }
+
+  // The authorization is re-derived from the frontier, not read from the probe.
+  const derivedAuthorized = [...new Set(safeActions(frontier).map((a) => a.target_resource_id))].sort();
+  const declaredAuthorized = [...new Set(probe.authorized_targets)].sort();
+  if (derivedAuthorized.join(" ") !== declaredAuthorized.join(" ")) {
+    throw new Erl2Error(
+      CODES.EMERGENCY_ACTION_UNDECLARED_TARGET,
+      `the cleanup residue probe claims authorization over [${declaredAuthorized.join(", ")}]; the ` +
+        `frontier derives [${derivedAuthorized.join(", ")}]`,
+    );
+  }
+
+  const verdict = deriveResidueProbeOutcome({
+    observedBefore: probe.observed_before.map((r) => ({
+      resourceId: r.resource_id,
+      identityHash: r.identity_hash,
+    })),
+    observedAfter: probe.observed_after.map((r) => ({
+      resourceId: r.resource_id,
+      identityHash: r.identity_hash,
+    })),
+    authorizedTargets: derivedAuthorized,
+    probeStatus: probe.probe_status,
+  });
+  if (verdict.outcome !== probe.outcome) {
+    throw new Erl2Error(
+      CODES.RESIDUE_PROBE_MISSING,
+      `the retained cleanup residue probe declares outcome ${probe.outcome}, but its own ` +
+        `observations derive ${verdict.outcome}`,
+    );
+  }
+  if (verdict.residual.join(" ") !== [...probe.residual_resources].join(" ")) {
+    throw new Erl2Error(
+      CODES.RESIDUE_PROBE_MISSING,
+      "the cleanup residue probe's residual set is not the one its observations derive",
+    );
+  }
+  if (
+    verdict.undeclaredDestroyed.join(" ") !==
+    [...probe.undeclared_destroyed_resources].join(" ")
+  ) {
+    throw new Erl2Error(
+      CODES.RESIDUE_PROBE_MISSING,
+      "the cleanup residue probe's undeclared-destruction set is not the one its observations derive",
+    );
+  }
+
+  if (verdict.outcome === "undeclared_destruction") {
+    throw new Erl2Error(
+      CODES.RESIDUE_UNDECLARED_DESTRUCTION,
+      `cleanup destroyed [${verdict.undeclaredDestroyed.join(", ")}], which the frontier-derived ` +
+        `action set never authorized; a resource the Lab did not authorize an action against must ` +
+        `still be there`,
+    );
+  }
+  if (verdict.outcome === "unobservable") {
+    throw new Erl2Error(
+      CODES.RESIDUE_PROBE_MISSING,
+      "the substrate could not be re-observed after cleanup; a cleanup nobody observed cannot be " +
+        "recorded as one that happened",
+    );
+  }
+
+  return { residual: verdict.residual };
+}
+
+/**
+ * Cross-checks each reported action against the substrate as it was actually
+ * observed afterwards.
+ *
+ * Separate from `deriveEmergencyCleanup` because it answers a different
+ * question: that function asks whether the *action list* corresponds to the
+ * frontier, and this one asks whether the action list corresponds to the
+ * *world*. A cleanup can satisfy the first completely and still report a success
+ * over a resource that is still sitting there.
+ */
+export function assertActionsAgreeWithResidue(options: {
+  readonly cleanup: EmergencyCleanupVerificationV1;
+  readonly frontier: EnvironmentResourceFrontierV1;
+  readonly probe: CleanupResidueProbeV1;
+}): void {
+  const { cleanup, frontier, probe } = options;
+  const targetOf = new Map(frontier.derived_actions.map((a) => [a.action_id, a.target_resource_id]));
+  const present = new Set(probe.observed_after.map((r) => r.resource_id));
+
+  for (const action of cleanup.actions) {
+    const target = targetOf.get(action.action_id);
+    if (target === undefined) continue;
+    const stillThere = present.has(target);
+    if (action.status === "succeeded" && stillThere) {
+      throw new Erl2Error(
+        CODES.EMERGENCY_CLEANUP_INCOMPLETE,
+        `emergency action ${action.action_id} is recorded as succeeded, but its target ${target} is ` +
+          `still present in the post-cleanup observation`,
+      );
+    }
+    if (action.status === "failed" && !stillThere) {
+      // The target was authorized, so its absence is not an *undeclared*
+      // destruction — but an action that reports failing to remove a resource
+      // that is gone is not describing what happened either.
+      throw new Erl2Error(
+        CODES.EMERGENCY_CLEANUP_INCOMPLETE,
+        `emergency action ${action.action_id} is recorded as failed, but its target ${target} is ` +
+          `absent from the post-cleanup observation`,
+      );
+    }
+  }
+
+  // `remaining_resources` is producer-derived; the probe is observed. They must
+  // name the same survivors, which is what makes a fabricated empty residue a
+  // refusal rather than an unfalsifiable claim.
+  const identityOf = new Map(frontier.observed_resources.map((r) => [r.resource_id, r.identity_hash]));
+  const observedResidue = new Set(
+    probe.residual_resources
+      .map((id) => identityOf.get(id))
+      .filter((h): h is Hash => h !== undefined),
+  );
+  const declaredResidue = new Set(cleanup.remaining_resources.map((r) => r.identity_hash));
+  for (const identity of observedResidue) {
+    if (!declaredResidue.has(identity)) {
+      throw new Erl2Error(
+        CODES.RESIDUE_DETECTED,
+        `the post-cleanup observation still sees ${identity}, which the cleanup verification does ` +
+          `not account for in its remaining resources`,
+      );
+    }
+  }
+  for (const identity of declaredResidue) {
+    if (!observedResidue.has(identity)) {
+      throw new Erl2Error(
+        CODES.RESIDUE_DETECTED,
+        `the cleanup verification reports ${identity} as remaining, but the post-cleanup ` +
+          `observation does not see it`,
+      );
+    }
+  }
+}
+
+// -- 4b. Lab attribution on an invalid environment terminal ------------------
+
+/**
+ * Refuses an invalid environment terminal whose primary finding names the wrong
+ * gate, or attributes a Lab environment failure to the subject
+ * (ADR-ERL2-027 §4.5).
+ *
+ * The gate map is re-applied here from the record's **own** `failed_phase`, so
+ * the producer's choice is the thing under test rather than the input. It used to
+ * be keyed on the cleanup branch: a provisioning failure named
+ * `environment-baseline-clean`, a gate belonging to a later phase that the run
+ * never evaluated, and every structural check passed over it.
+ *
+ * Attribution is checked because an invalid environment terminal is a statement
+ * about the **Lab's own** environment. A subject cannot be scored for the Lab
+ * failing to provision, restore or tear down, and the closed finding union
+ * carries the fields that say so — they were simply never required.
+ */
+export function assertInvalidFindingAttribution(options: {
+  readonly index: ArtifactIndex;
+  readonly record: InvalidLabRunRecordV1;
+}): void {
+  const { record } = options;
+  if (record.terminal_reason.kind !== "classified_failure") return;
+  if (record.failed_phase.kind !== "lifecycle_phase") return;
+  if (!isEnvironmentFailurePhase(record.failed_phase.phase)) return;
+
+  const finding = options.index.get(record.terminal_reason.primary_finding_hash).value;
+
+  if (finding["owner"] !== "lab") {
+    throw new Erl2Error(
+      CODES.INVALID_REASON_FABRICATED_FINDING,
+      `this terminal's primary finding is owned by ${String(finding["owner"])}; an invalid ` +
+        `environment terminal is a statement about the Lab's own environment and cannot be owned ` +
+        `by anyone else`,
+    );
+  }
+  if (finding["subject_attribution_proven"] === true) {
+    throw new Erl2Error(
+      CODES.INVALID_REASON_FABRICATED_FINDING,
+      "this terminal's primary finding claims proven subject attribution for an environment " +
+        "failure the Lab owns",
+    );
+  }
+  const planes = (finding["scoreable_planes"] as readonly unknown[] | undefined) ?? [];
+  if (planes.length > 0) {
+    throw new Erl2Error(
+      CODES.INVALID_REASON_FABRICATED_FINDING,
+      `this terminal's primary finding declares ${String(planes.length)} scoreable plane(s); a Lab ` +
+        `environment failure is not scored against the subject on any plane`,
+    );
+  }
+
+  const expected = gateForEnvironmentFailurePhase(record.failed_phase.phase);
+  const named = (finding["failed_gate_ids"] as readonly string[] | undefined) ?? [];
+  if (named.length !== 1 || named[0] !== expected) {
+    throw new Erl2Error(
+      CODES.INVALID_REASON_PHASE_MISMATCH,
+      `this terminal failed in phase ${record.failed_phase.phase}, which falsifies gate ` +
+        `${expected}; its primary finding names [${named.join(", ")}]`,
+    );
+  }
+}
+
 // -- 5. Lab validity ---------------------------------------------------------
 
 /**
@@ -884,6 +1185,7 @@ export function deriveInvalidEnvironmentSemantics(options: {
   readonly record: InvalidLabRunRecordV1;
 }): void {
   assertCleanupApplicable({ record: options.record, lifecycle: options.lifecycle });
+  assertInvalidFindingAttribution({ index: options.index, record: options.record });
 
   const roles = rolesOf(options.lifecycle);
   const hadEnvironment =
@@ -894,33 +1196,94 @@ export function deriveInvalidEnvironmentSemantics(options: {
   // A binding is required only of runs that produced one; the synthetic
   // pre-ADR-ERL2-024 environment fixtures predate the contract and are still
   // readable, which §10 records deliberately.
+  let bindingHash: Hash | undefined;
   if ((roles.get("substrate-binding") ?? []).length > 0) {
-    assertSubstrateBindingConsistent({
+    bindingHash = assertSubstrateBindingConsistent({
       index: options.index,
       lifecycle: options.lifecycle,
       runId: options.record.run_id,
-    });
+    }).binding.core_hash;
   }
 
-  if (options.record.cleanup.variant !== "emergency_environment") return;
+  // Every invalid environment terminal, not only the emergency one. This early
+  // return used to be `variant !== "emergency_environment"`, and behind it sat a
+  // bounded branch that swung an unconditional whole-environment `driver.destroy()`
+  // over a frontier it never read — so for five of the seven failure phases the
+  // verifier derived no expected safe-action set, checked no receipt cardinality
+  // and validated no unsafe skip (review P1-1, P1-5, P1-6; ADR-ERL2-027 §1.3).
   const frontierHash = single(roles, "environment-resource-frontier");
-  const resultHash = options.record.cleanup.result_hash;
-  if (frontierHash === undefined || resultHash === undefined) {
+  if (frontierHash === undefined) {
+    // A run that reached an environment always enumerates one before it cleans
+    // up; a terminal with none is asserting a cleanup over a world it never
+    // observed.
     throw new Erl2Error(
       CODES.EMERGENCY_CLEANUP_INCOMPLETE,
-      "an emergency cleanup terminal must retain both its resource frontier and its cleanup verification",
+      "this run reached an environment, but its terminal retains no resource frontier; a cleanup " +
+        "derived from nothing authorizes nothing",
     );
   }
+  const frontier = options.index.typed<EnvironmentResourceFrontierV1>(
+    frontierHash,
+    "environment-resource-frontier/v1",
+  );
+
+  // The independent post-cleanup observation is mandatory wherever a frontier
+  // was frozen — including a frontier that was empty. An empty frontier that
+  // probes back non-empty is itself evidence, and refusing to record it would be
+  // exactly the silence the contract exists to break (ADR-ERL2-027 §4.3).
+  const probeHash = single(roles, "cleanup-residue-probe");
+  if (probeHash === undefined) {
+    throw new Erl2Error(
+      CODES.RESIDUE_PROBE_MISSING,
+      "this terminal enumerated a resource frontier but retains no cleanup residue probe; without " +
+        "it the post-cleanup residue is derived by the producer from its own action outcomes, so " +
+        "an empty one cannot be contradicted and an unauthorized destruction cannot be seen",
+    );
+  }
+  const probe = options.index.typed<CleanupResidueProbeV1>(probeHash, "cleanup-residue-probe/v1");
+  const residue = deriveResidueProbe({
+    probe,
+    frontier,
+    runId: options.record.run_id,
+    ...(bindingHash === undefined ? {} : { substrateBindingHash: bindingHash }),
+  });
+
+  // The record's own cleanup status, against the substrate that was observed.
+  // `attempted_succeeded` over a non-empty residue is a producer claim that
+  // nothing checked: the status is a summary of the same evidence the probe
+  // holds, so the two cannot be allowed to disagree.
+  const derivedStatus =
+    residue.residual.length === 0 ? "attempted_succeeded" : "attempted_failed";
+  if (options.record.cleanup.status !== derivedStatus) {
+    throw new Erl2Error(
+      CODES.EMERGENCY_CLEANUP_INCOMPLETE,
+      `this terminal records cleanup status ${options.record.cleanup.status}, but the post-cleanup ` +
+        `observation leaves ${String(residue.residual.length)} resource(s) of this run's frontier ` +
+        `in place; the verifier derives ${derivedStatus}`,
+    );
+  }
+
+  // A frontier with no derived action has no cleanup verification to check:
+  // `EmergencyCleanupVerificationV1.actions` has `minItems: 1`, so the contract
+  // itself refuses to describe a cleanup that did nothing. The probe above is
+  // the whole record in that case, and it is the observation that says so.
+  if (frontier.derived_actions.length === 0) return;
+
+  const resultHash = options.record.cleanup.result_hash;
+  if (resultHash === undefined) {
+    throw new Erl2Error(
+      CODES.EMERGENCY_CLEANUP_INCOMPLETE,
+      "this terminal derived cleanup actions from its frontier but cites no cleanup verification",
+    );
+  }
+  const cleanup = options.index.typed<EmergencyCleanupVerificationV1>(
+    resultHash,
+    "emergency-cleanup-verification/v1",
+  );
   deriveEmergencyCleanup({
     index: options.index,
-    frontier: options.index.typed<EnvironmentResourceFrontierV1>(
-      frontierHash,
-      "environment-resource-frontier/v1",
-    ),
-    cleanup: options.index.typed<EmergencyCleanupVerificationV1>(
-      resultHash,
-      "emergency-cleanup-verification/v1",
-    ),
+    frontier,
+    cleanup,
     frontierEventHashes: options.lifecycle
       .filter((event) =>
         event.produced.some(
@@ -929,6 +1292,8 @@ export function deriveInvalidEnvironmentSemantics(options: {
       )
       .map((event) => event.core_hash),
   });
+  // What the action list says, against what the substrate showed.
+  assertActionsAgreeWithResidue({ cleanup, frontier, probe });
 }
 
 /** Recomputes an artifact's core hash. Exported so callers need not import integrity. */

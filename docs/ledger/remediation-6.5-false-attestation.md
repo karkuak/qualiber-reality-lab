@@ -289,6 +289,15 @@ The remaining seventeen are unchanged.
 
 ## 7. What is still open
 
+> **Two P2 items below have since been closed**, and the section is otherwise
+> left as the dated record it is. The invalid terminal's primary finding naming a
+> gate from the cleanup branch, and Lab attribution unenforced on an invalid
+> environment terminal, are both closed by
+> [ADR-ERL2-027](../adr/ADR-ERL2-027.md) and
+> [`remediation-6.5-cleanup.md`](remediation-6.5-cleanup.md) §4 — which also found
+> that this package's predecessor closed the P1-1/P1-5/P1-6 cluster on one branch
+> of two.
+
 This package closes four false-attestation paths. It does **not** remediate the
 whole review, and does not claim to.
 

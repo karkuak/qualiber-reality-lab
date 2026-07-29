@@ -90,6 +90,24 @@ const DRIVER_FAULTS: Readonly<Record<string, FakeDriverFaults>> = {
   // action alongside the safe ones — the mixed frontier whose foreign member
   // used to abort emergency cleanup entirely (review P1-5).
   "failed-restore-shared": { failRestore: true },
+  // A failed restoration and a resource belonging to **another run**, sitting in
+  // the same substrate. Distinct from `failed-restore-shared`, and the
+  // distinction is the whole point: a *shared* resource still embeds this run's
+  // id, so `assertOwnedByRun` passes for it and a whole-environment destroy
+  // never throws — which means the only case claiming to prove P1-5 was proving
+  // something about shared resources and nothing about foreign ones. A foreign
+  // resource fails `assertOwnedByRun`, so `driver.destroy` throws on it
+  // (ADR-ERL2-027 §1.5, §4.7).
+  "failed-restore-foreign": { failRestore: true },
+  // The bounded route: a contaminated baseline is a non-emergency failure, and
+  // until ADR-ERL2-027 it reached an unconditional whole-environment
+  // `driver.destroy()` over a frontier that had just been frozen and never read.
+  // With a shared resource present, that destroy removed a resource the frontier
+  // had classified `contain_residual` and left no record of having done so
+  // (review P1-1); with a foreign one it threw, and the run reached no terminal
+  // at all (review P1-5).
+  "contaminated-baseline-shared": { contaminationCodes: ["PREEXISTING_RESIDUE"] },
+  "contaminated-baseline-foreign": { contaminationCodes: ["PREEXISTING_RESIDUE"] },
   // The compensation returns `succeeded` and reverts nothing (review P1-4). Not
   // a variant of `failed-restore`: a failed restoration is honest and already
   // routes to emergency cleanup, while this one produces a receipt that reads
@@ -124,6 +142,15 @@ function driverFaults(flags: ParsedFlags, runId: string): FakeDriverFaults {
   if (name === "residue") return { residualResourceIds: [`volume-${runId.slice(0, 8)}`] };
   if (name === "failed-restore-shared") {
     return { failRestore: true, sharedResourceIds: [`volume-${runId.slice(0, 8)}`] };
+  }
+  if (name === "contaminated-baseline-shared") {
+    return { ...fault, sharedResourceIds: [`volume-${runId.slice(0, 8)}`] };
+  }
+  // The foreign resource is another run's, so it is named by *kind* rather than
+  // by one of this run's resource ids — there is no id of ours that could name
+  // something that is not ours.
+  if (name === "failed-restore-foreign" || name === "contaminated-baseline-foreign") {
+    return { ...fault, foreignResourceKinds: ["volume"] };
   }
   return fault;
 }

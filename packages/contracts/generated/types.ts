@@ -833,6 +833,29 @@ export type SubstrateBindingV1 = {
   readonly signature: Signature;
 };
 
+export type ObservedResourceIdentity = {
+  readonly resource_id: Id;
+  readonly identity_hash: Hash;
+};
+
+export type CleanupResidueProbeV1 = {
+  readonly schema_version: "cleanup-residue-probe/v1";
+  readonly probe_id: Id;
+  readonly run_id: RunId;
+  readonly substrate_binding_hash: Hash;
+  readonly environment_instance_hash: Hash;
+  readonly resource_frontier_hash: Hash;
+  readonly observed_before: readonly ObservedResourceIdentity[];
+  readonly observed_after: readonly ObservedResourceIdentity[];
+  readonly authorized_targets: IdArray;
+  readonly undeclared_destroyed_resources: IdArray;
+  readonly residual_resources: IdArray;
+  readonly probe_status: "observed" | "unavailable";
+  readonly outcome: "clean" | "residual" | "undeclared_destruction" | "unobservable";
+  readonly probed_at: Instant;
+  readonly core_hash: Hash;
+};
+
 export type ExpectedRevertedMutation = {
   readonly mutation_id: Id;
   readonly mutation_receipt_hash: Hash;

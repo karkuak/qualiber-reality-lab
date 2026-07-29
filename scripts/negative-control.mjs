@@ -430,6 +430,109 @@ const CONTROLS = [
     tests: ["tests/dist/adversarial/claimScopeEscalation.test.js"],
     expect: "fail",
   },
+
+  // -- ADR-ERL2-027: one cleanup discipline, and an observed residue ---------
+  {
+    id: "unconditional-bounded-destroy",
+    what: "the bounded invalid route derives its cleanup instead of destroying the environment (review P1-1/P1-5)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Restores `boundedEnvironmentCleanup` in the one respect that matters: the
+    // non-emergency route swings a whole-environment `driver.destroy()` before
+    // it reads the frontier it just froze. The per-action executor still runs
+    // afterwards, so the patch compiles and the *only* thing that changes is
+    // that an unauthorized aggregate dispatch happens first — which is the
+    // defect, and which the frontier-unsafe survivor and the residue probe both
+    // see.
+    find: "    const safe = safeActions(frontier);\n    const attemptHashes: Hash[] = [];",
+    replace:
+      "    if (!emergency) this.driver.destroy({ runId: this.runId, operationId: \"op-invalid-destroy\" });\n" +
+      "    const safe = safeActions(frontier);\n    const attemptHashes: Hash[] = [];",
+    tests: ["tests/dist/adversarial/invalidCleanupDiscipline.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cleanup-residue-probe",
+    what: "the substrate is re-observed after cleanup and the observation retained (ADR-ERL2-027 §4.3)",
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    // The verifier stops requiring the independent observation. Everything the
+    // producer writes about its own residue then stands unchallenged, which is
+    // the state §1.6 describes.
+    find: "  const probeHash = single(roles, \"cleanup-residue-probe\");\n  if (probeHash === undefined) {",
+    replace:
+      "  const probeHash = single(roles, \"cleanup-residue-probe\");\n" +
+      "  if (probeHash === undefined || String(1) !== \"2\") return;\n" +
+      "  if (probeHash === undefined) {",
+    tests: [
+      "tests/dist/adversarial/invalidCleanupDiscipline.test.js",
+      "tests/dist/adversarial/emergencyCleanupAdversarial.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "undeclared-destruction-detection",
+    what: "a resource that vanished without an authorized action is a refusal (ADR-ERL2-027 §4.3)",
+    file: "packages/core/src/environment/residueProbe.ts",
+    // The arithmetic still runs; only the verdict is suppressed, so a resource
+    // the frontier said not to touch can disappear and the probe reports
+    // `clean`. This is the offline-invisible half of P1-1.
+    find: "  if (undeclaredDestroyed.length > 0) {",
+    replace: '  if (undeclaredDestroyed.length > 0 && String(1) === "2") {',
+    tests: ["tests/dist/integration/cleanupDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "actions-agree-with-residue",
+    what: "a reported outcome must agree with the substrate that was observed (ADR-ERL2-027 §4.6)",
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    find: "  for (const action of cleanup.actions) {\n    const target = targetOf.get(action.action_id);",
+    replace:
+      "  for (const action of [] as typeof cleanup.actions) {\n" +
+      "    const target = targetOf.get(action.action_id);",
+    tests: ["tests/dist/adversarial/invalidCleanupDiscipline.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "invalid-finding-phase-gate",
+    what: "the invalid terminal's finding names the gate its own phase falsifies (review P1-3)",
+    file: "packages/core/src/evaluation/invalidityAttribution.ts",
+    // Restores the branch-keyed answer: every phase gets the baseline gate,
+    // which is what the producer did for five of the seven.
+    find: "  const gate = ENVIRONMENT_PHASE_GATE[phase as EnvironmentFailurePhase];",
+    replace: '  const gate = "environment-baseline-clean";',
+    tests: [
+      "tests/dist/integration/cleanupDerivation.test.js",
+      "tests/dist/adversarial/invalidCleanupDiscipline.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "invalid-finding-lab-attribution",
+    what: "a Lab environment failure cannot be attributed to the subject (ADR-ERL2-027 §4.5.2)",
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    find: "  if (record.terminal_reason.kind !== \"classified_failure\") return;\n  if (record.failed_phase.kind !== \"lifecycle_phase\") return;",
+    replace:
+      "  if (String(1) !== \"2\") return;\n" +
+      "  if (record.terminal_reason.kind !== \"classified_failure\") return;\n" +
+      "  if (record.failed_phase.kind !== \"lifecycle_phase\") return;",
+    tests: ["tests/dist/adversarial/invalidCleanupDiscipline.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "foreign-resource-classification",
+    what: "a resource that is not provably this run's is never an authorized target (review P1-5)",
+    file: "packages/core/src/environment/frontier.ts",
+    // The frontier stops re-deriving ownership and believes whatever it was
+    // handed. Another run's resource then becomes an independently safe action,
+    // which is the classification failure every downstream guard depends on not
+    // happening.
+    find: "    if (!owned) {",
+    replace: '    if (!owned && String(1) === "2") {',
+    tests: [
+      "tests/dist/integration/cleanupDerivation.test.js",
+      "tests/dist/adversarial/invalidCleanupDiscipline.test.js",
+    ],
+    expect: "fail",
+  },
 ];
 
 // -- the disposable tree -----------------------------------------------------

@@ -5,14 +5,14 @@
   "failed_phase": {
     "kind": "lifecycle_phase",
     "phase": "environment_restoration",
-    "lifecycle_event_hash": "sha256:3dbb2d7e2ca1f7909e12b48acc62768c96c7ae3dd374144c3f9f9a0a63349d6a"
+    "lifecycle_event_hash": "sha256:f256449464d955227ef953d59e7a1c6fbe6388862f47337247783e2997c1422f"
   },
   "terminal_reason": {
     "kind": "classified_failure",
     "classification": "cleanup_failure",
-    "failure_event_hash": "sha256:3dbb2d7e2ca1f7909e12b48acc62768c96c7ae3dd374144c3f9f9a0a63349d6a",
-    "primary_finding_hash": "sha256:a711077d5912f8244e21aad1b59229c0bdf77eea700b0ef06f38beb7ad20ea78",
-    "invalidity_finding_hash": "sha256:a711077d5912f8244e21aad1b59229c0bdf77eea700b0ef06f38beb7ad20ea78"
+    "failure_event_hash": "sha256:f256449464d955227ef953d59e7a1c6fbe6388862f47337247783e2997c1422f",
+    "primary_finding_hash": "sha256:731573d0157d3207607a9bd515b48cf41771d73ce1a38d326c8ffee33199b71f",
+    "invalidity_finding_hash": "sha256:731573d0157d3207607a9bd515b48cf41771d73ce1a38d326c8ffee33199b71f"
   },
   "available_evidence": [
     {
@@ -26,73 +26,88 @@
       "reached_event_hash": "sha256:c691ade0a7ded7257fd499d2b75df65e20b61737c6c6c6aecb481ca7c86f61d0"
     },
     {
+      "artifact_role": "environment-archetype",
+      "artifact_hash": "sha256:d9a0737d2feb34c5a047175339707b82da9344417c6f8b07588ccbaade672920",
+      "reached_event_hash": "sha256:e29d4cf0f9555c0c19ef618f691faed720bd126a7b369c774415ade2c3dc309f"
+    },
+    {
       "artifact_role": "environment-driver-manifest",
       "artifact_hash": "sha256:28861263c9e825955a3cf8094911b3db32bf75b38d7e03bf8df7963397201c57",
-      "reached_event_hash": "sha256:c733655271ef2c017e348a175adbfe4cdbfe54cc98b7838b36ad260d6a6bf543"
+      "reached_event_hash": "sha256:e29d4cf0f9555c0c19ef618f691faed720bd126a7b369c774415ade2c3dc309f"
+    },
+    {
+      "artifact_role": "substrate-binding",
+      "artifact_hash": "sha256:73aea8867200ce25795bd28ffa06a53c81f1a278dbf80e5d3c227bf249485c84",
+      "reached_event_hash": "sha256:e29d4cf0f9555c0c19ef618f691faed720bd126a7b369c774415ade2c3dc309f"
     },
     {
       "artifact_role": "environment-resource-inventory",
-      "artifact_hash": "sha256:19f90a2a249e4d7242b1b7718f712a43025cc2eff7fd60728a84def7adc8abfd",
-      "reached_event_hash": "sha256:c733655271ef2c017e348a175adbfe4cdbfe54cc98b7838b36ad260d6a6bf543"
+      "artifact_hash": "sha256:e0b4547ef4409a5eae2b71aa6116b1df2cf2f3635b7718e5e5da519c0271ff11",
+      "reached_event_hash": "sha256:e29d4cf0f9555c0c19ef618f691faed720bd126a7b369c774415ade2c3dc309f"
     },
     {
       "artifact_role": "environment-baseline",
-      "artifact_hash": "sha256:b0465771b39e93a57e3a8462138ea2e6b4c4ab46a6a5f4e5edf4943279172edd",
-      "reached_event_hash": "sha256:c733655271ef2c017e348a175adbfe4cdbfe54cc98b7838b36ad260d6a6bf543"
+      "artifact_hash": "sha256:a9d5462ecd31d7b9e027496a12b680b5ca67657d2fdc249791b8073a5b593e7d",
+      "reached_event_hash": "sha256:e29d4cf0f9555c0c19ef618f691faed720bd126a7b369c774415ade2c3dc309f"
     },
     {
       "artifact_role": "environment-operation-receipt",
-      "artifact_hash": "sha256:2ac0ce8ecd19eefa77c9027c42c0b69bc3b566593ca4a58a0f062b29f4716340",
-      "reached_event_hash": "sha256:3dbb2d7e2ca1f7909e12b48acc62768c96c7ae3dd374144c3f9f9a0a63349d6a"
+      "artifact_hash": "sha256:9f8ed6e17da05dcec3e00f49207aa0ae87348c5efdffa712a847301ffd7fed19",
+      "reached_event_hash": "sha256:f256449464d955227ef953d59e7a1c6fbe6388862f47337247783e2997c1422f"
     },
     {
       "artifact_role": "primary-finding",
-      "artifact_hash": "sha256:a711077d5912f8244e21aad1b59229c0bdf77eea700b0ef06f38beb7ad20ea78",
-      "reached_event_hash": "sha256:3dbb2d7e2ca1f7909e12b48acc62768c96c7ae3dd374144c3f9f9a0a63349d6a"
+      "artifact_hash": "sha256:731573d0157d3207607a9bd515b48cf41771d73ce1a38d326c8ffee33199b71f",
+      "reached_event_hash": "sha256:f256449464d955227ef953d59e7a1c6fbe6388862f47337247783e2997c1422f"
     },
     {
       "artifact_role": "environment-resource-frontier",
-      "artifact_hash": "sha256:fcf0a0b1c838835560ba05399f51dcced25f3e1b4f5fa230e41699c8309dfe85",
-      "reached_event_hash": "sha256:ea6cdf82f3a429921d52c68c5401441a2e3c60cb27c022ab8583b1ce43d8e5f7"
+      "artifact_hash": "sha256:446d2fcc074291ca64623d671eb64dc1e7b7055d5eb533641d9f0ffddba72517",
+      "reached_event_hash": "sha256:6c6754a487e10f22aff0ae188bdbbeca0fcd6c7f5c873c6818b61d87971e9cb8"
+    },
+    {
+      "artifact_role": "cleanup-residue-probe",
+      "artifact_hash": "sha256:f757275dc5656da102a7977f7223bfd770b8a551e03ebbfbc0c29b2f6e21755a",
+      "reached_event_hash": "sha256:8655d7007d4e671dfe4bbf4c122260967dff6ea952172206301f1c692f74e927"
     },
     {
       "artifact_role": "emergency-cleanup-verification",
-      "artifact_hash": "sha256:13610c5f190296e6b09549e90f6ee71b87318105cbcf55e88713a16386d91c28",
-      "reached_event_hash": "sha256:3791f2c7b6f125b5d9d4e7b799199b5c6fe62e01edfd85e573d31889204b1eeb"
+      "artifact_hash": "sha256:18b3a7a6b656ae4327d26cc9b9c9b506d5d3aec8ce5de1110f2d8465d7c1d824",
+      "reached_event_hash": "sha256:8655d7007d4e671dfe4bbf4c122260967dff6ea952172206301f1c692f74e927"
     },
     {
       "artifact_role": "emergency-attempt-receipt",
-      "artifact_hash": "sha256:e4c696b13d1d621f5c7e1c50fc3aed221a1d43f9af35f5cead0c805c22294012",
-      "reached_event_hash": "sha256:3791f2c7b6f125b5d9d4e7b799199b5c6fe62e01edfd85e573d31889204b1eeb"
+      "artifact_hash": "sha256:b4be54e9c3ef740ae0ce0c16cbfb43f3dc223a36a8bb067c368553ea6414c291",
+      "reached_event_hash": "sha256:8655d7007d4e671dfe4bbf4c122260967dff6ea952172206301f1c692f74e927"
     },
     {
       "artifact_role": "emergency-attempt-receipt",
-      "artifact_hash": "sha256:eaa6e4490e52a0d9cd68648115185fb24e0cc77b7bedfbae6d3de201bfa53441",
-      "reached_event_hash": "sha256:3791f2c7b6f125b5d9d4e7b799199b5c6fe62e01edfd85e573d31889204b1eeb"
+      "artifact_hash": "sha256:99eddd2b60a6af0b46817ddb39df6f7d117bc2517be48c70e64fca59f7137b2b",
+      "reached_event_hash": "sha256:8655d7007d4e671dfe4bbf4c122260967dff6ea952172206301f1c692f74e927"
     },
     {
       "artifact_role": "emergency-attempt-receipt",
-      "artifact_hash": "sha256:5cb348abf0d4bc5527c1e4759e04b0b51fe3b0d9509c816bb10f7e04f2069bcd",
-      "reached_event_hash": "sha256:3791f2c7b6f125b5d9d4e7b799199b5c6fe62e01edfd85e573d31889204b1eeb"
+      "artifact_hash": "sha256:1ad30a7e58861968c43d56cd58f458a805a7ab76b4c6f912f9961750070ac632",
+      "reached_event_hash": "sha256:8655d7007d4e671dfe4bbf4c122260967dff6ea952172206301f1c692f74e927"
     },
     {
       "artifact_role": "emergency-attempt-receipt",
-      "artifact_hash": "sha256:7604ab057423bae394045abf612a6ae016553f85478d56b25899b2fdd03e0f70",
-      "reached_event_hash": "sha256:3791f2c7b6f125b5d9d4e7b799199b5c6fe62e01edfd85e573d31889204b1eeb"
+      "artifact_hash": "sha256:0077f02ebf910ea23f41c8e65ac99d6e4a60b20f49f952f2b21ebe5c748825fa",
+      "reached_event_hash": "sha256:8655d7007d4e671dfe4bbf4c122260967dff6ea952172206301f1c692f74e927"
     }
   ],
   "cleanup": {
     "variant": "emergency_environment",
-    "status": "attempted_succeeded",
+    "status": "attempted_failed",
     "attempt_hashes": [
-      "sha256:e4c696b13d1d621f5c7e1c50fc3aed221a1d43f9af35f5cead0c805c22294012",
-      "sha256:eaa6e4490e52a0d9cd68648115185fb24e0cc77b7bedfbae6d3de201bfa53441",
-      "sha256:5cb348abf0d4bc5527c1e4759e04b0b51fe3b0d9509c816bb10f7e04f2069bcd",
-      "sha256:7604ab057423bae394045abf612a6ae016553f85478d56b25899b2fdd03e0f70"
+      "sha256:b4be54e9c3ef740ae0ce0c16cbfb43f3dc223a36a8bb067c368553ea6414c291",
+      "sha256:99eddd2b60a6af0b46817ddb39df6f7d117bc2517be48c70e64fca59f7137b2b",
+      "sha256:1ad30a7e58861968c43d56cd58f458a805a7ab76b4c6f912f9961750070ac632",
+      "sha256:0077f02ebf910ea23f41c8e65ac99d6e4a60b20f49f952f2b21ebe5c748825fa"
     ],
-    "result_hash": "sha256:13610c5f190296e6b09549e90f6ee71b87318105cbcf55e88713a16386d91c28"
+    "result_hash": "sha256:18b3a7a6b656ae4327d26cc9b9c9b506d5d3aec8ce5de1110f2d8465d7c1d824"
   },
-  "lifecycle_head_hash": "sha256:3791f2c7b6f125b5d9d4e7b799199b5c6fe62e01edfd85e573d31889204b1eeb",
-  "invalidated_at": "2026-07-01T00:00:26Z",
-  "core_hash": "sha256:d712f02328e37d951f6ad7307f5ec684e4324773e86cbeb773309bffe5379a42"
+  "lifecycle_head_hash": "sha256:8655d7007d4e671dfe4bbf4c122260967dff6ea952172206301f1c692f74e927",
+  "invalidated_at": "2026-07-01T00:00:34Z",
+  "core_hash": "sha256:13755f7911a5ad7e0cd07af9db07417491c22954c333f342a1cfc8a46eb45324"
 }
