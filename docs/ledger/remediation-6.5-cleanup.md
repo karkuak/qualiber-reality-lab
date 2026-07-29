@@ -341,3 +341,84 @@ The expectation was **not** re-scored to `pass`. This is the same distinction
 not isolating it. It is why the campaign is worth running even when the code is
 right, and it found a genuine hole — a whole class of "the verifier checks X"
 claims in this package rested on tests that never asked the verifier.
+
+### The full campaign, in the repository
+
+Run after this work was committed to `slice-6.5-cleanup-remediation` at
+`16b5b92` — the campaign §9's opening paragraph said belonged to whoever
+committed. All thirty-seven controls, **zero disagreements**, working tree
+byte-identical afterwards, no worktrees left registered.
+
+| Control | Result | Expected |
+|---|---|---|
+| `activate-connect-guard` | 10 pass / 1 fail | fail ✔ |
+| `freeze-output-outstanding-step-guard` | 10 pass / 1 fail | fail ✔ |
+| `step-order-guard` | 11 pass / 1 fail | fail ✔ |
+| `durable-substrate` | 6 pass / 17 fail | fail ✔ |
+| `restore-receipt-status` | 4 pass / 4 fail | fail ✔ |
+| `emergency-route` | 5 pass / 3 fail | fail ✔ (see below) |
+| `subject-output-canary-scan` | 11 pass / 1 fail | fail ✔ |
+| `environment-bundle-verifier` | 10 pass / 7 fail | fail ✔ |
+| `baseline-repeatability` | 12 pass / 0 fail | pass ✔ — still not load-bearing; the fake driver is deterministic, so two probes agree by construction |
+| `case-selected-comparisons` | 21 pass / 0 fail | pass ✔ — still not load-bearing; the producer builds pool entries from the admitted manifests |
+| `run-identity-validation` | 4 pass / 7 fail | fail ✔ |
+| `substrate-binding-validation` | 9 pass / 3 fail | fail ✔ |
+| `substrate-locator-conflict` | 10 pass / 2 fail | fail ✔ |
+| `pre-dispatch-intent` | 5 pass / 2 fail | fail ✔ |
+| `intent-reconciliation` | 5 pass / 2 fail | fail ✔ |
+| `frontier-action-derivation` | 13 pass / 1 fail | fail ✔ |
+| `safe-action-completeness` | 10 pass / 4 fail | fail ✔ |
+| `per-action-emergency-cleanup` | 13 pass / 1 fail | fail ✔ |
+| `verifier-validity-derivation` | 12 pass / 1 fail | fail ✔ |
+| `verifier-restoration-derivation` | 12 pass / 1 fail | fail ✔ |
+| `verifier-teardown-derivation` | 12 pass / 1 fail | fail ✔ |
+| `branch-specific-cancellation` | 3 pass / 6 fail | fail ✔ |
+| `cancellation-cleanup-applicability` | 12 pass / 1 fail | fail ✔ |
+| `locator-flag-development-gate` | 11 pass / 1 fail | fail ✔ |
+| `narrow-enoent-substrate-read` | 8 pass / 3 fail | fail ✔ |
+| `substrate-state-shape-validation` | 10 pass / 1 fail | fail ✔ |
+| `compensation-mutation-binding` | 3 pass / 5 fail | fail ✔ |
+| `independent-restoration-probe` | 5 pass / 3 fail | fail ✔ |
+| `producer-claim-scope-derivation` | 7 pass / 1 fail | fail ✔ |
+| `verifier-claim-scope-rederivation` | 4 pass / 4 fail | fail ✔ |
+| `unconditional-bounded-destroy` | 10 pass / 10 fail | fail ✔ |
+| `cleanup-residue-probe` | 32 pass / 2 fail | fail ✔ |
+| `undeclared-destruction-detection` | 19 pass / 2 fail | fail ✔ |
+| `actions-agree-with-residue` | 19 pass / 1 fail | fail ✔ |
+| `invalid-finding-phase-gate` | 36 pass / 5 fail | fail ✔ |
+| `invalid-finding-lab-attribution` | 18 pass / 2 fail | fail ✔ |
+| `foreign-resource-classification` | 36 pass / 5 fail | fail ✔ |
+
+**Thirty-five of thirty-seven are load-bearing.** The two that are not are the two
+that have never been, for reasons that have not changed.
+
+**The clone methodology holds up again, with the same caveat as before.** The
+seven package controls' in-repo kill counts are all ≥ their clone counts, and
+every difference is accounted for by tests added *after* the clone measurement:
+the two entry-point cases and the status-disagreement case landed late, so five
+suites grew, and the new status case also dies under `unconditional-bounded-destroy`
+and `cleanup-residue-probe` (each +1 kill). `undeclared-destruction-detection`
+reproduced exactly, 19 / 2. No kill was lost.
+
+**One count moved downward against the `e48bdc2` table, and it is not a
+regression.** `emergency-route` flips the restoration-failure dispatch from
+`emergency: true` to `emergency: false`. Under the pre-ADR-ERL2-027 tree that
+meant `boundedEnvironmentCleanup` — no per-action attempts, no receipts, no
+cleanup verification — and it killed 4 of 8 cases. It now means the **same
+executor with a different lifecycle route**, because the discipline is shared by
+construction, so the cases that assert per-action receipts and completeness pass
+even with the guard disabled, and the 3 that still fail are the ones about the
+route itself — including the closure derivation's `EMERGENCY_CLEANUP_BYPASSED`,
+which still refuses a restoration failure that reached the record without the
+emergency variant. This is the same defence-in-depth cost the previous ledger
+recorded for `restore-receipt-status` (5 → 4), and it is recorded on the same
+terms: the invariant the control isolates has narrowed from "misrouting loses the
+cleanup" to "misrouting mislabels the route", because the first half can no
+longer happen.
+
+Three inherited counts rose because their suites grew rather than because
+anything changed — `frontier-action-derivation`, `safe-action-completeness` and
+`per-action-emergency-cleanup` each gained one passing case from
+`emergencyCleanupAdversarial`'s new genuinely-foreign test. The remaining
+twenty-six inherited controls returned counts identical to the `e48bdc2`
+campaign.
