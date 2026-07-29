@@ -203,13 +203,6 @@ turned out to be defects in the controls or the tests rather than in the
 invariants (`remediation-6.5-invariants.md` §8). No expectation was re-scored to
 make anything green, and none needed to be.
 
-Two of the ten measure guards ADR-ERL2-024 introduced (`run-identity-validation`,
-`substrate-binding-validation`) and are re-measured here because their suites
-grew: run-identity now kills 7 cases rather than 5, and substrate-binding 3
-rather than 2. The remaining twenty pre-existing controls were not re-run by this
-package; their last measurement is the table in
-`remediation-6.5-invariants.md` §9.
-
 `compensation-mutation-binding` and `verifier-claim-scope-rederivation` are worth
 a note: they kill 5 of 8 and 4 of 8 cases respectively. A control that kills half
 its suite is not a stronger control than one that kills a single named case — but
@@ -220,6 +213,79 @@ The harness gained one change: its filter now accepts a comma-separated list, so
 a package can measure exactly the controls it touches and say which. A full
 thirty-control campaign is thirty builds and thirty suite runs; the alternative
 to naming a subset was a partial answer with no record of which part.
+
+### The full campaign, in the repository
+
+Run after this work was committed, against the real repository rather than a
+clone — the first time either was possible, because the harness checks a worktree
+out at `HEAD` and refuses a dirty tree, and until the commit there was no `HEAD`
+to check out. Thirty controls, 1h33m, **zero disagreements**, working tree
+byte-identical afterwards, no worktrees left registered.
+
+| Control | Result | Expected |
+|---|---|---|
+| `activate-connect-guard` | 10 pass / 1 fail | fail ✔ |
+| `freeze-output-outstanding-step-guard` | 10 pass / 1 fail | fail ✔ |
+| `step-order-guard` | 11 pass / 1 fail | fail ✔ |
+| `durable-substrate` | 6 pass / 17 fail | fail ✔ |
+| `restore-receipt-status` | 4 pass / 4 fail | fail ✔ (see below) |
+| `emergency-route` | 4 pass / 4 fail | fail ✔ |
+| `subject-output-canary-scan` | 11 pass / 1 fail | fail ✔ |
+| `environment-bundle-verifier` | 10 pass / 7 fail | fail ✔ |
+| `baseline-repeatability` | 12 pass / 0 fail | pass ✔ — still not load-bearing; the fake driver is deterministic, so two probes agree by construction |
+| `case-selected-comparisons` | 21 pass / 0 fail | pass ✔ — still not load-bearing; the producer builds pool entries from the admitted manifests |
+| `run-identity-validation` | 4 pass / 7 fail | fail ✔ |
+| `substrate-binding-validation` | 9 pass / 3 fail | fail ✔ |
+| `substrate-locator-conflict` | 10 pass / 2 fail | fail ✔ |
+| `pre-dispatch-intent` | 5 pass / 2 fail | fail ✔ |
+| `intent-reconciliation` | 5 pass / 2 fail | fail ✔ |
+| `frontier-action-derivation` | 12 pass / 1 fail | fail ✔ |
+| `safe-action-completeness` | 9 pass / 4 fail | fail ✔ |
+| `per-action-emergency-cleanup` | 12 pass / 1 fail | fail ✔ |
+| `verifier-validity-derivation` | 12 pass / 1 fail | fail ✔ |
+| `verifier-restoration-derivation` | 12 pass / 1 fail | fail ✔ |
+| `verifier-teardown-derivation` | 12 pass / 1 fail | fail ✔ |
+| `branch-specific-cancellation` | 3 pass / 6 fail | fail ✔ |
+| `cancellation-cleanup-applicability` | 12 pass / 1 fail | fail ✔ |
+| `locator-flag-development-gate` | 11 pass / 1 fail | fail ✔ |
+| `narrow-enoent-substrate-read` | 8 pass / 3 fail | fail ✔ |
+| `substrate-state-shape-validation` | 10 pass / 1 fail | fail ✔ |
+| `compensation-mutation-binding` | 3 pass / 5 fail | fail ✔ |
+| `independent-restoration-probe` | 5 pass / 3 fail | fail ✔ |
+| `producer-claim-scope-derivation` | 7 pass / 1 fail | fail ✔ |
+| `verifier-claim-scope-rederivation` | 4 pass / 4 fail | fail ✔ |
+
+**Twenty-eight of thirty are load-bearing.** The two that are not are the two that
+were already recorded as not load-bearing, for reasons that have not changed.
+
+**The clone methodology reproduces exactly.** All ten controls this package ran
+against a disposable clone returned *identical* pass/fail counts in the
+repository. That is worth recording: the previous two packages had no choice but
+to measure in a clone, and their numbers were never independently checked against
+an in-repo run. They now are.
+
+**One count moved, downward, and it is not a regression.**
+`restore-receipt-status` disables the `receipt.status !== "succeeded"` check in
+`restore()`. It killed 5 of 8 cases in 6.5-B and kills 4 of 8 now, over a suite
+that did not change size. The cause is ADR-ERL2-026: the `failRestore` fault
+returns a failed receipt and, because it returns before `this.put(...)`, leaves
+the mutation applied — so with the receipt check disabled, execution now reaches
+the restoration probe, which observes the mutation still there and refuses with
+`RESTORATION_NOT_INDEPENDENTLY_OBSERVED` instead. One of the eight cases
+therefore no longer changes outcome when the guard is removed.
+
+That is defence in depth working, and it is also the honest cost of it: the
+receipt-status check is now *partially redundant* with the probe, and the control
+is a correspondingly weaker isolator than it was. Recorded rather than smoothed
+over, because a kill count that drops for a good reason and a kill count that
+drops because a guard rotted look identical in a table.
+
+Six other counts rose, all because their suites grew rather than because anything
+changed: `run-identity-validation` 5→7 kills (suite 7→11),
+`substrate-binding-validation` 2→3 (8→12), `substrate-locator-conflict` 2→2
+(8→12), and `verifier-restoration-derivation`, `verifier-teardown-derivation` and
+`cancellation-cleanup-applicability` each 1→1 over a suite of 13 rather than 12.
+The remaining seventeen are unchanged.
 
 ## 7. What is still open
 
@@ -263,10 +329,8 @@ misdescribes where its own evidence lives is the failure this file exists to
 prevent. `remediation-6.5-invariants.md` §9 carries the same description and is
 left as the dated record it is.
 
-What **is** owed: this package measured ten of the thirty controls (§6), and the
-campaign ran against a disposable clone because the harness checks a worktree out
-at `HEAD` and this remediation had none to check out. Both of those constraints
-are now gone — the work is committed and the tree is clean — so the next
-opportunity to run the full thirty in the repository itself should be taken, and
-its result recorded beside the tables in §6 and in
-`remediation-6.5-invariants.md` §9.
+What was owed has been done. This package measured ten of the thirty controls
+during development, against a disposable clone because the harness checks a
+worktree out at `HEAD` and this remediation had none. Both constraints ended at
+the commit, and the full thirty were then run in the repository itself — §6
+carries the result, including the one count that moved and why.

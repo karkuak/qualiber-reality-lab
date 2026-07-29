@@ -193,6 +193,16 @@ campaign is worth running even when the code is right.
 
 ## 9. Negative-control results
 
+> **Superseded by a measurement this table could not make**, and left as the
+> dated record it is. Every number below was taken in a disposable clone, because
+> the harness checks a worktree out at `HEAD` and this package had no commit to
+> check out. The full thirty controls have since been run **in the repository**,
+> and `remediation-6.5-false-attestation.md` §6 carries that result — including
+> the fact that all ten controls measured both ways returned identical counts,
+> which is the first independent check this clone methodology has ever had.
+> One count below has since moved for a stated reason (`restore-receipt-status`,
+> 5 kills → 4), and six rose because their suites grew.
+
 Measured against the repaired controls and the strengthened tests. `expect: pass`
 is a legitimate value and is never assigned to make a campaign green: it means the
 guard was disabled and **nothing failed**, which is reported rather than hidden.
