@@ -252,11 +252,21 @@ something the evidence never supported.
 
 ## 8. Where the numbers live
 
-`docs/ledger/negative-controls.json` is **not** updated by this package and still
-holds the ten-control result set from 6.5-B. That is the same deliberate, stated
-gap the previous package recorded: the harness regenerates that file only from a
-full campaign run, and a campaign requires a committed `HEAD`. The campaign
-therefore ran against a disposable clone and its JSON was written there.
-Re-running the whole campaign in the repository is the first thing to do after
-this work is committed; until then the JSON is stale and says so here rather than
-being hand-assembled into something that claims to be generated.
+**The §6 table is the record.** The harness also writes
+`docs/ledger/negative-controls.json`, but that file has been **gitignored since
+9378af2** — "the campaign is the evidence, not its last output file" — so it is a
+local build output and not repository evidence. It was never tracked at `main`,
+and a fresh clone does not have one. An earlier draft of this section described
+it as a tracked artifact left stale by this package; that was wrong, and the
+correction is recorded here rather than quietly applied, because a ledger that
+misdescribes where its own evidence lives is the failure this file exists to
+prevent. `remediation-6.5-invariants.md` §9 carries the same description and is
+left as the dated record it is.
+
+What **is** owed: this package measured ten of the thirty controls (§6), and the
+campaign ran against a disposable clone because the harness checks a worktree out
+at `HEAD` and this remediation had none to check out. Both of those constraints
+are now gone — the work is committed and the tree is clean — so the next
+opportunity to run the full thirty in the repository itself should be taken, and
+its result recorded beside the tables in §6 and in
+`remediation-6.5-invariants.md` §9.
