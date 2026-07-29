@@ -26,7 +26,12 @@ import {
 import { coreHash, domainHash, HASH_DOMAINS, sealSigned, type SigningKey } from "@erl2/integrity";
 import type { Clock } from "../runtime/seams.js";
 import { buildBaselineFingerprint, type EvidenceSourceState } from "./cleanControl.js";
-import { MemorySubstrateStore, type SubstrateState, type SubstrateStore } from "./substrate.js";
+import {
+  MemorySubstrateStore,
+  type SubstrateInstance,
+  type SubstrateState,
+  type SubstrateStore,
+} from "./substrate.js";
 import {
   assertDriverEnabled,
   assertNarrowSelector,
@@ -34,6 +39,7 @@ import {
   assertOwnedByRun,
   resourceIdentityHash,
   type DestroyRequest,
+  type DestroyResourceRequest,
   type DestroyResult,
   type EnvironmentDriver,
   type MutateRequest,
@@ -49,6 +55,25 @@ export interface FakeDriverFaults {
   readonly contaminationCodes?: readonly string[];
   readonly failProbeIds?: readonly string[];
   readonly failRestore?: boolean;
+  /**
+   * The compensation returns `succeeded` and reverts nothing.
+   *
+   * This is review P1-4 as a scripted fault. It is not a variant of
+   * `failRestore`: a *failed* restoration is honest and already routes to
+   * emergency cleanup, while this one lies — and until ADR-ERL2-026 the lie was
+   * accepted, because the baseline fingerprint and the resource inventory are
+   * both blind to a mutation.
+   */
+  readonly restoreWithoutReverting?: boolean;
+  /**
+   * A mutation the environment already carried when the run provisioned into
+   * it, which the run never applied and holds no receipt for.
+   *
+   * An ordinary compensation then clears it along with the run's own, which is
+   * the `collateral` case: state the compensation was never asked to revert,
+   * reverted anyway. The environment did not return to its baseline either.
+   */
+  readonly preexistingMutationId?: string;
   readonly failTeardown?: boolean;
   /** Resource ids the driver refuses to destroy, producing residue. */
   readonly residualResourceIds?: readonly string[];
@@ -137,6 +162,39 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
     return this.state(runId).mutations;
   }
 
+  /**
+   * What the substrate says is applied **right now** (ADR-ERL2-026 §4.1).
+   *
+   * The Lab reads this before compensating and again afterwards, and derives
+   * restoration from the difference rather than from the compensation receipt's
+   * own `status`. A driver that reported `succeeded` and cleared nothing used to
+   * produce `passed: true`, because the baseline fingerprint measures resource
+   * health and a mutation leaves resource health alone (review P1-4).
+   */
+  observedMutations(runId: string): readonly string[] {
+    return [...this.appliedMutations(runId)].sort();
+  }
+
+  /**
+   * The receipt of an operation this driver already completed for the run.
+   *
+   * The driver's own operation log, which is what makes restart reconciliation
+   * able to *adopt* a prior result rather than re-dispatch or fail closed
+   * (ADR-ERL2-024 §4.3). A real driver has the same thing under a different
+   * name: a labelled Compose project, a namespace annotation.
+   */
+  completedOperation(runId: string, operationId: string): EnvironmentOperationReceiptV1 | undefined {
+    return this.state(runId).operations?.[operationId];
+  }
+
+  /** Records a completed operation, so a repeat of the same id is a no-op. */
+  private remember(runId: string, receipt: EnvironmentOperationReceiptV1): EnvironmentOperationReceiptV1 {
+    this.put(runId, {
+      operations: { ...(this.state(runId).operations ?? {}), [receipt.operation_id]: receipt },
+    });
+    return receipt;
+  }
+
   private put(runId: string, patch: Partial<SubstrateState>): void {
     this.substrate.save(runId, { ...this.state(runId), ...patch });
   }
@@ -211,10 +269,30 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
     });
   }
 
+  substrateInstance(): SubstrateInstance | undefined {
+    return this.substrate.instance();
+  }
+
+  establishSubstrateInstance(runId: string): SubstrateInstance {
+    return this.substrate.establishInstance(runId);
+  }
+
   provision(request: ProvisionRequest): ProvisionResult {
     assertDriverEnabled(this.manifest);
     assertOperationSupported(this.manifest, "provision");
-    if (this.provisioned(request.runId)) {
+    // Idempotent by operation id: a resumed dispatch under the same id returns
+    // what the first one did, without creating a second environment.
+    const completed = this.completedOperation(request.runId, request.operationId);
+    if (completed !== undefined) {
+      const live = this.liveResources(request.runId);
+      return {
+        receipt: completed,
+        inventory: this.inventoryOf(request.runId, live),
+        environmentInstanceHash: this.liveInstanceHash(request.runId),
+        partial: live.length < this.kinds.length,
+      };
+    }
+    if (this.provisioned(request.runId) && this.liveResources(request.runId).length > 0) {
       throw new Erl2Error(CODES.ENV_PROVISION_FAILED, `run ${request.runId} is already provisioned`);
     }
     const resources = this.resourcesFor(request.runId);
@@ -224,11 +302,17 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
       run_id: request.runId,
       resource_ids: resources.map((r) => r.resource_id),
     });
-    this.put(request.runId, { instanceHash, resources });
+    this.put(request.runId, {
+      instanceHash,
+      resources,
+      ...(this.faults.preexistingMutationId === undefined
+        ? {}
+        : { mutations: [this.faults.preexistingMutationId] }),
+    });
     const partial = resources.length < this.kinds.length;
 
     return {
-      receipt: this.receipt({
+      receipt: this.remember(request.runId, this.receipt({
         runId: request.runId,
         operation: "provision",
         operationId: request.operationId,
@@ -237,7 +321,7 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
         after: { resources: resources.map((r) => r.identity_hash) },
         status: partial ? "failed" : "succeeded",
         ...(partial ? { errorCode: CODES.ENV_PROVISION_FAILED } : {}),
-      }),
+      })),
       inventory: this.inventoryOf(request.runId, resources),
       environmentInstanceHash: instanceHash,
       partial,
@@ -298,9 +382,11 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
       );
     }
     assertOwnedByRun(request.runId, target);
+    const already = this.completedOperation(request.runId, request.operationId);
+    if (already !== undefined) return already;
     const applied = [...this.appliedMutations(request.runId), request.mutationId];
     this.put(request.runId, { mutations: applied });
-    return this.receipt({
+    return this.remember(request.runId, this.receipt({
       runId: request.runId,
       operation: "mutate",
       operationId: request.operationId,
@@ -309,15 +395,17 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
       after: { mutations: applied },
       status: "succeeded",
       compensationId: `compensate-${request.mutationId}`,
-    });
+    }));
   }
 
   restore(request: RestoreRequest): EnvironmentOperationReceiptV1 {
     assertDriverEnabled(this.manifest);
     assertOperationSupported(this.manifest, "restore");
+    const already = this.completedOperation(request.runId, request.operationId);
+    if (already !== undefined) return already;
     const applied = this.appliedMutations(request.runId);
     if (this.faults.failRestore === true) {
-      return this.receipt({
+      return this.remember(request.runId, this.receipt({
         runId: request.runId,
         operation: "restore",
         operationId: request.operationId,
@@ -326,10 +414,16 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
         after: { mutations: applied },
         status: "failed",
         errorCode: CODES.RESTORATION_FAILED,
-      });
+      }));
     }
-    this.put(request.runId, { mutations: [] });
-    return this.receipt({
+    // The scripted lie: a receipt that reads exactly like a clean compensation
+    // over a substrate the compensation never touched. It has to be
+    // indistinguishable *in the receipt* — that is the whole of P1-4 — and
+    // distinguishable only by re-reading the substrate.
+    this.put(request.runId, {
+      mutations: this.faults.restoreWithoutReverting === true ? applied : [],
+    });
+    return this.remember(request.runId, this.receipt({
       runId: request.runId,
       operation: "restore",
       operationId: request.operationId,
@@ -337,7 +431,72 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
       before: { mutations: applied },
       after: { mutations: [] },
       status: "succeeded",
-    });
+    }));
+  }
+
+  /**
+   * Destroys exactly one owned resource (ADR-ERL2-024 §4.5).
+   *
+   * This is what lets emergency cleanup attempt each independently safe action
+   * on its own, instead of swinging a whole-environment destroy first and
+   * classifying the frontier afterwards (review P1-1). A foreign resource in
+   * the frontier now fails exactly one action rather than aborting the branch
+   * (review P1-5).
+   */
+  destroyResource(request: DestroyResourceRequest): EnvironmentOperationReceiptV1 {
+    assertDriverEnabled(this.manifest);
+    assertOperationSupported(this.manifest, "destroy");
+    const resources = this.liveResources(request.runId);
+    const already = this.completedOperation(request.runId, request.operationId);
+    if (already !== undefined) return already;
+    const target = resources.find((r) => r.resource_id === request.resourceId);
+    if (target === undefined) {
+      throw new Erl2Error(
+        CODES.ENV_FOREIGN_RESOURCE_REJECTED,
+        `resource ${request.resourceId} is not part of run ${request.runId}`,
+      );
+    }
+    // Ownership and narrowness are checked for *this* resource only: the whole
+    // point of per-resource destruction is that one foreign member does not
+    // veto the destruction of the run's own resources.
+    assertOwnedByRun(request.runId, target);
+    assertNarrowSelector(request.runId, target.run_scoped_name);
+    const before = resources.map((r) => r.identity_hash);
+    if (!target.destroyable) {
+      return this.remember(request.runId, this.receipt({
+        runId: request.runId,
+        operation: "destroy",
+        operationId: request.operationId,
+        targetIdentityHash: target.identity_hash,
+        before: { resources: before },
+        after: { resources: before },
+        status: "failed",
+        errorCode: CODES.ENV_RESIDUE_DETECTED,
+      }));
+    }
+    if (this.faults.failTeardown === true) {
+      return this.remember(request.runId, this.receipt({
+        runId: request.runId,
+        operation: "destroy",
+        operationId: request.operationId,
+        targetIdentityHash: target.identity_hash,
+        before: { resources: before },
+        after: { resources: before },
+        status: "failed",
+        errorCode: CODES.TEARDOWN_FAILED,
+      }));
+    }
+    const remaining = resources.filter((r) => r.resource_id !== target.resource_id);
+    this.put(request.runId, { resources: remaining });
+    return this.remember(request.runId, this.receipt({
+      runId: request.runId,
+      operation: "destroy",
+      operationId: request.operationId,
+      targetIdentityHash: target.identity_hash,
+      before: { resources: before },
+      after: { resources: remaining.map((r) => r.identity_hash) },
+      status: "succeeded",
+    }));
   }
 
   destroy(request: DestroyRequest): DestroyResult {
@@ -349,9 +508,13 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
       assertOwnedByRun(request.runId, resource);
       assertNarrowSelector(request.runId, resource.run_scoped_name);
     }
+    const alreadyDestroyed = this.completedOperation(request.runId, request.operationId);
+    if (alreadyDestroyed !== undefined) {
+      return { receipt: alreadyDestroyed, residue: this.liveResources(request.runId) };
+    }
     if (this.faults.failTeardown === true) {
       return {
-        receipt: this.receipt({
+        receipt: this.remember(request.runId, this.receipt({
           runId: request.runId,
           operation: "destroy",
           operationId: request.operationId,
@@ -360,14 +523,14 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
           after: { resources: resources.map((r) => r.identity_hash) },
           status: "failed",
           errorCode: CODES.TEARDOWN_FAILED,
-        }),
+        })),
         residue: resources,
       };
     }
     const residue = resources.filter((r) => !r.destroyable);
     this.put(request.runId, { resources: residue });
     return {
-      receipt: this.receipt({
+      receipt: this.remember(request.runId, this.receipt({
         runId: request.runId,
         operation: "destroy",
         operationId: request.operationId,
@@ -376,7 +539,7 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
         after: { resources: residue.map((r) => r.identity_hash) },
         status: residue.length === 0 ? "succeeded" : "failed",
         ...(residue.length === 0 ? {} : { errorCode: CODES.ENV_RESIDUE_DETECTED }),
-      }),
+      })),
       residue,
     };
   }

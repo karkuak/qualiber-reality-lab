@@ -44,6 +44,11 @@ const ENVIRONMENT_ROLES = [
   "selected-challenge-journey-binding",
   "selection-proof",
   "selection-verification-receipt",
+  // ADR-ERL2-024 §4.2: an environment terminal whose cleanup verdicts cannot be
+  // attributed to a named substrate is exactly the artifact P0-1 produced. The
+  // binding is mandatory, and it is derived here from the lifecycle like every
+  // other role — not read out of the run record, which has no field for it.
+  "substrate-binding",
   "environment-reservation-lease",
   "environment-resource-inventory",
   "environment-baseline",
@@ -54,6 +59,11 @@ const ENVIRONMENT_ROLES = [
   "domain-result",
   "precleanup-result-join",
   "environment-restoration",
+  // ADR-ERL2-026 §4.3: the restoration verification's three observations cannot
+  // see a mutation, so a terminal that carries one without the independent
+  // post-compensation re-read is the artifact P1-4 produced. Mandatory on the
+  // valid environment branch, beside the restoration it qualifies.
+  "restoration-probe",
   "teardown-verification",
   "validity-result",
   "generic-evaluation-index",
@@ -82,6 +92,12 @@ const ENVIRONMENT_OPTIONAL_ROLES = [
   "environment-operation-receipt",
   "mutation-receipt",
   "compensation-receipt",
+  // ADR-ERL2-023's signed controller receipt. Optional as a *role* because a run
+  // that terminated before activation never produced one; required as soon as
+  // the lifecycle shows `challenge_activated`, which `deriveEnvironmentSemantics`
+  // enforces. Before this it was accounted for only as a supporting schema, so an
+  // environment terminal that dropped it still verified valid (review P2).
+  "challenge-activation-receipt",
 ] as const;
 
 /** The three capture roles that must appear together or not at all. */

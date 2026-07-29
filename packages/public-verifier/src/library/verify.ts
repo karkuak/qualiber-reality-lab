@@ -32,8 +32,13 @@ import {
   type LocalTrustConfiguration,
 } from "@erl2/integrity";
 import { ArtifactIndex } from "./artifactIndex.js";
+import { assertClaimScopeWithinCeiling, deriveClaimCeiling } from "./claimScope.js";
 import { derivePreEnvironmentClosure, deriveInvalidClosure } from "./closure.js";
 import { deriveEnvironmentClosure, deriveTerminalVariant } from "./environmentClosure.js";
+import {
+  deriveEnvironmentSemantics,
+  deriveInvalidEnvironmentSemantics,
+} from "./environmentDerivation.js";
 import { verifyReferencedBytes } from "./referencedBytes.js";
 import { verifyRetainedFileAccounting } from "./retainedFiles.js";
 import { verifySignedMembers } from "./signedMembers.js";
@@ -303,6 +308,22 @@ function verifyPreEnvironmentBundle(options: VerifyBundleOptions): BundleVerific
   index.get(attestation.adapter_hash);
   index.get(attestation.generic_run_policy_hash);
 
+  // -- ADR-ERL2-025: how strongly this run may be spoken about ---------------
+  //
+  // Derived here from retained bytes alone, independently of whatever the
+  // producer chose. `claim_scope` used to be `flags["claim-scope"] ?? "T1"` on
+  // one side and `["T1","T2","T3"].includes(...)` on the other, so an operator
+  // could sign T3 over a run that measured nothing (review P2).
+  assertClaimScopeWithinCeiling({
+    claimScope: attestation.claim_scope,
+    report: deriveClaimCeiling({
+      index,
+      lifecycle: options.lifecycle,
+      terminalVariant: "pre_environment",
+    }),
+    who: "this attestation",
+  });
+
   return {
     verdict: "valid",
     closure,
@@ -380,6 +401,11 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
       "attestation references a trust policy other than the pinned head",
     );
   }
+  // `attestation.lab_validity` is a *schema constant* — the producer writes
+  // `lab_validity: "valid" as const` — so reading it here proves nothing about
+  // the run. It is checked only to catch a malformed document; the verdict that
+  // matters is re-derived from the retained validity result below, together with
+  // restoration, teardown and the substrate binding (ADR-ERL2-024 §4.6).
   if (attestation.lab_validity !== "valid") {
     throw new Erl2Error(
       CODES.BUNDLE_VARIANT_MISMATCH,
@@ -388,6 +414,12 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
   }
   if (!["T1", "T2", "T3"].includes(attestation.claim_scope)) {
     throw new Erl2Error(CODES.BUNDLE_VARIANT_MISMATCH, "base attestations may only claim T1-T3");
+  }
+  if (attestation.run_id !== bundle.run_id) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
+      "the bundle and the attestation name different runs",
+    );
   }
   // The selection receipt is a bundle member *and* an attestation member; a
   // mismatch would let a bundle present a different challenge's receipt.
@@ -501,6 +533,87 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
       "attestation attests a selection receipt the derived closure did not reach",
     );
   }
+
+  // -- the attestation bindings the environment path was missing -------------
+  //
+  // The pre-environment path cross-checks nine of these; the environment path
+  // checked three, so a self-consistent bundle whose attestation named a
+  // *different* retained artifact was believed for the other six (review P1-11).
+  // The signer-inventory binding is the sharpest of them: without it, an
+  // attestation could attest an inventory the bundle does not carry.
+  const environmentCheckpointHead = chain[chain.length - 1];
+  assertBinding(attestation.signer_inventory_hash, coreHash(inventory), "signer inventory");
+  assertBinding(
+    attestation.signer_inventory_hash,
+    bundle.signer_inventory.artifact_core_hash,
+    "signer inventory bundle member",
+  );
+  assertBinding(
+    attestation.acquisition_preregistration_verification_receipt_hash,
+    bundle.acquisition_preregistration_verification_receipt.artifact_core_hash,
+    "acquisition preregistration receipt",
+  );
+  if (environmentCheckpointHead !== undefined) {
+    assertBinding(
+      attestation.timestamp_checkpoint_hash,
+      coreHash(environmentCheckpointHead),
+      "timestamp checkpoint",
+    );
+  }
+  assertBinding(
+    attestation.acquisition_source_manifest_hash,
+    requiredHash(closure, "acquisition-source-manifest"),
+    "acquisition source manifest",
+  );
+  assertBinding(
+    attestation.acquisition_record_hash,
+    requiredHash(closure, "acquisition-record"),
+    "acquisition record",
+  );
+  assertBinding(
+    attestation.subject_package_manifest_hash,
+    requiredHash(closure, "subject-package-manifest"),
+    "subject package manifest",
+  );
+  assertBinding(
+    attestation.generic_evaluation_index_hash,
+    requiredHash(closure, "generic-evaluation-index"),
+    "generic evaluation index",
+  );
+  // Adapter identity and generic run policy must be retained artifacts; a
+  // dangling binding is a missing-artifact refusal.
+  index.get(attestation.adapter_hash);
+  index.get(attestation.generic_run_policy_hash);
+
+  // -- §4.6: the semantic derivation the verifier owns -----------------------
+  //
+  // Run last, so a genuinely missing role keeps its own, more fundamental cause
+  // rather than surfacing as a derived-verdict mismatch. This is where
+  // `lab_validity`, `EnvironmentValidityResultV1.status`, restoration `passed`,
+  // teardown `passed` and the emergency safe/unsafe classification stop being
+  // believed and start being recomputed.
+  deriveEnvironmentSemantics({
+    index,
+    lifecycle: options.lifecycle,
+    runId: attestation.run_id,
+  });
+
+  // -- ADR-ERL2-025: how strongly this run may be spoken about ---------------
+  //
+  // The environment branch carries the evidence that matters most here — the
+  // driver's own kind, the tier the challenge was drawn at, the selection
+  // assurance and whether the domain plane was evaluated at all — and every one
+  // of them was ignored while `--claim-scope` decided the answer.
+  assertClaimScopeWithinCeiling({
+    claimScope: attestation.claim_scope,
+    report: deriveClaimCeiling({
+      index,
+      lifecycle: options.lifecycle,
+      terminalVariant: "environment",
+      selectionAssurance: attestation.selection_assurance,
+    }),
+    who: "this attestation",
+  });
 
   // -- §8.5: the selection chain, verified offline ---------------------------
   //
@@ -629,5 +742,12 @@ export function verifyInvalidRecord(options: VerifyRecordOptions): MandatoryGrap
   );
   const recordTrust = new TrustEvaluator(mirroredPolicy, options.localTrust);
   verifySignedMembers({ index, trust: recordTrust, asOf: record.invalidated_at });
+
+  // ADR-ERL2-024 §4.6 on the invalid branch. An invalid record carries no
+  // attestation, so its cleanup claims are the *only* statement that a failed
+  // run cleaned up — which is exactly why they must be re-derived rather than
+  // read. A cancellation that claimed `not_required` over a live environment
+  // verified at exit 0 before this pass existed (review P1-2).
+  deriveInvalidEnvironmentSemantics({ index, lifecycle: options.lifecycle, record });
   return closure;
 }

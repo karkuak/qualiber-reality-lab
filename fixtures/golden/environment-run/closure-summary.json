@@ -52,6 +52,10 @@
       "count": 1
     },
     {
+      "role": "substrate-binding",
+      "count": 1
+    },
+    {
       "role": "environment-reservation-lease",
       "count": 4
     },
@@ -89,6 +93,10 @@
     },
     {
       "role": "environment-restoration",
+      "count": 1
+    },
+    {
+      "role": "restoration-probe",
       "count": 1
     },
     {
@@ -149,6 +157,10 @@
     },
     {
       "role": "compensation-receipt",
+      "count": 1
+    },
+    {
+      "role": "challenge-activation-receipt",
       "count": 1
     }
   ],
@@ -373,6 +385,7 @@
     "selected-binding-checkpoint",
     "selection-proof",
     "selection-verification-receipt",
+    "substrate-binding",
     "environment-reservation-lease",
     "environment-reservation-lease",
     "environment-reservation-lease",
@@ -420,6 +433,7 @@
     "domain-result",
     "precleanup-result-join",
     "compensation-receipt",
+    "restoration-probe",
     "environment-restoration",
     "environment-operation-receipt",
     "teardown-verification",

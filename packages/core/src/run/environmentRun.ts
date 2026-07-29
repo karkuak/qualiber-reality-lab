@@ -36,6 +36,7 @@ import {
   type AdapterStepRequestV1,
   type AdapterTranslationReceiptV1,
   type ArtifactRef,
+  type CancellationRequestV1,
   type ChallengeActivationReceiptV1,
   type ChallengeManifestV1,
   type ComparisonPolicyV1,
@@ -44,6 +45,7 @@ import {
   type EnvironmentArchetypeV1,
   type EnvironmentBaselineFingerprintV1,
   type EnvironmentJourneyIntent,
+  type EnvironmentOperationReceiptV1,
   type EnvironmentResourceFrontierV1,
   type EnvironmentResourceInventoryV1,
   type EnvironmentResourceV1,
@@ -72,9 +74,11 @@ import {
   type RuntimeMilestoneV1,
   type SelectedChallengeJourneyBindingV1,
   type SelectedJourneyResultV1,
+  type SelectionAssuranceV1,
   type SourceSnapshotV1,
   type SubjectExecutionPlanV1,
   type SubjectVisibleJourneyStepV1,
+  type SubstrateBindingV1,
   type TeardownVerificationV1,
   type TrafficProcessStartReceiptV1,
 } from "@erl2/contracts";
@@ -100,10 +104,26 @@ import {
 } from "../terminal/environmentFinalize.js";
 import type { Clock } from "../runtime/seams.js";
 import type { LabState } from "../lifecycle/states.js";
-import { assertSubjectPortExecutable } from "../lifecycle/states.js";
+import { TERMINAL_STATES, assertSubjectPortExecutable } from "../lifecycle/states.js";
 import { assertBaselineClean, assertRepeatableBaseline } from "../environment/cleanControl.js";
-import { assertDriverEnabled, assertOperationSupported, type EnvironmentDriver } from "../environment/driver.js";
+import {
+  assertDriverEnabled,
+  assertOperationSupported,
+  type DestroyResult,
+  type EnvironmentDriver,
+  type ProvisionResult,
+} from "../environment/driver.js";
 import { ReservationAllocator, type ReservationKind } from "../environment/allocator.js";
+import {
+  assertSubstrateBinding,
+  buildSubstrateBinding,
+  reservationNamespaceHash,
+} from "../environment/substrateBinding.js";
+import {
+  buildRestorationProbe,
+  restorationProbePassed,
+  type ExpectedRevertedMutation,
+} from "../environment/restorationProbe.js";
 import { freezeResourceFrontier, safeActions } from "../environment/frontier.js";
 import { buildEmergencyCleanup } from "../cleanup/cleanup.js";
 import { buildEnvironmentRestoration, buildTeardownVerification, type TeardownCheck } from "../cleanup/cleanup.js";
@@ -116,10 +136,20 @@ import { buildEnvironmentValidity, type GateResult } from "../evaluation/validit
 import { JOURNEY_PLANE_METRICS } from "../evaluation/genericMetrics.js";
 import { verifyLifecycleChain } from "../lifecycle/log.js";
 import { assertNoCanaryLeak } from "../journey/oracle.js";
+import { MutationIntentJournal, type ProbeVerdict } from "./mutationIntent.js";
 import { EVALUATOR_RELEASE, type RunWorkspace } from "./workspace.js";
 
 /** The signing roles the environment branch needs, each a distinct operator. */
 export interface EnvironmentKeyring {
+  /**
+   * Signs the run's substrate binding (ADR-ERL2-024 §6.4).
+   *
+   * The governor is the authority that provisions the environment, so recording
+   * *which* substrate it provisioned into is part of that act. Not the
+   * `controller` — that role decides a challenge goes live (ADR-ERL2-023) — and
+   * never the driver, which is untrusted infrastructure.
+   */
+  readonly environmentGovernor: SigningKey;
   /** Signs the challenge-activation controller evidence. */
   readonly controller: SigningKey;
   /** Signs the traffic process start receipt. */
@@ -153,6 +183,16 @@ export interface EnvironmentRunOptions {
 }
 
 const RETAINED = "retained/environment";
+
+/**
+ * How a driver names the undo of a mutation it applied.
+ *
+ * The only place the Lab's mutation vocabulary and the driver's compensation
+ * vocabulary meet: `EnvironmentOperationReceiptV1.compensation_id` is where a
+ * driver says "the way to undo this is …", and the restoration probe needs the
+ * mutation id back out of it to ask whether it is still applied.
+ */
+const COMPENSATION_PREFIX = "compensate-";
 
 /** Resource kinds the global allocator holds a reservation lease for (§22). */
 const RESERVATION_KINDS: ReadonlySet<string> = new Set<ReservationKind>([
@@ -237,6 +277,12 @@ export class EnvironmentRun {
   private readonly keys: EnvironmentKeyring;
   private readonly clock: Clock;
   /**
+   * Durable intent before every external dispatch, and reconciliation before any
+   * retry (ADR-ERL2-024 §4.3). Run-private state, not evidence: it records that
+   * a call is about to be made, which is never a result.
+   */
+  private readonly intents: MutationIntentJournal;
+  /**
    * The driver receipt for the operation that just failed.
    *
    * Set immediately before a restoration or teardown failure is raised, and read
@@ -255,6 +301,127 @@ export class EnvironmentRun {
     this.cutoffPolicy = options.cutoffPolicy;
     this.keys = options.keys;
     this.clock = options.clock;
+    this.intents = new MutationIntentJournal({
+      runRoot: options.workspace.store.root,
+      runId: options.workspace.runId,
+    });
+  }
+
+  /**
+   * Runs one driver operation under a durable intent.
+   *
+   * The probe and the adopt path both come from the driver's own operation log:
+   * a completed operation id *is* the independently observable evidence that the
+   * external call already happened, and its stored receipt is the result to
+   * adopt. A driver with no log cannot answer, so its unsettled operations fail
+   * closed — which is the honest outcome, not a gap to paper over with an
+   * assumption of idempotence.
+   */
+  private driverOperation<T = EnvironmentOperationReceiptV1>(spec: {
+    readonly operationId: string;
+    readonly kind: string;
+    readonly targetIdentity: string;
+    readonly requestHash: Hash;
+    readonly compensation: string;
+    /**
+     * For a compensation, what it is expected to reverse and what must hold
+     * afterwards (ADR-ERL2-026 §4.2).
+     *
+     * `requestHash` already covers the mutation set, but only as an opaque
+     * digest: a crashed run's journal could say a compensation was in flight
+     * without saying what it was undoing, which is the information a
+     * reconciliation actually needs.
+     */
+    readonly expectedRevertedMutations?: readonly string[];
+    readonly expectedTargets?: readonly Hash[];
+    readonly expectedPostCondition?: string;
+    readonly probeId?: string;
+    readonly dispatch: () => T;
+    /**
+     * Rebuilds the result from the driver's own operation log. Defaults to the
+     * stored receipt, which is the result for every operation whose value *is*
+     * a receipt; `provision` supplies its own because its result also carries an
+     * inventory, which is an observation the driver can re-derive.
+     */
+    readonly adopt?: (completed: EnvironmentOperationReceiptV1) => T;
+  }): T {
+    const completed = (): EnvironmentOperationReceiptV1 | undefined =>
+      this.driver.completedOperation?.(this.runId, spec.operationId);
+    return this.intents.run<T>(
+      {
+        operationId: spec.operationId,
+        kind: spec.kind,
+        targetIdentity: spec.targetIdentity,
+        requestHash: spec.requestHash,
+        idempotencyKey: domainHash(HASH_DOMAINS.DRIVER_STATE, {
+          run_id: this.runId,
+          operation_id: spec.operationId,
+        }),
+        preconditionHash: domainHash(HASH_DOMAINS.DRIVER_STATE, {
+          resources: this.driver.inspect(this.runId).resources.map((r) => r.identity_hash),
+        }),
+        ...(this.ws.hashForRole("substrate-binding") === undefined
+          ? {}
+          : { substrateBindingHash: this.ws.requireHashForRole("substrate-binding") }),
+        ...(spec.expectedRevertedMutations === undefined
+          ? {}
+          : { expectedRevertedMutations: spec.expectedRevertedMutations }),
+        ...(spec.expectedTargets === undefined ? {} : { expectedTargets: spec.expectedTargets }),
+        ...(spec.expectedPostCondition === undefined
+          ? {}
+          : { expectedPostCondition: spec.expectedPostCondition }),
+        probeId: spec.probeId ?? "driver.completedOperation",
+        retry: "idempotent_by_key",
+        compensation: spec.compensation,
+        probe: (): ProbeVerdict =>
+          this.driver.completedOperation === undefined
+            ? "unknown"
+            : completed() === undefined
+              ? "absent"
+              : "present",
+        adopt: (): T => {
+          const receipt = completed() as EnvironmentOperationReceiptV1;
+          return spec.adopt === undefined ? (receipt as T) : spec.adopt(receipt);
+        },
+        dispatch: spec.dispatch,
+      },
+      this.now(),
+    );
+  }
+
+  /**
+   * Refuses a compensation receipt that is not this compensation's
+   * (ADR-ERL2-026 §4.3).
+   *
+   * Four ways a receipt can be about something else, and each of them is a way
+   * for a genuine past success to be replayed over a compensation that never
+   * happened: it belongs to another run, it settles another operation, it was
+   * issued against another driver manifest, or it is not a compensation at all.
+   * The receipt is retained, hash-linked and role-produced, so none of these is
+   * caught by any hash check.
+   */
+  private assertCompensationReceiptBound(
+    receipt: EnvironmentOperationReceiptV1,
+    operationId: string,
+  ): void {
+    const binding = this.substrateBinding();
+    const wrong =
+      receipt.run_id !== this.runId
+        ? `belongs to run ${receipt.run_id}`
+        : receipt.operation_id !== operationId
+          ? `settles operation ${receipt.operation_id}, not ${operationId}`
+          : receipt.operation !== "restore"
+            ? `records a ${receipt.operation}, which is not a compensation`
+            : binding !== undefined && receipt.driver_manifest_hash !== binding.driver_manifest_hash
+              ? "was issued against a driver manifest this run never bound"
+              : undefined;
+    if (wrong !== undefined) {
+      throw new Erl2Error(
+        CODES.RESTORATION_PROBE_MISSING,
+        `the compensation receipt for ${operationId} ${wrong}`,
+        { owner: "lab" },
+      );
+    }
   }
 
   private get runId(): string {
@@ -291,6 +458,99 @@ export class EnvironmentRun {
     return true;
   }
 
+  // -- 0. the substrate binding ----------------------------------------------
+
+  /** The run's retained substrate binding, if the lifecycle has recorded one. */
+  substrateBinding(): SubstrateBindingV1 | undefined {
+    const hash = this.ws.hashForRole("substrate-binding");
+    if (hash === undefined) return undefined;
+    return this.ws.artifact<SubstrateBindingV1>(hash, "SubstrateBindingV1");
+  }
+
+  /**
+   * The binding as it exists on disk, whether or not the lifecycle has reached
+   * the event that records it.
+   *
+   * `provision` freezes the binding *before* it dispatches, so a partial
+   * provision or a reservation conflict raises before the
+   * `environment_provisioned` event exists. The invalid terminal must still be
+   * able to see the binding — both to check it before enumerating a frontier,
+   * and to account for the retained byte, which the closure would otherwise
+   * reject as an unreachable artifact.
+   */
+  private retainedSubstrateBinding(): SubstrateBindingV1 | undefined {
+    const roled = this.substrateBinding();
+    if (roled !== undefined) return roled;
+    let bytes: Buffer;
+    try {
+      bytes = this.ws.store.read(`${RETAINED}/substrate-binding.json`);
+    } catch {
+      return undefined;
+    }
+    return assertContract<SubstrateBindingV1>(
+      "SubstrateBindingV1",
+      JSON.parse(bytes.toString("utf8")) as unknown,
+    );
+  }
+
+  /** True once this run has external resources, or may have: the environment branch. */
+  hasSubstrate(): boolean {
+    return this.ws.hashForRole("substrate-binding") !== undefined;
+  }
+
+  /**
+   * The selection assurance this run's terminal will carry.
+   *
+   * Exposed so the claim-scope derivation reads the *same* value the finalizer
+   * will sign rather than a second copy of it: a ceiling derived from one
+   * assurance and an attestation signed with another would be two answers to one
+   * question. ERL2-OQ-007 is unresolved, so the only representable value is the
+   * one that makes no blindness claim at all.
+   */
+  selectionAssurance(): SelectionAssuranceV1 {
+    return NON_BLIND_DEVELOPMENT_ASSURANCE;
+  }
+
+  /**
+   * Refuses a phase whose substrate is not the one this run bound
+   * (ADR-ERL2-024 §4.2), **before** any dispatch and before any freeze.
+   *
+   * Every environment phase that will reach the driver calls this. A phase that
+   * skipped it could be pointed at a fresh empty substrate and would record a
+   * clean observation of an environment it never looked at — the P0-1 exploit.
+   */
+  private assertBoundSubstrate(options: { readonly expectProvisioned: boolean }): void {
+    const binding = this.substrateBinding();
+    if (binding === undefined) {
+      throw new Erl2Error(
+        CODES.ENV_SUBSTRATE_BINDING_MISSING,
+        "this run has not bound a substrate; an environment phase cannot dispatch to a substrate the run never claimed",
+        { owner: "lab" },
+      );
+    }
+    assertSubstrateBinding({
+      binding,
+      runId: this.runId,
+      driver: this.driver,
+      archetypeHash: coreHash(this.archetype),
+      reservationNamespaceHash: reservationNamespaceHash(this.allocator.namespaceLocator),
+      expectProvisioned: options.expectProvisioned,
+    });
+  }
+
+  /**
+   * Whether the run's own lifecycle still says resources should exist.
+   *
+   * True from `environment_provisioned` until the teardown that removed them is
+   * verified. Used as `expectProvisioned`, so an emptied or substituted
+   * substrate is caught while the run still believes it has an environment, and
+   * a legitimately torn-down run is not.
+   */
+  private lifecycleExpectsResources(): boolean {
+    if (this.ws.hashForRole("environment-resource-inventory") === undefined) return false;
+    return this.ws.hashForRole("teardown-verification") === undefined;
+  }
+
   // -- 1. reservation and provisioning ---------------------------------------
 
   /**
@@ -321,6 +581,24 @@ export class EnvironmentRun {
         `driver ${this.driver.manifest.driver_id} declares no reservable resource kind; a run with no reservation cannot be isolated`,
       );
     }
+    // The substrate identity is established and bound BEFORE the first
+    // substrate-affecting dispatch (ADR-ERL2-024 §4.2). Establishing it after
+    // provisioning would leave a window in which a crash produced real
+    // resources that no binding names — and a run whose environment exists but
+    // whose substrate is unnamed is exactly the state P0-1 exploits.
+    const substrate = this.driver.establishSubstrateInstance(this.runId);
+    const binding = buildSubstrateBinding({
+      runId: this.runId,
+      driverManifest: this.driver.manifest,
+      archetypeHash: coreHash(this.archetype),
+      substrateKind: substrate.kind,
+      substrateInstanceHash: substrate.instanceHash,
+      reservationNamespaceHash: reservationNamespaceHash(this.allocator.namespaceLocator),
+      boundAt: this.now(),
+      signingKey: this.keys.environmentGovernor,
+    });
+    this.ws.store.freezeJson(`${RETAINED}/substrate-binding.json`, binding, "INTERNAL");
+
     // Every reservation is taken before the driver is asked to create anything.
     const leases = kinds.map((kind) =>
       this.allocator.acquire({
@@ -331,7 +609,10 @@ export class EnvironmentRun {
       }),
     );
 
-    const result = this.driver.provision({
+    // Durable intent before the dispatch, and reconciliation before any retry.
+    // A crash between the call and the receipt freeze used to leave an
+    // environment the run had no record of; the next process re-provisioned.
+    const provisionRequest = {
       runId: this.runId,
       archetypeHash: coreHash(this.archetype),
       disorderSeedCommitment: domainHash(HASH_DOMAINS.DRIVER_STATE, {
@@ -339,6 +620,27 @@ export class EnvironmentRun {
         archetype_id: this.archetype.archetype_id,
       }),
       operationId: "op-provision",
+    };
+    // Exactly one dispatch. An adopted prior provision rebuilds its result from
+    // the driver's operation log and a fresh inspection — the inventory is an
+    // observation either way — rather than calling `provision` a second time,
+    // which would be a second external invocation however harmless it looked.
+    const result = this.driverOperation<ProvisionResult>({
+      operationId: "op-provision",
+      kind: "provision",
+      targetIdentity: coreHash(this.archetype),
+      requestHash: domainHash(HASH_DOMAINS.DRIVER_STATE, provisionRequest),
+      compensation: "invalid terminal via frontier-derived environment cleanup",
+      dispatch: () => this.driver.provision(provisionRequest),
+      adopt: (receipt) => {
+        const observed = this.driver.inspect(this.runId);
+        return {
+          receipt,
+          inventory: observed,
+          environmentInstanceHash: observed.environment_instance_hash,
+          partial: observed.resources.length < this.archetype.topology.length,
+        };
+      },
     });
     if (result.partial) {
       // A partial provision is a Lab-owned failure whose authorized route is
@@ -373,6 +675,14 @@ export class EnvironmentRun {
       commandId: "provision",
       operationId: "op-provision",
       produced: [
+        // The binding is the first produced role of the environment branch:
+        // every later phase resolves it before it dispatches, and the offline
+        // verifier requires it before it will believe any cleanup verdict.
+        {
+          artifact_role: "substrate-binding",
+          artifact_core_hash: binding.core_hash,
+          artifact_schema_version: "substrate-binding/v1",
+        },
         ...leases.map((lease) => ({
           artifact_role: "environment-reservation-lease",
           artifact_core_hash: lease.core_hash,
@@ -405,6 +715,7 @@ export class EnvironmentRun {
         },
       ],
     });
+    this.intents.settle("op-provision", result.receipt.core_hash);
     return { inventory: result.inventory, leases: leases.length };
   }
 
@@ -450,6 +761,8 @@ export class EnvironmentRun {
         "EnvironmentBaselineFingerprintV1",
       );
     }
+    // The substrate this phase is about to probe must be the one the run bound.
+    this.assertBoundSubstrate({ expectProvisioned: true });
     assertOperationSupported(this.driver.manifest, "probe");
     // Readiness first: did the environment come up at all. Then the baseline,
     // twice. The fingerprint is derived from probe observations and source
@@ -700,7 +1013,35 @@ export class EnvironmentRun {
     });
     this.ws.assertRequestOracleClean(`adapter step request (${step.intent})`, request);
 
-    const response = this.ws.subject.step(request, step.intent);
+    // A subject step is the one external mutation with **no probe**. An opaque
+    // subject cannot be asked whether it already ran a step, so an intent left
+    // unsettled by a crash is genuinely ambiguous — and ambiguity fails closed
+    // (ADR-ERL2-024 §4.3). Re-dispatching would mean choosing to double-install
+    // against a real subject to keep a happy path green. The durable intent
+    // itself is what makes the ambiguity *visible*: before it, a crash between
+    // the call and the lifecycle append simply re-invoked the port (review P1-7).
+    const response = this.intents.run(
+      {
+        operationId: `op-step-${String(step.index)}`,
+        kind: "subject_step",
+        targetIdentity: step.visibleStep.step_id,
+        requestHash: request.core_hash,
+        // The step commitment, not the request: the request carries a deadline
+        // read from the clock, and an idempotency key that moves is not one.
+        idempotencyKey: step.commitment.core_hash,
+        preconditionHash: domainHash(HASH_DOMAINS.DRIVER_STATE, {
+          prior_outcomes: priorInteractions,
+        }),
+        ...(this.ws.hashForRole("substrate-binding") === undefined
+          ? {}
+          : { substrateBindingHash: this.ws.requireHashForRole("substrate-binding") }),
+        retry: "fail_closed",
+        compensation: "invalid terminal; a subject step is not safe to repeat",
+        probe: () => "unknown" as const,
+        dispatch: () => this.ws.subject.step(request, step.intent),
+      },
+      this.now(),
+    );
     // The subject's own output bytes are retained, not discarded. They are the
     // only thing in a step outcome that the *subject* wrote, so a run that threw
     // them away had no subject output to scan, evaluate or attribute — the
@@ -734,6 +1075,7 @@ export class EnvironmentRun {
         ...(response.errorCode === undefined ? {} : { errorCode: response.errorCode }),
       }),
     });
+    this.intents.settle(`op-step-${String(step.index)}`, outcome.core_hash);
     return outcome;
   }
 
@@ -777,13 +1119,22 @@ export class EnvironmentRun {
         "the selected journey still has a setup step to run before the challenge may be activated",
       );
     }
+    this.assertBoundSubstrate({ expectProvisioned: true });
     assertOperationSupported(this.driver.manifest, "mutate");
     const target = this.mutationTarget();
-    const receipt = this.driver.mutate({
+    const mutateRequest = {
       runId: this.runId,
       targetResourceId: target.resource_id,
       mutationId: `activate-${this.binding().challenge_manifest_hash.slice("sha256:".length, "sha256:".length + 12)}`,
       operationId: "op-activate",
+    };
+    const receipt = this.driverOperation({
+      operationId: "op-activate",
+      kind: "mutate",
+      targetIdentity: target.identity_hash,
+      requestHash: domainHash(HASH_DOMAINS.DRIVER_STATE, mutateRequest),
+      compensation: "invalid terminal via receipt-backed emergency cleanup",
+      dispatch: () => this.driver.mutate(mutateRequest),
     });
     if (receipt.status !== "succeeded") {
       throw new Erl2Error(
@@ -841,6 +1192,7 @@ export class EnvironmentRun {
         },
       ],
     });
+    this.intents.settle("op-activate", receipt.core_hash);
     return { receiptHash: receipt.core_hash, activationReceiptHash: activation.core_hash };
   }
 
@@ -1655,13 +2007,62 @@ export class EnvironmentRun {
   // -- 10. restoration -------------------------------------------------------
 
   /**
-   * Compensates every mutation, re-probes the environment and freezes the
-   * restoration verification.
+   * The mutations a compensation is expected to reverse, from the run's own
+   * retained evidence (ADR-ERL2-026 §4.2).
+   *
+   * Derived from the retained `mutation-receipt` role, one entry per receipt,
+   * so the expected set is exactly what the run durably recorded as applied and
+   * cannot be narrowed at compensation time. The mutation id is the driver's
+   * own vocabulary, recovered from the receipt's `compensation_id`: the driver
+   * declares "the way to undo this is `compensate-<mutation>`" when it applies
+   * a mutation, and that is the only place the two vocabularies meet.
+   */
+  private expectedRevertedMutations(): readonly ExpectedRevertedMutation[] {
+    return this.ws.hashesForRole("mutation-receipt").map((hash) => {
+      const receipt = this.ws.artifact<EnvironmentOperationReceiptV1>(
+        hash,
+        "EnvironmentOperationReceiptV1",
+      );
+      const compensationId = receipt.compensation_id;
+      if (compensationId === undefined || !compensationId.startsWith(COMPENSATION_PREFIX)) {
+        // A mutation whose receipt names no compensation cannot be proven
+        // reverted, so it is not quietly dropped from the expected set: the run
+        // refuses rather than compensating a smaller set than it mutated.
+        throw new Erl2Error(
+          CODES.RESTORATION_PROBE_MISSING,
+          `the retained mutation receipt ${hash} declares no compensation, so what a restoration ` +
+            `would have to revert cannot be established`,
+          { owner: "lab" },
+        );
+      }
+      return {
+        mutationId: compensationId.slice(COMPENSATION_PREFIX.length),
+        mutationReceiptHash: receipt.core_hash,
+        targetIdentityHash: receipt.target_identity_hash,
+      };
+    });
+  }
+
+  /** What the substrate says is applied now, or `undefined` if it cannot be asked. */
+  private observedMutations(): readonly string[] | undefined {
+    return this.driver.observedMutations?.(this.runId);
+  }
+
+  /**
+   * Compensates every mutation, independently re-reads the substrate, and
+   * freezes both the restoration verification and the observation it rests on.
    *
    * `passed` is derived by `buildEnvironmentRestoration` from the before/after
    * baselines and the residual set, never supplied: a drifted baseline is a
    * restoration failure whose authorized route is emergency cleanup, so it can
    * only ever be reported, not asserted away.
+   *
+   * Those three observations are blind to a *mutation*, though — the
+   * fingerprint measures resource health and the inventory measures resource
+   * existence — so ADR-ERL2-026 adds the one observation that is not: the
+   * substrate is asked again what is applied, and a compensation that returned
+   * `succeeded` while leaving its target applied is refused on that ground
+   * alone (review P1-4).
    */
   restore(): EnvironmentRestorationVerificationV1 {
     if (!this.enter("restore", this.ws.hashForRole("environment-restoration") !== undefined)) {
@@ -1670,6 +2071,7 @@ export class EnvironmentRun {
         "EnvironmentRestorationVerificationV1",
       );
     }
+    this.assertBoundSubstrate({ expectProvisioned: true });
     assertOperationSupported(this.driver.manifest, "restore");
     const baselineBefore = this.ws.artifact<EnvironmentBaselineFingerprintV1>(
       this.ws.requireHashForRole("environment-baseline"),
@@ -1684,7 +2086,43 @@ export class EnvironmentRun {
       requiredHashes: [this.ws.requireHashForRole("precleanup-result-join")],
     });
 
-    const receipt = this.driver.restore({ runId: this.runId, operationId: "op-restore" });
+    // Read *before* the dispatch, and before the intent that precedes it: the
+    // question "what was applied when this compensation started" has no answer
+    // once the compensation has run.
+    const expected = this.expectedRevertedMutations();
+    const observedBefore = this.observedMutations();
+    const bindingHash = this.ws.requireHashForRole("substrate-binding");
+
+    const receipt = this.driverOperation({
+      operationId: "op-restore",
+      kind: "restore",
+      targetIdentity: this.instanceHashForCleanup(),
+      requestHash: domainHash(HASH_DOMAINS.DRIVER_STATE, {
+        run_id: this.runId,
+        operation_id: "op-restore",
+        // What this compensation is *supposed* to revert, recorded before it
+        // runs. Without it, "reverted nothing" and "had nothing to revert" are
+        // indistinguishable — which is how a no-op compensation was accepted
+        // (review P1-4).
+        reverts: this.ws.hashesForRole("mutation-receipt"),
+      }),
+      // The durable intent names the mutation set, the resources it was applied
+      // to, the state observed before, the condition that must hold afterwards
+      // and the probe that will answer it — so a crash mid-compensation leaves a
+      // record of what the run was in the middle of undoing, not just that it
+      // was undoing something.
+      expectedRevertedMutations: expected.map((entry) => entry.mutationId),
+      expectedTargets: expected.map((entry) => entry.targetIdentityHash),
+      expectedPostCondition: "no expected mutation remains applied to the bound substrate",
+      probeId: "driver.observedMutations",
+      compensation: "invalid terminal via receipt-backed emergency cleanup",
+      dispatch: () => this.driver.restore({ runId: this.runId, operationId: "op-restore" }),
+    });
+    // The compensation receipt must be about *this* compensation, on this run's
+    // substrate. A receipt from another operation, another run or another driver
+    // manifest is a receipt from elsewhere, and citing one is how a stale
+    // success gets replayed over a compensation that never happened.
+    this.assertCompensationReceiptBound(receipt, "op-restore");
     // The driver's own verdict on the compensation it just attempted.
     //
     // `buildEnvironmentRestoration` derives `passed` from the before/after
@@ -1699,6 +2137,42 @@ export class EnvironmentRun {
       throw new Erl2Error(
         CODES.RESTORATION_FAILED,
         `the environment driver reported a failed restoration: ${receipt.error_code ?? "unspecified"}`,
+        { owner: "lab" },
+      );
+    }
+
+    // The independent observation. Taken from the substrate, not from the
+    // receipt the substrate just handed back.
+    const observedAfter = this.observedMutations();
+    const probe = buildRestorationProbe({
+      runId: this.runId,
+      substrateBindingHash: bindingHash,
+      environmentInstanceHash: this.environmentInstanceHash(),
+      compensationOperationId: "op-restore",
+      compensationReceiptHash: receipt.core_hash,
+      expected,
+      observedBefore: observedBefore ?? [],
+      observedAfter: observedAfter ?? [],
+      probeStatus: observedAfter === undefined ? "unavailable" : "observed",
+      probedAt: this.now(),
+      signingKey: this.keys.environmentGovernor,
+    });
+    if (!restorationProbePassed(probe.outcome)) {
+      // Retained before the refusal, so the invalid terminal can cite the
+      // observation that refused it rather than only the receipt that lied.
+      this.ws.store.freezeJson(`${RETAINED}/failed-restore-receipt.json`, receipt, "INTERNAL");
+      this.ws.store.freezeJson(`${RETAINED}/failed-restoration-probe.json`, probe, "INTERNAL");
+      this.failedAttemptHash = receipt.core_hash;
+      throw new Erl2Error(
+        CODES.RESTORATION_NOT_INDEPENDENTLY_OBSERVED,
+        `the compensation receipt reports success, but re-reading the bound substrate derives ` +
+          `${probe.outcome}` +
+          (probe.residual_expected_mutations.length > 0
+            ? ` (still applied: ${probe.residual_expected_mutations.join(", ")})`
+            : probe.collateral_reverted_mutations.length > 0
+              ? ` (reverted without being asked to: ${probe.collateral_reverted_mutations.join(", ")})`
+              : " (the driver offers no applied-mutation observation)") +
+          `; the authorized route is receipt-backed emergency cleanup`,
         { owner: "lab" },
       );
     }
@@ -1740,6 +2214,7 @@ export class EnvironmentRun {
     void inventory;
 
     this.ws.store.freezeJson(`${RETAINED}/compensation-restore.json`, receipt, "INTERNAL");
+    this.ws.store.freezeJson(`${RETAINED}/restoration-probe.json`, probe, "INTERNAL");
     this.ws.store.freezeJson("retained/environment-restoration-verification.json", restoration, "INTERNAL");
     this.ws.lifecycle.append({
       eventType: "environment_restored",
@@ -1754,12 +2229,18 @@ export class EnvironmentRun {
           artifact_schema_version: "environment-operation-receipt/v1",
         },
         {
+          artifact_role: "restoration-probe",
+          artifact_core_hash: probe.core_hash,
+          artifact_schema_version: "restoration-probe/v1",
+        },
+        {
           artifact_role: "environment-restoration",
           artifact_core_hash: restoration.core_hash,
           artifact_schema_version: "environment-restoration-verification/v1",
         },
       ],
     });
+    this.intents.settle("op-restore", receipt.core_hash);
     return restoration;
   }
 
@@ -1784,6 +2265,10 @@ export class EnvironmentRun {
         residue: 0,
       };
     }
+    // The exact site of the P0-1 exploit: `destroy` against a fresh empty
+    // substrate observed nothing and recorded a clean teardown. It now refuses
+    // before the `teardown_started` event, so no cleanup evidence freezes at all.
+    this.assertBoundSubstrate({ expectProvisioned: true });
     assertOperationSupported(this.driver.manifest, "destroy");
     const restorationHash = this.ws.requireHashForRole("environment-restoration");
     const declared = this.inventory().resources;
@@ -1796,7 +2281,19 @@ export class EnvironmentRun {
       requiredHashes: [restorationHash],
     });
 
-    const result = this.driver.destroy({ runId: this.runId, operationId: "op-destroy" });
+    const result = this.driverOperation<DestroyResult>({
+      operationId: "op-destroy",
+      kind: "destroy",
+      targetIdentity: this.environmentInstanceHash(),
+      requestHash: domainHash(HASH_DOMAINS.DRIVER_STATE, {
+        run_id: this.runId,
+        operation_id: "op-destroy",
+        declared: declared.map((r) => r.identity_hash),
+      }),
+      compensation: "invalid terminal via receipt-backed emergency cleanup",
+      dispatch: () => this.driver.destroy({ runId: this.runId, operationId: "op-destroy" }),
+      adopt: (receipt) => ({ receipt, residue: this.driver.inspect(this.runId).resources }),
+    });
     // The Lab's own residue observation, independent of what destroy reported.
     const remaining = new Set(this.driver.inspect(this.runId).resources.map((r) => r.identity_hash));
     const checks: TeardownCheck[] = declared.map((resource) => ({
@@ -1847,6 +2344,7 @@ export class EnvironmentRun {
         },
       ],
     });
+    this.intents.settle("op-destroy", result.receipt.core_hash);
     return { teardown, residue: remaining.size };
   }
 
@@ -1894,14 +2392,35 @@ export class EnvironmentRun {
     const restorationHash = this.ws.requireHashForRole("environment-restoration");
     const teardownHash = this.ws.requireHashForRole("teardown-verification");
 
+    // Every failing gate gets a finding that names it. `invalidityFindingHashes`
+    // used to be a hardcoded `[]` two lines below the gate computation, so a run
+    // with any failing gate froze a validity result asserting failure with zero
+    // supporting findings — which `assertEnvironmentFinalizable` then rejected as
+    // a fabricated invalid reason. The run was durably accepted with **no
+    // reachable terminal at all**, which ERL2-FR-001 forbids (review P1-3).
+    //
+    // The findings are derived from the gate results, not chosen: a gate that
+    // passed can never acquire one, and a gate that failed can never lack one.
+    const gates = this.environmentGates(input);
+    const failedGates = gates.filter((gate) => !gate.passed);
+    const invalidityFindingHashes = failedGates.map((gate) =>
+      this.ws.freezeInvalidityFinding({
+        findingId: `environment-gate-${gate.gate_id}`,
+        category: "lab_invalid",
+        summary: `Lab-owned environment validity gate ${gate.gate_id} did not pass.`,
+        failedGateIds: [gate.gate_id],
+        proofRefs: [...gate.evidence_refs],
+      }),
+    );
+
     const validity = buildEnvironmentValidity({
       runId: this.runId,
       terminalStage,
       genericRunPolicyHash: policyHash,
-      gates: this.environmentGates(input),
+      gates,
       environmentRestorationHash: restorationHash,
       teardownHash,
-      invalidityFindingHashes: [],
+      invalidityFindingHashes,
       evaluatedAt: this.now(),
     });
     this.ws.store.freezeJson("retained/validity-result.json", validity, "INTERNAL");
@@ -1912,6 +2431,14 @@ export class EnvironmentRun {
       commandId: "finalize-generic",
       operationId: "op-environment-validity",
       produced: [
+        // The findings are recorded as produced roles, not merely retained: a
+        // retained byte the lifecycle never reached is an unaccounted artifact,
+        // and the closure derivation rejects it.
+        ...invalidityFindingHashes.map((hash) => ({
+          artifact_role: "finding",
+          artifact_core_hash: hash,
+          artifact_schema_version: "finding/v1",
+        })),
         {
           artifact_role: "validity-result",
           artifact_core_hash: validity.core_hash,
@@ -2015,6 +2542,11 @@ export class EnvironmentRun {
         `the environment terminal departs from generic_evaluation_index_frozen; this run is in ${this.ws.lifecycle.currentState}`,
       );
     }
+
+    // The finalizer re-observes residue independently of what teardown reported
+    // (`residueAfterTeardown` below). That independence is worthless if it can be
+    // pointed at a different substrate, so the binding is checked here too.
+    this.assertBoundSubstrate({ expectProvisioned: false });
 
     const outcomes = this.ws.derivedStepOutcomes();
     const observationHash = this.ws.hashForRole("observation-bundle");
@@ -2285,6 +2817,35 @@ export class EnvironmentRun {
       proofRefs: [this.instanceHashForCleanup()],
     });
 
+    // A provisioning failure raises *after* the binding is frozen and *before*
+    // the event that records it, so the detection event adopts it. Two things
+    // depend on that: the frontier gate below needs a binding it can resolve by
+    // role, and the invalid-record closure counts a retained byte the lifecycle
+    // never reached as an unaccounted artifact.
+    const unrecordedBinding =
+      this.ws.hashForRole("substrate-binding") === undefined
+        ? this.retainedSubstrateBinding()
+        : undefined;
+    const detectionProduced = [
+      ...(unrecordedBinding === undefined
+        ? []
+        : [
+            {
+              artifact_role: "substrate-binding",
+              artifact_core_hash: unrecordedBinding.core_hash,
+              artifact_schema_version: "substrate-binding/v1",
+            },
+          ]),
+      ...(this.failedAttemptHash === undefined
+        ? []
+        : [
+            {
+              artifact_role: "environment-operation-receipt",
+              artifact_core_hash: this.failedAttemptHash,
+              artifact_schema_version: "environment-operation-receipt/v1",
+            },
+          ]),
+    ];
     const detection = this.ws.lifecycle.append({
       // Named for the phase, not for the state: the state is
       // `invalid_failure_detected` for every one of them, and an event stream
@@ -2296,17 +2857,7 @@ export class EnvironmentRun {
       operationId: "op-invalid-detected",
       requiredHashes: [findingHash],
       failure: input.failure,
-      ...(this.failedAttemptHash === undefined
-        ? {}
-        : {
-            produced: [
-              {
-                artifact_role: "environment-operation-receipt",
-                artifact_core_hash: this.failedAttemptHash,
-                artifact_schema_version: "environment-operation-receipt/v1",
-              },
-            ],
-          }),
+      ...(detectionProduced.length === 0 ? {} : { produced: detectionProduced }),
     });
     this.ws.lifecycle.append({
       eventType: "invalid_environment_cleanup_started",
@@ -2326,6 +2877,11 @@ export class EnvironmentRun {
         : input.phase === "teardown"
           ? ("teardown_failure" as const)
           : ("invalid_environment_failure" as const);
+    // The frontier is an observation of the substrate, so it is only meaningful
+    // against the substrate the run bound. `expectProvisioned` is false: a
+    // provisioning failure legitimately has no inventory, and an emptied
+    // substrate is a *result* the frontier must be allowed to record.
+    this.assertBoundSubstrate({ expectProvisioned: false });
     const frontier = freezeResourceFrontier({
       runId: this.runId,
       environmentInstanceHash: this.instanceHashForCleanup(),
@@ -2418,17 +2974,322 @@ export class EnvironmentRun {
     return record;
   }
 
+  // -- 15. cancellation, on the branch the run is actually in -----------------
+
   /**
-   * The emergency branch: attempt every independently safe action, receipt each
-   * attempt, and record every unsafe skip with its frontier-derived reason.
+   * The cancellation phase this run is in, derived from its observed state.
    *
-   * The fake driver's destruction granularity is the whole environment, so one
-   * destroy receipt covers every safe action it attempted, and each action's
-   * success is derived from re-inspecting the substrate afterwards rather than
-   * from what destroy claimed. A driver with per-resource destruction would
-   * produce one receipt per action; the contract permits both, and what it
-   * refuses — a safe action with no attempt, an attempt with no receipt, a
-   * failure with no reason — is enforced by `buildEmergencyCleanup` either way.
+   * Not the pre-environment mapping: that one answers `environment_setup` for
+   * everything from `case_selected` onward and has no notion of a journey in
+   * flight, which is how a live environment came to be described as a
+   * pre-environment cancellation in the first place.
+   */
+  private cancellationPhase(state: LabState): "environment_setup" | "journey_execution" | "cleanup" | "finalization" {
+    if (
+      state === "case_selected" ||
+      state === "environment_provisioned" ||
+      state === "baseline_verified" ||
+      state === "execution_plan_frozen"
+    ) {
+      return "environment_setup";
+    }
+    if (
+      state.includes("cleanup") ||
+      state.startsWith("teardown") ||
+      state === "environment_restored"
+    ) {
+      return "cleanup";
+    }
+    if (state.includes("validity_result") || state === "generic_evaluation_index_frozen") {
+      return "finalization";
+    }
+    return "journey_execution";
+  }
+
+  /**
+   * The environment journey intent a cancellation interrupted, if any.
+   *
+   * The step the journey owes next when there is one — that is the step in
+   * flight — and otherwise the last environment intent that produced an outcome.
+   * A run with neither is not executing a journey.
+   */
+  private cancellationJourneyIntent(): EnvironmentJourneyIntent | undefined {
+    const environmentIntent = (intent: JourneyIntent): EnvironmentJourneyIntent | undefined =>
+      intent === "acquire" || intent === "verify_package"
+        ? undefined
+        : (intent as EnvironmentJourneyIntent);
+    if (this.ws.hashForRole("execution-plan") === undefined) return undefined;
+    const next = this.nextStep();
+    if (next !== undefined) {
+      const intent = environmentIntent(next.intent);
+      if (intent !== undefined) return intent;
+    }
+    const outcomes = this.ws.derivedStepOutcomes();
+    for (let i = outcomes.length - 1; i >= 0; i -= 1) {
+      const intent = environmentIntent((outcomes[i] as JourneyStepOutcomeV1).intent);
+      if (intent !== undefined) return intent;
+    }
+    return undefined;
+  }
+
+  /**
+   * True once the run has entered its cleanup sequence, so a cancellation from
+   * here has exactly one authorized route: receipt-backed emergency cleanup
+   * (design §12). Restoration and teardown are the two phases whose failure the
+   * design already routes that way, and an interruption part-way through either
+   * is indistinguishable from a failure of it.
+   */
+  private cleanupAlreadyBegun(state: LabState): boolean {
+    return (
+      state === "lab_cleanup_started" ||
+      state === "environment_restored" ||
+      state.startsWith("teardown") ||
+      state.startsWith("emergency_") ||
+      state === "invalid_environment_cleanup_started"
+    );
+  }
+
+  /**
+   * `erl2 cancel` on the environment branch (ADR-ERL2-024 §4.4).
+   *
+   * ## What this replaces
+   *
+   * `cancel` was not branch-dispatched. Cancelling a **live** environment run
+   * ran the pre-environment terminal, which enumerates only the Lab's own
+   * acquisition temporaries: the record froze with cleanup variant `none` and
+   * status `not_required` while the environment and its four reservation leases
+   * were still allocated — and the shipped verifier accepted it (review P1-2).
+   *
+   * ## The order, and why it is that order
+   *
+   * The signed cancellation request freezes **first**, before any external
+   * cleanup call. That is the durable cancellation intent §4.3 requires: a crash
+   * between "the operator asked to stop" and "the Lab started destroying things"
+   * must leave evidence of the ask, not of neither.
+   *
+   * Reservations are released **last**, only after cleanup is proven, exactly as
+   * on the valid path: a cancelled run that returned its network and port names
+   * while its containers were still up would hand a live environment's
+   * identities to the next run.
+   */
+  cancel(input: {
+    readonly reasonCode: string;
+    readonly requestedByActorId: string;
+  }): InvalidLabRunRecordV1 {
+    const state = this.ws.lifecycle.currentState;
+
+    // Replay is a no-op, not a second terminal. A cancelled run that is
+    // cancelled again returns the record it already froze and writes nothing.
+    const existingRecord = this.ws.hashForRole("invalid-run-record");
+    if (existingRecord !== undefined) {
+      const record = this.ws.artifact<InvalidLabRunRecordV1>(existingRecord, "InvalidLabRunRecordV1");
+      if (record.failed_phase.kind === "cancellation") return record;
+      throw new Erl2Error(
+        CODES.CANCELLATION_AFTER_TERMINAL,
+        `run is already invalidated for a reason other than cancellation; it cannot be cancelled`,
+      );
+    }
+    if (state === "created") {
+      throw new Erl2Error(
+        CODES.CANCELLATION_BEFORE_ACCEPTANCE,
+        "a run that has not been durably accepted cannot be cancelled",
+      );
+    }
+    if (TERMINAL_STATES.has(state)) {
+      throw new Erl2Error(
+        CODES.CANCELLATION_AFTER_TERMINAL,
+        `run is already terminal (state ${state}); it cannot be cancelled`,
+      );
+    }
+
+    // `InvalidCancellationPhaseV1` requires the journey intent exactly when the
+    // cancellation happened during journey execution, and forbids it otherwise:
+    // "cancelled during the journey" is not a claim you may make without saying
+    // *which step*. If no environment intent can be derived the run was not in a
+    // journey at all, so the honest phase is the setup one.
+    const journeyIntent = this.cancellationJourneyIntent();
+    const derivedPhase = this.cancellationPhase(state);
+    const cancelledDuring =
+      derivedPhase === "journey_execution" && journeyIntent === undefined
+        ? ("environment_setup" as const)
+        : derivedPhase;
+    const emergency = this.cleanupAlreadyBegun(state);
+
+    // 1. durable intent, before any external call.
+    const requestBase = {
+      schema_version: "cancellation-request/v1" as const,
+      request_id: `cxl-${this.runId.slice(0, 8)}`,
+      run_id: this.runId,
+      cancelled_during: cancelledDuring,
+      observed_state: state,
+      requested_by_actor_id: input.requestedByActorId,
+      reason_code: input.reasonCode,
+      requested_at: this.now(),
+    };
+    const request = assertContract<CancellationRequestV1>(
+      "CancellationRequestV1",
+      sealSigned(requestBase, this.keys.finalizer),
+    );
+    this.ws.store.freezeJson("retained/cancellation-request.json", request, "INTERNAL");
+
+    // 2. detection, carrying the request and adopting any binding the lifecycle
+    //    has not yet recorded (a cancellation during provisioning).
+    const unrecordedBinding =
+      this.ws.hashForRole("substrate-binding") === undefined
+        ? this.retainedSubstrateBinding()
+        : undefined;
+    const detection = this.ws.lifecycle.append({
+      eventType: "environment_cancellation_requested",
+      stateTo: "invalid_failure_detected",
+      actorId: input.requestedByActorId,
+      commandId: "cancel",
+      operationId: "op-cancel-detected",
+      requiredHashes: [request.core_hash],
+      ...(unrecordedBinding === undefined
+        ? {}
+        : {
+            produced: [
+              {
+                artifact_role: "substrate-binding",
+                artifact_core_hash: unrecordedBinding.core_hash,
+                artifact_schema_version: "substrate-binding/v1",
+              },
+            ],
+          }),
+    });
+    this.ws.lifecycle.append({
+      eventType: "invalid_environment_cleanup_started",
+      stateTo: "invalid_environment_cleanup_started",
+      actorId: input.requestedByActorId,
+      commandId: "cancel",
+      operationId: "op-cancel-environment-cleanup-start",
+    });
+
+    // 3. the actual resource frontier — never "this run probably has nothing".
+    this.assertBoundSubstrate({ expectProvisioned: false });
+    const frontier = freezeResourceFrontier({
+      runId: this.runId,
+      environmentInstanceHash: this.instanceHashForCleanup(),
+      driverManifestHash: coreHash(this.driver.manifest),
+      trigger: emergency ? "teardown_failure" : "invalid_environment_failure",
+      observedResources: this.driver.inspect(this.runId).resources,
+      frozenAt: this.now(),
+    });
+    this.ws.store.freezeJson(`${RETAINED}/resource-frontier.json`, frontier, "INTERNAL");
+
+    const cleanup = emergency
+      ? this.emergencyCleanup(frontier, "teardown_failure")
+      : this.boundedEnvironmentCleanup(frontier);
+
+    const reached: { artifact_role: string; artifact_hash: Hash; reached_event_hash: Hash }[] = [];
+    for (const event of this.ws.lifecycle.all()) {
+      for (const produced of event.produced) {
+        reached.push({
+          artifact_role: produced.artifact_role,
+          artifact_hash: produced.artifact_core_hash,
+          reached_event_hash: event.core_hash,
+        });
+      }
+    }
+    // The signed request is reached evidence; omitting it would leave an
+    // unaccounted retained artifact the closure verifier rejects.
+    reached.push({
+      artifact_role: "cancellation-request",
+      artifact_hash: request.core_hash,
+      reached_event_hash: detection.core_hash,
+    });
+
+    const recordBase = {
+      schema_version: "invalid-lab-run-record/v1" as const,
+      run_id: this.runId,
+      terminal_state: "invalidated" as const,
+      failed_phase: {
+        kind: "cancellation" as const,
+        cancelled_during: cancelledDuring,
+        ...(cancelledDuring === "journey_execution"
+          ? { journey_intent: journeyIntent as EnvironmentJourneyIntent }
+          : {}),
+        lifecycle_event_hash: detection.core_hash,
+      },
+      terminal_reason: {
+        kind: "cancellation" as const,
+        classification: "cancellation" as const,
+        cancellation_request_hash: request.core_hash,
+        cancellation_event_hash: detection.core_hash,
+        requested_by_actor_hash: coreHash({ actor_id: input.requestedByActorId }),
+        reason_code: input.reasonCode,
+      },
+      available_evidence: reached,
+      cleanup: {
+        variant: cleanup.variant,
+        status: cleanup.status,
+        attempt_hashes: [...cleanup.attemptHashes],
+        result_hash: cleanup.resultHash,
+      },
+      lifecycle_head_hash: this.ws.lifecycle.head as Hash,
+      invalidated_at: this.now(),
+    };
+    const record = assertContract<InvalidLabRunRecordV1>("InvalidLabRunRecordV1", {
+      ...recordBase,
+      core_hash: coreHash(recordBase),
+    });
+    this.ws.store.freezeJson("retained/invalid-run-record.json", record, "INTERNAL");
+    this.ws.lifecycle.append({
+      eventType: "invalid_lab_run_record_frozen",
+      stateTo: "invalid_lab_run_record_frozen",
+      actorId: input.requestedByActorId,
+      commandId: "cancel",
+      operationId: "op-cancel-record",
+      produced: [
+        {
+          artifact_role: "invalid-run-record",
+          artifact_core_hash: record.core_hash,
+          artifact_schema_version: "invalid-lab-run-record/v1",
+        },
+      ],
+    });
+    this.ws.lifecycle.append({
+      eventType: "invalidated",
+      stateTo: "invalidated",
+      actorId: input.requestedByActorId,
+      commandId: "cancel",
+      operationId: "op-cancel-invalidated",
+    });
+    // Only now: cleanup has been attempted and its outcome retained.
+    for (const lease of this.allocator.held(this.runId)) {
+      this.allocator.release(this.runId, lease.reservation_kind, lease.reserved_value);
+    }
+    return record;
+  }
+
+  /**
+   * The emergency branch: attempt every independently safe action **one at a
+   * time**, receipt each attempt, and record every unsafe skip with its
+   * frontier-derived reason.
+   *
+   * ## What this replaces
+   *
+   * The previous implementation issued an unconditional whole-environment
+   * `driver.destroy()` *before* consulting the frontier it had just frozen, and
+   * then reported every frontier-unsafe resource as `skipped_unsafe` — a claim
+   * the destroy had already contradicted (review P1-1). Worse, the fake driver's
+   * `destroy` validates ownership of **every** resource before touching any, so a
+   * single foreign resource in the frontier made that one call throw: the branch
+   * aborted with zero safe actions attempted, no terminal reached and the run's
+   * leases still held (review P1-5).
+   *
+   * ## What it does instead
+   *
+   * Each independently safe action is attempted inside its own failure boundary,
+   * against its own target. A foreign or shared resource now fails, or skips,
+   * exactly one action. A driver fault part-way through the sequence does not
+   * stop the actions after it. And each action's success is derived by
+   * **re-observing the target afterwards**, never from what the receipt claimed.
+   *
+   * A driver with no per-resource granularity falls back to the conditional
+   * whole-environment rule (ADR-ERL2-024 §4.5): the sledgehammer may be swung
+   * only when every observed frontier member is an authorized target, so it can
+   * never destroy something the derived action set did not authorize.
    */
   private emergencyCleanup(
     frontier: EnvironmentResourceFrontierV1,
@@ -2454,32 +3315,156 @@ export class EnvironmentRun {
       ],
     });
 
-    const attemptReceipt = this.driver.destroy({
-      runId: this.runId,
-      operationId: "op-emergency-destroy",
-    }).receipt;
-    this.ws.store.freezeJson(`${RETAINED}/emergency-attempt-receipt.json`, attemptReceipt, "INTERNAL");
-    const remaining = new Map(
-      this.driver.inspect(this.runId).resources.map((r) => [r.resource_id, r]),
-    );
+    const safe = safeActions(frontier);
+    const attemptHashes: Hash[] = [];
+    const produced: {
+      artifact_role: string;
+      artifact_core_hash: Hash;
+      artifact_schema_version: string;
+    }[] = [];
+    const attempts: {
+      actionId: string;
+      succeeded: boolean;
+      attemptReceiptHash?: Hash;
+      reasonCode?: string;
+    }[] = [];
 
-    const attempts = safeActions(frontier).map((action) => {
-      const stillThere = remaining.has(action.target_resource_id);
-      return {
-        actionId: action.action_id,
-        succeeded: !stillThere,
-        attemptReceiptHash: attemptReceipt.core_hash,
-        ...(stillThere ? { reasonCode: "RESOURCE_SURVIVED_EMERGENCY_DESTROY" } : {}),
-      };
-    });
+    const record = (receipt: EnvironmentOperationReceiptV1, label: string): Hash => {
+      this.ws.store.freezeJson(`${RETAINED}/emergency-receipt-${label}.json`, receipt, "INTERNAL");
+      if (!attemptHashes.includes(receipt.core_hash)) {
+        attemptHashes.push(receipt.core_hash);
+        produced.push({
+          artifact_role: "emergency-attempt-receipt",
+          artifact_core_hash: receipt.core_hash,
+          artifact_schema_version: "environment-operation-receipt/v1",
+        });
+      }
+      return receipt.core_hash;
+    };
+
+    if (this.driver.destroyResource !== undefined) {
+      const destroyResource = this.driver.destroyResource.bind(this.driver);
+      for (const action of safe) {
+        const operationId = `op-emergency-${action.action_id}`;
+        let receiptHash: Hash;
+        try {
+          receiptHash = record(
+            // Under a durable intent like every other external mutation. An
+            // emergency action is the most consequential dispatch a run makes
+            // and the one most likely to be interrupted, so exempting it would
+            // be exempting the case the audit exists for.
+            this.driverOperation({
+              operationId,
+              kind: "emergency_action",
+              targetIdentity: action.target_resource_id,
+              requestHash: domainHash(HASH_DOMAINS.DRIVER_STATE, {
+                run_id: this.runId,
+                action_id: action.action_id,
+                target_resource_id: action.target_resource_id,
+              }),
+              compensation: "retain the target as uncontained residue in the emergency verification",
+              dispatch: () =>
+                destroyResource({
+                  runId: this.runId,
+                  resourceId: action.target_resource_id,
+                  operationId,
+                }),
+            }),
+            action.action_id,
+          );
+          this.intents.settle(operationId, receiptHash);
+        } catch (cause) {
+          // A driver fault on one action is that action's failure, not the
+          // branch's. Without a receipt the contract has nothing to bind the
+          // attempt to, so the attempt is recorded against the *frontier* — and
+          // `buildEmergencyCleanup` will refuse an attempt with no receipt,
+          // which is why the synthetic receipt below exists rather than a bare
+          // "it threw".
+          receiptHash = record(
+            this.failedActionReceipt(action.target_resource_id, action.action_id, cause),
+            action.action_id,
+          );
+          attempts.push({
+            actionId: action.action_id,
+            succeeded: false,
+            attemptReceiptHash: receiptHash,
+            reasonCode: cause instanceof Erl2Error ? cause.code : "EMERGENCY_ACTION_DRIVER_FAULT",
+          });
+          continue;
+        }
+        // Success is an *observation*, not a claim: re-inspect and ask whether
+        // the target is actually gone.
+        const stillThere = this.driver
+          .inspect(this.runId)
+          .resources.some((r) => r.resource_id === action.target_resource_id);
+        attempts.push({
+          actionId: action.action_id,
+          succeeded: !stillThere,
+          attemptReceiptHash: receiptHash,
+          ...(stillThere ? { reasonCode: "RESOURCE_SURVIVED_EMERGENCY_DESTROY" } : {}),
+        });
+      }
+    } else if (safe.length > 0) {
+      // Whole-environment granularity only. It is authorized only when the
+      // derived action set covers every observed member — otherwise the single
+      // call would affect a target the Lab never authorized, which is exactly
+      // what §4.5 refuses.
+      const unauthorized = frontier.derived_actions.filter((a) => !a.independently_safe);
+      if (unauthorized.length > 0) {
+        for (const action of safe) {
+          attempts.push({
+            actionId: action.action_id,
+            succeeded: false,
+            attemptReceiptHash: record(
+              this.failedActionReceipt(
+                action.target_resource_id,
+                action.action_id,
+                new Erl2Error(
+                  CODES.EMERGENCY_ACTION_UNDECLARED_TARGET,
+                  `driver ${this.driver.manifest.driver_id} destroys only whole environments, and ` +
+                    `${String(unauthorized.length)} observed resource(s) are not authorized targets`,
+                ),
+              ),
+              action.action_id,
+            ),
+            reasonCode: CODES.EMERGENCY_ACTION_UNDECLARED_TARGET,
+          });
+        }
+      } else {
+        const wholeReceipt = record(
+          this.driver.destroy({ runId: this.runId, operationId: "op-emergency-destroy" }).receipt,
+          "whole-environment",
+        );
+        const remaining = new Set(
+          this.driver.inspect(this.runId).resources.map((r) => r.resource_id),
+        );
+        for (const action of safe) {
+          const stillThere = remaining.has(action.target_resource_id);
+          attempts.push({
+            actionId: action.action_id,
+            succeeded: !stillThere,
+            attemptReceiptHash: wholeReceipt,
+            ...(stillThere ? { reasonCode: "RESOURCE_SURVIVED_EMERGENCY_DESTROY" } : {}),
+          });
+        }
+      }
+    }
+
+    // The frontier is re-probed after every attempt, so residue is what is
+    // *now* there rather than what the frontier said before cleanup started.
+    const stillPresent = new Set(this.driver.inspect(this.runId).resources.map((r) => r.resource_id));
     // Every resource whose action was skipped or failed must appear here with an
     // explicit containment status: silence is not containment.
+    const failedTargets = new Set(
+      attempts
+        .filter((a) => !a.succeeded)
+        .map((a) => frontier.derived_actions.find((d) => d.action_id === a.actionId))
+        .filter((d): d is NonNullable<typeof d> => d !== undefined)
+        .map((d) => d.target_resource_id),
+    );
     const unresolved = new Set([
       ...frontier.derived_actions.filter((a) => !a.independently_safe).map((a) => a.target_resource_id),
-      ...attempts.filter((a) => !a.succeeded).map((a) => {
-        const action = frontier.derived_actions.find((d) => d.action_id === a.actionId);
-        return (action as { target_resource_id: string }).target_resource_id;
-      }),
+      ...failedTargets,
     ]);
     const emergency = buildEmergencyCleanup({
       runId: this.runId,
@@ -2493,7 +3478,7 @@ export class EnvironmentRun {
         .map((r) => ({
           kind: r.kind,
           identity_hash: r.identity_hash,
-          containment_status: remaining.has(r.resource_id)
+          containment_status: stillPresent.has(r.resource_id)
             ? ("uncontained" as const)
             : ("contained" as const),
         })),
@@ -2507,11 +3492,7 @@ export class EnvironmentRun {
       commandId: "cleanup",
       operationId: "op-emergency-cleanup-terminal",
       produced: [
-        {
-          artifact_role: "emergency-attempt-receipt",
-          artifact_core_hash: attemptReceipt.core_hash,
-          artifact_schema_version: "environment-operation-receipt/v1",
-        },
+        ...produced,
         {
           artifact_role: "emergency-cleanup-verification",
           artifact_core_hash: emergency.core_hash,
@@ -2519,12 +3500,57 @@ export class EnvironmentRun {
         },
       ],
     });
+    // The terminal stays reachable even when cleanup did not complete:
+    // `attempted_failed` with retained residue is a *result*, and stranding the
+    // run instead would violate ERL2-FR-001.
     return {
       variant: "emergency_environment",
       status: emergency.remaining_resources.length === 0 ? "attempted_succeeded" : "attempted_failed",
-      attemptHashes: [attemptReceipt.core_hash],
+      attemptHashes,
       resultHash: emergency.core_hash,
     };
+  }
+
+  /**
+   * A Lab-authored receipt for an action the driver could not receipt itself.
+   *
+   * An attempted action must always carry a receipt (ERL2-FR-025/031), and a
+   * driver that throws produces none. Recording the attempt without one would be
+   * refused by `buildEmergencyCleanup`; recording *no attempt* would be a
+   * silently skipped safe action, which is worse. So the Lab receipts its own
+   * failed attempt, marked `failed` with the driver's refusal code, and the
+   * before/after state hashes are the Lab's observation rather than the driver's
+   * claim.
+   */
+  private failedActionReceipt(
+    targetResourceId: string,
+    actionId: string,
+    cause: unknown,
+  ): EnvironmentOperationReceiptV1 {
+    const observed = this.driver.inspect(this.runId).resources.map((r) => r.identity_hash);
+    const at = this.now();
+    const base = {
+      schema_version: "environment-operation-receipt/v1" as const,
+      run_id: this.runId,
+      operation: "destroy" as const,
+      operation_id: `op-emergency-${actionId}`,
+      idempotency_key: coreHash({ run: this.runId, action: actionId }).slice("sha256:".length),
+      driver_manifest_hash: coreHash(this.driver.manifest),
+      target_identity_hash: domainHash(HASH_DOMAINS.DRIVER_STATE, {
+        run_id: this.runId,
+        target_resource_id: targetResourceId,
+      }),
+      before_state_hash: domainHash(HASH_DOMAINS.DRIVER_STATE, { resources: observed }),
+      after_state_hash: domainHash(HASH_DOMAINS.DRIVER_STATE, { resources: observed }),
+      status: "failed" as const,
+      error_code: cause instanceof Erl2Error ? cause.code : CODES.LAB_UNEXPECTED_FAILURE,
+      started_at: at,
+      ended_at: at,
+    };
+    return assertContract<EnvironmentOperationReceiptV1>("EnvironmentOperationReceiptV1", {
+      ...base,
+      core_hash: coreHash(base),
+    });
   }
 
   /**

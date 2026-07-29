@@ -19,6 +19,8 @@ import {
   CODES,
   parseStrictJson,
   type Hash,
+  type LabLifecycleEventV1,
+  type SelectionAssuranceV1,
   type SubjectAdapterManifestV1,
   type Tier,
 } from "@erl2/contracts";
@@ -32,12 +34,19 @@ import {
   RunWorkspace,
   SteppingClock,
   SystemClock,
+  assertWorkspaceRunIdentity,
   newRunId,
   type Clock,
   type SubjectPort,
   type WorkspaceKeyring,
 } from "@erl2/core";
-import { ArtifactIndex, VERIFIER_RELEASE_HASH, derivePreFinalizationClosure } from "@erl2/public-verifier";
+import {
+  ArtifactIndex,
+  VERIFIER_RELEASE_HASH,
+  assertClaimScopeWithinCeiling,
+  deriveClaimCeiling,
+  derivePreFinalizationClosure,
+} from "@erl2/public-verifier";
 import { ArtifactStore, developmentAgeIdentity, developmentKey } from "@erl2/integrity";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -147,8 +156,28 @@ function runClock(runRoot: string): Clock {
   return new SystemClock();
 }
 
-export function openWorkspace(flags: ParsedFlags, runId: string): RunWorkspace {
+/**
+ * Opens an existing run workspace.
+ *
+ * The run identity is validated **first**, before the admission registry is
+ * opened, before the subject port is constructed (which, with `--adapter-entry`,
+ * creates an adapter workspace directory) and before `RunWorkspace` creates the
+ * run root at all. `--run` and `--run-root` are one identity, not two
+ * independent inputs (ADR-ERL2-024 §4.1, review P1-8).
+ *
+ * `allowBootstrap` is passed only by `preregister-acquisition`.
+ */
+export function openWorkspace(
+  flags: ParsedFlags,
+  runId: string,
+  options: { readonly allowBootstrap?: boolean } = {},
+): RunWorkspace {
   const runRoot = requireString(flags, "run-root");
+  assertWorkspaceRunIdentity({
+    runRoot,
+    runId,
+    ...(options.allowBootstrap === true ? { allowBootstrap: true } : {}),
+  });
   const registry = AdmissionRegistry.open(requireString(flags, "registry"));
   const clock = runClock(runRoot);
   return new RunWorkspace({
@@ -159,6 +188,7 @@ export function openWorkspace(flags: ParsedFlags, runId: string): RunWorkspace {
     keyring: developmentKeyring(flags),
     tier: requireDevelopmentTier(flags),
     subjectPort: subjectPort(flags, runId, runRoot, registry, clock),
+    ...(options.allowBootstrap === true ? { allowBootstrap: true } : {}),
   });
 }
 
@@ -429,7 +459,9 @@ export function preregisterAcquisition(argv: readonly string[]): JourneyCommandO
     { name: "expires", kind: "string", required: true },
   ]);
   const runId = (flags["run"] as string | undefined) ?? newRunId();
-  const workspace = openWorkspace(flags, runId);
+  // The one command that legitimately brings a run root into being: it is what
+  // writes the workspace identity every later command validates against.
+  const workspace = openWorkspace(flags, runId, { allowBootstrap: true });
   const preregistration = workspace.preregisterAcquisition({
     sourceManifestHash: hash(flags, "acquisition-source"),
     adapterManifestHash: hash(flags, "adapter"),
@@ -632,6 +664,49 @@ export function evaluate(argv: readonly string[]): JourneyCommandOutput {
 }
 
 /**
+ * Resolves the scope a terminal is signed with (ADR-ERL2-025 §4.4).
+ *
+ * With no `--claim-scope`, the earned scope is derived and used. With one, it is
+ * a **requested upper bound**: a request weaker than the evidence is honoured
+ * exactly as asked, and a request stronger than the evidence is refused rather
+ * than quietly capped. Capping would be the worse behaviour of the two — an
+ * operator who typed `T3` and got a signed `T1` back has been told nothing, and
+ * would go on believing the run supported the claim.
+ *
+ * The derivation is the offline verifier's, injected rather than reimplemented,
+ * so a scope this accepts is a scope that verifier accepts.
+ */
+export function resolveClaimScope(options: {
+  readonly requested: string | undefined;
+  readonly index: ArtifactIndex;
+  readonly lifecycle: readonly LabLifecycleEventV1[];
+  readonly terminalVariant: "pre_environment" | "environment";
+  readonly selectionAssurance?: SelectionAssuranceV1;
+}): "T1" | "T2" | "T3" {
+  const report = deriveClaimCeiling({
+    index: options.index,
+    lifecycle: options.lifecycle,
+    terminalVariant: options.terminalVariant,
+    ...(options.selectionAssurance === undefined
+      ? {}
+      : { selectionAssurance: options.selectionAssurance }),
+  });
+  if (options.requested === undefined) return report.ceiling;
+  if (options.requested !== "T1" && options.requested !== "T2" && options.requested !== "T3") {
+    throw new Erl2Error(
+      CODES.CFG_MISSING_REQUIRED,
+      "--claim-scope must be T1, T2 or T3; a base attestation never emits T4",
+    );
+  }
+  assertClaimScopeWithinCeiling({
+    claimScope: options.requested,
+    report,
+    who: "--claim-scope",
+  });
+  return options.requested;
+}
+
+/**
  * `erl2 finalize-generic` — cleanup, validity, generic index, terminal run
  * record, attestation and public bundle, in the design's order.
  *
@@ -645,13 +720,12 @@ export function finalizeGeneric(argv: readonly string[]): JourneyCommandOutput {
   const runId = requireString(flags, "run");
   const runRoot = requireString(flags, "run-root");
   const workspace = openWorkspace(flags, runId);
-  const claimScope = (flags["claim-scope"] as string | undefined) ?? "T1";
-  if (claimScope !== "T1" && claimScope !== "T2" && claimScope !== "T3") {
-    throw new Erl2Error(
-      CODES.CFG_MISSING_REQUIRED,
-      "--claim-scope must be T1, T2 or T3; a base attestation never emits T4",
-    );
-  }
+  const claimScope = resolveClaimScope({
+    requested: flags["claim-scope"] as string | undefined,
+    index: ArtifactIndex.scan(runRoot),
+    lifecycle: workspace.lifecycle.all(),
+    terminalVariant: "pre_environment",
+  });
   const finalized = workspace.finalizeGeneric({
     claimScope,
     deriveClosure: (runRecord) =>

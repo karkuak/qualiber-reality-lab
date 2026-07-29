@@ -36,10 +36,16 @@ There is no `AGENTS.md` or `CLAUDE.md`.
 
 ## 3. State as of this handoff — verify before trusting
 
-- **Branch** `main`, HEAD `176b43b`. **All 6R and 6.5-A work is uncommitted** —
-  around 48 entries in `git status`, including this prompt. Nothing has been
-  committed since 6R, so `git stash` or a careless checkout loses two slices of
-  work. Check `git status` yourself before touching anything.
+- **Branch `slice-6.5a-selection-chain`**, HEAD `fa41388` — "Slice 6R pass 4 and
+  Slice 6.5-A: selection chain wired end to end". The working tree is clean and
+  everything is pushed.
+- Remote `origin` is `https://github.com/karkuak/qualiber-reality-lab.git`.
+  `main` sits at `176b43b` (the 6R commit) and has **not** been fast-forwarded —
+  the 6.5-A work lives only on the branch, pending review or merge. Start 6.5-B
+  from `slice-6.5a-selection-chain`, not from `main`, or you will be building on
+  a tree without the selection chain.
+- Confirm before starting: `git rev-parse --abbrev-ref HEAD` and
+  `git status --porcelain` (expect a clean tree).
 - `npm run clean && npm install && npm run build && npm run typecheck && npm run verify:generated && npm test && npm run purity && npm run evidence && npm run evidence:verify`
   exits **0**.
 - **500 tests pass / 0 fail / 0 skipped**; **24** architecture/purity tests.
@@ -118,6 +124,13 @@ once complete.
 7. **The shared-formula risk is open** (`Independent-Code-Review.md:87`): the
    producer, auditor and offline verifier all call the same
    `deriveSelectedIndex`/`poolRootOf`. Known-answer vectors are the only defence.
+8. **Repo hygiene, pre-existing and now public.** `Independent Code Review.docx`
+   and a stray Word lock file `~$dependent Code Review.docx` are both *tracked*
+   from earlier history. The development signing keys are derived from labels
+   (`developmentKey("selector")`) and are repo-derivable **by design** — that is
+   why the isolation claim is `locally_observed_unauthenticated` and no
+   production tier is reachable. Neither is a leak; both are worth knowing about
+   on a public remote.
 
 ## 6. Your task — Slice 6.5-B
 
@@ -196,7 +209,11 @@ the deep/customer commands that are **out of scope**.
    error code hid an entire broken suite.
 5. **Full-tree byte manifests** for refusal-writes-no-evidence, measured on both
    a fresh run and one stopped mid-phase.
-6. **Report what is unproven.** Dead code that compiles is not done.
+6. **Never put literal control bytes in source.** `typedRefusals.test.ts`
+   carried a real NUL inside deliberate test data, which made git treat the
+   whole file as binary and therefore undiffable. Use escapes (`\u0000`) — the
+   test data is identical and the file stays reviewable.
+7. **Report what is unproven.** Dead code that compiles is not done.
 
 ## 8. Verification
 

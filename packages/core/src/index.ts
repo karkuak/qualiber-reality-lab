@@ -102,6 +102,7 @@ export {
   type MutateRequest,
   type RestoreRequest,
   type DestroyRequest,
+  type DestroyResourceRequest,
   type DestroyResult,
 } from "./environment/driver.js";
 export {
@@ -113,9 +114,26 @@ export {
 export {
   FileSubstrateStore,
   MemorySubstrateStore,
+  type SubstrateInstance,
+  type SubstrateIo,
   type SubstrateState,
   type SubstrateStore,
 } from "./environment/substrate.js";
+export {
+  buildRestorationProbe,
+  deriveRestorationProbeOutcome,
+  restorationProbePassed,
+  type ExpectedRevertedMutation,
+  type RestorationObservations,
+  type RestorationProbeVerdict,
+} from "./environment/restorationProbe.js";
+export {
+  assertSubstrateBinding,
+  buildSubstrateBinding,
+  reservationNamespaceHash,
+  type AssertBindingInput,
+  type BuildSubstrateBindingInput,
+} from "./environment/substrateBinding.js";
 export {
   ReservationAllocator,
   type ReservationKind,
@@ -349,6 +367,19 @@ export {
   type OpenWorkspaceOptions,
   type WorkspaceKeyring,
 } from "./run/workspace.js";
+export {
+  assertWorkspaceRunIdentity,
+  readWorkspaceIdentity,
+  type WorkspaceIdentity,
+} from "./run/runIdentity.js";
+export {
+  MutationIntentJournal,
+  type MutationIntent,
+  type MutationIntentState,
+  type MutationSpec,
+  type ProbeVerdict,
+  type RetryRule,
+} from "./run/mutationIntent.js";
 export {
   verifySelectionChain,
   assertDisjointRoles,

@@ -94,6 +94,15 @@ const SIGNED_MEMBER_RULES = new Map<string, SignedMemberRule>([
   // failed after provisioning (the emergency-cleanup terminal), so their roles
   // are declared now rather than left to fail closed on a shipped path.
   ["environment-driver-manifest/v1", { role: "environment_governor" }],
+  // ADR-ERL2-024 §6.4. The governor provisions the environment, so it is the
+  // authority that records which substrate it provisioned into. Never the
+  // driver: a binding signed by the thing being bound proves nothing.
+  ["substrate-binding/v1", { role: "environment_governor", securityTimestampField: "bound_at" }],
+  // ADR-ERL2-026 §6.4, and the same argument one step further on: the governor
+  // owns the environment, so it owns the statement that the environment was
+  // observed back at its baseline. The driver signs nothing here — it is the
+  // party whose compensation is being checked.
+  ["restoration-probe/v1", { role: "environment_governor", securityTimestampField: "probed_at" }],
   ["environment-archetype/v1", { role: "environment_governor" }],
   ["environment-cleanup-contract/v1", { role: "environment_governor" }],
   ["substrate-lock/v1", { role: "environment_governor", securityTimestampField: "recorded_at" }],

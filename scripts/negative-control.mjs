@@ -152,10 +152,22 @@ const CONTROLS = [
     id: "environment-bundle-verifier",
     what: "verifyEnvironmentBundle is reached by a real bundle",
     file: "packages/public-verifier/src/library/verify.ts",
-    find: "function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificationResult {",
-    replace:
-      "function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificationResult {\n" +
-      '  throw new Error("negative control: verifyEnvironmentBundle is unreachable");',
+    // Routed away rather than made to `throw`.
+    //
+    // The original patch inserted a `throw` as the function's first statement.
+    // That worked until ADR-ERL2-024 added `chain[chain.length - 1]` to the
+    // environment path: under `noUncheckedIndexedAccess` the value is
+    // `T | undefined`, and TypeScript's control-flow analysis does not narrow
+    // inside a block it has already proven unreachable — so the *patched* tree
+    // stopped compiling and the control reported BUILD FAILED instead of
+    // measuring anything. Diverting the dispatch tests the same property (an
+    // environment bundle really reaches `verifyEnvironmentBundle`) and leaves
+    // both functions typechecking.
+    find:
+      '  return declaredVariant === "environment"\n' +
+      "    ? verifyEnvironmentBundle(options)\n" +
+      "    : verifyPreEnvironmentBundle(options);",
+    replace: "  void verifyEnvironmentBundle;\n  return verifyPreEnvironmentBundle(options);",
     tests: [
       "tests/dist/e2e/environmentRun.test.js",
       "tests/dist/adversarial/environmentTerminalMutations.test.js",
@@ -181,6 +193,242 @@ const CONTROLS = [
     tests: ["tests/dist/e2e/selectionWalk.test.js", "tests/dist/e2e/environmentRun.test.js"],
     expect: "pass",
     note: "the producer builds pool entries from the admitted manifests, so they agree by construction",
+  },
+
+  // -- ADR-ERL2-024: one control per invariant the remediation establishes ----
+  //
+  // Each disables exactly one guard and names the test that must then fail. A
+  // control that kills nothing is recorded as `expect: "pass"` with the reason,
+  // never quietly re-scored — the discipline §10a already established.
+  //
+  // Several patches read `String(1) === "2"` rather than `false`. That is not
+  // decoration: a literal `false` lets TypeScript drop the branch and stop
+  // narrowing, so the *unpatched* code around it no longer typechecks and the
+  // control reports BUILD FAILED instead of measuring anything.
+  {
+    id: "run-identity-validation",
+    what: "--run must match the run the workspace records (review P1-8)",
+    file: "packages/core/src/run/runIdentity.ts",
+    // Disabled at the single source of truth, which is what proves all three
+    // call sites — the CLI dispatcher, the CLI workspace opener and the
+    // `RunWorkspace` constructor — rest on the same guard.
+    find: "  const identity = readWorkspaceIdentity(options.runRoot);",
+    replace:
+      "  const identity = readWorkspaceIdentity(options.runRoot);\n" +
+      '  if (String(1) !== "2") return identity;',
+    tests: ["tests/dist/adversarial/runIdentity.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "substrate-binding-validation",
+    what: "every environment phase checks the substrate it is about to talk to (review P0-1)",
+    file: "packages/core/src/run/environmentRun.ts",
+    find: "    assertSubstrateBinding({",
+    replace: '    if (String(1) !== "2") return;\n    assertSubstrateBinding({',
+    tests: ["tests/dist/adversarial/substrateSubstitution.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "substrate-locator-conflict",
+    what: "a locator flag may not replace an established binding (review P0-1)",
+    file: "packages/cli/src/environmentCommands.ts",
+    find:
+      "  if (suppliedSubstrate !== undefined && path.resolve(suppliedSubstrate) !== bound.substrate_root) {",
+    replace:
+      "  if (suppliedSubstrate !== undefined && String(1) === \"2\") {",
+    tests: ["tests/dist/adversarial/substrateSubstitution.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "pre-dispatch-intent",
+    what: "no external mutation without a durable intent recorded first (review P1-7)",
+    file: "packages/core/src/run/mutationIntent.ts",
+    // The dispatch still happens; only the durable record *before* it is
+    // removed. That is the defect exactly: the call was made and nothing said so.
+    find: '    this.advance(spec.operationId, "dispatching");',
+    replace: "    void spec.operationId;",
+    tests: ["tests/dist/e2e/mutationIntentCrashMatrix.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "intent-reconciliation",
+    what: "an unsettled intent is reconciled against observed state before any retry",
+    file: "packages/core/src/run/mutationIntent.ts",
+    // Disables the *adopt* path, so an unsettled idempotent operation is
+    // re-dispatched instead of reconciled. Patching the probe itself does not
+    // compile: TypeScript narrows a `const` to its literal initializer even
+    // through a type annotation, and the two later comparisons then report "no
+    // overlap".
+    find: '      if (observed === "present") {',
+    replace: '      if (String(1) === "2") {',
+    tests: ["tests/dist/e2e/mutationIntentCrashMatrix.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "frontier-action-derivation",
+    what: "a frontier cannot vouch for its own action set (review P1-6)",
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    find: "  assertFrontierActionsDerivable(frontier);",
+    replace: "  void assertFrontierActionsDerivable;",
+    tests: ["tests/dist/adversarial/emergencyCleanupAdversarial.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "safe-action-completeness",
+    what: "every independently safe action must be attempted and correctly labelled (ERL2-AC-035)",
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    // Empties the per-action verification loop: an omitted action and a
+    // relabelled one both become invisible, which is what the verifier did.
+    find: "  for (const action of frontier.derived_actions) {\n    const reported = reportedById.get(action.action_id);",
+    replace:
+      "  for (const action of [] as typeof frontier.derived_actions) {\n" +
+      "    const reported = reportedById.get(action.action_id);",
+    tests: ["tests/dist/adversarial/emergencyCleanupAdversarial.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "per-action-emergency-cleanup",
+    what: "emergency cleanup attempts each safe action separately (review P1-1/P1-5)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Forces the whole-environment fallback even though the driver offers
+    // per-resource destruction — the pre-remediation behaviour exactly.
+    find: "    if (this.driver.destroyResource !== undefined) {",
+    replace:
+      '    if (this.driver.destroyResource !== undefined && this.driver.manifest.driver_id === "no-such-driver") {',
+    tests: ["tests/dist/adversarial/emergencyCleanupAdversarial.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "verifier-validity-derivation",
+    what: "the verifier re-derives validity instead of reading `status` (review P1-11)",
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    find: "  if (derived !== validity.status) {",
+    replace: '  if (String(1) === "2") {',
+    tests: ["tests/dist/adversarial/environmentVerifierDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "verifier-restoration-derivation",
+    what: "the verifier re-derives restoration instead of reading `passed` (review P1-4)",
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    find: "  if (derived !== restoration.passed) {",
+    replace: '  if (String(1) === "2") {',
+    tests: ["tests/dist/adversarial/environmentVerifierDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "verifier-teardown-derivation",
+    what: "the verifier re-derives teardown instead of reading `passed`",
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    find: "  if (derived !== teardown.passed) {",
+    replace: '  if (String(1) === "2") {',
+    tests: ["tests/dist/adversarial/environmentVerifierDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "branch-specific-cancellation",
+    what: "cancel is routed by the run's own evidence, not to the pre-environment terminal (review P1-2)",
+    file: "packages/cli/src/index.ts",
+    find: "  cancel: (argv) => (hasSubstrate(argv) ? cancelEnvironment(argv) : cancel(argv)),",
+    replace:
+      '  cancel: (argv) => (hasSubstrate(argv) && String(1) === "2" ? cancelEnvironment(argv) : cancel(argv)),',
+    tests: ["tests/dist/e2e/environmentCancellation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cancellation-cleanup-applicability",
+    what: "the verifier refuses a terminal claiming no cleanup was required over a live environment",
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    find: '  if (variant === "none" || status === "not_required") {',
+    replace: '  if (String(1) === "2") {',
+    tests: ["tests/dist/adversarial/environmentVerifierDerivation.test.js"],
+    expect: "fail",
+  },
+
+  // -- the false-attestation remediation package (ADR-ERL2-025/026, and the
+  //    parts of P0-1 / P1-12 / P1-4 that ADR-ERL2-024 left open) -------------
+  {
+    id: "locator-flag-development-gate",
+    what: "--substrate-root and --reservation-root are development-only (review P0-1)",
+    file: "packages/cli/src/environmentCommands.ts",
+    // The gate, not the binding. Gating the flag is not the fix — the binding
+    // is — but an ungated redirection flag has no business on a release surface
+    // either way, and the claim that it is unreachable there has to be measured.
+    find: '  if (supplied && process.env["ERL2_DEVELOPMENT_FAKE_SUBJECT"] !== "1") {',
+    replace: '  if (supplied && String(1) === "2") {',
+    tests: ["tests/dist/adversarial/substrateSubstitution.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "narrow-enoent-substrate-read",
+    what: "only ENOENT means `never provisioned`; every other fault fails closed (review P1-12)",
+    file: "packages/core/src/environment/substrate.ts",
+    // Restores the original fail-open exactly: every read fault becomes
+    // "nothing here", which is what let a teardown pass over live resources.
+    find: "      if (isAbsent(cause)) return undefined;",
+    replace: "      void cause;\n      return undefined;",
+    tests: ["tests/dist/adversarial/substrateErrorClassification.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "substrate-state-shape-validation",
+    what: "a document that is not substrate state is a fault, not an empty substrate (review P1-12)",
+    file: "packages/core/src/environment/substrate.ts",
+    // The second, quieter half of the same fail-open: the coercion that turned
+    // every unrecognised shape into `{ resources: [], mutations: [] }`.
+    find: "  if (!Array.isArray(record[\"resources\"])) throw unreadable(what, \"`resources` is not an array\");",
+    replace:
+      "  if (!Array.isArray(record[\"resources\"])) return { resources: [], mutations: [] };",
+    tests: ["tests/dist/adversarial/substrateErrorClassification.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "compensation-mutation-binding",
+    what: "the expected reverted set is derived from the run's own retained mutation receipts (review P1-4)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // The compensation still runs and the probe is still frozen; it simply
+    // stops naming what it was supposed to revert, which is how "reverted
+    // nothing" and "had nothing to revert" became the same terminal.
+    // Asks for a role nothing produces rather than substituting an empty
+    // literal: a literal `[]` loses the branded hash type and the *unpatched*
+    // callback stops typechecking, which reports BUILD FAILED instead of
+    // measuring anything — the failure mode §8 of the previous campaign
+    // recorded twice.
+    find: 'return this.ws.hashesForRole("mutation-receipt").map((hash) => {',
+    replace: 'return this.ws.hashesForRole("no-such-role").map((hash) => {',
+    tests: ["tests/dist/adversarial/compensationAdversarial.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "independent-restoration-probe",
+    what: "the substrate is re-read after the compensation, and the verdict comes from that (review P1-4)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Removes the independent post-compensation observation and falls back to
+    // believing the receipt — the pre-ADR-ERL2-026 behaviour exactly.
+    find: "    if (!restorationProbePassed(probe.outcome)) {",
+    replace: '    if (String(1) === "2") {',
+    tests: ["tests/dist/adversarial/compensationAdversarial.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "producer-claim-scope-derivation",
+    what: "the producer refuses a requested scope stronger than the evidence (ADR-ERL2-025 §4.4)",
+    file: "packages/cli/src/journeyCommands.ts",
+    // Restores `flags["claim-scope"] ?? "T1"`: the operator's word, signed.
+    find: "  assertClaimScopeWithinCeiling({",
+    replace:
+      "  if (String(1) !== \"2\") return options.requested;\n  assertClaimScopeWithinCeiling({",
+    tests: ["tests/dist/adversarial/claimScopeEscalation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "verifier-claim-scope-rederivation",
+    what: "the verifier re-derives the ceiling instead of accepting the signed scope (ADR-ERL2-025 §4.5)",
+    file: "packages/public-verifier/src/library/claimScope.ts",
+    find: "  if (!claimScopeExceeds(options.claimScope, options.report.ceiling)) return;",
+    replace: '  if (String(1) !== "2") return;',
+    tests: ["tests/dist/adversarial/claimScopeEscalation.test.js"],
+    expect: "fail",
   },
 ];
 
@@ -241,8 +489,15 @@ if (dirty.length > blocking.length) {
       "are ignored; they cannot change a control's result",
   );
 }
+// Comma-separated, so a remediation package can measure exactly the controls it
+// touches. A full campaign is ~30 builds and ~30 suite runs; a package that
+// changed nine guards should be able to say which nine it measured rather than
+// choosing between four hours and a partial answer with no record of which part.
 const filter = process.argv.find((a) => !a.startsWith("--") && a !== process.argv[0] && a !== process.argv[1]);
-const selected = CONTROLS.filter((c) => filter === undefined || c.id.includes(filter));
+const wanted = filter === undefined ? undefined : filter.split(",").filter(Boolean);
+const selected = CONTROLS.filter(
+  (c) => wanted === undefined || wanted.some((needle) => c.id.includes(needle)),
+);
 if (selected.length === 0) {
   console.error(`no control matches ${String(filter)}`);
   process.exit(2);

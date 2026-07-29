@@ -817,6 +817,48 @@ export type ChallengeActivationReceiptV1 = {
   readonly signature: Signature;
 };
 
+export type SubstrateBindingV1 = {
+  readonly schema_version: "substrate-binding/v1";
+  readonly binding_id: Id;
+  readonly run_id: RunId;
+  readonly driver_id: Id;
+  readonly driver_manifest_hash: Hash;
+  readonly archetype_hash: Hash;
+  readonly substrate_kind: Id;
+  readonly substrate_instance_hash: Hash;
+  readonly reservation_namespace_hash: Hash;
+  readonly substrate_lock_hash?: Hash;
+  readonly bound_at: Instant;
+  readonly core_hash: Hash;
+  readonly signature: Signature;
+};
+
+export type ExpectedRevertedMutation = {
+  readonly mutation_id: Id;
+  readonly mutation_receipt_hash: Hash;
+  readonly target_identity_hash: Hash;
+};
+
+export type RestorationProbeV1 = {
+  readonly schema_version: "restoration-probe/v1";
+  readonly probe_id: Id;
+  readonly run_id: RunId;
+  readonly substrate_binding_hash: Hash;
+  readonly environment_instance_hash: Hash;
+  readonly compensation_operation_id: Id;
+  readonly compensation_receipt_hash: Hash;
+  readonly expected_reverted_mutations: readonly ExpectedRevertedMutation[];
+  readonly observed_before: IdArray;
+  readonly observed_after: IdArray;
+  readonly residual_expected_mutations: IdArray;
+  readonly collateral_reverted_mutations: IdArray;
+  readonly probe_status: "observed" | "unavailable";
+  readonly outcome: "reverted" | "nothing_to_revert" | "residual" | "collateral" | "unobservable";
+  readonly probed_at: Instant;
+  readonly core_hash: Hash;
+  readonly signature: Signature;
+};
+
 // ---- erl2:evaluation : ERL2 data-only evaluation pack, metric definition and metric result contracts ----
 
 export type MetricThresholdClass = "measurement" | "information" | "ordinary_gate" | "hard_safety";

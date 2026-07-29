@@ -137,11 +137,19 @@ test("ENV-MUT: the driver's substrate survives the process that created it", () 
     assert.ok(resource.run_scoped_name.includes(run.runId), "every resource identity embeds the run id");
   }
 
-  const substrate = readdirSync(`${path.resolve(run.runRoot)}.substrate`);
-  assert.equal(substrate.length, 1, "the substrate holds exactly this run's state");
-  const state = JSON.parse(
-    readFileSync(path.join(`${path.resolve(run.runRoot)}.substrate`, substrate[0] as string), "utf8"),
-  ) as { resources: unknown[] };
+  const substrateRoot = `${path.resolve(run.runRoot)}.substrate`;
+  const substrate = readdirSync(substrateRoot).sort();
+  // Two files, and exactly two: this run's state, and the substrate's own
+  // identity marker. The marker is what makes a *substituted* substrate
+  // detectable — a fresh empty directory carries none, so it can never satisfy
+  // the run's `SubstrateBindingV1` (ADR-ERL2-024 §4.2, review P0-1).
+  assert.equal(substrate.length, 2, `unexpected substrate contents: ${substrate.join(", ")}`);
+  assert.ok(substrate.includes("substrate-instance.json"), "the substrate carries its own identity");
+  const stateFile = substrate.find((name) => name.endsWith(".substrate.json"));
+  assert.ok(stateFile !== undefined, "the substrate holds this run's state");
+  const state = JSON.parse(readFileSync(path.join(substrateRoot, stateFile), "utf8")) as {
+    resources: unknown[];
+  };
   assert.equal(state.resources.length, 5, "a separate process can see what was provisioned");
 });
 

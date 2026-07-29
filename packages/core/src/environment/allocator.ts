@@ -43,6 +43,18 @@ export class ReservationAllocator {
   private readonly clock: Clock;
   private readonly ttlMs: number;
 
+  /**
+   * The absolute directory this allocator's leases live in.
+   *
+   * Exposed so a run can bind its reservation namespace (ADR-ERL2-024 §4.2):
+   * `--reservation-root` is the other caller-supplied root, and redirecting it
+   * at teardown would let a run release leases it never held while the real ones
+   * stayed allocated.
+   */
+  get namespaceLocator(): string {
+    return this.root;
+  }
+
   constructor(options: { readonly root: string; readonly clock: Clock; readonly ttlMs?: number }) {
     this.root = path.resolve(options.root);
     this.clock = options.clock;

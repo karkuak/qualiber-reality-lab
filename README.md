@@ -36,6 +36,36 @@ fails freezes exactly one `InvalidLabRunRecordV1` after frontier-derived cleanup
 with restoration and teardown failures routed through receipt-backed emergency
 cleanup. Slices 7–12 are not started.
 
+An independent review of that work found a false-valid-attestation mechanism and
+a cluster of integrity defects in exactly the paths the slice exists to establish.
+[ADR-ERL2-024](docs/adr/ADR-ERL2-024.md) settles and implements the invariant
+foundation underneath them: a run is permanently bound to the workspace that
+records it and to **one** substrate identity, every externally visible mutation is
+preceded by a durable intent and reconciled against observed state before any
+retry, cancellation is routed from the branch the run is actually in, emergency
+cleanup attempts each independently safe action separately, and the offline
+verifier **re-derives** validity, restoration, teardown and the emergency action
+set instead of reading the producer's verdict. That package closes the P0 and the
+blocking P1 cluster; it does not remediate the whole review, and
+[`docs/ledger/remediation-6.5-invariants.md`](docs/ledger/remediation-6.5-invariants.md) §6
+lists what stays open.
+
+A follow-up audit of that implementation found three false-attestation paths still
+open, and two ADRs close them.
+[ADR-ERL2-026](docs/adr/ADR-ERL2-026.md) makes restoration rest on an
+**observation** rather than a receipt: the substrate is read for its
+applied-mutation set before the compensation and again afterwards, because the
+baseline fingerprint and the resource inventory are both blind to a mutation and
+a driver reporting `succeeded` while reverting nothing produced `passed: true`.
+[ADR-ERL2-025](docs/adr/ADR-ERL2-025.md) makes `claim_scope` **derived from
+retained evidence** rather than supplied by `--claim-scope`, which had let an
+operator sign historical-reproduction evidence over a fake-driver development run.
+And the substrate loader's remaining fail-open — the coercion that turned any
+unrecognised document into an empty substrate — is closed, so only `ENOENT` means
+"never provisioned".
+[`docs/ledger/remediation-6.5-false-attestation.md`](docs/ledger/remediation-6.5-false-attestation.md)
+records what was measured and §7 lists what is still open.
+
 **What that environment terminal is, exactly.** It is a **development-tier** run
 against the **fake environment driver** with a **trusted reference subject** and
 **non-blind** selection. It is evidence that the mechanism closes — one archetype,
@@ -45,8 +75,15 @@ or robustness of any kind. `DomainResultEvaluatedV1` remains unreachable: a
 development run reveals only journey-scope judge expectations, so every completed
 run produces `DomainResultNotApplicableV1` — `pre_environment_terminal` on the
 early branch, `functional_evidence_unavailable` on the environment branch.
-See [`docs/claims/permitted-claims.md`](docs/claims/permitted-claims.md) for the
-claim boundary in full.
+
+Since ADR-ERL2-025 that boundary is **enforced rather than described**: every
+terminal this build can produce derives `claim_scope: "T1"`, held there
+independently by the development tier, the non-blind selection, the fake driver,
+the absent containment qualification, the unevaluated domain plane and the
+metrics' own declared ceilings. `--claim-scope T2` or `T3` is a typed refusal in
+the producer, and an attestation carrying either is refused by the offline
+verifier. See [`docs/claims/permitted-claims.md`](docs/claims/permitted-claims.md)
+for the claim boundary in full.
 
 Four slices shipped under their documented rollbacks. **The Compose driver is
 disabled** because ERL2-OQ-005 is unresolved, so the fake driver is the only

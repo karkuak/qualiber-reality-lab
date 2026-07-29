@@ -23,7 +23,9 @@
  * substituting its adapter after preregistration.
  */
 
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { parseStrictJson } from "@erl2/contracts";
 import { CODES, Erl2Error, type Hash } from "./contractsFacade.js";
 import type {
   ChallengeManifestV1,
@@ -50,7 +52,12 @@ import {
 } from "@erl2/public-verifier";
 import { developmentAgeIdentity, developmentKey } from "@erl2/integrity";
 import { parseFlags, requireString, type FlagSpec, type ParsedFlags } from "./args.js";
-import { COMMON_FLAGS, openWorkspace, type JourneyCommandOutput } from "./journeyCommands.js";
+import {
+  COMMON_FLAGS,
+  openWorkspace,
+  resolveClaimScope,
+  type JourneyCommandOutput,
+} from "./journeyCommands.js";
 
 /** Flags every environment command accepts on top of the common ones. */
 const ENVIRONMENT_FLAGS: readonly FlagSpec[] = [
@@ -78,6 +85,19 @@ const DRIVER_FAULTS: Readonly<Record<string, FakeDriverFaults>> = {
   "contaminated-baseline": { contaminationCodes: ["PREEXISTING_RESIDUE"] },
   "failed-probe": { failProbeIds: ["probe-network"] },
   "failed-restore": { failRestore: true },
+  // A failed restoration *and* a resource the driver reports as shared with
+  // another run. The frontier must then derive one `contain_residual`/unsafe
+  // action alongside the safe ones — the mixed frontier whose foreign member
+  // used to abort emergency cleanup entirely (review P1-5).
+  "failed-restore-shared": { failRestore: true },
+  // The compensation returns `succeeded` and reverts nothing (review P1-4). Not
+  // a variant of `failed-restore`: a failed restoration is honest and already
+  // routes to emergency cleanup, while this one produces a receipt that reads
+  // exactly like a clean compensation over a mutation that is still applied.
+  "no-op-restore": { restoreWithoutReverting: true },
+  // The environment already carried a mutation this run never applied, and the
+  // compensation clears it too.
+  "collateral-restore": { preexistingMutationId: "preexisting-operator-change" },
   "failed-teardown": { failTeardown: true },
   residue: { residualResourceIds: [] },
 };
@@ -101,19 +121,133 @@ function driverFaults(flags: ParsedFlags, runId: string): FakeDriverFaults {
   }
   // The residue fault names a concrete resource of *this* run, so it cannot be
   // written as a static table entry.
-  return name === "residue"
-    ? { residualResourceIds: [`volume-${runId.slice(0, 8)}`] }
-    : fault;
+  if (name === "residue") return { residualResourceIds: [`volume-${runId.slice(0, 8)}`] };
+  if (name === "failed-restore-shared") {
+    return { failRestore: true, sharedResourceIds: [`volume-${runId.slice(0, 8)}`] };
+  }
+  return fault;
 }
 
-function substrateRoot(flags: ParsedFlags): string {
-  const supplied = flags["substrate-root"] as string | undefined;
-  return supplied ?? `${path.resolve(requireString(flags, "run-root"))}.substrate`;
+/**
+ * The private, run-local record of where this run's substrate and reservations
+ * actually live (ADR-ERL2-024 §4.2).
+ *
+ * It lives in `state/`, beside the run lease and the derived snapshot: a
+ * subtree the artifact index, the closure derivation and the retained-file
+ * accounting all exclude by construction. That is deliberate. An operational
+ * locator is deployment configuration, not a claim — publishing an absolute
+ * host path as signed evidence would be a leak, and hashing it would be
+ * unverifiable by an offline reader who has no path to hash. The *public*
+ * identity is `SubstrateBindingV1.substrate_instance_hash`; this file is only
+ * how a fresh process finds the substrate again without trusting a flag.
+ */
+interface SubstrateLocatorRecord {
+  readonly run_id: string;
+  readonly substrate_root: string;
+  readonly reservation_root: string;
 }
 
-function reservationRoot(flags: ParsedFlags): string {
-  const supplied = flags["reservation-root"] as string | undefined;
-  return supplied ?? `${path.resolve(requireString(flags, "run-root"))}.reservations`;
+function locatorPath(runRoot: string): string {
+  return path.join(path.resolve(runRoot), "state", "substrate-locator.json");
+}
+
+function readLocator(runRoot: string): SubstrateLocatorRecord | undefined {
+  const file = locatorPath(runRoot);
+  if (!existsSync(file)) return undefined;
+  try {
+    return parseStrictJson(readFileSync(file, "utf8")) as SubstrateLocatorRecord;
+  } catch (cause) {
+    // A torn locator is not "no locator": answering it that way would send the
+    // next phase to a default directory that may not be the bound substrate.
+    throw new Erl2Error(
+      CODES.ENV_SUBSTRATE_UNREADABLE,
+      "the run's substrate locator record exists but could not be read",
+      { cause },
+    );
+  }
+}
+
+function writeLocator(runRoot: string, record: SubstrateLocatorRecord): void {
+  const file = locatorPath(runRoot);
+  mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  const temp = `${file}.tmp`;
+  writeFileSync(temp, `${JSON.stringify(record)}\n`, { mode: 0o600 });
+  renameSync(temp, file);
+}
+
+/**
+ * The locator flags are development-only shortcuts, on the same terms as
+ * `--fake-driver-fault` and `--fake-acquire`.
+ *
+ * `--substrate-root` used to be ungated and unattested, which is the whole of
+ * P0-1: a caller drove the environment against substrate A, then ran `destroy`
+ * and `finalize-generic` against a fresh empty directory and obtained an
+ * offline-valid attestation while A stayed allocated. Gating the flag is not
+ * the fix — the binding is — but an ungated redirection flag has no business on
+ * a release surface either way.
+ */
+function assertLocatorFlagsAvailable(flags: ParsedFlags): void {
+  const supplied =
+    flags["substrate-root"] !== undefined || flags["reservation-root"] !== undefined;
+  if (supplied && process.env["ERL2_DEVELOPMENT_FAKE_SUBJECT"] !== "1") {
+    throw new Erl2Error(
+      CODES.CFG_DEVELOPMENT_FLAG_UNAVAILABLE,
+      "--substrate-root and --reservation-root redirect the Lab's own observation channel; " +
+        "they are development-only shortcuts requiring the explicit development profile " +
+        "(ERL2_DEVELOPMENT_FAKE_SUBJECT=1) and are not reachable on the release surface",
+    );
+  }
+}
+
+/**
+ * Resolves the substrate and reservation locators for one command.
+ *
+ * A run establishes them once and then owns them. A later flag may not replace
+ * them: this is the rule that stops the second half of the substitution — even
+ * a developer with the profile enabled cannot point an already-bound run at a
+ * different directory, they can only fail to.
+ */
+function resolveLocators(flags: ParsedFlags, runId: string): {
+  readonly substrateRoot: string;
+  readonly reservationRoot: string;
+} {
+  assertLocatorFlagsAvailable(flags);
+  const runRoot = path.resolve(requireString(flags, "run-root"));
+  const suppliedSubstrate = flags["substrate-root"] as string | undefined;
+  const suppliedReservation = flags["reservation-root"] as string | undefined;
+  const substrateRoot = path.resolve(suppliedSubstrate ?? `${runRoot}.substrate`);
+  const reservationRoot = path.resolve(suppliedReservation ?? `${runRoot}.reservations`);
+
+  const bound = readLocator(runRoot);
+  if (bound === undefined) {
+    return { substrateRoot, reservationRoot };
+  }
+  if (bound.run_id !== runId) {
+    throw new Erl2Error(
+      CODES.POLICY_RUN_IDENTITY_MISMATCH,
+      `the substrate locator recorded in this run root belongs to run ${bound.run_id}`,
+    );
+  }
+  if (suppliedSubstrate !== undefined && path.resolve(suppliedSubstrate) !== bound.substrate_root) {
+    throw new Erl2Error(
+      CODES.ENV_SUBSTRATE_LOCATOR_CONFLICT,
+      `--substrate-root names ${path.resolve(suppliedSubstrate)}, but this run is bound to the ` +
+        `substrate at ${bound.substrate_root}; a binding may be established once, never replaced`,
+    );
+  }
+  if (
+    suppliedReservation !== undefined &&
+    path.resolve(suppliedReservation) !== bound.reservation_root
+  ) {
+    throw new Erl2Error(
+      CODES.ENV_SUBSTRATE_LOCATOR_CONFLICT,
+      `--reservation-root names ${path.resolve(suppliedReservation)}, but this run is bound to the ` +
+        `reservation namespace at ${bound.reservation_root}`,
+    );
+  }
+  // The run's own record wins over any default: a later command that omits the
+  // flags must still reach the substrate the run bound, not `<run-root>.substrate`.
+  return { substrateRoot: bound.substrate_root, reservationRoot: bound.reservation_root };
 }
 
 function hashFlag(flags: ParsedFlags, name: string): Hash | undefined {
@@ -175,6 +309,11 @@ function retainedHashOfSchema(workspace: RunWorkspace, schemaVersion: string): H
  */
 function environmentKeyring(): EnvironmentKeyring {
   return {
+    // The authority that provisions the environment is the one that records
+    // which substrate it provisioned into (ADR-ERL2-024 §6.4). The development
+    // policy grants `environment_governor` to the challenge-governor key, which
+    // is the same key the driver manifest is signed with.
+    environmentGovernor: developmentKey("challenge-governor"),
     // Its own key, not the governor's: the governor provisions the environment,
     // the controller decides a challenge goes live in it (ADR-ERL2-023).
     controller: developmentKey("controller"),
@@ -192,6 +331,12 @@ export interface EnvironmentContext {
   readonly runId: string;
   readonly runRoot: string;
   readonly flags: ParsedFlags;
+  /**
+   * Records the run's operational locators, so a later process reaches the same
+   * substrate without trusting a flag. Called by `provision` only, immediately
+   * before the phase that establishes the binding.
+   */
+  readonly recordLocators: () => void;
 }
 
 /**
@@ -205,6 +350,10 @@ export function openEnvironment(argv: readonly string[], extra: readonly FlagSpe
   const flags = parseFlags(argv, [...ENVIRONMENT_FLAGS, ...extra]);
   const runId = requireString(flags, "run");
   const runRoot = requireString(flags, "run-root");
+  // Locators are resolved before the workspace is opened, so a flag that
+  // contradicts the run's binding refuses before any directory is created —
+  // including the substrate and reservation roots themselves.
+  const locators = resolveLocators(flags, runId);
   const workspace = openWorkspace(flags, runId);
   const clock = workspace.productionClock();
 
@@ -247,21 +396,33 @@ export function openEnvironment(argv: readonly string[], extra: readonly FlagSpe
     archetypeHash: archetype.core_hash,
     resourceKinds: archetype.topology.map((node) => node.node_id),
     evidenceSourceIds: archetype.evidence_sources.map((source) => source.source_id),
-    substrate: new FileSubstrateStore(substrateRoot(flags)),
+    substrate: new FileSubstrateStore(locators.substrateRoot),
     faults: driverFaults(flags, runId),
   });
 
   const run = new EnvironmentRun({
     workspace,
     driver,
-    allocator: new ReservationAllocator({ root: reservationRoot(flags), clock }),
+    allocator: new ReservationAllocator({ root: locators.reservationRoot, clock }),
     archetype,
     comparisonPolicy,
     cutoffPolicy,
     keys: environmentKeyring(),
     clock,
   });
-  return { workspace, run, runId, runRoot, flags };
+  return {
+    workspace,
+    run,
+    runId,
+    runRoot,
+    flags,
+    recordLocators: () =>
+      writeLocator(runRoot, {
+        run_id: runId,
+        substrate_root: locators.substrateRoot,
+        reservation_root: locators.reservationRoot,
+      }),
+  };
 }
 
 /**
@@ -344,6 +505,11 @@ function routed(
 
 export function provision(argv: readonly string[]): JourneyCommandOutput {
   const ctx = openEnvironment(argv);
+  // The locator is recorded before the binding is established, not after: a
+  // crash between the two must leave a run that can still *find* the substrate
+  // it may have created, rather than one that silently falls back to a default
+  // directory (ADR-ERL2-024 §4.2).
+  ctx.recordLocators();
   let result;
   try {
     result = ctx.run.provision();
@@ -507,6 +673,41 @@ export function isEnvironmentBranch(workspace: RunWorkspace): boolean {
   return workspace.hashForRole("execution-plan") !== undefined;
 }
 
+/**
+ * `erl2 cancel` on the environment branch (ADR-ERL2-024 §4.4).
+ *
+ * Reached through the same branch dispatch the other four shared commands use,
+ * but on a *wider* discriminator: `freeze-output`, `reveal`, `evaluate` and
+ * `finalize-generic` key off the execution plan, which a run only has once it
+ * has provisioned, baselined and planned. Cancellation has to be routed
+ * correctly from `environment_provisioned` too — a run that provisioned and then
+ * stopped has four reservation leases and a live environment, and that is
+ * exactly the case that used to freeze `not_required` (review P1-2).
+ */
+export function cancelEnvironment(argv: readonly string[]): JourneyCommandOutput {
+  const ctx = openEnvironment(argv, [
+    { name: "reason", kind: "string", required: true },
+    { name: "actor", kind: "string" },
+  ]);
+  const record = ctx.run.cancel({
+    reasonCode: requireString(ctx.flags, "reason"),
+    requestedByActorId: (ctx.flags["actor"] as string | undefined) ?? "operator",
+  });
+  return {
+    ...output(ctx, {
+      invalid_run_record_hash: record.core_hash,
+      terminal_state: record.terminal_state,
+      cleanup_variant: record.cleanup.variant,
+      cleanup_status: record.cleanup.status,
+      cancelled_during:
+        record.failed_phase.kind === "cancellation" ? record.failed_phase.cancelled_during : undefined,
+    }),
+    // A cancelled run still returns its record hash (Appendix C) but exits on
+    // the cancellation class so a caller cannot read it as success.
+    terminalError: new Erl2Error(CODES.CANCELLATION_REQUESTED, "run cancelled at operator request"),
+  };
+}
+
 export function freezeEnvironmentOutput(argv: readonly string[]): JourneyCommandOutput {
   const ctx = openEnvironment(argv, [{ name: "terminal-stage", kind: "string" }]);
   const manifest = ctx.run.freezeOutput();
@@ -580,13 +781,17 @@ export function evaluateEnvironment(argv: readonly string[]): JourneyCommandOutp
  */
 export function finalizeEnvironment(argv: readonly string[]): JourneyCommandOutput {
   const ctx = openEnvironment(argv, [{ name: "claim-scope", kind: "string" }]);
-  const claimScope = (ctx.flags["claim-scope"] as string | undefined) ?? "T1";
-  if (claimScope !== "T1" && claimScope !== "T2" && claimScope !== "T3") {
-    throw new Erl2Error(
-      CODES.CFG_MISSING_REQUIRED,
-      "--claim-scope must be T1, T2 or T3; a base attestation never emits T4",
-    );
-  }
+  // Derived from the run's own retained evidence, with `--claim-scope` reduced
+  // to a requested upper bound (ADR-ERL2-025 §4.4). It used to be
+  // `flags["claim-scope"] ?? "T1"`, which let an operator sign T3 over a
+  // development-tier fake-driver run whose domain plane was never evaluated.
+  const claimScope = resolveClaimScope({
+    requested: ctx.flags["claim-scope"] as string | undefined,
+    index: ArtifactIndex.scan(ctx.runRoot),
+    lifecycle: ctx.workspace.lifecycle.all(),
+    terminalVariant: "environment",
+    selectionAssurance: ctx.run.selectionAssurance(),
+  });
   const progress = deriveEnvironmentClosureProgress({
     lifecycle: ctx.workspace.lifecycle.all(),
     index: ArtifactIndex.scan(ctx.runRoot),

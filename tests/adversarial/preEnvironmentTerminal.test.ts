@@ -264,6 +264,11 @@ test("EARLY-TERMINAL-CLOSURE: the run workspace refuses the early terminal with 
   const runRoot = mkdtempSync(path.join(tmpdir(), "erl2-refusal-"));
   const runId = uuidV7From(Date.parse("2026-07-01T00:00:00Z"), Buffer.alloc(10, 0x66));
   const workspace = new RunWorkspace({
+    // This fixture creates the run root it operates on, which is the one thing
+    // `allowBootstrap` is for (ADR-ERL2-024 §4.1). Without it a library caller
+    // may not bring a workspace into being, so a mistyped root refuses instead
+    // of silently starting a second, empty run.
+    allowBootstrap: true,
     runId,
     runRoot,
     registry: AdmissionRegistry.open(registry.root),

@@ -138,6 +138,15 @@ export const CONTRACTS: readonly ContractDescriptor[] = [
   // Additive: the signed controller activation receipt design v2 §12 requires and
   // no V2 contract carried (ADR-ERL2-023). No existing schema changed shape.
   d("ERL2-C-155", "ChallengeActivationReceiptV1", "environment", "challenge-activation-receipt/v1"),
+  // ADR-ERL2-024 §6.1: additive, on the same terms as ERL2-C-155 and ERL2-C-063.
+  // No existing schema changed shape or meaning, and the signer role it uses
+  // (`environment_governor`) was already in the frozen SignerRole enum.
+  d("ERL2-C-156", "SubstrateBindingV1", "environment", "substrate-binding/v1"),
+  // ADR-ERL2-026 §6: additive, on the same terms as ERL2-C-156. The restoration
+  // verification is frozen and could not carry the independently observed
+  // post-compensation state, so the observation gets its own identity rather
+  // than an optional field on a frozen schema.
+  d("ERL2-C-157", "RestorationProbeV1", "environment", "restoration-probe/v1"),
   d("ERL2-C-058", "LabRunRecordV1", "terminal", undefined, true),
   d("ERL2-C-059", "MandatoryGraphClosureReportV1", "terminal", "mandatory-graph-closure-report/v1"),
   d("ERL2-C-060", "PreEnvironmentFinalLabAttestationV1", "terminal", "pre-environment-final-lab-attestation/v1"),

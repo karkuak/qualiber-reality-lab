@@ -40,6 +40,29 @@ export {
   type EnvironmentPreFinalizationVerdict,
 } from "./library/environmentClosure.js";
 export {
+  assertCleanupApplicable,
+  assertSubstrateBindingConsistent,
+  deriveEmergencyCleanup,
+  deriveEnvironmentSemantics,
+  deriveInvalidEnvironmentSemantics,
+  deriveRestorationOutcome,
+  deriveTeardownOutcome,
+  deriveValidityOutcome,
+  type EnvironmentSemanticReport,
+  type SubstrateBindingReport,
+} from "./library/environmentDerivation.js";
+export {
+  assertClaimScopeWithinCeiling,
+  claimScopeExceeds,
+  claimScopeRank,
+  combineClaimScopeComponents,
+  deriveClaimCeiling,
+  MAX_BASE_CLAIM_SCOPE,
+  type ClaimCeilingReport,
+  type ClaimScopeComponent,
+  type DeriveClaimCeilingOptions,
+} from "./library/claimScope.js";
+export {
   verifyPublicBundle,
   verifyInvalidRecord,
   VERIFIER_RELEASE_HASH,

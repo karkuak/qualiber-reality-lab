@@ -24,6 +24,7 @@ import {
   type Hash,
 } from "@erl2/contracts";
 import { domainHash, HASH_DOMAINS } from "@erl2/integrity";
+import type { SubstrateInstance } from "./substrate.js";
 
 /** Resource identity always embeds the run id (design v2 §22). */
 export function resourceIdentityHash(runId: string, kind: string, runScopedName: string): Hash {
@@ -121,14 +122,71 @@ export interface DestroyResult {
   readonly residue: readonly EnvironmentResourceV1[];
 }
 
+export interface DestroyResourceRequest {
+  readonly runId: string;
+  readonly resourceId: string;
+  readonly operationId: string;
+}
+
 export interface EnvironmentDriver {
   readonly manifest: EnvironmentDriverManifestV1;
   provision(request: ProvisionRequest): ProvisionResult;
+  /** Read-only by contract: a probe observes and returns a fingerprint. It mutates nothing. */
   probe(request: ProbeRequest): EnvironmentBaselineFingerprintV1;
   mutate(request: MutateRequest): EnvironmentOperationReceiptV1;
   restore(request: RestoreRequest): EnvironmentOperationReceiptV1;
   destroy(request: DestroyRequest): DestroyResult;
+  /** Read-only by contract: an inspection observes and returns an inventory. */
   inspect(runId: string): EnvironmentResourceInventoryV1;
+  /**
+   * The identity of the substrate this driver instance is operating against, or
+   * `undefined` when that substrate has never been established.
+   *
+   * ADR-ERL2-024 §6.2 amends ADR-ERL2-021 §5 to add this. §4.2 requires an
+   * identity "unambiguous for the driver and substrate instance actually
+   * observed", and only the driver can report it: the run root knows which
+   * substrate it *configured*, not which one the driver reached.
+   */
+  substrateInstance(): SubstrateInstance | undefined;
+  /** Establishes the substrate identity. Called once, by `provision`. */
+  establishSubstrateInstance(runId: string): SubstrateInstance;
+  /**
+   * The receipt of an operation this driver has already completed for the run,
+   * keyed by operation id — the driver's own operation log.
+   *
+   * **Optional.** It is what lets restart reconciliation *adopt* an
+   * independently verified prior result instead of re-dispatching or failing
+   * closed (ADR-ERL2-024 §4.3). A driver that cannot offer one is not broken;
+   * its unsettled operations simply fail closed, which is the correct posture
+   * and not a thing to work around by assuming idempotence.
+   */
+  completedOperation?(runId: string, operationId: string): EnvironmentOperationReceiptV1 | undefined;
+  /**
+   * The mutation ids the driver observes as **currently applied** to this run's
+   * environment.
+   *
+   * **Optional**, and its absence is fail-closed: a driver that cannot be asked
+   * what is applied cannot support a restoration claim, because there is then no
+   * way to tell a compensation that reverted the mutation from one that returned
+   * `succeeded` and did nothing (review P1-4). Restoration under such a driver
+   * records `probe_status: "unavailable"` and refuses.
+   *
+   * This is an **observation**, like `probe` and `inspect`, and it is read-only
+   * by contract. It is what the restoration probe re-reads *after* the
+   * compensation, so the Lab's verdict comes from the substrate rather than from
+   * the receipt the substrate handed it.
+   */
+  observedMutations?(runId: string): readonly string[];
+  /**
+   * Destroys exactly one owned resource, receipting the attempt.
+   *
+   * **Optional.** A driver whose only destructive granularity is the whole
+   * environment omits it, and emergency cleanup then falls back to the
+   * conditional whole-environment rule (§4.5): the sledgehammer may be swung
+   * only when every observed frontier member is an authorized target. Providing
+   * this method is how a driver escapes that restriction.
+   */
+  destroyResource?(request: DestroyResourceRequest): EnvironmentOperationReceiptV1;
 }
 
 /**

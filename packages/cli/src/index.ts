@@ -32,6 +32,7 @@ import {
   REQUIRED_ISOLATION_CONTROLS,
   RunLease,
   SystemClock,
+  assertWorkspaceRunIdentity,
   enforcedControls,
   unsupportedControls,
 } from "@erl2/core";
@@ -55,6 +56,7 @@ import {
   activate,
   authenticate,
   baseline,
+  cancelEnvironment,
   configure,
   connect,
   destroy,
@@ -221,6 +223,28 @@ function isEnvironmentRun(argv: readonly string[]): boolean {
   return existsSync(path.join(path.resolve(runRoot), "retained", "execution-plan.json"));
 }
 
+/**
+ * Whether this run has, or may have, external resources.
+ *
+ * A wider discriminator than {@link isEnvironmentRun}, and cancellation needs the
+ * wider one: a run that provisioned and then stopped has a live environment and
+ * four reservation leases but no execution plan yet, and routing *that* through
+ * the pre-environment terminal is how a cancellation came to freeze cleanup
+ * variant `none` / status `not_required` over an allocated environment (review
+ * P1-2, ADR-ERL2-024 §4.4).
+ *
+ * The substrate binding is the right marker because `provision` freezes it
+ * *before* it dispatches: a run that crashed mid-provision has one, and it is
+ * precisely the run whose frontier must be enumerated rather than assumed empty.
+ */
+function hasSubstrate(argv: readonly string[]): boolean {
+  const runRoot = flagValue(argv, "run-root");
+  if (runRoot === undefined) return false;
+  return existsSync(
+    path.join(path.resolve(runRoot), "retained", "environment", "substrate-binding.json"),
+  );
+}
+
 /** Journey, evaluation and finalization commands, keyed by their CLI name. */
 const JOURNEY_COMMANDS: Readonly<Record<string, (argv: readonly string[]) => JourneyCommandOutput>> = {
   "preregister-acquisition": preregisterAcquisition,
@@ -235,7 +259,9 @@ const JOURNEY_COMMANDS: Readonly<Record<string, (argv: readonly string[]) => Jou
   reveal: (argv) => (isEnvironmentRun(argv) ? revealEnvironment(argv) : reveal(argv)),
   evaluate: (argv) => (isEnvironmentRun(argv) ? evaluateEnvironment(argv) : evaluate(argv)),
   "finalize-generic": (argv) => (isEnvironmentRun(argv) ? finalizeEnvironment(argv) : finalizeGeneric(argv)),
-  cancel,
+  // Branch-dispatched on the *substrate binding*, not the execution plan: a run
+  // that provisioned and stopped has resources to clean up and no plan.
+  cancel: (argv) => (hasSubstrate(argv) ? cancelEnvironment(argv) : cancel(argv)),
   provision,
   baseline,
   plan,
@@ -283,6 +309,16 @@ function withRunLease<T>(command: string, argv: readonly string[], fn: () => T):
   const runId = flagValue(argv, "run");
   const runRoot = flagValue(argv, "run-root");
   if (runId === undefined || runRoot === undefined) return fn();
+  // Before the lease, not after: an identity refusal must not create, take or
+  // renew a lease on a workspace it does not belong to (ADR-ERL2-024 §4.1).
+  // `preregister-acquisition` is the one command that may bring a run root into
+  // being, and it is also the only one that reaches here with a `--run` naming a
+  // workspace that does not exist yet.
+  assertWorkspaceRunIdentity({
+    runRoot,
+    runId,
+    ...(command === "preregister-acquisition" ? { allowBootstrap: true } : {}),
+  });
   const owner = `pid-${String(process.pid)}`;
   const lease = RunLease.acquire(runRoot, owner, command, Date.now());
   try {

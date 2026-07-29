@@ -213,6 +213,13 @@ export const CODES = {
   INVALID_REASON_PHASE_MISMATCH: "INVALID_REASON_PHASE_MISMATCH",
   INVALID_REASON_FABRICATED_FINDING: "INVALID_REASON_FABRICATED_FINDING",
   EMERGENCY_CLEANUP_BYPASSED: "EMERGENCY_CLEANUP_BYPASSED",
+  /**
+   * Emergency cleanup did not account for the frontier it was derived from: an
+   * omitted action, a cleanup citing a frontier the run never froze, or a
+   * terminal that claims cleanup was not required while the run held external
+   * resources (ADR-ERL2-024 §4.5/§4.6).
+   */
+  EMERGENCY_CLEANUP_INCOMPLETE: "EMERGENCY_CLEANUP_INCOMPLETE",
   EMERGENCY_ACTION_RECEIPT_MISSING: "EMERGENCY_ACTION_RECEIPT_MISSING",
   EMERGENCY_ACTION_SAFE_ACTION_SKIPPED: "EMERGENCY_ACTION_SAFE_ACTION_SKIPPED",
   STATE_POST_REVEAL_EXECUTION_FORBIDDEN: "STATE_POST_REVEAL_EXECUTION_FORBIDDEN",
@@ -321,6 +328,87 @@ export const CODES = {
   BASELINE_PROBE_FAILED: "BASELINE_PROBE_FAILED",
   RESTORATION_FAILED: "RESTORATION_FAILED",
   TEARDOWN_FAILED: "TEARDOWN_FAILED",
+
+  // -- slice 6.5 remediation: run identity, substrate binding, mutation intent
+  //    (ADR-ERL2-024; review P0-1, P1-7, P1-8, P1-12) ------------------------
+  /**
+   * `--run` names a run the workspace at `--run-root` does not record. A run
+   * root and a run id are one identity, not two independent inputs (§4.1).
+   * Raised before the run lease, any evidence, any substrate directory and any
+   * driver, subject port or adapter construction.
+   */
+  POLICY_RUN_IDENTITY_MISMATCH: "POLICY_RUN_IDENTITY_MISMATCH",
+  /**
+   * A locator flag named a substrate or reservation root other than the one
+   * this run privately recorded when it bound its substrate. A binding may be
+   * established once; it may never be replaced by a flag (§4.2).
+   */
+  ENV_SUBSTRATE_LOCATOR_CONFLICT: "ENV_SUBSTRATE_LOCATOR_CONFLICT",
+  /**
+   * A bound run reached a substrate that carries no instance identity — the
+   * fresh empty directory of the P0-1 substitution exploit. Raised before any
+   * cleanup evidence can freeze.
+   */
+  ENV_SUBSTRATE_BINDING_MISSING: "ENV_SUBSTRATE_BINDING_MISSING",
+  /**
+   * The substrate instance, driver, archetype or reservation namespace this
+   * phase is about to talk to is not the one the run bound.
+   */
+  ENV_SUBSTRATE_BINDING_MISMATCH: "ENV_SUBSTRATE_BINDING_MISMATCH",
+  /**
+   * The lifecycle records a provisioned environment; the substrate says this
+   * run was never provisioned in it. A teardown here would be a clean report
+   * over resources it never looked at.
+   */
+  ENV_SUBSTRATE_NOT_PROVISIONED: "ENV_SUBSTRATE_NOT_PROVISIONED",
+  /**
+   * The substrate exists but could not be read. Previously indistinguishable
+   * from "never provisioned", so an ordinary permission or I/O fault yielded a
+   * passing teardown over live resources (review P1-12). It is now its own
+   * fail-closed refusal.
+   */
+  ENV_SUBSTRATE_UNREADABLE: "ENV_SUBSTRATE_UNREADABLE",
+  /** An external dispatch was reached with no durable intent. A Lab defect; fails closed. */
+  ENV_MUTATION_INTENT_MISSING: "ENV_MUTATION_INTENT_MISSING",
+  /**
+   * A durable intent is unsettled, the operation is not idempotent, and no
+   * probe can observe whether the external effect happened. Ambiguity fails
+   * closed rather than re-dispatching (§4.3).
+   */
+  ENV_MUTATION_INTENT_AMBIGUOUS: "ENV_MUTATION_INTENT_AMBIGUOUS",
+  /**
+   * Whole-environment destruction would affect a target the frontier-derived
+   * action set does not authorize. A driver whose only granularity is the whole
+   * environment may be invoked only when every observed member is an authorized
+   * target (§4.5).
+   */
+  EMERGENCY_ACTION_UNDECLARED_TARGET: "EMERGENCY_ACTION_UNDECLARED_TARGET",
+
+  // -- slice 6.5 remediation: independently probed restoration and the
+  //    evidence-derived claim ceiling (ADR-ERL2-025/026; review P1-4, P2) ----
+  /**
+   * A compensation was cited without the independent observation that says what
+   * it actually did: no retained `restoration-probe/v1`, a probe naming another
+   * run, another substrate binding or another compensation operation, or a
+   * probe whose expected mutation set does not correspond to the retained
+   * mutation receipts (ADR-ERL2-026 §4.3).
+   */
+  RESTORATION_PROBE_MISSING: "RESTORATION_PROBE_MISSING",
+  /**
+   * The substrate was re-read after the compensation and the mutation the
+   * compensation was declared to revert is still applied, or unrelated state
+   * was reverted instead, or the driver offers no applied-mutation observation
+   * at all. A receipt reading `succeeded` is not an answer to this question,
+   * which is why it is asked separately (review P1-4).
+   */
+  RESTORATION_NOT_INDEPENDENTLY_OBSERVED: "RESTORATION_NOT_INDEPENDENTLY_OBSERVED",
+  /**
+   * A requested or retained `claim_scope` is stronger than the ceiling
+   * independently derived from the run's own retained evidence
+   * (ADR-ERL2-025 §4). Raised by the producer against `--claim-scope` and again,
+   * independently, by the offline verifier against the signed attestation.
+   */
+  POLICY_CLAIM_SCOPE_EXCEEDS_EVIDENCE: "POLICY_CLAIM_SCOPE_EXCEEDS_EVIDENCE",
   // -- slice 6: data-only evaluation packs (ERL2-OQ-004 fail-closed) --------
   PACK_SUBJECT_VOCABULARY_IN_DOMAIN_SCOPE: "PACK_SUBJECT_VOCABULARY_IN_DOMAIN_SCOPE",
   PACK_PROHIBITED_API_REFERENCE: "PACK_PROHIBITED_API_REFERENCE",
@@ -358,6 +446,13 @@ export const CODES = {
   EVALUATOR_STALE_RESULT_HASH: "EVALUATOR_STALE_RESULT_HASH",
   EVALUATOR_INVALID_VALIDITY_IN_GENERIC_INDEX: "EVALUATOR_INVALID_VALIDITY_IN_GENERIC_INDEX",
   EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED: "EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED",
+  /**
+   * A retained validity result disagrees with its own gate set, or a failed gate
+   * carries no invalidity finding naming it. Raised by the offline verifier,
+   * which re-derives the verdict rather than reading `status` (ADR-ERL2-024
+   * §4.6; review P1-3 and the tautological `lab_validity` check).
+   */
+  EVALUATOR_VALIDITY_GATE_FAILED: "EVALUATOR_VALIDITY_GATE_FAILED",
   EVALUATOR_FABRICATED_CITATION: "EVALUATOR_FABRICATED_CITATION",
   EVALUATOR_CAUSAL_OVERCLAIM: "EVALUATOR_CAUSAL_OVERCLAIM",
 

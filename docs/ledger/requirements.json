@@ -953,8 +953,8 @@
     },
     {
       "acceptance_id": "ERL2-AC-015",
-      "status": "partial",
-      "evidence": "attestation schema restricts claim_scope to T1-T3"
+      "status": "passing",
+      "evidence": "claim_scope is derived from retained evidence and re-derived by the offline verifier (ADR-ERL2-025); tests/adversarial/claimScopeEscalation.test.ts; the attestation schema restricts claim_scope to T1-T3 and cannot encode T4"
     },
     {
       "acceptance_id": "ERL2-AC-016",
@@ -1232,6 +1232,42 @@
     },
     {
       "id": "ADR-ERL2-017",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-018",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-019",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-020",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-021",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-022",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-023",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-024",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-025",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-026",
       "status": "accepted"
     }
   ],

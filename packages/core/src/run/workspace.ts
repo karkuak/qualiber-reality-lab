@@ -87,6 +87,7 @@ import {
   type SigningKey,
 } from "@erl2/integrity";
 import { LifecycleLog, verifyLifecycleChain } from "../lifecycle/log.js";
+import { assertWorkspaceRunIdentity } from "./runIdentity.js";
 import type { BeaconRound } from "../selection/beacon.js";
 import type { SelectionPoolEntry } from "../selection/chain.js";
 import type { SelectionContext, SelectionProgress } from "../selection/stages.js";
@@ -166,6 +167,16 @@ export interface OpenWorkspaceOptions {
   readonly keyring: WorkspaceKeyring;
   readonly tier: Tier;
   readonly subjectPort: SubjectPort;
+  /**
+   * True only for the one command that legitimately brings a run root into
+   * being (`preregister-acquisition`). Every other caller opens an existing
+   * workspace and must match the run identity it already records
+   * (ADR-ERL2-024 §4.1).
+   *
+   * Defaulting to `false` is the point: a new caller that forgets this flag is
+   * refused rather than silently allowed to invent a workspace.
+   */
+  readonly allowBootstrap?: boolean;
 }
 
 interface IndexedArtifact {
@@ -204,6 +215,16 @@ export class RunWorkspace {
   private readonly engine: GenericStepEngine;
 
   constructor(options: OpenWorkspaceOptions) {
+    // First, before anything that could write: the run id and the run root are
+    // one identity, not two independent inputs (ADR-ERL2-024 §4.1). Checked
+    // here rather than only in the CLI so a library caller cannot bypass it —
+    // `ArtifactStore` and `LifecycleLog` both create directories, so this must
+    // precede their construction.
+    assertWorkspaceRunIdentity({
+      runRoot: options.runRoot,
+      runId: options.runId,
+      ...(options.allowBootstrap === true ? { allowBootstrap: true } : {}),
+    });
     assertDevelopmentSubjectPort(options.tier, options.subjectPort.portId);
     this.runId = options.runId;
     this.store = new ArtifactStore(options.runRoot);

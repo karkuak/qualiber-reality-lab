@@ -433,10 +433,32 @@ test("ENV-SUBSTRATE: the driver's substrate lives outside the run root", () => {
     existsSync(`${path.resolve(run.runRoot)}.substrate`),
     "the fake driver's substrate is a sibling of the run root",
   );
-  // Nothing under the run root is substrate state: an artifact index scans the
-  // whole run root, so substrate inside it would be indexed as evidence.
+  // Nothing under the run root is substrate *state*: an artifact index scans the
+  // whole run root, so substrate state inside it would be indexed as evidence.
+  //
+  // Two files under the run root do name the substrate, and neither is substrate
+  // state (ADR-ERL2-024 §4.2):
+  //
+  //   - `retained/environment/substrate-binding.json` is signed *evidence about*
+  //     which substrate this run bound. It is a closure member on purpose: an
+  //     environment terminal whose cleanup verdicts cannot be attributed to a
+  //     named substrate is exactly the artifact P0-1 produced.
+  //   - `state/substrate-locator.json` is the private operational locator, in the
+  //     `state/` subtree the index, the closure derivation and the retained-file
+  //     accounting all exclude — beside the run lease and the snapshot cache.
+  //
+  // The allowlist is exact, so a genuine substrate-state file appearing under the
+  // run root would still fail this test.
   const inside = [...manifest(run.runRoot).keys()].filter((p) => p.includes("substrate"));
-  assert.deepEqual(inside, [], "no substrate state may live under the run root");
+  assert.deepEqual(
+    inside.sort(),
+    [
+      "retained/environment/substrate-binding.json",
+      "retained/environment/substrate-binding.json.frozen",
+      "state/substrate-locator.json",
+    ],
+    "only the substrate binding and the private locator may name the substrate inside the run root",
+  );
 });
 
 /*

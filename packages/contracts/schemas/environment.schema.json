@@ -861,6 +861,186 @@
           "$ref": "erl2:common#/$defs/Signature"
         }
       }
+    },
+    "SubstrateBindingV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "$comment": "Signed Lab evidence binding one run permanently to one substrate identity (ADR-ERL2-024 \u00a74.2). Additive contract ERL2-C-156; no existing schema changed shape or meaning. It exists because `--substrate-root` was caller-controlled, ungated, and bound into no contract, no receipt and no attestation field, so a caller could drive the environment against substrate A and then destroy and finalize against a fresh empty substrate B, obtaining an offline-valid attestation while the real environment stayed allocated (review P0-1). The canonical identity is `substrate_instance_hash`, a value the substrate itself carries: a fresh substrate has none, which is what makes substitution detectable offline. The operational locator is deliberately ABSENT \u2014 a path is deployment-local, unstable across hosts, unverifiable by a reader who has no path to hash, and would bake an absolute host path into signed public evidence; it is kept in the run's private `state/` subtree instead. Signed by the environment governor, never by the driver: a driver is untrusted infrastructure and must not attest its own substrate identity.",
+      "required": [
+        "schema_version",
+        "binding_id",
+        "run_id",
+        "driver_id",
+        "driver_manifest_hash",
+        "archetype_hash",
+        "substrate_kind",
+        "substrate_instance_hash",
+        "reservation_namespace_hash",
+        "bound_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "substrate-binding/v1"
+        },
+        "binding_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "driver_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "driver_manifest_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "archetype_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "substrate_kind": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "substrate_instance_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "reservation_namespace_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "substrate_lock_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "bound_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
+    },
+    "ExpectedRevertedMutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "$comment": "One mutation the compensation was expected to reverse, tied to the retained receipt that recorded it being applied and to the resource it was applied to.",
+      "required": [
+        "mutation_id",
+        "mutation_receipt_hash",
+        "target_identity_hash"
+      ],
+      "properties": {
+        "mutation_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "mutation_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "target_identity_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "RestorationProbeV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "$comment": "Signed Lab evidence that the substrate was independently re-read after a compensation (ADR-ERL2-026 \u00a74). Additive contract ERL2-C-157; no existing schema changed shape or meaning. It exists because restoration was derived from the before/after baseline fingerprints, the residual resource set and the compensation receipt's own `status` \u2014 none of which can see a mutation. A driver that returned `status: \"succeeded\"` and reverted nothing produced `passed: true` over a mutation that was still applied, and 'reverted nothing' was indistinguishable from 'had nothing to revert' (review P1-4). `expected_reverted_mutations` names, from durable pre-compensation intent, exactly what the compensation was supposed to undo, and `observed_after` is what the substrate itself reported afterwards. `outcome` is derived from those two sets and is never asserted. Signed by the environment governor for the same reason the substrate binding is: the driver is untrusted infrastructure and must not be the authority on whether its own compensation worked.",
+      "required": [
+        "schema_version",
+        "probe_id",
+        "run_id",
+        "substrate_binding_hash",
+        "environment_instance_hash",
+        "compensation_operation_id",
+        "compensation_receipt_hash",
+        "expected_reverted_mutations",
+        "observed_before",
+        "observed_after",
+        "residual_expected_mutations",
+        "collateral_reverted_mutations",
+        "probe_status",
+        "outcome",
+        "probed_at",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "restoration-probe/v1"
+        },
+        "probe_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "substrate_binding_hash": {
+          "$comment": "The binding of \u00a74.2. A probe that names another run's substrate is a probe of another environment.",
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "environment_instance_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "compensation_operation_id": {
+          "$comment": "The operation the receipt below belongs to. Pins a receipt to the compensation it is cited for, so a stale receipt replayed from another operation cannot stand in.",
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "compensation_receipt_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "expected_reverted_mutations": {
+          "$comment": "What the compensation was declared to revert, one entry per retained mutation receipt. Empty only when the run applied no mutation at all \u2014 which is what makes 'reverted nothing' and 'had nothing to revert' different outcomes rather than the same silence.",
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "erl2:environment#/$defs/ExpectedRevertedMutation"
+          }
+        },
+        "observed_before": {
+          "$comment": "Mutation ids the substrate reported applied immediately before the compensation was dispatched. On a resumed run whose compensation already completed this is legitimately empty; it is evidence, not a precondition.",
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "observed_after": {
+          "$comment": "Mutation ids the substrate reported applied after the compensation, read back independently. This is the observation the verdict comes from.",
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "residual_expected_mutations": {
+          "$comment": "Expected mutations still present in `observed_after`. Non-empty is a restoration failure whatever the receipt claimed.",
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "collateral_reverted_mutations": {
+          "$comment": "Mutations present before that were removed without being expected. A compensation that reverted unrelated state did not restore the environment either, and must not be reported as if it had.",
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "probe_status": {
+          "$comment": "`unavailable` when the driver offers no applied-mutation observation. It is a fail-closed outcome, not a pass: a restoration that cannot be observed cannot be claimed.",
+          "enum": [
+            "observed",
+            "unavailable"
+          ]
+        },
+        "outcome": {
+          "$comment": "Derived from the sets above, never supplied. `reverted` and `nothing_to_revert` are the only two that support a valid terminal, and they are deliberately distinct.",
+          "enum": [
+            "reverted",
+            "nothing_to_revert",
+            "residual",
+            "collateral",
+            "unobservable"
+          ]
+        },
+        "probed_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "signature": {
+          "$ref": "erl2:common#/$defs/Signature"
+        }
+      }
     }
   }
 }

@@ -1,10 +1,25 @@
 # Slice 6.5 gap matrix — environment vertical closure
 
 **Design revision:** `external-reality-lab-design-v2.md` `2.0.0-draft.11`
-**Generated:** 2026-07-23, against the working tree after the Slice 6.5 finalization work
+**Generated:** 2026-07-23, against the working tree **before** Slice 6.5 shipped
 **Purpose:** implementation-plan §7.5. It states, per contract, exactly which of
 the eight layers exist and which do not, so the remaining work is a list rather
 than an estimate.
+
+> **Status: superseded, and kept only as a record of the pre-6.5 gap.**
+>
+> This matrix was generated before the selection and environment branches
+> existed. Every "no CLI command exists" row below is now wrong: `select`
+> advances the durable selection walk, seventeen phase commands take a run from
+> `case_selected` to a finalized environment terminal, and both terminals verify
+> offline. The independent review of 6.5-B/C/D/E recorded the drift (P3), and it
+> is corrected here by marking the document superseded rather than by rewriting a
+> dated snapshot into something it never was.
+>
+> For what actually ships, read
+> [`docs/ledger/remediation-6.5B.md`](../ledger/remediation-6.5B.md) and
+> [`docs/ledger/remediation-6.5-invariants.md`](../ledger/remediation-6.5-invariants.md);
+> for the claim boundary, [`docs/claims/permitted-claims.md`](../claims/permitted-claims.md).
 
 ## How to read it
 

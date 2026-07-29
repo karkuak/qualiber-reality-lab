@@ -1332,13 +1332,25 @@ export function runFakeEnvironmentEmergencyCleanupRun(): FakeRunResult {
     resource_frontier_event_hash: frontierEvent.core_hash,
     actions,
     all_independently_safe_actions_attempted: true as const,
+    // The *real* identity of each unresolved resource, read from the frontier's
+    // own observations. It used to be `h("target-<resource id>")` — a fabricated
+    // hash that named nothing, so the residue accounted for no actual resource.
+    // The offline verifier now re-derives this correspondence
+    // (ADR-ERL2-024 §4.6), and a residue entry that names a hash the frontier
+    // never observed is exactly the "silence is not containment" failure it
+    // refuses.
     remaining_resources: frontier.derived_actions
       .filter((a) => !a.independently_safe)
-      .map((a) => ({
-        kind: "volume",
-        identity_hash: h(`target-${a.target_resource_id}`),
-        containment_status: "contained" as const,
-      })),
+      .map((a) => {
+        const resource = frontier.observed_resources.find(
+          (r) => r.resource_id === a.target_resource_id,
+        );
+        return {
+          kind: (resource as { kind: string }).kind,
+          identity_hash: (resource as { identity_hash: Hash }).identity_hash,
+          containment_status: "contained" as const,
+        };
+      }),
     completed_at: ctx.clock.now(),
   };
   const emergency = publish(ctx, "retained/emergency-cleanup-verification.json", {

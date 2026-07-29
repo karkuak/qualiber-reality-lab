@@ -1,8 +1,25 @@
 # Claims permitted by the evidence actually earned
 
 Design v2 §25 fixes the claim ceiling for each release level. This file records
-what the current implementation may and may not state. It is checked by review,
-and the attestation schema mechanically restricts `claim_scope` to T1–T3.
+what the current implementation may and may not state.
+
+Since ADR-ERL2-025 it is no longer only checked by review. `claim_scope` is
+**derived from the run's own retained evidence** and re-derived independently by
+the offline verifier, so the ceiling this file describes is the ceiling the
+binary emits. `--claim-scope` survives as a requested *upper bound*: a request
+above the derived ceiling is a typed refusal
+(`POLICY_CLAIM_SCOPE_EXCEEDS_EVIDENCE`) before anything is signed, and an
+attestation carrying a scope above the ceiling an offline reader derives is
+refused at verification. The attestation schema still mechanically restricts
+`claim_scope` to T1–T3, and T4 remains unrepresentable.
+
+**Every terminal this build can produce derives T1**, held there independently by
+six components: development tier, non-blind selection, the fake environment
+driver, no qualified containment report, an unevaluated domain plane, and nine
+journey-plane metrics whose weakest declared ceiling is T1. A seventh —
+regression evidence — caps at T2 because the historical-reproduction contracts
+design §26 and plan §18 require belong to slice 12 and do not exist, which is why
+**T3 is structurally non-emittable** rather than merely unclaimed.
 
 ## What may be claimed today
 
@@ -66,15 +83,68 @@ The one claim this slice earns, stated at exactly its width:
   offline with the trust head and the randomness-source registry taken only from
   locally pinned configuration, and the derived closure reports zero missing roles
   and zero rejected extras.
-- **Crash-resumability of the environment walk may be claimed.** Every one of the
-  twenty-one phase boundaries has been interrupted and resumed from retained
-  evidence, with exactly one of each once-only artifact however the run was cut.
+- **Crash-resumability of the environment walk may be claimed at *two* levels.**
+  Every one of the twenty-one phase boundaries has been interrupted and resumed
+  from retained evidence, with exactly one of each once-only artifact however the
+  run was cut; and, since ADR-ERL2-024, a crash *inside* a phase — between the
+  external call and the evidence that records it — is reconciled against observed
+  state before any retry, measured by **counting invocations of an instrumented
+  driver and subject port** rather than by counting artifacts.
+- **Exactly-once external effect may be claimed for the driver operations**
+  (provision, activation mutate, restore, destroy, per-action emergency destroy,
+  reservation acquire/release). It may **not** be claimed for a subject step: an
+  opaque subject has no probe, so an interrupted step is genuinely ambiguous and
+  the run fails closed rather than re-invoking it. That asymmetry is the claim,
+  not a gap in it.
 - **"A refusal writes no evidence" may be claimed for the environment commands**,
-  measured by full-tree byte manifest on a fresh run and again mid-path.
+  measured by full-tree byte manifest on a fresh run and again mid-path. The
+  exception recorded by the independent review — a refused `journey` freezing a
+  cutoff policy with no lifecycle event (P1-10) — is **still open** and is not
+  covered by this claim.
+- **The substrate a cleanup verdict was observed against may be claimed to be the
+  one the run provisioned into.** `SubstrateBindingV1` is frozen before the first
+  substrate-affecting dispatch, checked by every later phase before it dispatches,
+  and re-derived offline. Redirecting a later phase at a fresh or foreign
+  substrate is a typed refusal before any cleanup evidence freezes. This closes
+  the review's P0-1: before it, a run could be torn down and finalized against an
+  empty directory and the resulting bundle verified at exit 0.
 - **The mandatory emergency route may be claimed.** A restoration or teardown
   failure enters receipt-backed emergency cleanup: every independently safe action
-  the frontier derived is attempted and receipted, every unsafe action skipped with
-  a reason and no receipt.
+  the frontier derived is attempted **individually** and receipted, every unsafe
+  action skipped with a reason and no receipt, and a foreign or shared resource
+  fails exactly its own action rather than aborting the branch.
+- **Branch-specific cancellation may be claimed.** `erl2 cancel` routes on the
+  run's own evidence: a run holding an environment enumerates its actual frontier
+  and can never record cleanup as `not_required`.
+- **Offline verification of environment validity and cleanup may be claimed to be
+  independent.** The verifier re-derives the validity verdict, the restoration and
+  teardown outcomes and the emergency action set from retained bytes, and refuses
+  a producer field that disagrees with them. It may **not** be claimed that the
+  verifier re-runs every Lab validity *gate*: several read evidence a public
+  reader does not hold, so what is checked is that the retained gate set is
+  self-consistent and corroborated by the retained findings.
+- **Restoration may be claimed to rest on an observation rather than on a
+  receipt.** The substrate is read for its applied-mutation set immediately
+  before the compensation and again immediately after it, and the verdict is the
+  difference; a `RestorationProbeV1` retains both observations, the mutation set
+  the compensation was declared to revert, and the outcome derived from them.
+  A compensation that returns `succeeded` and reverts nothing is a typed refusal
+  (ADR-ERL2-026, review P1-4). Before this, restoration was derived from the
+  before/after baseline fingerprints, the residual resource set and the receipt's
+  own status — none of which can see a mutation — and "reverted nothing" and
+  "had nothing to revert" produced byte-identical terminals. It may **not** be
+  claimed that the Lab takes an independent census of the substrate: the
+  observation is the driver's, and what the Lab owns is its correspondence to the
+  Lab's own retained mutation receipts.
+- **The claim scope may be claimed to be derived rather than asserted.** It is
+  computed from the terminal variant, the challenge tier, the selection
+  assurance, the driver kind and substrate lock, the containment qualification,
+  whether the domain plane was evaluated, every applicable metric's declared
+  ceiling and hard-safety threshold, and the presence of regression evidence —
+  as a monotonic minimum in which no component can raise another's ceiling and
+  missing evidence never raises. It may **not** be claimed that this widens
+  anything: it removes a claim the evidence never supported and adds none
+  (ADR-ERL2-025).
 - **Four oracle-canary surfaces are scanned live** — adapter request, Lab
   telemetry, mounted evidence entry, and subject output — and a canary planted in
   a subject's own output bytes refuses the run before anything freezes. Four
@@ -166,6 +236,12 @@ The one claim this slice earns, stated at exactly its width:
 - **No customer external validity, and no T4.** `FinalLabAttestationV1` cannot
   encode T4; a contextual T4 statement requires a separately verified
   `CustomerVerificationBundleV1` that does not exist.
+- **No T2 and no T3.** Not as a matter of restraint but of derivation
+  (ADR-ERL2-025 §5). T2 needs a real, enabled driver on a qualified substrate
+  lock, and ERL2-OQ-005 keeps the only non-fake driver signed `enabled: false`.
+  T3 needs historical-reproduction evidence whose contracts belong to slice 12
+  and do not exist. Requesting either is a typed refusal in the producer and in
+  the offline verifier.
 - **No "bias-free", "collusion-proof" or "universal" language.** Design v2 §6
   forbids it unconditionally. Blind reports, when they eventually exist, must
   carry the literal residual-collusion limitation, which
