@@ -103,10 +103,13 @@ node --test tests/dist/architecture/signerInventoryIndependence.test.js   # prod
   deleting the loop.** Deleting a guard usually deletes a type narrowing with it,
   and a patched tree that does not compile measures nothing — the fourth time this
   campaign has hit that trap.
-- **`pre-dispatch-intent`'s anchor matches twice** in `mutationIntent.ts`.
-  `String.replace` takes the first, so the control applies deterministically, but
-  "applies" and "applies where the author meant" are different claims. Inherited;
-  recorded in ledger §9.2, not repaired here.
+- **`pre-dispatch-intent` had been dead since ADR-ERL2-028.** Its anchor occurs
+  twice in `mutationIntent.ts`; ADR-ERL2-028 added the earlier occurrence, so
+  `String.replace` had been disabling the resume branch instead of the
+  first-dispatch path. The full campaign found it at 7 pass / 0 fail; it is
+  re-anchored on the comment the guard owns and re-measured at 3 pass / 4 fail.
+  Ledger §9.2. **Two of the three controls that have died this way were found by
+  running the full set, and neither by the focused subsets in between.**
 
 ## 7. What remains
 

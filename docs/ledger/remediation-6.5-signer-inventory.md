@@ -211,18 +211,139 @@ be complete for* — and the invalid branch has no terminal variant from which t
 derive an applicable set, so this is the only place the category error can be
 named. The control now kills the case.
 
-### 9.2 An inherited anchor that matches twice
+### 9.2 The inherited control the campaign proved was dead
 
-`pre-dispatch-intent` anchors on a string that occurs **twice** in
-`mutationIntent.ts`. `String.replace` takes the first, so the control applies
-deterministically and its result stands — but "applies" and "applies where the
-author meant" are not the same claim, and the next edit to that file could move
-which occurrence is patched without the harness noticing. Recorded, not fixed:
-it is an inherited control and repairing it is not this package's change.
+`pre-dispatch-intent` came back **7 pass / 0 fail** against `expect: "fail"`. It
+compiled, its patch applied, and it killed nothing.
+
+The cause is the one the previous package hit one file over. The control
+anchored on
+
+```
+this.advance(spec.operationId, "dispatching");
+```
+
+which occurs **twice** in `mutationIntent.ts`. ADR-ERL2-028 added the earlier
+occurrence — the resume path, taken only when an existing intent already sits at
+`declared` — so `String.replace` had been disabling *that* branch instead of the
+first-dispatch path every operation takes. The rule the control claims to
+measure, "no external mutation without a durable intent recorded first", had
+been unmeasured from ADR-ERL2-028 onward.
+
+Re-anchored on the two comment lines the guard owns, which occur once. Verified
+by the anchor checker (exactly one match, at the first-dispatch advance) and
+re-measured: **3 pass / 4 fail**, agreeing.
+
+**It was not re-scored.** `npm run negative-control` refuses to call a control
+satisfied by changing its expectation, and the failure was real.
+
+This is the **third** recorded instance of a control expiring because a later
+package edited the file above its anchor — `62158c3`'s three, then
+`invalid-finding-lab-attribution`, now this. Two of the three were found by
+running the *full* set; neither was found by the focused subsets that ran in
+between. That is the argument for §10's discipline, stated as evidence rather
+than as a preference.
 
 ## 10. Campaign results
 
-_Filled in from the run against the committed candidate; see §10.1._
+Run against the committed candidate `723935f`, in the repository, with the
+harness's own worktree. **72 of 72 controls scored**, the working tree byte-identical
+afterwards, no registered worktree, no temp directory and no orphan process left.
+
+| | total | patch applied | build ok | load-bearing | disagreed |
+|---|---|---|---|---|---|
+| inherited | 53 | 53 | 53 | 51 + 2 recorded `expect: "pass"` | **1** (§9.2) |
+| new (this package) | 19 | 19 | 19 | **19** | 0 |
+
+The two inherited `expect: "pass"` rows are the pre-existing, deliberately
+recorded ones — `baseline-repeatability` (the fake driver is deterministic, so
+two probes agree by construction) and `case-selected-comparisons` (the producer
+builds pool entries from the admitted manifests). Neither is new and neither is
+claimed as proof.
+
+### 10.1 The nineteen new controls
+
+| Control | Result | Expected |
+|---|---|---|
+| `signer-producer-ordinary-signature` | 5 pass / **12 fail** | fail ✔ |
+| `signer-producer-root-signature` | 15 pass / **2 fail** | fail ✔ |
+| `signer-producer-wrapper-signature` | 16 pass / **1 fail** | fail ✔ |
+| `signer-producer-unknown-contract` | 16 pass / **1 fail** | fail ✔ |
+| `signer-producer-completeness-derivation` | 16 pass / **1 fail** | fail ✔ |
+| `signer-producer-finalization-gate` | 16 pass / **1 fail** | fail ✔ |
+| `signer-producer-postfreeze-recheck` | 16 pass / **1 fail** | fail ✔ |
+| `signer-fixture-complete-set` | 4 pass / **2 fail** | fail ✔ |
+| `signer-verifier-trusts-producer-flag` | 10 pass / **12 fail** | fail ✔ |
+| `signer-verifier-missing-direction` | 17 pass / **5 fail** | fail ✔ |
+| `signer-verifier-extra-detection` | 20 pass / **2 fail** | fail ✔ |
+| `signer-verifier-duplicate-detection` | 21 pass / **1 fail** | fail ✔ |
+| `signer-verifier-lifecycle-reachability` | 21 pass / **1 fail** | fail ✔ |
+| `signer-verifier-member-run-binding` | 21 pass / **1 fail** | fail ✔ |
+| `signer-verifier-inventory-run-scope` | 21 pass / **1 fail** | fail ✔ |
+| `signer-verifier-entry-signature-binding` | 21 pass / **1 fail** | fail ✔ |
+| `signer-invalid-record-inventory` | 21 pass / **1 fail** | fail ✔ |
+| `signer-verifier-wrapper-field` | **0 pass / 4 fail** | fail ✔ |
+| `signer-verifier-environment-completeness` | 1 pass / **3 fail** | fail ✔ |
+
+Three of these are worth reading twice.
+
+**`signer-verifier-trusts-producer-flag` kills 12 of 22.** It restores the exact
+status quo ADR-ERL2-029 §9 rejected by guarding the derivation on
+`complete_for_terminal_chain` — and because the field is `const: true`, that
+guard disables the derivation entirely. Twelve cases is the size of what was
+unverified.
+
+**`signer-verifier-wrapper-field` kills 4 of 4**, including the baseline.
+Removing wrapper-signature recognition does not hide the member; it makes the
+honest environment inventory look like it lists something inapplicable. That is
+the review's original finding, measured from the other side.
+
+**The eight one-kill controls are the point of splitting them.** Each disables a
+single rule and kills exactly the case written for that rule, so a reader can
+tell which refusal is doing the work rather than being told the composition
+refuses. That is the lesson `cutoff-milestone-resolution` taught in the previous
+package, applied in advance.
+
+### 10.2 Inherited results, in full
+
+All 53 re-run against `723935f`. Load-bearing unless noted:
+
+`activate-connect-guard` 10/1 · `freeze-output-outstanding-step-guard` 10/1 ·
+`step-order-guard` 11/1 · `durable-substrate` 5/18 · `restore-receipt-status` 4/4 ·
+`emergency-route` 5/3 · `subject-output-canary-scan` 11/1 ·
+`environment-bundle-verifier` 10/7 · `baseline-repeatability` 12/0 *(expect pass)* ·
+`case-selected-comparisons` 21/0 *(expect pass)* · `run-identity-validation` 4/7 ·
+`substrate-binding-validation` 9/3 · `substrate-locator-conflict` 10/2 ·
+**`pre-dispatch-intent` 7/0 → repaired → 3/4** · `intent-reconciliation` 5/2 ·
+`frontier-action-derivation` 13/1 · `safe-action-completeness` 10/4 ·
+`per-action-emergency-cleanup` 13/1 · `verifier-validity-derivation` 12/1 ·
+`verifier-restoration-derivation` 12/1 · `verifier-teardown-derivation` 12/1 ·
+`branch-specific-cancellation` 3/6 · `cancellation-cleanup-applicability` 12/1 ·
+`locator-flag-development-gate` 11/1 · `narrow-enoent-substrate-read` 8/3 ·
+`substrate-state-shape-validation` 10/1 · `compensation-mutation-binding` 3/5 ·
+`independent-restoration-probe` 5/3 · `producer-claim-scope-derivation` 7/1 ·
+`verifier-claim-scope-rederivation` 4/4 · `unconditional-bounded-destroy` 10/10 ·
+`cleanup-residue-probe` 32/2 · `undeclared-destruction-detection` 19/2 ·
+`actions-agree-with-residue` 19/1 · `invalid-finding-phase-gate` 36/5 ·
+`invalid-finding-lab-attribution` 18/2 · `foreign-resource-classification` 36/5 ·
+`journey-prerequisite-matrix` 23/1 · `post-capture-activation-requirement` 7/3 ·
+`prerequisite-evidence-derivation` 19/3 · `refusal-before-cutoff-freeze` 5/7 ·
+`lazy-operational-directories` 11/1 · `cancellation-branch-classification` 10/2 ·
+`cleanup-continuation` 11/1 · `not-dispatched-proven` 19/1 ·
+`crash-lease-reclamation` 9/18 · `invocation-count-not-dedup` 11/9 ·
+`cutoff-milestone-resolution` 17/1 · `cutoff-bounds-derivation` 17/1 ·
+`cutoff-clock-divergence` 17/1 · `cutoff-lifecycle-reachability` 17/1 ·
+`payload-presence-accounting` 7/1 · `payload-directory-enumeration` 5/3.
+
+**`invalid-finding-lab-attribution` is load-bearing again at 18/2**, so the
+previous package's repair held — which is the only way to know it did.
+
+### 10.3 Residue
+
+`the working tree is byte-identical to how the campaign started`. Afterwards:
+`git worktree list` shows only the repository; no `erl2-negative-control-*` temp
+directory remains; no `node --test` or harness process survives; `git status
+--short` is empty and `git diff --check` is clean.
 
 ## 11. What this package does not claim
 
