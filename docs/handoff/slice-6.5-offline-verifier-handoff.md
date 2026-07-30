@@ -93,10 +93,15 @@ evidence:verify — directly verifying 3 invalid golden(s):
 The behavioural claims, individually:
 
 ```bash
-node --test tests/dist/integration/cutoffDerivation.test.js      # 17 pure derivation cases
+node --test tests/dist/integration/cutoffDerivation.test.js      # 18 pure derivation cases
 node --test tests/dist/adversarial/subjectOutputPayloads.test.js #  8 CLI mutation cases
 node --test tests/dist/adversarial/invalidGoldenGate.test.js     #  4 gate + sabotage cases
 ```
+
+Expect **749 tests / 749 pass / 0 fail**, purity **24/24**, and
+`evidence:verify OK — pinned 787 files, excluded 7`. The baseline was 719, so 30
+cases are new. Verified from a clean `npm run clean && npm install` in a
+disposable checkout of the branch tip.
 
 ## 6. Hazards to carry forward
 
