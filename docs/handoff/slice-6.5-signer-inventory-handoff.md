@@ -60,7 +60,27 @@ schema. It is pinned by name in
 `tests/architecture/signerInventoryIndependence.test.ts`; widening it is a visible
 edit.
 
-## 5. Verify it yourself
+## 5. Verified
+
+The full gate, run in a **disposable checkout of `b5650bb`** — `npm run clean`,
+a fresh `npm install`, then every step including a from-scratch `npm run
+evidence`:
+
+| | |
+|---|---|
+| tests | **808 / 808 pass / 0 fail** (baseline 749; 59 new) |
+| purity | **29 / 29** (was 24; five new architecture cases) |
+| `verify:generated` | clean |
+| byte pin | **787 pinned / 7 excluded**, exclusion manifest unchanged |
+| invalid goldens | 3 / 3 at exit 0 / verdict `valid`, in fresh processes |
+| `git diff --check` | clean |
+
+Negative controls: **72 of 72 scored** against the committed candidate, working
+tree byte-identical afterwards, no worktree, temp directory or process left. All
+19 new controls load-bearing; one inherited control disagreed and was repaired
+and re-measured (§6, ledger §9.2).
+
+## 6. Verify it yourself
 
 ```bash
 npm run build && npm run typecheck && npm run verify:generated
@@ -79,7 +99,7 @@ node --test tests/dist/contract/signerInventoryFixtures.test.js           # the 
 node --test tests/dist/architecture/signerInventoryIndependence.test.js   # producer/verifier independence
 ```
 
-## 6. Hazards to carry forward
+## 7. Hazards to carry forward
 
 - **Inherited and still true:** do not rebuild while a suite is running; do not
   edit a tracked file while a negative-control campaign runs; `npm run clean` dies
@@ -111,7 +131,7 @@ node --test tests/dist/architecture/signerInventoryIndependence.test.js   # prod
   Ledger §9.2. **Two of the three controls that have died this way were found by
   running the full set, and neither by the focused subsets in between.**
 
-## 7. What remains
+## 8. What remains
 
 - The producer-side P2 cluster, untouched and named out of scope in ADR-ERL2-029
   §2 and ADR-ERL2-030 §2: `mounted_file` scanned with metadata that cannot contain
