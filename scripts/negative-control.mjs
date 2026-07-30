@@ -687,16 +687,21 @@ const CONTROLS = [
     id: "cutoff-milestone-resolution",
     what: "the cutoff's runtime milestone is resolved, not merely named (review P2)",
     file: "packages/public-verifier/src/library/cutoffDerivation.ts",
-    // Restores the exact pre-remediation posture: a well-formed hash is believed
-    // without resolving it. This is the review's finding — *an observation bundle
-    // naming a nonexistent runtime milestone verifies as valid* — reintroduced.
+    // Restores the pre-remediation posture: a well-formed hash is believed
+    // without being resolved to the artifact it names. Any artifact of the right
+    // schema stands in, which is exactly what "nothing resolved the hash" meant.
     //
-    // Returns the artifact the *bundle* would have to be for the rest of the
-    // derivation to proceed, so the control isolates resolution rather than
-    // knocking the whole function over: the bounds and clock cases below must
-    // keep passing under it, and only the resolution cases may die.
-    find: "  const found = index.tryGet(hash);\n  if (found === undefined) {",
-    replace: "  const found = index.tryGet(hash);\n  if (false && found === undefined) {",
+    // Disabling the `if` instead — the obvious patch — does **not** compile: it
+    // removes the `undefined` narrowing and the three uses of `found` below fail
+    // `strictNullChecks`. That is the same trap that broke two controls in the
+    // 6.5-B campaign (`remediation-6.5-invariants.md` §8) and one in the
+    // lifecycle-ordering campaign, and it is the third time it has been hit. The
+    // substitution keeps every identifier used and every type narrowed, and still
+    // makes resolution meaningless.
+    find: "  const found = index.tryGet(hash);",
+    replace:
+      "  const found =\n" +
+      "    index.tryGet(hash) ?? index.all().find((a) => a.schemaVersion === schemaVersion);",
     tests: ["tests/dist/integration/cutoffDerivation.test.js"],
     expect: "fail",
   },
