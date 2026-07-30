@@ -26,17 +26,40 @@
  * refuses to run against a dirty tree: an uncommitted change to a guard would be
  * measured against source that does not contain it.
  *
+ * ## Why every patch must prove it hit its target
+ *
+ * This campaign used to apply patches with `source.replace(find, replace)`, which
+ * takes the **first** occurrence and reports nothing when there are several.
+ * Three controls have silently expired that way after a later package inserted
+ * similar text above their anchor, and two of the three were found only by
+ * running the full set — the focused subsets in between reported a number for a
+ * measurement that had not happened.
+ *
+ * So targeting is now a proof rather than an assumption, in
+ * `scripts/lib/controlTarget.mjs`: a control declares its preimage and how many
+ * occurrences it means, the default is exactly one, zero and "more than declared"
+ * are both refusals, and the postimage is verified positionally after the splice.
+ * A control whose anchor is ambiguous is a **harness error** that fails the
+ * campaign. It is never reported as a passing or non-load-bearing control,
+ * because a patch that modified the wrong location is not evidence.
+ *
  * Usage:
  *   npm run negative-control              # every control
  *   npm run negative-control -- substrate # controls whose id matches
  */
 
-import { createHash } from "node:crypto";
-import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { TARGET_OUTCOME, planControlPatch, verifyPatchOnDisk } from "./lib/controlTarget.mjs";
+import {
+  certifyTreeUnchanged,
+  createDisposableWorktree,
+  treeDigest,
+  worktreeResidue,
+} from "./lib/disposableWorktree.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -47,8 +70,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  * Two of these guards genuinely do not fail any test when removed; recording
  * that as an expectation is the point, because it stops a later reader from
  * assuming they are proven. See the ledger for why each one is kept anyway.
+ *
+ * `expectedMatches` is optional and defaults to **exactly one**. A control whose
+ * preimage legitimately occurs more than once must say so, or name an `anchor`
+ * that occurs exactly once and locate the preimage after it. Neither is a
+ * formality: the default is what turns a preimage that stopped being unique from
+ * a silent mis-patch into a failed campaign.
  */
-const CONTROLS = [
+export const CONTROLS = [
   {
     id: "activate-connect-guard",
     what: "activation requires a succeeded connect outcome",
@@ -250,13 +279,13 @@ const CONTROLS = [
     // advance alone. `this.advance(spec.operationId, "dispatching")` occurs
     // twice: once on the resume path ADR-ERL2-028 added, which is taken only
     // when an existing intent already sits at `declared`, and once on the path
-    // every operation takes. `String.replace` takes the first, so from
+    // every operation takes. `String.replace` took the first, so from
     // ADR-ERL2-028 onward this control disabled the resume branch and killed
     // nothing — 7 pass / 0 fail on the Step 5B campaign. That is the third
     // recorded instance of a control expiring because a later package edited
     // the file above its anchor (`invalid-finding-lab-attribution` was the
-    // second), and the lesson is the same one: anchor on something the guard
-    // owns, not on a line that could be one of several.
+    // second), and it is the case the unique-target requirement now catches
+    // structurally rather than by memory.
     find:
       "    // Durable *before* the call, so a crash during dispatch is distinguishable\n" +
       "    // from a crash before it.\n" +
@@ -587,6 +616,10 @@ const CONTROLS = [
     // Keeps the matrix and the enforcement, and drops only the three facts that
     // separate a post-capture intent from a setup one. A run can then reach
     // `exercise` with no activation receipt and no realized cutoff.
+    //
+    // The postimage here is `];`, which occurs ten times in this file — which is
+    // exactly why the harness verifies the postimage **positionally** rather than
+    // by counting occurrences, and why `uniquePostimage` is opt-in.
     find: '  "challenge_activation",\n  "evidence_cutoff",\n  "observation_bundle",\n];',
     replace: "];",
     tests: ["tests/dist/integration/journeyPrerequisites.test.js"],
@@ -802,6 +835,12 @@ const CONTROLS = [
   // measures nothing. Substituting the *set of fields the producer looks in* is
   // also the more faithful reproduction — the defect was never "no enumeration",
   // it was "an enumeration over one field name".
+  //
+  // All three share one preimage, `for (const field of AUTHORITY_SIGNATURE_FIELDS) {`,
+  // which occurs exactly once in that file. The unique-target requirement is what
+  // keeps that true: if a later package adds a second enumeration over the same
+  // constant, these three become ambiguous and fail the campaign rather than
+  // quietly measuring whichever one comes first.
   {
     id: "signer-producer-ordinary-signature",
     what: "the producer enumerates members whose authority field is `signature`",
@@ -1007,204 +1046,397 @@ const CONTROLS = [
   },
 ];
 
-// -- the disposable tree -----------------------------------------------------
-
-function git(args, cwd = root) {
-  return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
-}
-
-/** A digest of every tracked file, so "the tree is unchanged" is checkable. */
-function treeDigest() {
-  const status = git(["status", "--porcelain"]);
-  const files = git(["ls-files"]).split("\n").filter(Boolean);
-  const hash = createHash("sha256");
-  for (const file of files.sort()) {
-    hash.update(file);
-    hash.update("\0");
-    try {
-      hash.update(readFileSync(path.join(root, file)));
-    } catch {
-      hash.update("<unreadable>");
-    }
-  }
-  return { digest: hash.digest("hex"), status };
-}
-
-const before = treeDigest();
+// -- result classification ---------------------------------------------------
 
 /**
- * Paths whose uncommitted state could change a control's result.
+ * How one control ended.
  *
- * Narrower than "the whole tree" on purpose. Refusing on *any* dirt sounds
- * stricter, but it fires on an unrelated markdown edit, and a check that fires
- * for reasons the operator knows are irrelevant trains them to pass
- * `--allow-dirty` reflexively — at which point it stops protecting the case it
- * exists for. These are the roots the build and the controls actually read.
+ * The distinction that matters is between a **behavioural kill** — the guard was
+ * disabled and the named suite noticed — and everything else. A build failure is
+ * not a kill: it says the patched tree does not compile, which is a fact about
+ * the patch. A patch that landed in the wrong place is not evidence at all. Both
+ * used to be scored in the same column as a real result, and reading a campaign
+ * summary required knowing which rows to distrust.
  */
-const BUILD_RELEVANT = ["packages/", "tests/", "scripts/", "adapters/", "packs/", "package.json", "tsconfig"];
-const dirty = before.status
-  .split("\n")
-  .filter(Boolean)
-  .map((line) => line.slice(3));
-const blocking = dirty.filter((f) => BUILD_RELEVANT.some((prefix) => f.startsWith(prefix)));
-if (blocking.length > 0 && !process.argv.includes("--allow-dirty")) {
-  console.error(
-    "negative-control refuses to run: uncommitted changes to source it measures.\n\n" +
-      "Controls are applied to a worktree checked out at HEAD, so an uncommitted\n" +
-      "change to a guard would be measured against source that does not contain\n" +
-      "it — the result would look authoritative and mean nothing. Commit first, or\n" +
-      "pass --allow-dirty if you know the difference does not matter.\n\n" +
-      blocking.map((f) => `  ${f}`).join("\n"),
-  );
-  process.exit(2);
-}
-if (dirty.length > blocking.length) {
-  console.log(
-    `note: ${String(dirty.length - blocking.length)} uncommitted file(s) outside the build ` +
-      "are ignored; they cannot change a control's result",
-  );
-}
-// Comma-separated, so a remediation package can measure exactly the controls it
-// touches. A full campaign is ~30 builds and ~30 suite runs; a package that
-// changed nine guards should be able to say which nine it measured rather than
-// choosing between four hours and a partial answer with no record of which part.
-const filter = process.argv.find((a) => !a.startsWith("--") && a !== process.argv[0] && a !== process.argv[1]);
-const wanted = filter === undefined ? undefined : filter.split(",").filter(Boolean);
-const selected = CONTROLS.filter(
-  (c) => wanted === undefined || wanted.some((needle) => c.id.includes(needle)),
-);
-if (selected.length === 0) {
-  console.error(`no control matches ${String(filter)}`);
-  process.exit(2);
-}
+export const CONTROL_RESULT = Object.freeze({
+  NAMED_TESTS_FAILED: "named_tests_failed",
+  UNRELATED_TESTS_FAILED: "unrelated_tests_failed",
+  TESTS_PASSED_UNEXPECTEDLY: "tests_passed_unexpectedly",
+  NO_KILL_AS_DECLARED: "no_kill_as_declared",
+  BUILD_FAILED: "build_failure",
+  RUNNER_FAILED: "test_runner_failed",
+  RESTORATION_FAILED: "restoration_failure",
+  RESIDUE_FAILED: "residue_failure",
+});
 
-const worktreeRoot = mkdtempSync(path.join(tmpdir(), "erl2-negative-control-"));
-const worktree = path.join(worktreeRoot, "tree");
-console.log(`negative controls: ${String(selected.length)} of ${String(CONTROLS.length)}`);
-console.log(`worktree: ${worktree}`);
-git(["worktree", "add", "--detach", worktree, "HEAD"]);
+/** Result values that mean the campaign measured the guard rather than itself. */
+const MEASURED = new Set([
+  CONTROL_RESULT.NAMED_TESTS_FAILED,
+  CONTROL_RESULT.TESTS_PASSED_UNEXPECTEDLY,
+  CONTROL_RESULT.NO_KILL_AS_DECLARED,
+]);
+
+/** True when the result says something about the harness, not about the guard. */
+export function isHarnessError(result) {
+  return !MEASURED.has(result);
+}
 
 /**
- * Cleanup on a signal, not only on a normal exit.
+ * Parse one `node --test` run and decide what it says about the control.
  *
- * The `finally` below runs on a return and on a throw, and on **neither** of the
- * two ways a long campaign actually ends: a `SIGINT` from the operator, or a
- * `SIGTERM` from a harness timeout. The independent review killed a run
- * mid-campaign and confirmed what it leaves — a registered `git worktree` and a
- * temp directory (review, "Review-process defect (P3)").
- *
- * That was hygiene rather than correctness, because mutations only ever happen
- * inside the worktree and the tracked-file digest gate below proves the measured
- * tree is untouched. It becomes operational the moment a campaign is long enough
- * that interrupting it is normal, which the 47-control campaign is.
- *
- * `SIGKILL` remains uncatchable by construction; `npm run negative-control` after
- * one still starts cleanly, because `worktree add` into a fresh `mkdtemp` path
- * never collides and the `prune` here removes the stale registration.
+ * The spec reporter names the file of every failing test in its trailing
+ * `failing tests:` section, which is what makes "a test failed that this control
+ * did not name" expressible at all. `mustFail`, when a control declares it,
+ * narrows the expectation further: the listed files are run, and the failures
+ * must fall inside the declared subset.
  */
-let cleanedUp = false;
-function releaseWorktree() {
-  if (cleanedUp) return;
-  cleanedUp = true;
-  try {
-    git(["worktree", "remove", "--force", worktree]);
-  } catch {
-    /* the prune below covers a worktree that was already gone */
-  }
-  try {
-    git(["worktree", "prune"]);
-  } catch {
-    /* a prune failure must not mask the original cause */
-  }
-  rmSync(worktreeRoot, { recursive: true, force: true });
-}
-for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
-  process.once(signal, () => {
-    console.error(`\nnegative-control: ${signal} received — removing the worktree before exiting.`);
-    releaseWorktree();
-    // Re-raise with the default disposition, so the exit status is the signal's
-    // and not a synthetic code: a caller distinguishing "interrupted" from
-    // "failed" must still be able to. `once` has already removed this listener,
-    // so the second delivery is the default one and terminates the process.
-    process.kill(process.pid, signal);
-  });
-}
+export function classifyTestRun({ stdout, expect, tests, mustFail }) {
+  const tests_ = Number(/^ℹ tests (\d+)$/m.exec(stdout)?.[1] ?? "-1");
+  const pass = Number(/^ℹ pass (\d+)$/m.exec(stdout)?.[1] ?? "-1");
+  const fail = Number(/^ℹ fail (\d+)$/m.exec(stdout)?.[1] ?? "-1");
 
-const results = [];
-try {
-  console.log("installing dependencies in the worktree (once)…");
-  const install = spawnSync("npm", ["install", "--silent"], { cwd: worktree, encoding: "utf8" });
-  if (install.status !== 0) {
-    throw new Error(`npm install failed in the worktree:\n${install.stderr.slice(0, 2000)}`);
+  // No parseable summary means the runner never got far enough to have an
+  // opinion — a module that would not load, a crash before the first test. That
+  // is a harness failure and must not be read as "nothing failed".
+  if (pass < 0 || fail < 0 || tests_ <= 0) {
+    return { result: CONTROL_RESULT.RUNNER_FAILED, pass, fail, tests: tests_, failingFiles: [] };
   }
 
-  for (const control of selected) {
-    const target = path.join(worktree, control.file);
-    const source = readFileSync(target, "utf8");
-    if (!source.includes(control.find)) {
-      // A control whose patch no longer applies is a *failure of the campaign*,
-      // not a silent skip: the guard may have moved, been renamed, or been
-      // deleted, and any of those needs a human.
-      results.push({ id: control.id, outcome: "PATCH DID NOT APPLY", detail: control.find.slice(0, 80) });
-      console.log(`  ✖ ${control.id}: patch did not apply`);
-      continue;
-    }
-    writeFileSync(target, source.replace(control.find, control.replace));
+  const failingFiles = [
+    ...new Set(
+      [...stdout.matchAll(/^test at (.+?):\d+:\d+$/gm)].map((m) => m[1].replace(/^\.\//, "")),
+    ),
+  ].sort();
 
-    const build = spawnSync("npm", ["run", "build"], { cwd: worktree, encoding: "utf8" });
-    if (build.status !== 0) {
-      results.push({ id: control.id, outcome: "BUILD FAILED", detail: build.stdout.slice(-800) });
-      console.log(`  ✖ ${control.id}: the patched tree does not build`);
-      git(["checkout", "--", "."], worktree);
-      continue;
-    }
-    const run = spawnSync("node", ["--test", ...control.tests], { cwd: worktree, encoding: "utf8" });
-    const pass = Number(/^ℹ pass (\d+)$/m.exec(run.stdout)?.[1] ?? "0");
-    const fail = Number(/^ℹ fail (\d+)$/m.exec(run.stdout)?.[1] ?? "0");
-    const outcome = fail > 0 ? "fail" : "pass";
-    const agreed = outcome === control.expect;
-    results.push({
-      id: control.id,
-      what: control.what,
-      expected: control.expect,
-      outcome,
+  if (fail === 0) {
+    return {
+      result: expect === "fail" ? CONTROL_RESULT.TESTS_PASSED_UNEXPECTEDLY : CONTROL_RESULT.NO_KILL_AS_DECLARED,
       pass,
       fail,
-      agreed,
-      ...(control.note === undefined ? {} : { note: control.note }),
-    });
-    console.log(
-      `  ${agreed ? "✔" : "✖"} ${control.id}: ${String(pass)} pass / ${String(fail)} fail ` +
-        `(expected ${control.expect})${control.note === undefined ? "" : ` — ${control.note}`}`,
-    );
-    git(["checkout", "--", "."], worktree);
+      tests: tests_,
+      failingFiles,
+    };
   }
-} finally {
-  // The worktree goes whatever happened, and the real tree is proven untouched.
-  // Shared with the signal handlers above, so a normal exit and an interrupted
-  // one release exactly the same things.
-  releaseWorktree();
+
+  const permitted = (mustFail ?? tests).map((t) => t.replace(/^\.\//, ""));
+  const stray = failingFiles.filter((file) => !permitted.some((t) => file.endsWith(t) || t.endsWith(file)));
+  return {
+    result: stray.length > 0 ? CONTROL_RESULT.UNRELATED_TESTS_FAILED : CONTROL_RESULT.NAMED_TESTS_FAILED,
+    pass,
+    fail,
+    tests: tests_,
+    failingFiles,
+    ...(stray.length > 0 ? { strayFiles: stray } : {}),
+  };
 }
 
-const after = treeDigest();
-if (after.digest !== before.digest || after.status !== before.status) {
-  console.error(
-    "\nnegative-control FAILED: the working tree changed while controls ran.\n" +
-      "This harness must never modify the tree it is measuring.",
+/** Whether a measured result matches what the control declared. */
+export function agreesWithExpectation(result, expect) {
+  if (expect === "fail") return result === CONTROL_RESULT.NAMED_TESTS_FAILED;
+  if (expect === "pass") return result === CONTROL_RESULT.NO_KILL_AS_DECLARED;
+  return false;
+}
+
+/**
+ * Structural checks on the control table itself, run before any worktree exists.
+ *
+ * A malformed declaration should fail in the first second of a four-hour
+ * campaign, not in its last.
+ */
+export function validateControlDeclarations(controls) {
+  const problems = [];
+  const seen = new Set();
+  for (const control of controls) {
+    const where = control.id ?? "<control with no id>";
+    if (typeof control.id !== "string" || control.id === "") problems.push("a control has no id");
+    else if (seen.has(control.id)) problems.push(`${control.id}: duplicate control id`);
+    else seen.add(control.id);
+    if (typeof control.what !== "string" || control.what === "") {
+      problems.push(`${where}: no named invariant (\`what\`)`);
+    }
+    if (typeof control.file !== "string" || control.file === "") problems.push(`${where}: no target file`);
+    if (typeof control.find !== "string" || control.find === "") problems.push(`${where}: no preimage`);
+    if (typeof control.replace !== "string") problems.push(`${where}: no postimage`);
+    if (!Array.isArray(control.tests) || control.tests.length === 0) {
+      problems.push(`${where}: names no test expected to notice`);
+    }
+    if (control.expect !== "fail" && control.expect !== "pass") {
+      problems.push(`${where}: \`expect\` must be "fail" or "pass"`);
+    }
+    if (control.expectedMatches !== undefined && !Number.isSafeInteger(control.expectedMatches)) {
+      problems.push(`${where}: \`expectedMatches\` must be an integer`);
+    }
+    if (control.mustFail !== undefined) {
+      const outside = control.mustFail.filter((t) => !control.tests.includes(t));
+      if (outside.length > 0) problems.push(`${where}: \`mustFail\` names suites it does not run: ${outside.join(", ")}`);
+    }
+  }
+  return problems;
+}
+// -- the campaign ------------------------------------------------------------
+
+async function main() {
+  const declarationProblems = validateControlDeclarations(CONTROLS);
+  if (declarationProblems.length > 0) {
+    console.error("negative-control refuses to run: the control table is malformed\n");
+    for (const problem of declarationProblems) console.error(`  ${problem}`);
+    process.exit(2);
+  }
+
+  const before = treeDigest(root);
+
+  /**
+   * Paths whose uncommitted state could change a control's result.
+   *
+   * Narrower than "the whole tree" on purpose. Refusing on *any* dirt sounds
+   * stricter, but it fires on an unrelated markdown edit, and a check that fires
+   * for reasons the operator knows are irrelevant trains them to pass
+   * `--allow-dirty` reflexively — at which point it stops protecting the case it
+   * exists for. These are the roots the build and the controls actually read.
+   */
+  const BUILD_RELEVANT = ["packages/", "tests/", "scripts/", "adapters/", "packs/", "package.json", "tsconfig"];
+  const dirty = before.status
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => line.slice(3));
+  const blocking = dirty.filter((f) => BUILD_RELEVANT.some((prefix) => f.startsWith(prefix)));
+  if (blocking.length > 0 && !process.argv.includes("--allow-dirty")) {
+    console.error(
+      "negative-control refuses to run: uncommitted changes to source it measures.\n\n" +
+        "Controls are applied to a worktree checked out at HEAD, so an uncommitted\n" +
+        "change to a guard would be measured against source that does not contain\n" +
+        "it — the result would look authoritative and mean nothing. Commit first, or\n" +
+        "pass --allow-dirty if you know the difference does not matter.\n\n" +
+        blocking.map((f) => `  ${f}`).join("\n"),
+    );
+    process.exit(2);
+  }
+  if (dirty.length > blocking.length) {
+    console.log(
+      `note: ${String(dirty.length - blocking.length)} uncommitted file(s) outside the build ` +
+        "are ignored; they cannot change a control's result",
+    );
+  }
+
+  // Comma-separated, so a remediation package can measure exactly the controls it
+  // touches. A full campaign is ~70 builds and ~70 suite runs; a package that
+  // changed nine guards should be able to say which nine it measured rather than
+  // choosing between four hours and a partial answer with no record of which part.
+  const filter = process.argv.find((a) => !a.startsWith("--") && a !== process.argv[0] && a !== process.argv[1]);
+  const wanted = filter === undefined ? undefined : filter.split(",").filter(Boolean);
+  const selected = CONTROLS.filter(
+    (c) => wanted === undefined || wanted.some((needle) => c.id.includes(needle)),
   );
-  console.error(`  before: ${before.digest}\n  after:  ${after.digest}`);
-  process.exit(1);
-}
-console.log("\nthe working tree is byte-identical to how the campaign started");
+  if (selected.length === 0) {
+    console.error(`no control matches ${String(filter)}`);
+    process.exit(2);
+  }
 
-const disagreed = results.filter((r) => r.agreed === false || r.outcome === "PATCH DID NOT APPLY" || r.outcome === "BUILD FAILED");
-writeFileSync(
-  path.join(root, "docs", "ledger", "negative-controls.json"),
-  `${JSON.stringify({ generated_by: "scripts/negative-control.mjs", results }, null, 2)}\n`,
-);
-if (disagreed.length > 0) {
-  console.error(`\nnegative-control FAILED: ${String(disagreed.length)} control(s) disagreed with their recorded expectation`);
-  for (const r of disagreed) console.error(`  ${r.id}: ${JSON.stringify(r)}`);
-  process.exit(1);
+  const disposable = createDisposableWorktree({ repoRoot: root });
+  const { worktree, worktreeRoot } = disposable;
+  console.log(`negative controls: ${String(selected.length)} of ${String(CONTROLS.length)}`);
+  console.log(`worktree: ${worktree}`);
+  disposable.installSignalHandlers((signal) => {
+    console.error(`\nnegative-control: ${signal} received — removing the worktree before exiting.`);
+  });
+
+  const results = [];
+  let aborted;
+  try {
+    console.log("installing dependencies in the worktree (once)…");
+    const install = spawnSync("npm", ["install", "--silent"], { cwd: worktree, encoding: "utf8" });
+    if (install.status !== 0) {
+      throw new Error(`npm install failed in the worktree:\n${install.stderr.slice(0, 2000)}`);
+    }
+
+    for (const control of selected) {
+      const target = path.join(worktree, control.file);
+      const source = readFileSync(target, "utf8");
+
+      const plan = planControlPatch({
+        source,
+        find: control.find,
+        replace: control.replace,
+        ...(control.expectedMatches === undefined ? {} : { expectedMatches: control.expectedMatches }),
+        ...(control.anchor === undefined ? {} : { anchor: control.anchor }),
+        ...(control.uniquePostimage === undefined ? {} : { uniquePostimage: control.uniquePostimage }),
+      });
+
+      if (plan.outcome !== TARGET_OUTCOME.APPLIED) {
+        // A control whose patch cannot be proven to hit its declared target is a
+        // *failure of the campaign*, not a silent skip and not a result: the
+        // guard may have moved, been renamed, been deleted, or — the case that
+        // cost three controls — acquired a second occurrence above the intended
+        // one. Any of those needs a human.
+        results.push({
+          id: control.id,
+          what: control.what,
+          expected: control.expect,
+          result: plan.outcome,
+          harnessError: true,
+          agreed: false,
+          detail: { ...plan, patched: undefined, preimage: control.find.slice(0, 90) },
+        });
+        console.log(`  ✖ ${control.id}: ${plan.outcome}`);
+        continue;
+      }
+
+      writeFileSync(target, plan.patched);
+
+      // Re-read rather than trusting the write: the compiler is about to read
+      // these bytes, so these are the bytes the control must have proven.
+      const landed = verifyPatchOnDisk({
+        written: readFileSync(target, "utf8"),
+        plan,
+        replace: control.replace,
+      });
+      if (landed.outcome !== TARGET_OUTCOME.APPLIED) {
+        results.push({
+          id: control.id,
+          what: control.what,
+          expected: control.expect,
+          result: landed.outcome,
+          harnessError: true,
+          agreed: false,
+          detail: landed,
+        });
+        console.log(`  ✖ ${control.id}: ${landed.outcome}`);
+        const residualAfterLanding = disposable.restore();
+        if (residualAfterLanding !== undefined) {
+          aborted = { id: control.id, residual: residualAfterLanding };
+          break;
+        }
+        continue;
+      }
+
+      const build = spawnSync("npm", ["run", "build"], { cwd: worktree, encoding: "utf8" });
+      if (build.status !== 0) {
+        // Not a behavioural kill. The patched tree does not compile, which is a
+        // fact about the patch and says nothing about whether the guard is
+        // load-bearing.
+        results.push({
+          id: control.id,
+          what: control.what,
+          expected: control.expect,
+          result: CONTROL_RESULT.BUILD_FAILED,
+          harnessError: true,
+          agreed: false,
+          detail: build.stdout.slice(-800),
+        });
+        console.log(`  ✖ ${control.id}: the patched tree does not build`);
+        const residualAfterBuild = disposable.restore();
+        if (residualAfterBuild !== undefined) {
+          aborted = { id: control.id, residual: residualAfterBuild };
+          break;
+        }
+        continue;
+      }
+
+      const run = spawnSync("node", ["--test", ...control.tests], { cwd: worktree, encoding: "utf8" });
+      const classified = classifyTestRun({
+        stdout: run.stdout,
+        expect: control.expect,
+        tests: control.tests,
+        ...(control.mustFail === undefined ? {} : { mustFail: control.mustFail }),
+      });
+      const agreed = agreesWithExpectation(classified.result, control.expect);
+      results.push({
+        id: control.id,
+        what: control.what,
+        expected: control.expect,
+        result: classified.result,
+        harnessError: isHarnessError(classified.result),
+        replacedCount: plan.replacedCount,
+        offsets: plan.offsets,
+        pass: classified.pass,
+        fail: classified.fail,
+        agreed,
+        ...(classified.strayFiles === undefined ? {} : { strayFiles: classified.strayFiles }),
+        ...(control.note === undefined ? {} : { note: control.note }),
+      });
+      console.log(
+        `  ${agreed ? "✔" : "✖"} ${control.id}: ${String(classified.pass)} pass / ${String(classified.fail)} fail ` +
+          `(expected ${control.expect}, ${classified.result})${control.note === undefined ? "" : ` — ${control.note}`}`,
+      );
+
+      const residual = disposable.restore();
+      if (residual !== undefined) {
+        results.push({
+          id: control.id,
+          result: CONTROL_RESULT.RESTORATION_FAILED,
+          harnessError: true,
+          agreed: false,
+          detail: residual.slice(0, 800),
+        });
+        aborted = { id: control.id, residual };
+        break;
+      }
+    }
+  } finally {
+    // The worktree goes whatever happened, and the real tree is proven untouched.
+    // Shared with the signal handlers above, so a normal exit and an interrupted
+    // one release exactly the same things.
+    disposable.release();
+  }
+
+  const residue = worktreeResidue({ repoRoot: root, worktree, worktreeRoot });
+
+  const certified = certifyTreeUnchanged(before, treeDigest(root));
+  if (!certified.certified) {
+    console.error(
+      "\nnegative-control FAILED: the working tree changed while controls ran.\n" +
+        "This harness must never modify the tree it is measuring.",
+    );
+    console.error(`  ${certified.reason}\n  before: ${certified.before}\n  after:  ${certified.after}`);
+    process.exit(1);
+  }
+  console.log("\nthe working tree is byte-identical to how the campaign started");
+
+  writeFileSync(
+    path.join(root, "docs", "ledger", "negative-controls.json"),
+    `${JSON.stringify(
+      {
+        generated_by: "scripts/negative-control.mjs",
+        selected: selected.length,
+        of: CONTROLS.length,
+        results,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  if (residue.length > 0) {
+    console.error(`\nnegative-control FAILED: ${CONTROL_RESULT.RESIDUE_FAILED}`);
+    for (const line of residue) console.error(`  ${line}`);
+    process.exit(1);
+  }
+
+  if (aborted !== undefined) {
+    console.error(
+      `\nnegative-control FAILED: the worktree could not be restored after ${aborted.id}.\n` +
+        "The campaign stopped there rather than measuring later controls against a\n" +
+        "tree still carrying this control's patch.\n\n" +
+        aborted.residual,
+    );
+    process.exit(1);
+  }
+
+  const disagreed = results.filter((r) => r.agreed === false);
+  if (disagreed.length > 0) {
+    const harnessErrors = disagreed.filter((r) => r.harnessError === true);
+    console.error(
+      `\nnegative-control FAILED: ${String(disagreed.length)} control(s) disagreed with their recorded expectation` +
+        (harnessErrors.length > 0
+          ? `, of which ${String(harnessErrors.length)} measured nothing (a harness error rather than a result)`
+          : ""),
+    );
+    for (const r of disagreed) console.error(`  ${r.id}: ${JSON.stringify(r)}`);
+    process.exit(1);
+  }
+  console.log(`all ${String(results.length)} control(s) matched their recorded expectation`);
 }
-console.log(`all ${String(results.length)} control(s) matched their recorded expectation`);
+
+// Importable for its own tests without starting a four-hour campaign.
+const entry = process.argv[1] === undefined ? undefined : pathToFileURL(process.argv[1]).href;
+if (entry === import.meta.url) await main();
