@@ -509,11 +509,23 @@ const CONTROLS = [
     id: "invalid-finding-lab-attribution",
     what: "a Lab environment failure cannot be attributed to the subject (ADR-ERL2-027 §4.5.2)",
     file: "packages/public-verifier/src/library/environmentDerivation.ts",
-    find: "  if (record.terminal_reason.kind !== \"classified_failure\") return;\n  if (record.failed_phase.kind !== \"lifecycle_phase\") return;",
+    // Repaired for ADR-ERL2-028: that package replaced the
+    // `failed_phase.kind !== "lifecycle_phase"` early return this patch anchored
+    // on with the cancellation / journey-execution branching, so the control had
+    // been **silently not applying** ever since. It went unnoticed because the
+    // full 47 were never re-run after the change — the lifecycle-ordering handoff
+    // §9.2 says so in as many words, and this is what that costs.
+    //
+    // Anchored on the function's own first two lines now, which are the stable
+    // part: a patch anchored on a branch is a patch that expires the next time
+    // the branch is edited.
+    find:
+      "  const { record } = options;\n" +
+      '  if (record.terminal_reason.kind !== "classified_failure") return;',
     replace:
-      "  if (String(1) !== \"2\") return;\n" +
-      "  if (record.terminal_reason.kind !== \"classified_failure\") return;\n" +
-      "  if (record.failed_phase.kind !== \"lifecycle_phase\") return;",
+      "  const { record } = options;\n" +
+      '  if (String(1) !== "2") return;\n' +
+      '  if (record.terminal_reason.kind !== "classified_failure") return;',
     tests: ["tests/dist/adversarial/invalidCleanupDiscipline.test.js"],
     expect: "fail",
   },

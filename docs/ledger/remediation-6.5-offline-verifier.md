@@ -163,7 +163,62 @@ stale registration.
 
 ## 8. Campaign results
 
-*(filled in from the measured run — see the handoff for the command)*
+Measured **in the repository** against the committed source, not in a clone: the
+Step 4 checkpoint means `HEAD` now carries the code being measured. The harness
+confirmed the live tree byte-identical afterwards.
+
+```bash
+npm run negative-control -- cutoff-,payload-
+```
+
+| Control | Result | Expected |
+|---|---|---|
+| `cutoff-milestone-resolution` | 17 pass / **1 fail** | fail ✔ |
+| `cutoff-bounds-derivation` | 17 pass / **1 fail** | fail ✔ |
+| `cutoff-clock-divergence` | 17 pass / **1 fail** | fail ✔ |
+| `cutoff-lifecycle-reachability` | 17 pass / **1 fail** | fail ✔ |
+| `payload-presence-accounting` | 7 pass / **1 fail** | fail ✔ |
+| `payload-directory-enumeration` | 5 pass / **3 fail** | fail ✔ |
+
+All six load-bearing.
+
+### 8.1 Two controls that had to be repaired, and what they found
+
+Neither was re-scored. `npm run negative-control` refuses to call a control
+satisfied by changing its expectation, and the two failures below were both real.
+
+**`cutoff-milestone-resolution` did not compile.** Disabling the guard removed
+the `undefined` narrowing and its three uses below stopped typechecking. This is
+the **third** time this campaign has hit that trap — two controls in the 6.5-B
+campaign (`remediation-6.5-invariants.md` §8) and one in the lifecycle-ordering
+campaign. The repair substitutes any artifact of the right schema for the one the
+hash names, which is a more faithful reproduction of the posture anyway: *nothing
+resolved the hash*.
+
+**Then it killed nothing — 17 pass / 0 fail — and that was the useful result.**
+Every existing case refused for a *later* rule (binding, reachability) or
+retained no milestone at all for a substitute to find, so **not one of them
+measured resolution itself**. The suite proved the composition refuses; it did
+not prove which rule did.
+
+`CUTOFF-MUT: a decoy milestone of the right schema does not satisfy the cutoff's
+named hash` is the case that closes it: a correctly bound, lifecycle-reached
+milestone is retained, and the cutoff names a different absent hash that the
+lifecycle *also* reaches — so neither binding nor reachability can be what
+refuses. With it the control kills exactly one named test.
+
+This is the pattern the previous package recorded and it held again: **a control
+that kills nothing usually means the tests are not isolating the invariant.**
+
+### 8.2 Inherited controls
+
+A focused Steps 2–4 subset was re-run against this branch to confirm the
+inherited invariants still hold — attribution, phase gate, residue probe,
+action/residue agreement, the prerequisite matrix, the post-capture activation
+requirement and the claim-scope ceiling. Results in the handoff.
+
+The full 53-control campaign was **not** run end to end for this package. That is
+a stated gap, not an implied pass.
 
 ## 9. What this package does not claim
 
