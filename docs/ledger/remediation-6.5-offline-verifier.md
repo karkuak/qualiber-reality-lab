@@ -33,7 +33,7 @@ Read in full: `verify.ts`, `environmentDerivation.ts`, `environmentClosure.ts`,
 | **subject-output payload accounting** | none (P2) | **OPEN → closed here** |
 | **exposure event lifecycle-reachable** | — | **OPEN → closed here** |
 | **invalid-golden direct verification** | — | **OPEN → closed here** |
-| **signer-inventory completeness** | `complete_for_terminal_chain` omits members (P2) | **OPEN → measured, not closed. §4.** |
+| **signer-inventory completeness** | `complete_for_terminal_chain` omits members (P2) | **measured here (§4); closed by Step 5B, ADR-ERL2-030** |
 
 **Nine of the fourteen listed invariants were already closed.** Repeating the
 review's list as a work plan would have re-implemented them.
@@ -121,10 +121,19 @@ signer inventory, moves the attestation that binds it, and moves the byte pin.
 That is materially outside "offline-verifier strengthening", and shipping the
 verifier half alone would be a guard that fails the correct goldens.
 
-**Disposition: open, fully characterized, handed to Step 6 with the measurement
-above.** ADR-ERL2-029 §4 records the definition of completeness the derivation
-should use when the producer can satisfy it. Nothing in this package claims the
-inventory is complete, and `permitted-claims.md` says so.
+**Disposition at the time of writing: open, fully characterized, handed on with
+the measurement above.** ADR-ERL2-029 §4 records the definition of completeness
+the derivation should use when the producer can satisfy it. Nothing in *this*
+package claims the inventory is complete.
+
+> **Closed by Step 5B**, in all three layers, in
+> [`remediation-6.5-signer-inventory.md`](remediation-6.5-signer-inventory.md)
+> under [ADR-ERL2-030](../adr/ADR-ERL2-030.md). Closing it also found that
+> ADR-ERL2-029 §4.1's definition of the applicable set is unsatisfiable as
+> written — it omits the inventory's own schema, which has no fixpoint — and that
+> the environment terminal's omission was 2 of 63, not the 1 of 7 measured here.
+> The counts in §4 are the pre-remediation measurement and stay as the record of
+> it.
 
 ## 5. The invalid-golden evidence gate (ADR-ERL2-029 §7)
 

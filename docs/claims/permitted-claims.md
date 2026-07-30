@@ -256,13 +256,27 @@ The one claim this slice earns, stated at exactly its width:
   in `cli-transcript.json`, the single file excluded from the byte pin, so a
   verifier regression against invalid records — which changes no producer bytes —
   left the gate green.
-- **The signer inventory may NOT be claimed complete.** `complete_for_terminal_chain`
-  is a producer schema constant (`true as const`) and the verifier does not
-  re-derive it. Measured on the shipped `valid-pre-environment-run` golden: **7**
-  applicable signed members, **1** listed. The defect spans the fixture builder,
-  the producer's single-field derivation and the absent verifier check, and
-  closing it moves the byte pin — it is characterized in
-  `remediation-6.5-offline-verifier.md` §4 and left open.
+- **Signer-inventory completeness MAY now be claimed, in both directions**
+  (ADR-ERL2-030). The producer derives the applicable signed-member set from the
+  retained evidence and refuses to seal an inventory it cannot certify; the
+  offline verifier derives the expected set *independently*, from its own role
+  table and the authority field each frozen schema declares, and compares it with
+  the retained inventory bijectively. `complete_for_terminal_chain` is **never
+  read as evidence** — an inventory that omitted a member while asserting
+  completeness is refused by the derivation, not by disagreeing with a boolean.
+  Measured before and after, on terminals that all asserted completeness:
+  `valid-pre-environment-run` 7 applicable / **1** listed → 7; the CLI-produced
+  pre-environment goldens 7 / **6** → 7; a CLI-produced environment terminal 63 /
+  **61** → 63. The two the producer had never listed were exactly the two whose
+  authority field is not named `signature`: the mirrored trust root
+  (`root_signature`) and the beacon association wrapper (`wrapper_signature`).
+- **What completeness does NOT claim.** It is a statement about the *set* of
+  signed members and about each member's schema, key, signature binding, role
+  authorization, run scope and lifecycle reachability. It is not a statement about
+  what those members say. Two contracts — the trust policy manifest and the
+  terminal timestamp checkpoint — are exempt from lifecycle reachability by name,
+  because neither is produced by any lifecycle event; both are bound to the
+  terminal by hash instead, and the exemption is pinned by an architecture test.
 
 ### Slice 6 — generic evaluation, terminal closure and finalization
 

@@ -44,8 +44,24 @@ What the verifier does, in order:
    authority.
 5. Verifies the final attestation's signature, role authorization and both trust
    verdicts (valid-when-signed and currently-trusted).
-6. Recomputes the signer inventory and refuses an entry for an excluded public
-   terminal type.
+6. **Derives the signer inventory independently and compares it bijectively**
+   (ADR-ERL2-030). The expected set comes from the retained bytes, the verifier's
+   own signer-role table, the authority field each *frozen schema* declares, the
+   terminal variant and the acyclic boundary — never from the inventory's own
+   entries, and never from `complete_for_terminal_chain`, which is not read as
+   evidence anywhere. A missing member, an extra one, a duplicate, an entry whose
+   schema/key/signature hash contradicts the artifact, a member from another run,
+   an inventory naming another run, and a member no lifecycle event produced are
+   seven separate refusals.
+
+   Two contracts are exempt from lifecycle reachability by name — the trust policy
+   manifest and the terminal timestamp checkpoint — because neither is produced by
+   any lifecycle event; both are bound to the terminal by hash instead. Nothing
+   else is exempt.
+
+   Read the boundary before quoting it: completeness is a statement about the
+   *set* of signed members and about each member's identity, authority and scope.
+   It is not a statement about what those members say.
 7. Runs `erl2-mandatory-closure/v1`, deriving the required artifact set from the
    **lifecycle chain**, not from any producer array, and reporting missing roles
    and rejected extras.

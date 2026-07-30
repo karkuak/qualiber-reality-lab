@@ -18,8 +18,15 @@ re-implemented them.
 Closed here: the **evidence cutoff**, **subject-output payload accounting**,
 **exposure-event reachability**, and the **invalid-golden evidence gate**.
 
-Open, and deliberately so: **signer-inventory completeness**, which measurement
-showed is a three-layer defect that cannot be closed from the verifier alone. §4.
+Open at the time this handoff was written, and deliberately so:
+**signer-inventory completeness**, which measurement showed is a three-layer
+defect that cannot be closed from the verifier alone. §4.
+
+> **Closed since, by Step 5B.** See [ADR-ERL2-030](../adr/ADR-ERL2-030.md),
+> [`remediation-6.5-signer-inventory.md`](../ledger/remediation-6.5-signer-inventory.md)
+> and [`slice-6.5-signer-inventory-handoff.md`](slice-6.5-signer-inventory-handoff.md).
+> §4 below is retained as the **measurement that opened it**, not as a statement
+> of current state.
 
 ## 2. What changed
 
@@ -145,7 +152,9 @@ disposable checkout of the branch tip.
 
 ## 7. What remains
 
-- **Signer-inventory completeness** (§4) — producer + fixture + verifier.
+- ~~**Signer-inventory completeness** (§4) — producer + fixture + verifier.~~
+  **Closed by Step 5B** (ADR-ERL2-030): all three layers, both terminal variants,
+  and the fixture that could not have failed.
 - The producer-side P2 cluster, untouched here and named as out of scope in
   ADR-ERL2-029 §2: `mounted_file` scanned with metadata that cannot contain the
   mount; `lab_telemetry` with no negative control; secret canaries and forbidden
