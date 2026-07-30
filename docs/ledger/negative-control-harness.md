@@ -236,9 +236,56 @@ positional.
 
 ## 7. Campaign results
 
-*(filled in per campaign; see each package's remediation ledger for the
-per-control table)*
+*(one row per campaign; see each package's remediation ledger for the per-control
+table)*
 
 | campaign | HEAD | controls | agreed | harness errors | tree restored | residue |
 |---|---|---|---|---|---|---|
-| Step 5B (pre-hardening) | `b5650bb` | 72 | 72 | — (not distinguished) | yes | none |
+| Step 5B (pre-hardening) | `723935f` | 72 | 72 | — (not distinguished) | yes | none |
+| **harness hardening** | **`6985297`** | **72** | **72** | **0** | yes | none |
+
+### 7.1 The hardening campaign, in full
+
+Run against the committed candidate `6985297`, 17:01 → 19:23 (2 h 22 m). **72 of
+72 scored, 72 agreed, 0 disagreed, 0 harness errors.**
+
+By classification:
+
+| result | count |
+|---|---|
+| `named_tests_failed` (behavioural kill) | **70** |
+| `no_kill_as_declared` (the two recorded `expect: "pass"`) | 2 |
+| every harness-error class | **0** |
+
+Zero is the number that matters in the second column. No control reported
+`ambiguous_patch_target`, `patch_not_applicable`, `postimage_missing`,
+`build_failure`, `test_runner_failed`, `unrelated_tests_failed` or
+`restoration_failure`. Every patch was proven to land on its declared target
+before its suite ran.
+
+**Every one of the 72 reproduces its Step 5B pass/fail pair exactly** — checked
+mechanically against §10.1 and §10.2 of
+[`remediation-6.5-signer-inventory.md`](remediation-6.5-signer-inventory.md), all
+72 rows, no drift.
+
+That is the result this package predicted in §6 and it is the honest one to
+report: hardening found no live defect, because there was none left to find. What
+it changed is that the property is now enforced rather than remembered.
+
+Two rows are worth reading twice:
+
+- **`pre-dispatch-intent` at 3 pass / 4 fail.** Before its repair at `77c519c` it
+  scored 7/0 — a control that had been measuring nothing since ADR-ERL2-028. It is
+  load-bearing, the repair held, and it is now the case
+  `NC-TARGET-REGRESSION` reproduces in miniature.
+- **`invalid-finding-lab-attribution` at 18 pass / 2 fail**, so the repair one
+  package earlier also held. Two controls that had both silently expired are both
+  alive, and the mechanism that let them expire is now a campaign failure rather
+  than a number.
+
+### 7.2 Residue
+
+`the working tree is byte-identical to how the campaign started`. Afterwards:
+`git worktree list` shows only the repository; no `erl2-negative-control-*` temp
+directory remains; no `node --test` or harness process survives; `git status
+--short` is empty and `git diff --check` is clean.
