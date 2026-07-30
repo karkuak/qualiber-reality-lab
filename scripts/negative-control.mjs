@@ -245,8 +245,26 @@ const CONTROLS = [
     file: "packages/core/src/run/mutationIntent.ts",
     // The dispatch still happens; only the durable record *before* it is
     // removed. That is the defect exactly: the call was made and nothing said so.
-    find: '    this.advance(spec.operationId, "dispatching");',
-    replace: "    void spec.operationId;",
+    //
+    // Anchored on the comment above the *first-dispatch* advance, not on the
+    // advance alone. `this.advance(spec.operationId, "dispatching")` occurs
+    // twice: once on the resume path ADR-ERL2-028 added, which is taken only
+    // when an existing intent already sits at `declared`, and once on the path
+    // every operation takes. `String.replace` takes the first, so from
+    // ADR-ERL2-028 onward this control disabled the resume branch and killed
+    // nothing — 7 pass / 0 fail on the Step 5B campaign. That is the third
+    // recorded instance of a control expiring because a later package edited
+    // the file above its anchor (`invalid-finding-lab-attribution` was the
+    // second), and the lesson is the same one: anchor on something the guard
+    // owns, not on a line that could be one of several.
+    find:
+      "    // Durable *before* the call, so a crash during dispatch is distinguishable\n" +
+      "    // from a crash before it.\n" +
+      '    this.advance(spec.operationId, "dispatching");',
+    replace:
+      "    // Durable *before* the call, so a crash during dispatch is distinguishable\n" +
+      "    // from a crash before it.\n" +
+      "    void spec.operationId;",
     tests: ["tests/dist/e2e/mutationIntentCrashMatrix.test.js"],
     expect: "fail",
   },
