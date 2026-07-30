@@ -224,6 +224,32 @@ test("CUTOFF-MUT: an observation bundle naming a nonexistent runtime milestone i
   );
 });
 
+test("CUTOFF-MUT: a decoy milestone of the right schema does not satisfy the cutoff's named hash", () => {
+  // The case that **isolates resolution**, and the negative-control campaign is
+  // why it exists: `cutoff-milestone-resolution` — which makes the derivation
+  // accept any artifact of the right schema instead of the one the hash names —
+  // killed none of the cases above. Each of them refused for a *later* rule
+  // (binding, reachability) or retained no milestone at all for a substitute to
+  // find, so none of them measured resolution itself.
+  //
+  // Here a perfectly good milestone is retained, correctly bound and
+  // lifecycle-reached, and the cutoff names a different hash that no artifact
+  // has. The lifecycle reaches that hash too, so reachability cannot be what
+  // refuses. Only resolving the named hash can.
+  const { policy, receipt, milestone: decoy } = wellFormed();
+  const absent = `sha256:${"0".repeat(64)}` as Hash;
+  const bundle = observationBundle(policy.core_hash, receipt.core_hash, absent);
+  assert.equal(
+    refusalCode(() =>
+      derive(
+        [policy, receipt, decoy, bundle],
+        lifecycleReaching(receipt.core_hash, decoy.core_hash, absent),
+      ),
+    ),
+    "CUTOFF_MILESTONE_MISMATCH",
+  );
+});
+
 test("CUTOFF-MUT: a cutoff naming a nonexistent process-start receipt is refused", () => {
   const { policy, receipt, milestone: ms } = wellFormed();
   const absent = `sha256:${"0".repeat(64)}` as Hash;
