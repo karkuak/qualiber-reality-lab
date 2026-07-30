@@ -775,6 +775,218 @@ const CONTROLS = [
     tests: ["tests/dist/adversarial/subjectOutputPayloads.test.js"],
     expect: "fail",
   },
+
+  // -- ADR-ERL2-030: signer-inventory completeness, in all three layers -------
+  //
+  // The producer controls all substitute the field list rather than deleting the
+  // loop, for the reason the cutoff controls record: removing a guard usually
+  // removes a type narrowing too, and a patched tree that does not compile
+  // measures nothing. Substituting the *set of fields the producer looks in* is
+  // also the more faithful reproduction — the defect was never "no enumeration",
+  // it was "an enumeration over one field name".
+  {
+    id: "signer-producer-ordinary-signature",
+    what: "the producer enumerates members whose authority field is `signature`",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    find: "  for (const field of AUTHORITY_SIGNATURE_FIELDS) {",
+    replace: '  for (const field of ["root_signature", "wrapper_signature"] as const) {',
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-producer-root-signature",
+    what: "the producer enumerates `root_signature` members — the mirrored trust policy, on every run",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    find: "  for (const field of AUTHORITY_SIGNATURE_FIELDS) {",
+    replace: '  for (const field of ["signature", "wrapper_signature"] as const) {',
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-producer-wrapper-signature",
+    what: "the producer enumerates `wrapper_signature` members — the review's original finding",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    find: "  for (const field of AUTHORITY_SIGNATURE_FIELDS) {",
+    replace: '  for (const field of ["signature", "root_signature"] as const) {',
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-producer-unknown-contract",
+    what: "a signed contract the producer declares no role for stops finalization",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    // Keeps `role` a string and every use below type-correct, and still makes an
+    // unclassified signed contract silently inventoried under a borrowed role.
+    find: "    const role = PRODUCER_SIGNED_MEMBER_ROLES.get(artifact.schemaVersion);\n    if (role === undefined) {",
+    replace:
+      '    const role = PRODUCER_SIGNED_MEMBER_ROLES.get(artifact.schemaVersion) ?? "policy_author";\n' +
+      '    if (String(1) === "2") {',
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-producer-completeness-derivation",
+    what: "`complete_for_terminal_chain` is derived from the actual set, not asserted",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    // The exact pre-remediation posture: a constant where a result belongs.
+    find: "    completeForTerminalChain: ordered.length === seen.size && ordered.length > 0,",
+    replace: "    completeForTerminalChain: true,",
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-producer-finalization-gate",
+    what: "an inventory the derivation cannot certify is refused rather than sealed",
+    file: "packages/core/src/terminal/finalize.ts",
+    find: "function assertInventoryComplete(complete: boolean, entryCount: number): void {\n  if (complete) return;",
+    replace:
+      "function assertInventoryComplete(complete: boolean, entryCount: number): void {\n" +
+      '  if (complete || String(1) === "1") return;',
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-producer-postfreeze-recheck",
+    what: "completeness is re-established against the tree as it stands after the inventory is sealed",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    // Re-derives the listed set from the derivation instead of from the sealed
+    // entries, which makes the comparison agree with itself by construction.
+    find: "  const listed = new Set(entries.map((entry) => entry.artifactCoreHash as string));",
+    replace:
+      "  const listed = new Set(derivation.applicableMembers.map((member) => member.coreHash as string));\n" +
+      "  void entries;",
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-fixture-complete-set",
+    what: "the fixture inventories every signed member it retains, rather than hand-writing one entry",
+    file: "tests/support/fakeRun.ts",
+    // Restores the shape the ledger measured: one entry, completeness asserted.
+    find: "    entries: applicable.map((member) => ({",
+    replace: "    entries: applicable.slice(0, 1).map((member) => ({",
+    tests: ["tests/dist/e2e/preEnvironmentRun.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-trusts-producer-flag",
+    what: "the verifier derives completeness instead of reading `complete_for_terminal_chain`",
+    file: "packages/public-verifier/src/library/verify.ts",
+    // The status quo ADR-ERL2-029 §9 rejected, restored exactly: the field is
+    // `const: true`, so guarding the derivation on it disables the derivation.
+    find:
+      "  verifySignerInventoryCompleteness({\n    index,\n    trust,\n    lifecycle: options.lifecycle,\n" +
+      '    runId: attestation.run_id,\n    terminalVariant: "pre_environment",',
+    replace:
+      "  if (!inventory.complete_for_terminal_chain) verifySignerInventoryCompleteness({\n    index,\n    trust,\n" +
+      "    lifecycle: options.lifecycle,\n" +
+      '    runId: attestation.run_id,\n    terminalVariant: "pre_environment",',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-missing-direction",
+    what: "an applicable signed member with no inventory entry is refused (retained -> inventory)",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    find: "  if (missing.length > 0) {",
+    replace: '  if (String(1) === "2" && missing.length > 0) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-extra-detection",
+    what: "an inventory entry that is not an applicable member is refused (inventory -> retained)",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    find: "  if (extra.length > 0) {",
+    replace: '  if (String(1) === "2" && extra.length > 0) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-duplicate-detection",
+    what: "an applicable member inventoried twice is refused",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    find: "  if (duplicates.length > 0) {",
+    replace: '  if (String(1) === "2" && duplicates.length > 0) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-lifecycle-reachability",
+    what: "an inventoried member no lifecycle event produced is refused",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    find: "  if (reachabilityFailures.length > 0) {",
+    replace: '  if (String(1) === "2" && reachabilityFailures.length > 0) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-member-run-binding",
+    what: "a signed member belonging to another run is refused",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    find: "  if (foreignRunMembers.length > 0) {",
+    replace: '  if (String(1) === "2" && foreignRunMembers.length > 0) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-inventory-run-scope",
+    what: "an inventory naming another run is refused even when every member hash resolves",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    find: "  if (input.inventoryRunId !== input.runId) {",
+    replace: '  if (String(1) === "2" && input.inventoryRunId !== input.runId) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-entry-signature-binding",
+    what: "an entry whose declared signature hash contradicts the artifact is refused",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    // The one entry field `verifySignedMembers` does not cross-check, so this
+    // control isolates the completeness layer rather than an inherited rule.
+    find: "    if (entry.signature_sha256 !== member.signedHash) {",
+    replace: '    if (String(1) === "2" && entry.signature_sha256 !== member.signedHash) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-invalid-record-inventory",
+    what: "an invalid record that retains a signer inventory is refused",
+    file: "packages/public-verifier/src/library/verify.ts",
+    find:
+      '  const strayInventories = index.ofSchema("signer-inventory/v2");\n  if (strayInventories.length > 0) {',
+    replace:
+      '  const strayInventories = index.ofSchema("signer-inventory/v2");\n' +
+      '  if (String(1) === "2" && strayInventories.length > 0) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-wrapper-field",
+    what: "the verifier recognizes wrapper-signed members as applicable inventory members",
+    file: "packages/public-verifier/src/library/signedMembers.ts",
+    // Removing wrapper recognition on the *verifier* side does not hide the
+    // member — it makes the honest environment inventory look like it lists
+    // something inapplicable, which is why the environment battery is the target.
+    find: "const SIGNATURE_FIELDS = AUTHORITY_SIGNATURE_FIELDS;",
+    replace: 'const SIGNATURE_FIELDS = ["signature", "root_signature"] as const;',
+    tests: ["tests/dist/adversarial/signerInventoryEnvironment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-environment-completeness",
+    what: "the environment branch derives completeness too, not only the pre-environment one",
+    file: "packages/public-verifier/src/library/verify.ts",
+    find:
+      "  verifySignerInventoryCompleteness({\n    index,\n    trust,\n    lifecycle: options.lifecycle,\n" +
+      '    runId: attestation.run_id,\n    terminalVariant: "environment",',
+    replace:
+      "  if (!inventory.complete_for_terminal_chain) verifySignerInventoryCompleteness({\n    index,\n    trust,\n" +
+      "    lifecycle: options.lifecycle,\n" +
+      '    runId: attestation.run_id,\n    terminalVariant: "environment",',
+    tests: ["tests/dist/adversarial/signerInventoryEnvironment.test.js"],
+    expect: "fail",
+  },
 ];
 
 // -- the disposable tree -----------------------------------------------------

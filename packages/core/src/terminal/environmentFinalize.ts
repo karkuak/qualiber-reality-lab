@@ -159,6 +159,7 @@ export function buildEnvironmentSignerInventory(input: {
   readonly runId: string;
   readonly selectionCommitmentHash: Hash;
   readonly entries: readonly SignerInventoryEntryInput[];
+  readonly completeForTerminalChain: boolean;
   readonly inventoriedAt: Instant;
   readonly signingKey: SigningKey;
 }): EnvironmentSignerInventoryV2 {
@@ -178,6 +179,17 @@ export function buildEnvironmentSignerInventory(input: {
     throw new Erl2Error(
       CODES.INVENTORY_ENTRY_MISSING,
       "an environment signer inventory covers at least one signed artifact",
+    );
+  }
+  // ADR-ERL2-030 §4.3, shared with the pre-environment builder: the schema pins
+  // `complete_for_terminal_chain` to `true`, so a producer that cannot prove
+  // completeness must refuse to seal rather than emit a weaker claim.
+  if (!input.completeForTerminalChain) {
+    throw new Erl2Error(
+      CODES.INVENTORY_ENTRY_MISSING,
+      `finalization refused: the signer inventory derivation covers ${String(input.entries.length)} ` +
+        `member(s) and could not establish that they are every applicable signed member of the ` +
+        `environment terminal chain`,
     );
   }
   const body = {
@@ -220,6 +232,11 @@ export interface EnvironmentFinalizationPreconditions {
   readonly derivedExtraHashes: readonly Hash[];
   /** An environment terminal selected a challenge, so exposure is a real event. */
   readonly exposureEventHash: Hash | undefined;
+  /**
+   * Independently derived by the producer from the retained evidence
+   * (ADR-ERL2-030 §4); computed, never asserted.
+   */
+  readonly signerInventoryComplete: boolean;
   readonly trustVerifiedAtCreation: boolean;
   readonly timestampCheckpointsAcyclic: boolean;
 }
@@ -311,7 +328,16 @@ export function assertEnvironmentFinalizable(
     );
   }
 
-  // 7-8. trust and timestamps.
+  // 7. the signer inventory, on the branch where the omission was largest:
+  //    66 retained signed members, 61 listed, completeness asserted.
+  if (!pre.signerInventoryComplete) {
+    throw new Erl2Error(
+      CODES.INVENTORY_ENTRY_MISSING,
+      "finalization refused: the signer inventory is not derivably complete for the terminal chain",
+    );
+  }
+
+  // 8-9. trust and timestamps.
   if (!pre.trustVerifiedAtCreation) {
     throw new Erl2Error(
       CODES.BUNDLE_FINALIZED_BEFORE_TRUST_CLOSURE,

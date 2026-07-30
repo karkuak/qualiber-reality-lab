@@ -40,6 +40,7 @@ import {
   deriveEnvironmentSemantics,
   deriveInvalidEnvironmentSemantics,
 } from "./environmentDerivation.js";
+import { verifySignerInventoryCompleteness } from "./inventoryCompleteness.js";
 import { verifySubjectOutputPayloads } from "./payloadAccounting.js";
 import { verifyReferencedBytes } from "./referencedBytes.js";
 import { verifyRetainedFileAccounting } from "./retainedFiles.js";
@@ -247,6 +248,21 @@ function verifyPreEnvironmentBundle(options: VerifyBundleOptions): BundleVerific
     trust,
     asOf: attestation.finalized_at,
     inventoryEntries: inventory.entries,
+  });
+  // ADR-ERL2-030. The other direction: the inventory must be *exactly* the set
+  // of applicable signed members this verifier derives from the retained bytes.
+  // `complete_for_terminal_chain` is not consulted — an inventory that omitted a
+  // member while asserting completeness is refused by the derivation, not by
+  // disagreeing with a producer constant.
+  verifySignerInventoryCompleteness({
+    index,
+    trust,
+    lifecycle: options.lifecycle,
+    runId: attestation.run_id,
+    terminalVariant: "pre_environment",
+    inventoryEntries: inventory.entries,
+    inventoryRunId: inventory.run_id,
+    declaredExcludedTypes: inventory.excluded_public_terminal_types,
   });
   verifyRetainedFileAccounting(index);
   // A pre-environment terminal has no selection, so retaining any selection
@@ -534,6 +550,20 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
     asOf: attestation.finalized_at,
     inventoryEntries: inventory.entries,
   });
+  // ADR-ERL2-030, on the branch where the omission was largest: the environment
+  // terminal retained 66 signed members, listed 61 and asserted completeness.
+  // The two it omitted were exactly the two whose authority field is not named
+  // `signature` — the beacon association wrapper and the mirrored trust root.
+  verifySignerInventoryCompleteness({
+    index,
+    trust,
+    lifecycle: options.lifecycle,
+    runId: attestation.run_id,
+    terminalVariant: "environment",
+    inventoryEntries: inventory.entries,
+    inventoryRunId: inventory.run_id,
+    declaredExcludedTypes: inventory.excluded_public_terminal_types,
+  });
   verifyRetainedFileAccounting(index);
   if (attestation.run_record_hash !== requiredHash(closure, "run-record")) {
     throw new Erl2Error(
@@ -740,6 +770,25 @@ export function verifyInvalidRecord(options: VerifyRecordOptions): MandatoryGrap
   const record = assertContract<InvalidLabRunRecordV1>("InvalidLabRunRecordV1", options.record);
   const index = ArtifactIndex.scan(options.artifactRoot);
   verifyReferencedBytes(index);
+
+  // ADR-ERL2-030 §3.5. A signer inventory attests *a terminal chain*, and an
+  // invalid record has none: it carries no attestation and no public bundle, so
+  // there is nothing for an inventory to be complete *for*.
+  //
+  // Checked *before* the closure derivation on purpose. The closure would refuse
+  // it too — `signer-inventory/v2` is not one of the invalid branch's supporting
+  // schemas, so it lands in `rejected_extra_hashes` — but as an anonymous
+  // unaccounted artifact. A reader deserves the actual cause, and the invalid
+  // branch has no terminal variant from which to derive an applicable set, so
+  // this is the only place the category error can be named.
+  const strayInventories = index.ofSchema("signer-inventory/v2");
+  if (strayInventories.length > 0) {
+    throw new Erl2Error(
+      CODES.INVENTORY_ENTRY_EXTRA,
+      "an invalid record retains a signer inventory; a signer inventory attests a terminal chain, " +
+        "and an invalid terminal has none",
+    );
+  }
   const indexed = index.tryGet(coreHash(record));
   if (!indexed) {
     throw new Erl2Error(

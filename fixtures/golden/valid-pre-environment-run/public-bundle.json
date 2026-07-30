@@ -8,10 +8,10 @@
       "path": "retained/final-attestation.json",
       "media_type": "application/json",
       "byte_length": 1784,
-      "file_sha256": "sha256:a91ebc01b6576f4f1ecb09b51a329366ab2396aab3e68c6c83bb961643226a35",
+      "file_sha256": "sha256:adbd60c1bffb3ad1dfc5bb9882a5928b849bed9aad18b618e4829683fb0e3db2",
       "classification": "INTERNAL"
     },
-    "artifact_core_hash": "sha256:8744f499022698f30973a52ef9d153ccbbbdcc173b9bfe71ff63aaf893c6034e"
+    "artifact_core_hash": "sha256:0ddefbf1c7dfb2c4c45116fd213116b5709890d84dbcf8b998ddf46e953f02d9"
   },
   "acquisition_preregistration_verification_receipt": {
     "artifact": {
@@ -27,11 +27,11 @@
     "artifact": {
       "path": "retained/signer-inventory.json",
       "media_type": "application/json",
-      "byte_length": 1207,
-      "file_sha256": "sha256:081b306d9b46770342b60a4f9514d1268f715ad75bdd2a9e1bf9560ce0c5b86b",
+      "byte_length": 3651,
+      "file_sha256": "sha256:8ca7cceae43727220eb1a8f80dd2a018112fc86e1498406df0bacfdcd2b34eab",
       "classification": "INTERNAL"
     },
-    "artifact_core_hash": "sha256:4738168b0dba30233fd4a52a11f37529aef94b6f69499f9245a0e2f4fc212960"
+    "artifact_core_hash": "sha256:e8a5459b4e0444afc9e5134fb4149cbcd38aac5a8e171de41f9c4fa9064906f3"
   },
   "run_trust_policy": {
     "artifact": {
@@ -49,15 +49,15 @@
         "path": "retained/timestamp-checkpoint.json",
         "media_type": "application/json",
         "byte_length": 1016,
-        "file_sha256": "sha256:b9d1b21072186f2b65c213255335eb3fa3d9d6765980704cf7e73cb10b31d22e",
+        "file_sha256": "sha256:417e07ecc630d177df7249ef3f7e86d9b4cb0cbe346737499cf67dc6f7956de3",
         "classification": "INTERNAL"
       },
-      "artifact_core_hash": "sha256:f8fc09608bd6ebbfb6f346f717f57dab4de7bdc27af75ca3af0ad5ac4bf1cada"
+      "artifact_core_hash": "sha256:5024c9f578b37b8f535dafcc38efa3da79e2f79178b5d3a3950da9632e713782"
     }
   ],
   "verification_trust_head_source": "local_root_pinned_configuration",
   "execution_verification_mode": "finalizer_verdict_only",
   "execution_artifacts": [],
   "created_at": "2026-07-01T00:00:30Z",
-  "core_hash": "sha256:49f94dd7a267322035af55e27a68f9a4788b333749e0e4b40e9e73c88e40e736"
+  "core_hash": "sha256:fa521289a74765a46745e0baff1e2b109f28cf1ba7c507cafbb6b3c5c0e16a62"
 }

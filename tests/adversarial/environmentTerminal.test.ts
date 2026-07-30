@@ -146,6 +146,7 @@ function preconditions(overrides: Record<string, unknown> = {}) {
     derivedMissingRoles: [] as string[],
     derivedExtraHashes: [] as Hash[],
     exposureEventHash: h("99") as Hash | undefined,
+    signerInventoryComplete: true,
     trustVerifiedAtCreation: true,
     timestampCheckpointsAcyclic: true,
     ...overrides,
@@ -224,6 +225,7 @@ test("ENV-INVENTORY: the two public terminal types are excluded and cannot be sm
     runId: "01890000-0000-7000-8000-000000000001",
     selectionCommitmentHash: h("5"),
     entries: [entry],
+    completeForTerminalChain: true,
     inventoriedAt: AT,
     signingKey: developmentKey("finalizer"),
   });
@@ -244,6 +246,7 @@ test("ENV-INVENTORY: the two public terminal types are excluded and cannot be sm
           runId: "01890000-0000-7000-8000-000000000001",
           selectionCommitmentHash: h("5"),
           entries: [{ ...entry, artifactSchemaVersion: excluded }],
+          completeForTerminalChain: true,
           inventoriedAt: AT,
           signingKey: developmentKey("finalizer"),
         }),
@@ -259,11 +262,30 @@ test("ENV-INVENTORY: the two public terminal types are excluded and cannot be sm
         runId: "01890000-0000-7000-8000-000000000001",
         selectionCommitmentHash: h("5"),
         entries: [],
+        completeForTerminalChain: true,
         inventoriedAt: AT,
         signingKey: developmentKey("finalizer"),
       }),
     "INVENTORY_ENTRY_MISSING",
     "an empty inventory",
+  );
+
+  // ADR-ERL2-030 §4.3: a derivation that could not establish completeness does
+  // not produce a weaker inventory, because the schema pins the field to `true`.
+  // It refuses — before any signature exists.
+  throwsCode(
+    () =>
+      buildEnvironmentSignerInventory({
+        inventoryId: "inv-env",
+        runId: "01890000-0000-7000-8000-000000000001",
+        selectionCommitmentHash: h("5"),
+        entries: [entry],
+        completeForTerminalChain: false,
+        inventoriedAt: AT,
+        signingKey: developmentKey("finalizer"),
+      }),
+    "INVENTORY_ENTRY_MISSING",
+    "an inventory the derivation could not certify complete",
   );
 });
 

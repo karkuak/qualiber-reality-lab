@@ -14,10 +14,23 @@ export {
   type Descriptor,
 } from "./library/referencedBytes.js";
 export {
+  authoritySignatureOf,
+  declaredSignedMemberSchemas,
+  signedMemberRuleFor,
   verifySignedMembers,
   type SignedMemberOptions,
   type SignedMemberReport,
+  type SignedMemberRule,
 } from "./library/signedMembers.js";
+export {
+  deriveExpectedSignedMembers,
+  excludedTerminalTypesFor,
+  verifySignerInventoryCompleteness,
+  SELF_REFERENTIAL_INVENTORY_SCHEMA,
+  type ExpectedSignedMember,
+  type InventoryEntryView,
+  type SignerInventoryCompletenessReport,
+} from "./library/inventoryCompleteness.js";
 export {
   verifyRetainedFileAccounting,
   type RetainedAccountingReport,

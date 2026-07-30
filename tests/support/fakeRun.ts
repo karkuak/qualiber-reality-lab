@@ -48,6 +48,7 @@ import {
   type DevelopmentKeyring,
 } from "./keys.js";
 import type { LocalTrustConfiguration } from "@erl2/integrity";
+import { applicableSignedMembers, scanRetainedSignedMembers } from "./signedMemberScan.js";
 
 export interface FakeRunResult {
   readonly runId: string;
@@ -225,6 +226,27 @@ function preregister(ctx: Ctx) {
         artifact_role: "acquisition-source-manifest",
         artifact_core_hash: source.hash,
         artifact_schema_version: "acquisition-source-manifest/v1",
+      },
+      // The shipped producer's `acquisition_preregistered` event produces these
+      // three as well, and this fixture did not — so three of its retained
+      // signed members were reachable by nothing. That is invisible while the
+      // signer inventory lists one member; it is a refusal the moment the
+      // inventory has to contain every applicable signed member and every one of
+      // them has to be lifecycle-reached (ADR-ERL2-030 §3.4).
+      {
+        artifact_role: "acquisition-preregistration-verification-receipt",
+        artifact_core_hash: verificationReceipt.hash,
+        artifact_schema_version: "acquisition-preregistration-verification-receipt/v1",
+      },
+      {
+        artifact_role: "adapter-manifest",
+        artifact_core_hash: adapter.hash,
+        artifact_schema_version: "subject-adapter-manifest/v1",
+      },
+      {
+        artifact_role: "generic-run-policy",
+        artifact_core_hash: policy.hash,
+        artifact_schema_version: "generic-run-policy/v1",
       },
     ],
   });
@@ -719,23 +741,39 @@ export function runFakeValidPreEnvironmentRun(): FakeRunResult {
   });
   const checkpointPublished = publish(ctx, "retained/timestamp-checkpoint.json", checkpoint);
 
+  // The signer inventory, enumerated from what this fixture actually retained.
+  //
+  // It used to hand-write **one** entry — the preregistration — and assert
+  // `complete_for_terminal_chain: true` over a run that retains seven applicable
+  // signed members. That is the recurring failure ADR-ERL2-028's handoff §6
+  // names, *a test fixture that names a condition it does not contain*, and it
+  // is why a completeness gate could not simply be switched on: the gate would
+  // have failed the goldens, which is a rule refusing the fixtures rather than a
+  // defect being caught.
+  //
+  // The scan is the fixture's own (`signedMemberScan.ts`), deliberately not the
+  // producer's derivation and not the verifier's: a fixture that built its
+  // inventory by calling either would prove only that the caller agrees with
+  // itself (ADR-ERL2-030 §5).
+  const inventoryStamp = (checkpoint.entries[0] as { security_timestamp: string }).security_timestamp;
+  const applicable = applicableSignedMembers(scanRetainedSignedMembers(root), [
+    "pre-environment-final-lab-attestation/v1",
+  ]);
   const inventoryBase = {
     schema_version: "signer-inventory/v2" as const,
     terminal_variant: "pre_environment" as const,
     inventory_id: "fake-signer-inventory",
     run_id: runId,
     acquisition_preregistration_hash: scaffold.prereg.hash,
-    entries: [
-      {
-        artifact_schema_version: "acquisition-preregistration/v1",
-        artifact_core_hash: scaffold.prereg.hash,
-        signer_key_id: keyring.preregistrar.keyId,
-        signature_sha256: scaffold.prereg.hash,
-        security_timestamp: "2026-07-01T00:00:05Z",
-        timestamp_log_id: "erl2-development-log",
-        timestamp_sequence: 0,
-      },
-    ],
+    entries: applicable.map((member) => ({
+      artifact_schema_version: member.schemaVersion,
+      artifact_core_hash: member.coreHash,
+      signer_key_id: member.signerKeyId,
+      signature_sha256: member.signedHash,
+      security_timestamp: inventoryStamp,
+      timestamp_log_id: checkpoint.log_id,
+      timestamp_sequence: checkpoint.first_sequence,
+    })),
     excluded_public_terminal_types: ["pre-environment-final-lab-attestation/v1"] as const,
     complete_for_terminal_chain: true as const,
     inventoried_at: ctx.clock.now(),
@@ -824,6 +862,28 @@ export function runFakeValidPreEnvironmentRun(): FakeRunResult {
       },
     ],
   });
+
+  // The fixture-consistency assertion (ADR-ERL2-030 §6).
+  //
+  // Re-scanned over the *finished* tree, so it sees the attestation and the
+  // inventory that the enumeration above could not: the inventory must list
+  // every applicable signed member the completed fixture retains, exactly once,
+  // and nothing else. A fixture may not claim a condition it does not contain,
+  // and this is the line that makes that checkable inside the fixture rather
+  // than only in the verifier that reads its output.
+  const finalMembers = scanRetainedSignedMembers(root);
+  const finalApplicable = applicableSignedMembers(finalMembers, [
+    "pre-environment-final-lab-attestation/v1",
+  ]);
+  const listedHashes = [...inventoryBase.entries].map((e) => e.artifact_core_hash).sort();
+  const applicableHashes = finalApplicable.map((m) => m.coreHash).sort();
+  if (JSON.stringify(listedHashes) !== JSON.stringify(applicableHashes)) {
+    throw new Error(
+      `fake pre-environment run: the signer inventory lists ${String(listedHashes.length)} member(s) ` +
+        `but the fixture retains ${String(applicableHashes.length)} applicable signed member(s). ` +
+        `A fixture must contain the condition it claims.`,
+    );
+  }
 
   return {
     runId,

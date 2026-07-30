@@ -117,6 +117,87 @@ export function runToValidTerminal(verifyStatus: "failed" | "unsupported" = "fai
 }
 
 /**
+ * Drives a run all the way to a finalized **environment** terminal through the
+ * shipped CLI, returning the run root an external verifier would read.
+ *
+ * Shared rather than copied because it is ~2 minutes of real work per call and
+ * three suites now need the same terminal. Callers should build one and copy it
+ * per case.
+ */
+export function runToEnvironmentTerminal(): ValidTerminalRun {
+  const run = runToAcquired();
+  const base = [
+    "--run-root", run.runRoot,
+    "--registry", run.registry.root,
+    "--tier", "development",
+    "--run", run.runId,
+  ];
+  const sourceTrust = path.join(run.runRoot, "source-trust.json");
+  writeFileSync(
+    sourceTrust,
+    JSON.stringify({
+      sourceTrustPolicyHash: run.registry.sourceTrustPolicyHash,
+      randomnessRegistryHeadHash: run.registry.sourceTrustPolicyHash,
+    }),
+  );
+  const plan: readonly (readonly [string, readonly string[]])[] = [
+    ["freeze-package", ["freeze-package", ...base]],
+    [
+      "verify-package",
+      [
+        "verify-package", ...base,
+        "--fake-verify-package", "succeeded",
+        "--subject-id", "s",
+        "--subject-version", "0.1.0",
+      ],
+    ],
+    [
+      "preregister-challenge",
+      [
+        "preregister-challenge", ...base,
+        "--journey-selection-policy", run.registry.journeySelectionPolicyHash,
+        "--randomness-policy", run.registry.randomnessPolicyHash,
+        ...run.registry.challengeCandidates.flatMap((c) => ["--challenge", c.challengeManifestHash]),
+      ],
+    ],
+    ["select", ["select", ...base, "--source-trust-config", sourceTrust, "--expires", "2026-12-31T00:00:00Z"]],
+    ["provision", ["provision", ...base, "--archetype", run.registry.archetypeHash]],
+    ["baseline", ["baseline", ...base]],
+    ["plan", ["plan", ...base]],
+    ["install", ["install", ...base]],
+    ["configure", ["configure", ...base]],
+    ["authenticate", ["authenticate", ...base]],
+    ["connect", ["connect", ...base]],
+    ["discover", ["execute-subject", ...base]],
+    ["activate", ["activate", ...base]],
+    [
+      "journey",
+      [
+        "journey", ...base,
+        "--comparison-policy", run.registry.comparisonPolicyHash,
+        "--cutoff-policy", run.registry.cutoffPolicyHash,
+      ],
+    ],
+    ["observe", ["observe", ...base]],
+    ["freeze-observation", ["freeze-observation", ...base]],
+    ["exercise", ["execute-subject", ...base]],
+    ["observe-step", ["execute-subject", ...base]],
+    ["remove", ["remove", ...base]],
+    ["freeze-output", ["freeze-output", ...base]],
+    ["reveal", ["reveal", ...base, "--vault", run.registry.vaultRoot]],
+    ["evaluate", ["evaluate", ...base]],
+    ["restore", ["restore", ...base]],
+    ["destroy", ["destroy", ...base]],
+    ["finalize-generic", ["finalize-generic", ...base]],
+  ];
+  for (const [name, argv] of plan) {
+    const result = erl2(argv);
+    assert.equal(result.exitCode, 0, `${name}: ${JSON.stringify(result.body.errors)}`);
+  }
+  return run;
+}
+
+/**
  * Drives a run only as far as a durably-accepted, mid-flight state (after
  * `acquire`), for exercising cancellation and replay from a non-terminal run.
  */

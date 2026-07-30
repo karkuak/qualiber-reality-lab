@@ -28,14 +28,21 @@
  * environment and selection branches inherit when Slice 6.5 lands).
  */
 
-import { CODES, Erl2Error } from "@erl2/contracts";
+import { AUTHORITY_SIGNATURE_FIELDS, CODES, Erl2Error, signedSchemaAuthorityFields } from "@erl2/contracts";
 import { SIGNATURE_DOMAINS, type SignatureDomain, type SignerRole, type TrustEvaluator } from "@erl2/integrity";
 import type { ArtifactIndex, IndexedArtifact } from "./artifactIndex.js";
 
-/** The authority-bearing signature fields; all are excluded from `core_hash`. */
-const SIGNATURE_FIELDS = ["signature", "root_signature", "wrapper_signature"] as const;
+/**
+ * The authority-bearing signature fields; all are excluded from `core_hash`.
+ *
+ * Membership is decided by the **field the registered contract declares**, never
+ * by a property name that happens to contain "signature": the frozen schemas are
+ * the source (`signedSchemaAuthorityFields()`), and a signature object sitting on
+ * a schema version that does not declare it is already refused at hash time.
+ */
+const SIGNATURE_FIELDS = AUTHORITY_SIGNATURE_FIELDS;
 
-interface SignedMemberRule {
+export interface SignedMemberRule {
   /** The role the pinned trust policy must grant the signing key. */
   readonly role: SignerRole;
   /**
@@ -51,6 +58,31 @@ interface SignedMemberRule {
    * signer inventory does not carry one for it.
    */
   readonly securityTimestampField?: string;
+  /**
+   * Declares that this contract is legitimately **not** produced by any
+   * lifecycle event (ADR-ERL2-030 §3.4).
+   *
+   * Every other applicable signed member must be lifecycle-reached: a retained
+   * signed artifact no event ever produced is the snapshot-only shape the closure
+   * refuses everywhere else, and ADR-ERL2-029 §6 already applied that argument to
+   * the exposure event. Two contracts genuinely cannot satisfy it, and both are
+   * bound to the terminal by hash instead:
+   *
+   *   - `trust-policy-manifest/v2` — the trust root predates the run and is
+   *     mirrored in at preregistration, never *produced* by it. It is authorized
+   *     against the verifier's own locally pinned head, which is a stronger
+   *     binding than reachability.
+   *   - `trusted-timestamp-checkpoint/v1` — the *terminal* checkpoint anchors the
+   *     run record during finalization, after the last event that could have
+   *     produced it; the attestation's `timestamp_checkpoint_hash` and the
+   *     bundle's checkpoint chain bind it. Measured on a real environment run:
+   *     the three selection checkpoints *are* reached and only this one is not,
+   *     so the exemption is per contract and cannot be narrowed further without
+   *     refusing the shipped terminal.
+   *
+   * Anything else with this flag would be a widening, and there is nothing else.
+   */
+  readonly externallyAnchored?: boolean;
 }
 
 /**
@@ -61,7 +93,12 @@ interface SignedMemberRule {
 const SIGNED_MEMBER_RULES = new Map<string, SignedMemberRule>([
   [
     "trust-policy-manifest/v2",
-    { role: "trust_root", domain: SIGNATURE_DOMAINS.LEGACY_V1, securityTimestampField: "issued_at" },
+    {
+      role: "trust_root",
+      domain: SIGNATURE_DOMAINS.LEGACY_V1,
+      securityTimestampField: "issued_at",
+      externallyAnchored: true,
+    },
   ],
   [
     "trusted-timestamp-checkpoint/v1",
@@ -69,6 +106,7 @@ const SIGNED_MEMBER_RULES = new Map<string, SignedMemberRule>([
       role: "timestamp_authority",
       domain: SIGNATURE_DOMAINS.LEGACY_V1,
       securityTimestampField: "checkpointed_at",
+      externallyAnchored: true,
     },
   ],
   ["signer-inventory/v2", { role: "final_attestation_signer", securityTimestampField: "inventoried_at" }],
@@ -191,20 +229,56 @@ const SIGNED_MEMBER_RULES = new Map<string, SignedMemberRule>([
   ["journey-step-commitment/v1", { role: "challenge_governor", securityTimestampField: "committed_at" }],
 ]);
 
-/** The signature object an artifact carries, if any, with the field it came from. */
-function signatureOf(
+/**
+ * The **authority-bearing** signature an artifact carries, if any.
+ *
+ * The field is not believed because it is named `signature`: the schema version
+ * must legally declare it (`signedSchemaAuthorityFields()`, derived from the
+ * frozen schema bundles). A signature-shaped object on a contract that does not
+ * declare that field is refused rather than treated as authority — otherwise a
+ * schema could carry an unhashed authority claim and be inventoried for it.
+ *
+ * Exported because the completeness derivation must enumerate signed members the
+ * same way this pass verifies them; the *role table* is what stays private to
+ * each derivation, not the frozen fact of which field carries authority.
+ */
+export function authoritySignatureOf(
   artifact: IndexedArtifact,
 ): { readonly field: string; readonly signature: { key_id: string; signed_hash: string } } | undefined {
+  const declared = signedSchemaAuthorityFields().get(artifact.schemaVersion);
+  let found: { field: string; signature: { key_id: string; signed_hash: string } } | undefined;
   for (const field of SIGNATURE_FIELDS) {
     const candidate = artifact.value[field];
-    if (candidate !== null && typeof candidate === "object" && !Array.isArray(candidate)) {
-      const signature = candidate as { key_id?: unknown; signed_hash?: unknown };
-      if (typeof signature.key_id === "string" && typeof signature.signed_hash === "string") {
-        return { field, signature: signature as { key_id: string; signed_hash: string } };
-      }
+    if (candidate === null || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+    const signature = candidate as { key_id?: unknown; signed_hash?: unknown };
+    if (typeof signature.key_id !== "string" || typeof signature.signed_hash !== "string") continue;
+    if (declared === undefined || !declared.has(field)) {
+      throw new Erl2Error(
+        CODES.TRUST_SIGNATURE_INVALID,
+        `retained artifact ${artifact.logicalPath} carries a ${field} for ${artifact.schemaVersion}, ` +
+          `a contract that does not declare that authority field`,
+      );
     }
+    if (found !== undefined) {
+      throw new Erl2Error(
+        CODES.TRUST_SIGNATURE_INVALID,
+        `retained artifact ${artifact.logicalPath} carries both a ${found.field} and a ${field}; ` +
+          `a contract has exactly one authority`,
+      );
+    }
+    found = { field, signature: signature as { key_id: string; signed_hash: string } };
   }
-  return undefined;
+  return found;
+}
+
+/** The verifier's own expectation for a signed contract, or `undefined`. */
+export function signedMemberRuleFor(schemaVersion: string): SignedMemberRule | undefined {
+  return SIGNED_MEMBER_RULES.get(schemaVersion);
+}
+
+/** Every signed contract this verifier declares a role for, for cross-checks. */
+export function declaredSignedMemberSchemas(): readonly string[] {
+  return [...SIGNED_MEMBER_RULES.keys()].sort();
 }
 
 /** A signer-inventory entry, as the verifier reads it (never as authority). */
@@ -249,7 +323,7 @@ export function verifySignedMembers(options: SignedMemberOptions): SignedMemberR
   // (audit finding: forged signature at the canonical path + a pristine
   // byte-copy under a later-sorting name verified at exit 0 / `valid`).
   for (const artifact of index.retainedFiles()) {
-    const found = signatureOf(artifact);
+    const found = authoritySignatureOf(artifact);
     if (found === undefined) continue;
 
     const rule = SIGNED_MEMBER_RULES.get(artifact.schemaVersion);

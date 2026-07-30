@@ -491,7 +491,7 @@
   {
     "actor_id": "finalizer",
     "command_id": "finalize-generic",
-    "core_hash": "sha256:96a37ff5048600e3844d2fdb51fdd3fc50e252622791ae0b7d80f292c6af1224",
+    "core_hash": "sha256:42d865bdd41c47ebdc25c0acf84cc54ba82fd7134401fea2a444b6f55e8eca8e",
     "event_id": "evt-000019",
     "event_type": "generic_finalized",
     "occurred_at": "2026-07-01T00:00:10Z",
@@ -504,12 +504,12 @@
         "artifact_schema_version": "pre-environment-lab-run-record/v1"
       },
       {
-        "artifact_core_hash": "sha256:b742fcf1dc2fc4af689cb79654b376996a52503cb59f662c51929bd7bebd75e8",
+        "artifact_core_hash": "sha256:9e0f113749c4c0c02be1d6c15cb7e4387ff59c2aa7c40645e5fd0c0e2ed02ac2",
         "artifact_role": "final-attestation",
         "artifact_schema_version": "pre-environment-final-lab-attestation/v1"
       },
       {
-        "artifact_core_hash": "sha256:47f115e52be4eadd91f86779fb3762a0f52f4c17fecc8e61c2f4f19923a0ad45",
+        "artifact_core_hash": "sha256:82633ed097c6dcd117cfb9db6d6b6bc45380025daf89ae873bfbd0187d90cc76",
         "artifact_role": "signer-inventory",
         "artifact_schema_version": "signer-inventory/v2"
       }

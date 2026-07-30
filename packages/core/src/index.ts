@@ -561,6 +561,16 @@ export {
   type PreEnvironmentRunRecordInput,
   type SignerInventoryEntryInput,
 } from "./terminal/finalize.js";
+export {
+  assertInventoryCoversDerivation,
+  deriveSignedMembers,
+  signerInventoryEntriesFrom,
+  PRODUCER_SIGNED_MEMBER_ROLES,
+  SELF_REFERENTIAL_INVENTORY_SCHEMA,
+  type DerivedSignedMember,
+  type RetainedArtifactView,
+  type SignerInventoryDerivation,
+} from "./terminal/signerInventoryDerivation.js";
 export { buildRoleSeparationAudit, buildSelectionRequest, loadSelectionPool, POOL_MANIFEST_PATH, poolEntryPath } from "./run/selectionContext.js";
 export { SELECTION_STEPS, assertResumable, stepFrom, type SelectionStep } from "./run/selectionWalk.js";
 export type { SelectionPreludeInput } from "./run/workspace.js";

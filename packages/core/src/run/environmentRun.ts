@@ -2735,17 +2735,24 @@ export class EnvironmentRun {
     );
     assertNotSelfAnchoring(checkpoint);
 
+    // Two public terminal types are excluded because the bundle already carries
+    // them: an inventory covering them would vouch for artifacts the reader
+    // holds independently. Everything else that is signed and retained is
+    // derived, not enumerated by field name (ADR-ERL2-030 §4) — this branch is
+    // where the old `artifact.value["signature"]` loop lost the most, omitting
+    // the wrapper-signed beacon association receipt and the mirrored trust root
+    // from an inventory that asserted it was complete.
+    const environmentExclusions = [
+      "environment-final-lab-attestation/v1",
+      "selection-verification-receipt/v2",
+    ];
+    const signerInventory = this.ws.deriveSignerInventory(checkpoint, environmentExclusions);
     const inventory = buildEnvironmentSignerInventory({
       inventoryId: `inv-${this.runId.slice(0, 8)}`,
       runId: this.runId,
       selectionCommitmentHash: this.ws.requireHashForRole("selection-commitment"),
-      // Two public terminal types are excluded because the bundle already carries
-      // them: an inventory covering them would vouch for artifacts the reader
-      // holds independently.
-      entries: this.ws.signerInventoryEntries(checkpoint, [
-        "environment-final-lab-attestation/v1",
-        "selection-verification-receipt/v2",
-      ]),
+      entries: signerInventory.entries,
+      completeForTerminalChain: signerInventory.derivation.completeForTerminalChain,
       inventoriedAt: this.now(),
       signingKey: this.keys.finalizer,
     });
@@ -2782,6 +2789,7 @@ export class EnvironmentRun {
       derivedMissingRoles: derived.missingRoles,
       derivedExtraHashes: derived.extraHashes,
       exposureEventHash,
+      signerInventoryComplete: signerInventory.derivation.completeForTerminalChain,
       trustVerifiedAtCreation: true,
       timestampCheckpointsAcyclic: true,
     });
@@ -2818,6 +2826,10 @@ export class EnvironmentRun {
       inventory,
       "INTERNAL",
     );
+    // Re-derived against the tree *including* the sealed inventory, so a signed
+    // artifact that appeared between the derivation and the freeze cannot ride
+    // in uncovered by it.
+    this.ws.assertSignerInventoryStillComplete(signerInventory.entries, environmentExclusions);
     const attestationRef = this.ws.store.freezeJson(
       "retained/final-attestation.json",
       attestation,

@@ -22,9 +22,24 @@
         "artifact_role": "acquisition-source-manifest",
         "artifact_core_hash": "sha256:fa57383df86cc9071d64f8bf365328cadf0abeab833b2a032ca3ef1d0a6c1c34",
         "artifact_schema_version": "acquisition-source-manifest/v1"
+      },
+      {
+        "artifact_role": "acquisition-preregistration-verification-receipt",
+        "artifact_core_hash": "sha256:b8f2ab84b5fe89af241c3b53c3de7299a79223a25eae9b25db78bc03c8e6a819",
+        "artifact_schema_version": "acquisition-preregistration-verification-receipt/v1"
+      },
+      {
+        "artifact_role": "adapter-manifest",
+        "artifact_core_hash": "sha256:cba59a384249a6dd76e6f2d6503ba8c2b408fa141143c6e2a589eab6199d8be3",
+        "artifact_schema_version": "subject-adapter-manifest/v1"
+      },
+      {
+        "artifact_role": "generic-run-policy",
+        "artifact_core_hash": "sha256:de7f809efb0b310efbae5528a0911ce563b76585e29bf30b850f53ba730fc622",
+        "artifact_schema_version": "generic-run-policy/v1"
       }
     ],
-    "core_hash": "sha256:c691ade0a7ded7257fd499d2b75df65e20b61737c6c6c6aecb481ca7c86f61d0"
+    "core_hash": "sha256:f0e9eee46e8548ddbd5a7edaae5e5ea4c5657caf051f811c6ca63c4d82935bb3"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -38,10 +53,10 @@
     "actor_id": "fake-operator",
     "command_id": "provision",
     "operation_id": "op-env-planned",
-    "prior_event_hash": "sha256:c691ade0a7ded7257fd499d2b75df65e20b61737c6c6c6aecb481ca7c86f61d0",
+    "prior_event_hash": "sha256:f0e9eee46e8548ddbd5a7edaae5e5ea4c5657caf051f811c6ca63c4d82935bb3",
     "required_hashes": [],
     "produced": [],
-    "core_hash": "sha256:a25b41756cd3c4c54cc7b2886372e5321f370e4a0e00fcad8b0cb34d5e6ee0c2"
+    "core_hash": "sha256:48d2df5098dda3585c0b2559f84ba318a08bb1d72c05aedb1f2bf92c7266ebea"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -55,7 +70,7 @@
     "actor_id": "fake-operator",
     "command_id": "provision",
     "operation_id": "op-env-started",
-    "prior_event_hash": "sha256:a25b41756cd3c4c54cc7b2886372e5321f370e4a0e00fcad8b0cb34d5e6ee0c2",
+    "prior_event_hash": "sha256:48d2df5098dda3585c0b2559f84ba318a08bb1d72c05aedb1f2bf92c7266ebea",
     "required_hashes": [],
     "produced": [
       {
@@ -84,7 +99,7 @@
         "artifact_schema_version": "environment-baseline-fingerprint/v1"
       }
     ],
-    "core_hash": "sha256:e29d4cf0f9555c0c19ef618f691faed720bd126a7b369c774415ade2c3dc309f"
+    "core_hash": "sha256:19e3926bc1a93fa899cf5a8f0f348af09a78291b481774593f04f249b8fb2c9f"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -98,7 +113,7 @@
     "actor_id": "fake-operator",
     "command_id": "restore",
     "operation_id": "op-restore-failed",
-    "prior_event_hash": "sha256:e29d4cf0f9555c0c19ef618f691faed720bd126a7b369c774415ade2c3dc309f",
+    "prior_event_hash": "sha256:19e3926bc1a93fa899cf5a8f0f348af09a78291b481774593f04f249b8fb2c9f",
     "required_hashes": [],
     "produced": [
       {
@@ -117,7 +132,7 @@
       "owner": "lab",
       "message": "environment restoration receipt reported failure"
     },
-    "core_hash": "sha256:f256449464d955227ef953d59e7a1c6fbe6388862f47337247783e2997c1422f"
+    "core_hash": "sha256:b8e0916dabf1c15c9d497c5a69441a452e8ed32a653555b4f15b80dbe72adc2b"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -131,10 +146,10 @@
     "actor_id": "fake-operator",
     "command_id": "cleanup",
     "operation_id": "op-invalid-env-cleanup",
-    "prior_event_hash": "sha256:f256449464d955227ef953d59e7a1c6fbe6388862f47337247783e2997c1422f",
+    "prior_event_hash": "sha256:b8e0916dabf1c15c9d497c5a69441a452e8ed32a653555b4f15b80dbe72adc2b",
     "required_hashes": [],
     "produced": [],
-    "core_hash": "sha256:ab0892f989c7607a25672c189968cf38758339e2b4e358ff66d332efb4f13f01"
+    "core_hash": "sha256:27b3a9b99c8aa32071866d8b17de1e997020915739964a853d9adde11652ffaa"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -148,7 +163,7 @@
     "actor_id": "fake-operator",
     "command_id": "cleanup",
     "operation_id": "op-emergency-start",
-    "prior_event_hash": "sha256:ab0892f989c7607a25672c189968cf38758339e2b4e358ff66d332efb4f13f01",
+    "prior_event_hash": "sha256:27b3a9b99c8aa32071866d8b17de1e997020915739964a853d9adde11652ffaa",
     "required_hashes": [],
     "produced": [
       {
@@ -157,7 +172,7 @@
         "artifact_schema_version": "environment-resource-frontier/v1"
       }
     ],
-    "core_hash": "sha256:6c6754a487e10f22aff0ae188bdbbeca0fcd6c7f5c873c6818b61d87971e9cb8"
+    "core_hash": "sha256:be10c013a1cd7ec4bd5509e5b945f518be4ec714e4e7c5ccd113a09973c94885"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -171,7 +186,7 @@
     "actor_id": "fake-operator",
     "command_id": "cleanup",
     "operation_id": "op-emergency-terminal",
-    "prior_event_hash": "sha256:6c6754a487e10f22aff0ae188bdbbeca0fcd6c7f5c873c6818b61d87971e9cb8",
+    "prior_event_hash": "sha256:be10c013a1cd7ec4bd5509e5b945f518be4ec714e4e7c5ccd113a09973c94885",
     "required_hashes": [],
     "produced": [
       {
@@ -181,11 +196,11 @@
       },
       {
         "artifact_role": "emergency-cleanup-verification",
-        "artifact_core_hash": "sha256:18b3a7a6b656ae4327d26cc9b9c9b506d5d3aec8ce5de1110f2d8465d7c1d824",
+        "artifact_core_hash": "sha256:91a6d8d47d8fd3c8611777f501b773e43b1875b8316168df1ae4d32955292c16",
         "artifact_schema_version": "emergency-cleanup-verification/v1"
       }
     ],
-    "core_hash": "sha256:8655d7007d4e671dfe4bbf4c122260967dff6ea952172206301f1c692f74e927"
+    "core_hash": "sha256:6a9ba90e81f88d25f4f7cb19b5766a195f92614c120b08a80a35df68194cf5ae"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -199,16 +214,16 @@
     "actor_id": "fake-operator",
     "command_id": "cleanup",
     "operation_id": "op-invalid-record",
-    "prior_event_hash": "sha256:8655d7007d4e671dfe4bbf4c122260967dff6ea952172206301f1c692f74e927",
+    "prior_event_hash": "sha256:6a9ba90e81f88d25f4f7cb19b5766a195f92614c120b08a80a35df68194cf5ae",
     "required_hashes": [],
     "produced": [
       {
         "artifact_role": "invalid-run-record",
-        "artifact_core_hash": "sha256:13755f7911a5ad7e0cd07af9db07417491c22954c333f342a1cfc8a46eb45324",
+        "artifact_core_hash": "sha256:c5578f1a50b0e8abce09ef5aae112ef282ee823c32104aa2937f8ae69fbe203b",
         "artifact_schema_version": "invalid-lab-run-record/v1"
       }
     ],
-    "core_hash": "sha256:b9e7bf72d875c7030542a43ade1b2d8a12141a4da8451a50db349fc479b3730a"
+    "core_hash": "sha256:8052ac4b9c0022bb0582bf1942f0d25887900251400215e4cd659cc83cfbbc8c"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -222,9 +237,9 @@
     "actor_id": "fake-operator",
     "command_id": "cleanup",
     "operation_id": "op-invalidated",
-    "prior_event_hash": "sha256:b9e7bf72d875c7030542a43ade1b2d8a12141a4da8451a50db349fc479b3730a",
+    "prior_event_hash": "sha256:8052ac4b9c0022bb0582bf1942f0d25887900251400215e4cd659cc83cfbbc8c",
     "required_hashes": [],
     "produced": [],
-    "core_hash": "sha256:80ac213cbe713e22a26e74cfeb221c4a224fd81968e1f0a217e6485543bac742"
+    "core_hash": "sha256:ae570fb0bea6db6521b739a56e173b8f3ea9ebc9bc687de7fa7c32ceeaf05dba"
   }
 ]
