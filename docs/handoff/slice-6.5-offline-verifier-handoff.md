@@ -121,6 +121,22 @@ node --test tests/dist/adversarial/invalidGoldenGate.test.js     #  4 gate + sab
 - **`environmentDerivation.ts` contains literal NUL bytes** inside `join("\0")`
   string literals, so `rg` treats it as binary and skips it silently. Use `rg -a`.
   Pre-existing, not introduced here, and a real trap for any audit that greps.
+- **Run the full 53 on the checkpoint.** `invalid-finding-lab-attribution` had been
+  silently not applying since ADR-ERL2-028 — that package rewrote the exact lines
+  the patch anchored on — and the campaign therefore proved nothing about Lab
+  attribution for a whole package. It went unnoticed because the full set was
+  never re-run after the change. Ledger §8.2.
+- **Do not edit a tracked file while a campaign runs.** The harness digests the
+  tree at start and refuses to certify a run whose tree moved. It fired once here,
+  correctly, on a ledger edit of mine. The control *results* were still sound —
+  mutations only ever happen in the worktree — but a run that cannot certify
+  itself should not be quoted.
+- **`npm run clean` dies on a stray `.DS_Store`.** `clean.mjs` treats every entry
+  under `packages/`, `adapters/` and `packs/` as a directory, so one Finder visit
+  makes the first step of the clean gate fail with `ENOTDIR`. Delete the
+  `.DS_Store` files (they are gitignored) or the gate cannot start. Not fixed here
+  — it is unrelated to this package — but it will cost the next session ten
+  minutes if it is not written down.
 
 ## 7. What remains
 

@@ -210,15 +210,50 @@ refuses. With it the control kills exactly one named test.
 This is the pattern the previous package recorded and it held again: **a control
 that kills nothing usually means the tests are not isolating the invariant.**
 
-### 8.2 Inherited controls
+### 8.2 Inherited controls, and the one that had stopped applying
 
-A focused Steps 2–4 subset was re-run against this branch to confirm the
-inherited invariants still hold — attribution, phase gate, residue probe,
-action/residue agreement, the prerequisite matrix, the post-capture activation
-requirement and the claim-scope ceiling. Results in the handoff.
+A focused Steps 2–4 subset was re-run against this branch:
+
+| Control | Result | Expected |
+|---|---|---|
+| `producer-claim-scope-derivation` | 7 pass / **1 fail** | fail ✔ |
+| `verifier-claim-scope-rederivation` | 4 pass / **4 fail** | fail ✔ |
+| `cleanup-residue-probe` | 32 pass / **2 fail** | fail ✔ |
+| `actions-agree-with-residue` | 19 pass / **1 fail** | fail ✔ |
+| `invalid-finding-phase-gate` | 36 pass / **5 fail** | fail ✔ |
+| `journey-prerequisite-matrix` | 23 pass / **1 fail** | fail ✔ |
+| `post-capture-activation-requirement` | 7 pass / **3 fail** | fail ✔ |
+| `invalid-finding-lab-attribution` | **patch did not apply** → repaired → 18 pass / **2 fail** | fail ✔ |
+
+**`invalid-finding-lab-attribution` had been silently dead since ADR-ERL2-028.**
+It anchored on the `failed_phase.kind !== "lifecycle_phase"` early return, which
+that package replaced with the cancellation / journey-execution branching. The
+patch has not applied since, and the campaign therefore proved nothing about Lab
+attribution across the whole lifecycle-ordering package.
+
+Nothing noticed because **the full 47 were never re-run after the change** — the
+lifecycle-ordering handoff §9.2 says exactly that, and recommends running them
+once the branch is committed. This is what deferring that costs, and it is the
+argument for running the full campaign on a checkpoint rather than a subset.
+
+Re-anchored on the function's own first two lines. *A patch anchored on a branch
+expires the next time the branch is edited* — the same lesson as the exact-path
+exclusion rule in `generate-evidence.mjs`.
+
+### 8.3 The tree-digest guard fired, correctly
+
+One campaign run ended with `the working tree changed while controls ran`. The
+cause was this ledger being edited *while the campaign ran*, in the same tree the
+harness had digested at start. The harness was right and the mechanism it exists
+for worked: mutations still only ever happened inside the worktree, and the
+control results from that run are sound, but a campaign whose measured tree moved
+cannot certify itself and should not be quoted. The tables above are from runs
+whose closing digest matched.
+
+### 8.4 What was not run
 
 The full 53-control campaign was **not** run end to end for this package. That is
-a stated gap, not an implied pass.
+a stated gap, not an implied pass — and §8.2 is the reason it is worth closing.
 
 ## 9. What this package does not claim
 
