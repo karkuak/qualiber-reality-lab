@@ -56,6 +56,15 @@ export {
   type SubstrateBindingReport,
 } from "./library/environmentDerivation.js";
 export {
+  assertCutoffOrderingFromLifecycle,
+  deriveEvidenceCutoff,
+  type CutoffDerivation,
+} from "./library/cutoffDerivation.js";
+export {
+  verifySubjectOutputPayloads,
+  type PayloadAccountingReport,
+} from "./library/payloadAccounting.js";
+export {
   assertClaimScopeWithinCeiling,
   claimScopeExceeds,
   claimScopeRank,

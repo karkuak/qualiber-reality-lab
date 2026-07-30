@@ -34,11 +34,13 @@ import {
 import { ArtifactIndex } from "./artifactIndex.js";
 import { assertClaimScopeWithinCeiling, deriveClaimCeiling } from "./claimScope.js";
 import { derivePreEnvironmentClosure, deriveInvalidClosure } from "./closure.js";
+import { assertCutoffOrderingFromLifecycle, deriveEvidenceCutoff } from "./cutoffDerivation.js";
 import { deriveEnvironmentClosure, deriveTerminalVariant } from "./environmentClosure.js";
 import {
   deriveEnvironmentSemantics,
   deriveInvalidEnvironmentSemantics,
 } from "./environmentDerivation.js";
+import { verifySubjectOutputPayloads } from "./payloadAccounting.js";
 import { verifyReferencedBytes } from "./referencedBytes.js";
 import { verifyRetainedFileAccounting } from "./retainedFiles.js";
 import { verifySignedMembers } from "./signedMembers.js";
@@ -259,6 +261,11 @@ function verifyPreEnvironmentBundle(options: VerifyBundleOptions): BundleVerific
   // named check for the crossover is cheaper than relying on a general rule to
   // keep covering a specific hazard.
   assertNoSelectionArtifacts(index);
+  // ADR-ERL2-029 §5. The payload root and its accounting rule are identical on
+  // both terminal variants — a payload is a descendant of the manifest that
+  // declares it, and that is not a branch-specific fact — so this is the one
+  // shared derivation with the variant supplied by what the lifecycle reached.
+  verifySubjectOutputPayloads({ index, lifecycle: options.lifecycle });
   if (attestation.run_record_hash !== requiredHash(closure, "run-record")) {
     throw new Erl2Error(
       CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
@@ -432,7 +439,28 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
       "the bundle presents a selection verification receipt the attestation does not attest",
     );
   }
-  index.get(attestation.exposure_event_hash);
+  // ADR-ERL2-029 §6. `index.get` proves the bytes are retained; it does not prove
+  // the run ever reached them. An attestation naming a retained exposure event
+  // that no lifecycle event produced is the snapshot-only-artifact shape the
+  // closure refuses everywhere else, and it is not exempt here.
+  const exposure = index.get(attestation.exposure_event_hash);
+  if (
+    !options.lifecycle.some((event) =>
+      event.produced.some((p) => p.artifact_core_hash === attestation.exposure_event_hash),
+    )
+  ) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_UNREACHABLE_ARTIFACT,
+      `the attestation names exposure event ${attestation.exposure_event_hash}, which is retained ` +
+        `but which no lifecycle event produced`,
+    );
+  }
+  if (exposure.value["run_id"] !== attestation.run_id) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
+      `the attestation names an exposure event belonging to run ${String(exposure.value["run_id"])}`,
+    );
+  }
 
   const inventory = index.typed<EnvironmentSignerInventoryV2>(
     bundle.signer_inventory.artifact_core_hash,
@@ -598,6 +626,27 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
     runId: attestation.run_id,
   });
 
+  // -- ADR-ERL2-029 §3: the evidence cutoff, re-derived offline --------------
+  //
+  // `cutoff.runtime_milestone_hash` used to be a 32-byte string nothing resolved,
+  // so an observation bundle naming a nonexistent runtime milestone verified as
+  // valid (review P2). The derivation is bounds-exact rather than scalar-exact —
+  // the warmup and observation durations are composition constants and are not
+  // retained — and that boundary is stated in the ADR rather than blurred here.
+  const cutoff = deriveEvidenceCutoff({
+    index,
+    lifecycle: options.lifecycle,
+    runId: attestation.run_id,
+  });
+  assertCutoffOrderingFromLifecycle(options.lifecycle, cutoff?.milestoneHash);
+
+  // -- ADR-ERL2-029 §5: the payload bytes, accounted in both directions ------
+  //
+  // `retained/` accounting never saw these: the payload root is outside that
+  // subtree, and a *missing* declared payload was silently skipped by the
+  // referenced-bytes layer (review P2).
+  verifySubjectOutputPayloads({ index, lifecycle: options.lifecycle });
+
   // -- ADR-ERL2-025: how strongly this run may be spoken about ---------------
   //
   // The environment branch carries the evidence that matters most here — the
@@ -749,5 +798,11 @@ export function verifyInvalidRecord(options: VerifyRecordOptions): MandatoryGrap
   // read. A cancellation that claimed `not_required` over a live environment
   // verified at exit 0 before this pass existed (review P1-2).
   deriveInvalidEnvironmentSemantics({ index, lifecycle: options.lifecycle, record });
+
+  // ADR-ERL2-029 §5 on the invalid branch. An invalid terminal may have frozen a
+  // subject output before it failed; if it did, those payloads are accounted on
+  // exactly the same terms. If it did not, the derivation returns without a
+  // finding rather than inventing a missing role.
+  verifySubjectOutputPayloads({ index, lifecycle: options.lifecycle });
   return closure;
 }

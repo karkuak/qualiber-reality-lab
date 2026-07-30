@@ -681,6 +681,83 @@ const CONTROLS = [
     tests: ["tests/dist/e2e/crashBoundaryMatrix.test.js"],
     expect: "fail",
   },
+
+  // -- ADR-ERL2-029: the cutoff, the payload root and the invalid-golden gate --
+  {
+    id: "cutoff-milestone-resolution",
+    what: "the cutoff's runtime milestone is resolved, not merely named (review P2)",
+    file: "packages/public-verifier/src/library/cutoffDerivation.ts",
+    // Restores the exact pre-remediation posture: a well-formed hash is believed
+    // without resolving it. This is the review's finding — *an observation bundle
+    // naming a nonexistent runtime milestone verifies as valid* — reintroduced.
+    //
+    // Returns the artifact the *bundle* would have to be for the rest of the
+    // derivation to proceed, so the control isolates resolution rather than
+    // knocking the whole function over: the bounds and clock cases below must
+    // keep passing under it, and only the resolution cases may die.
+    find: "  const found = index.tryGet(hash);\n  if (found === undefined) {",
+    replace: "  const found = index.tryGet(hash);\n  if (false && found === undefined) {",
+    tests: ["tests/dist/integration/cutoffDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cutoff-bounds-derivation",
+    what: "the derived warmup and observation windows are checked against the committed policy bounds",
+    file: "packages/public-verifier/src/library/cutoffDerivation.ts",
+    // Removes only the observation-window bounds, leaving resolution, binding,
+    // clock-domain and divergence checks intact. A control that removed the whole
+    // arithmetic would kill every case and prove nothing about which rule each
+    // one measures.
+    find: "  if (observationMs < policy.minimum_observation_ms) {",
+    replace: "  if (String(1) === \"2\" && observationMs < policy.minimum_observation_ms) {",
+    tests: ["tests/dist/integration/cutoffDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cutoff-clock-divergence",
+    what: "wall and monotonic views of the warmup interval must agree within the committed bound",
+    file: "packages/public-verifier/src/library/cutoffDerivation.ts",
+    find: "  if (Math.abs(warmupMs - monotonicElapsedMs) > policy.maximum_monotonic_wall_divergence_ms) {",
+    replace:
+      '  if (String(1) === "2" && Math.abs(warmupMs - monotonicElapsedMs) > policy.maximum_monotonic_wall_divergence_ms) {',
+    tests: ["tests/dist/integration/cutoffDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cutoff-lifecycle-reachability",
+    what: "a cutoff input retained but never lifecycle-reached is refused",
+    file: "packages/public-verifier/src/library/cutoffDerivation.ts",
+    find: "  if (!reached.has(hash)) {",
+    replace: '  if (String(1) === "2" && !reached.has(hash)) {',
+    tests: ["tests/dist/integration/cutoffDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "payload-presence-accounting",
+    what: "a declared subject-output payload must actually be retained (review P2)",
+    file: "packages/public-verifier/src/library/payloadAccounting.ts",
+    // Restores the referenced-bytes layer's "a missing reference may have been
+    // scrubbed" allowance to the payload root, which is exactly the gap: that
+    // allowance is right for `raw/` and wrong for a payload the terminal's own
+    // manifest declares.
+    find: "  for (const payload of declaredByPath.values()) {\n    const bytes = readDeclared(root, payload);",
+    replace:
+      "  for (const payload of [] as DeclaredPayload[]) {\n    const bytes = readDeclared(root, payload);",
+    tests: ["tests/dist/adversarial/subjectOutputPayloads.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "payload-directory-enumeration",
+    what: "every file in the subject-output payload root is declared by a reached manifest",
+    file: "packages/public-verifier/src/library/payloadAccounting.ts",
+    // The other direction, and the one §24 names explicitly: skip the payload
+    // directory enumeration. Presence checking stays intact, so only the
+    // extra-file cases may die.
+    find: "  for (const [relative, kind] of present) {",
+    replace: "  for (const [relative, kind] of [] as [string, \"file\" | \"other\"][]) {\n    void present;",
+    tests: ["tests/dist/adversarial/subjectOutputPayloads.test.js"],
+    expect: "fail",
+  },
 ];
 
 // -- the disposable tree -----------------------------------------------------
@@ -760,6 +837,52 @@ console.log(`negative controls: ${String(selected.length)} of ${String(CONTROLS.
 console.log(`worktree: ${worktree}`);
 git(["worktree", "add", "--detach", worktree, "HEAD"]);
 
+/**
+ * Cleanup on a signal, not only on a normal exit.
+ *
+ * The `finally` below runs on a return and on a throw, and on **neither** of the
+ * two ways a long campaign actually ends: a `SIGINT` from the operator, or a
+ * `SIGTERM` from a harness timeout. The independent review killed a run
+ * mid-campaign and confirmed what it leaves — a registered `git worktree` and a
+ * temp directory (review, "Review-process defect (P3)").
+ *
+ * That was hygiene rather than correctness, because mutations only ever happen
+ * inside the worktree and the tracked-file digest gate below proves the measured
+ * tree is untouched. It becomes operational the moment a campaign is long enough
+ * that interrupting it is normal, which the 47-control campaign is.
+ *
+ * `SIGKILL` remains uncatchable by construction; `npm run negative-control` after
+ * one still starts cleanly, because `worktree add` into a fresh `mkdtemp` path
+ * never collides and the `prune` here removes the stale registration.
+ */
+let cleanedUp = false;
+function releaseWorktree() {
+  if (cleanedUp) return;
+  cleanedUp = true;
+  try {
+    git(["worktree", "remove", "--force", worktree]);
+  } catch {
+    /* the prune below covers a worktree that was already gone */
+  }
+  try {
+    git(["worktree", "prune"]);
+  } catch {
+    /* a prune failure must not mask the original cause */
+  }
+  rmSync(worktreeRoot, { recursive: true, force: true });
+}
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+  process.once(signal, () => {
+    console.error(`\nnegative-control: ${signal} received — removing the worktree before exiting.`);
+    releaseWorktree();
+    // Re-raise with the default disposition, so the exit status is the signal's
+    // and not a synthetic code: a caller distinguishing "interrupted" from
+    // "failed" must still be able to. `once` has already removed this listener,
+    // so the second delivery is the default one and terminates the process.
+    process.kill(process.pid, signal);
+  });
+}
+
 const results = [];
 try {
   console.log("installing dependencies in the worktree (once)…");
@@ -811,13 +934,9 @@ try {
   }
 } finally {
   // The worktree goes whatever happened, and the real tree is proven untouched.
-  try {
-    git(["worktree", "remove", "--force", worktree]);
-  } catch {
-    /* the prune below covers a worktree that was already gone */
-  }
-  git(["worktree", "prune"]);
-  rmSync(worktreeRoot, { recursive: true, force: true });
+  // Shared with the signal handlers above, so a normal exit and an interrupted
+  // one release exactly the same things.
+  releaseWorktree();
 }
 
 const after = treeDigest();

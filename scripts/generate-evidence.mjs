@@ -9,7 +9,16 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -1019,4 +1028,86 @@ if (process.argv.includes("--verify")) {
     process.exit(1);
   }
   console.log("evidence:verify OK — deterministic evidence matches the pinned goldens byte-for-byte");
+
+  // -------------------------------------------------------------------------
+  // The invalid-golden verification gate (ADR-ERL2-029 §7).
+  // -------------------------------------------------------------------------
+  //
+  // Everything above compares *producer bytes*. It is not a gate on verification
+  // at all, and the blind spot was exact: `runCli` records `exit_code` into the
+  // transcript and never asserts it, and `cli-transcript.json` is the single file
+  // excluded from the pin. So the three `verify-record` invocations over the three
+  // invalid goldens had their real outcome recorded in the one place the pin
+  // cannot see — and a verifier regression against invalid records changes no
+  // producer bytes, so it left `evidence:verify` green.
+  //
+  // This pass obtains its own exit codes, in its own child processes, from the
+  // pinned fixtures. The transcript is not consulted and nothing depends on it.
+  //
+  // Fixtures are ENUMERATED from the directory, never hard-coded: a new invalid
+  // golden is covered the day it lands and cannot be added outside the gate. The
+  // count is asserted too, so one cannot silently leave.
+  const EXPECTED_INVALID_GOLDENS = 3;
+  const invalidGoldens = readdirSync(pinned)
+    .filter((name) => name.startsWith("invalid-run-"))
+    .filter((name) => existsSync(path.join(pinned, name, "invalid-record.json")))
+    .sort();
+
+  console.log(`\nevidence:verify — directly verifying ${String(invalidGoldens.length)} invalid golden(s):`);
+  const invalidFailures = [];
+  for (const name of invalidGoldens) {
+    const dir = path.join(pinned, name);
+    // A fresh process, the real offline verifier, the pinned fixture's own bytes.
+    const run = runCli([
+      "verify-record",
+      "--record", path.join(dir, "invalid-record.json"),
+      "--lifecycle", path.join(dir, "lifecycle.json"),
+      "--artifact-root", path.join(dir, "artifacts"),
+      "--root-config", path.join(dir, "root-config.json"),
+      "--offline",
+    ]);
+    // `verify-record` returns the independently derived closure report, so the
+    // verdict read here is the *closure's* — the thing the verifier concluded —
+    // not a status word the CLI chose.
+    const verdict = run.stdout?.data?.closure?.verdict ?? null;
+    const code = run.stdout?.errors?.[0]?.code ?? null;
+    // A correctly constructed invalid terminal *verifies*: the record is valid
+    // evidence of an invalid run. Exit 0 and verdict `valid` are both required —
+    // exit code alone would pass a verifier that stopped forming a verdict.
+    const ok = run.exit_code === 0 && verdict === "valid";
+    console.log(`  ${ok ? "ok  " : "FAIL"} ${name} — exit ${String(run.exit_code)}, verdict ${String(verdict)}${code ? `, ${code}` : ""}`);
+    if (!ok) invalidFailures.push({ name, exit: run.exit_code, verdict, code });
+
+    // An invalid terminal carries no attestation and no public bundle. If one is
+    // present the fixture is not the thing the gate believes it is verifying.
+    for (const forbidden of ["public-bundle.json", "attestation.json"]) {
+      if (existsSync(path.join(dir, forbidden))) {
+        invalidFailures.push({ name, exit: null, verdict: null, code: `carries ${forbidden}` });
+      }
+    }
+  }
+
+  if (invalidFailures.length > 0) {
+    console.error("\nevidence:verify FAILED: an invalid golden did not verify.");
+    for (const f of invalidFailures) {
+      console.error(`  ${f.name}: exit ${String(f.exit)}, verdict ${String(f.verdict)}, ${String(f.code)}`);
+    }
+    console.error(
+      "\nA broken invalid fixture, or a verifier regression against invalid records, changes no\n" +
+        "producer bytes — which is exactly why this gate reads verification results and not bytes.",
+    );
+    process.exit(1);
+  }
+  if (invalidGoldens.length !== EXPECTED_INVALID_GOLDENS) {
+    console.error(
+      `\nevidence:verify FAILED: coverage moved — ${String(invalidGoldens.length)} invalid golden(s), ` +
+        `expected ${String(EXPECTED_INVALID_GOLDENS)}.\n` +
+        `If this change is intended, update EXPECTED_INVALID_GOLDENS in the same commit.`,
+    );
+    process.exit(1);
+  }
+  console.log(
+    `evidence:verify OK — all ${String(invalidGoldens.length)} invalid goldens verify at exit 0 / valid ` +
+      `in a fresh process`,
+  );
 }

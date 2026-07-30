@@ -217,6 +217,52 @@ The one claim this slice earns, stated at exactly its width:
   a subject's own output bytes refuses the run before anything freezes. Four
   surfaces remain unscanned and are named individually in
   `PENDING_ORACLE_SCAN_SURFACES`.
+- **The evidence cutoff may be claimed to be re-derived offline, to the width of
+  the committed bounds.** Since ADR-ERL2-029 the verifier resolves all three
+  cutoff inputs by exact hash *and* schema, requires the runtime milestone to bind
+  the process-start receipt the **cutoff** names, requires both to be
+  lifecycle-reached and run-bound, and re-checks clock-domain agreement,
+  wall/monotonic divergence and process-milestone skew. The warmup and observation
+  windows are derived from three separately signed instants — the supervisor's
+  process start, the runtime attestor's milestone and the cutoff itself — and
+  checked against every committed policy bound. An observation bundle naming a
+  **nonexistent** runtime milestone was previously valid; it is now a typed
+  refusal.
+
+  It may **not** be claimed that the cutoff instant is recomputed. The warmup and
+  observation durations are constants of the composition and are retained in no
+  contract, so a producer that moved the window *within* the committed bounds, and
+  moved its milestone with it, is not caught. Narrowing that needs a signed window
+  commitment on the producer side (ADR-ERL2-029 §3.2, §9).
+- **Subject-output payload bytes may be claimed to be completely accounted, in
+  both directions.** Every declared payload must exist as a regular file inside
+  the authorized payload root, match its declared length and digest exactly, and
+  be declared exactly once; and every file in that root must be a declared payload
+  or the freeze marker of one. Before this the payload root was outside the
+  `retained/` accounting subtree entirely, and a *missing* declared payload was
+  silently skipped, so both an absent payload and an undeclared extra verified at
+  exit 0 / `valid`.
+
+  It may **not** be claimed that payloads are **scanned**. This is byte
+  correspondence against descriptors. Secret canaries and forbidden identifiers on
+  the environment subject-output surface remain unscanned, and the declared
+  output-size ceiling remains hashed and unenforced; both are producer-side and
+  are not touched here.
+- **The mandatory evidence gate may be claimed to verify invalid goldens
+  semantically.** `evidence:verify` now invokes the real offline invalid-record
+  verifier in a fresh process for every invalid-run golden and requires exit 0 and
+  a derived closure verdict of `valid`, with the fixture list enumerated from the
+  directory and its count asserted. Previously those exit codes were recorded only
+  in `cli-transcript.json`, the single file excluded from the byte pin, so a
+  verifier regression against invalid records — which changes no producer bytes —
+  left the gate green.
+- **The signer inventory may NOT be claimed complete.** `complete_for_terminal_chain`
+  is a producer schema constant (`true as const`) and the verifier does not
+  re-derive it. Measured on the shipped `valid-pre-environment-run` golden: **7**
+  applicable signed members, **1** listed. The defect spans the fixture builder,
+  the producer's single-field derivation and the absent verifier check, and
+  closing it moves the byte pin — it is characterized in
+  `remediation-6.5-offline-verifier.md` §4 and left open.
 
 ### Slice 6 — generic evaluation, terminal closure and finalization
 
