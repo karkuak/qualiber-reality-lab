@@ -43,6 +43,7 @@ export {
   assertActionsAgreeWithResidue,
   assertCleanupApplicable,
   assertInvalidFindingAttribution,
+  assertJourneyOrderingFromLifecycle,
   assertSubstrateBindingConsistent,
   deriveEmergencyCleanup,
   deriveEnvironmentSemantics,

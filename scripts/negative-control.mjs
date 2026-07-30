@@ -533,6 +533,154 @@ const CONTROLS = [
     ],
     expect: "fail",
   },
+
+  // -- Step 4: lifecycle ordering and crash recovery (ADR-ERL2-028) ----------
+  {
+    id: "journey-prerequisite-matrix",
+    what: "every journey intent enforces its own activation/cutoff prerequisites (review P1-9)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Removes the per-occurrence enforcement entirely. This is the defect itself:
+    // without it a committed post-capture step runs before activation and before
+    // the evidence cutoff, exactly as it did before this package.
+    find: "    this.assertStepPrerequisites(step.intent, state);",
+    replace: "    void this.assertStepPrerequisites;",
+    tests: [
+      "tests/dist/adversarial/lifecycleOrdering.test.js",
+      "tests/dist/e2e/environmentRun.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "post-capture-activation-requirement",
+    what: "a post-capture intent may not run before the challenge is activated",
+    file: "packages/core/src/journey/prerequisites.ts",
+    // Keeps the matrix and the enforcement, and drops only the three facts that
+    // separate a post-capture intent from a setup one. A run can then reach
+    // `exercise` with no activation receipt and no realized cutoff.
+    find: '  "challenge_activation",\n  "evidence_cutoff",\n  "observation_bundle",\n];',
+    replace: "];",
+    tests: ["tests/dist/integration/journeyPrerequisites.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "prerequisite-evidence-derivation",
+    what: "prerequisites are answered from retained evidence, not from the departure state",
+    file: "packages/core/src/journey/prerequisites.ts",
+    // Every prerequisite becomes satisfied. The departure-state check survives, so
+    // this isolates the half of the matrix that the state machine does *not*
+    // already imply — and `step_outcome_frozen` is a legal post-capture departure
+    // state, which is exactly why the state alone cannot be the gate.
+    find: "  const unmet = row.requires.filter((prerequisite) => !SATISFIED_BY[prerequisite](evidence));",
+    replace: "  const unmet = row.requires.filter(() => false);",
+    tests: [
+      "tests/dist/integration/journeyPrerequisites.test.js",
+      "tests/dist/adversarial/lifecycleOrdering.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "refusal-before-cutoff-freeze",
+    what: "every refusable input is resolved before the first retained byte (review P1-10)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Restores the original ordering: the comparison policy is resolved at its
+    // freeze rather than up front, so a `journey` missing it freezes the cutoff
+    // policy and only then refuses.
+    find: "    const comparisonPolicy = this.comparisonPolicy();",
+    replace: "    const comparisonPolicy = { get bytes() { return this; } } as never;",
+    tests: ["tests/dist/adversarial/lifecycleOrdering.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "lazy-operational-directories",
+    what: "a refused command creates no substrate or reservation directory",
+    file: "packages/core/src/environment/allocator.ts",
+    // Puts the eager mkdir back in the constructor, which `openEnvironment` runs
+    // for every command including the ones that refuse.
+    find: "    this.ttlMs = options.ttlMs ?? 3_600_000;",
+    replace: "    this.ttlMs = options.ttlMs ?? 3_600_000;\n    mkdirSync(this.root, { recursive: true, mode: 0o700 });",
+    tests: ["tests/dist/adversarial/lifecycleOrdering.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cancellation-branch-classification",
+    what: "the cancellation branch is derived from durable evidence, not one file's existence (review P1-2)",
+    file: "packages/core/src/run/cancellationBranch.ts",
+    // Reinstates the `existsSync` semantics: absence and unreadability become the
+    // same answer, and the lifecycle witness is dropped. A live environment run
+    // whose binding artifact is gone then takes the pre-environment branch and
+    // freezes `not_required` over allocated resources.
+    find: "  if (bindingPresent(runRoot)) return \"environment\";\n  if (lifecycleShowsEnvironment(runRoot)) return \"environment\";",
+    replace:
+      "  try {\n" +
+      "    if (bindingPresent(runRoot)) return \"environment\";\n" +
+      "  } catch {\n" +
+      "    return \"pre_environment\";\n" +
+      "  }",
+    tests: ["tests/dist/adversarial/lifecycleOrdering.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cleanup-continuation",
+    what: "a cancellation continues an in-flight cleanup instead of re-observing its frontier",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Drops the adoption, so a cancellation during emergency cleanup freezes a
+    // second frontier under a relabelled trigger and collides with the first.
+    find: "    const alreadyFrozenFrontier = this.retainedResourceFrontier();",
+    replace: "    const alreadyFrozenFrontier = undefined as ReturnType<typeof this.retainedResourceFrontier>;",
+    tests: ["tests/dist/adversarial/lifecycleOrdering.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "not-dispatched-proven",
+    what: "a `declared` intent proves nothing was dispatched, so it is resumed rather than failed closed",
+    file: "packages/core/src/run/mutationIntent.ts",
+    // Removes the third reconciliation answer. A subject step interrupted between
+    // its intent freeze and its dispatch marker then fails closed to an invalid
+    // terminal over an operation that demonstrably never ran.
+    find: '      if (existing.state === "declared") {',
+    replace: '      if (existing.state === "declared" && String(1) === "2") {',
+    tests: ["tests/dist/e2e/crashBoundaryMatrix.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "crash-lease-reclamation",
+    what: "a lease whose holder is gone is reclaimed, so a crashed run can be recovered at all",
+    file: "packages/core/src/lifecycle/lease.ts",
+    // Without it, every crash recovery waits out the five-minute TTL — so the
+    // process that must reconcile the interrupted operation is refused before it
+    // reads a single intent.
+    find: "        if (!RunLease.ownerAlive(existing)) {",
+    replace: '        if (!RunLease.ownerAlive(existing) && String(1) === "2") {',
+    tests: [
+      "tests/dist/integration/runLease.test.js",
+      "tests/dist/e2e/crashBoundaryMatrix.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "invocation-count-not-dedup",
+    what: "the crash matrix counts external invocations, and artifact deduplication is not a substitute",
+    file: "packages/core/src/run/mutationIntent.ts",
+    // **The control this package exists to run.** It removes reconciliation
+    // entirely — every unsettled operation is re-dispatched — while leaving the
+    // artifact store's duplicate refusal, the lifecycle log's `operation_id`
+    // dedupe and the driver's own operation log completely intact.
+    //
+    // A suite that asserted "exactly one retained receipt" therefore still
+    // passes. The invocation-count assertions must fail anyway, because the
+    // external port really was entered twice. If this control kills nothing, the
+    // matrix is counting artifacts and the exactly-once claim is unfounded.
+    // Disables the condition's middle clause rather than the whole `if`. Replacing
+    // the condition with `false` removes the `existing !== undefined` narrowing, so
+    // the block below stops compiling under `strictNullChecks` — the same
+    // narrowing trap that broke two controls in the 6.5-B campaign
+    // (`remediation-6.5-invariants.md` §8). This keeps every identifier used and
+    // every type narrowed, and still makes the condition unsatisfiable.
+    find: '      existing.state !== "settled" &&',
+    replace: '      String(1) === "2" &&',
+    tests: ["tests/dist/e2e/crashBoundaryMatrix.test.js"],
+    expect: "fail",
+  },
 ];
 
 // -- the disposable tree -----------------------------------------------------

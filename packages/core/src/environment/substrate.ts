@@ -281,6 +281,18 @@ export class FileSubstrateStore implements SubstrateStore {
   constructor(root: string, io: SubstrateIo = NODE_IO) {
     this.root = path.resolve(root);
     this.io = io;
+  }
+
+  /**
+   * Creates the substrate directory, on the first write and never before.
+   *
+   * The constructor used to do it, and the constructor runs in
+   * `openEnvironment` — so every refused environment command left an empty
+   * `<run-root>.substrate` behind. `readDocument` already reads `ENOENT` as
+   * absence, so an unwritten substrate needs no directory to be readable as
+   * empty; only a write needs one (ADR-ERL2-028 §4).
+   */
+  private ensureRoot(): void {
     this.io.mkdirp(this.root);
   }
 
@@ -349,6 +361,7 @@ export class FileSubstrateStore implements SubstrateStore {
     // with an absolute host path in its message, which is both an untyped
     // refusal and a path leak.
     try {
+      this.ensureRoot();
       this.io.writeFile(temp, `${JSON.stringify({ version: STATE_VERSION, ...state })}\n`);
       this.io.rename(temp, absolute);
     } catch (cause) {
@@ -396,6 +409,7 @@ export class FileSubstrateStore implements SubstrateStore {
     const marker = this.markerPath();
     const temp = `${marker}.tmp`;
     try {
+      this.ensureRoot();
       this.io.writeFile(
         temp,
         `${JSON.stringify({ kind: instance.kind, instance_hash: instance.instanceHash })}\n`,

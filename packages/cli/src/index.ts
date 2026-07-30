@@ -33,6 +33,7 @@ import {
   RunLease,
   SystemClock,
   assertWorkspaceRunIdentity,
+  classifyCancellationBranch,
   enforcedControls,
   unsupportedControls,
 } from "@erl2/core";
@@ -240,9 +241,15 @@ function isEnvironmentRun(argv: readonly string[]): boolean {
 function hasSubstrate(argv: readonly string[]): boolean {
   const runRoot = flagValue(argv, "run-root");
   if (runRoot === undefined) return false;
-  return existsSync(
-    path.join(path.resolve(runRoot), "retained", "environment", "substrate-binding.json"),
-  );
+  // Not `existsSync`: it answers false for a permission or I/O fault as readily
+  // as for a file that was never written, so an `EACCES` on a live environment
+  // run routed the cancellation through the pre-environment terminal and froze
+  // `not_required` over an allocated environment — review P1-2's own symptom,
+  // reached with no flag at all. `classifyCancellationBranch` treats `ENOENT` as
+  // the only absence, reads the lifecycle as a second witness so deleting the
+  // binding does not downgrade the branch either, and refuses anything else
+  // (ADR-ERL2-028 §6.1).
+  return classifyCancellationBranch({ runRoot }) === "environment";
 }
 
 /** Journey, evaluation and finalization commands, keyed by their CLI name. */

@@ -199,6 +199,27 @@ export {
   type StepStatus,
 } from "./journey/engine.js";
 export {
+  CRASH_BOUNDARIES,
+  NO_CRASH,
+  isCrashBoundary,
+  type CrashBarrier,
+  type CrashBoundary,
+} from "./run/crashBarrier.js";
+export {
+  classifyCancellationBranch,
+  type CancellationBranch,
+} from "./run/cancellationBranch.js";
+export {
+  JOURNEY_PREREQUISITES,
+  CANONICAL_JOURNEY_INTENTS,
+  assertJourneyPrerequisites,
+  isPostCaptureIntent,
+  type JourneyPrerequisite,
+  type JourneyBranch,
+  type JourneyIntentRow,
+  type JourneyPrerequisiteEvidence,
+} from "./journey/prerequisites.js";
+export {
   FakeSubjectPort,
   FAKE_SUBJECT_PORT_ID,
   assertDevelopmentSubjectPort,
@@ -486,6 +507,8 @@ export {
 export {
   ENVIRONMENT_PHASE_GATE,
   gateForEnvironmentFailurePhase,
+  gateForInvalidFailurePhase,
+  JOURNEY_EXECUTION_GATE,
   isEnvironmentFailurePhase,
   type EnvironmentFailurePhase,
 } from "./evaluation/invalidityAttribution.js";

@@ -170,7 +170,18 @@ function runClock(runRoot: string): Clock {
 export function openWorkspace(
   flags: ParsedFlags,
   runId: string,
-  options: { readonly allowBootstrap?: boolean } = {},
+  options: {
+    readonly allowBootstrap?: boolean;
+    /**
+     * Wraps the subject port before the workspace holds it.
+     *
+     * Used only by the development-gated crash matrix, to count subject
+     * invocations into a durable log that survives the `SIGKILL` the matrix
+     * injects (ADR-ERL2-028 §7). Absent, the port is the production one,
+     * unwrapped.
+     */
+    readonly wrapSubjectPort?: (port: SubjectPort) => SubjectPort;
+  } = {},
 ): RunWorkspace {
   const runRoot = requireString(flags, "run-root");
   assertWorkspaceRunIdentity({
@@ -187,7 +198,9 @@ export function openWorkspace(
     clock,
     keyring: developmentKeyring(flags),
     tier: requireDevelopmentTier(flags),
-    subjectPort: subjectPort(flags, runId, runRoot, registry, clock),
+    subjectPort: (options.wrapSubjectPort ?? ((port: SubjectPort) => port))(
+      subjectPort(flags, runId, runRoot, registry, clock),
+    ),
     ...(options.allowBootstrap === true ? { allowBootstrap: true } : {}),
   });
 }

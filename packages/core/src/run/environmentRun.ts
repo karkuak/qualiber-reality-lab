@@ -45,6 +45,7 @@ import {
   type EnvironmentArchetypeV1,
   type EnvironmentBaselineFingerprintV1,
   type EnvironmentJourneyIntent,
+  type InvalidNonJourneyPhase,
   type EnvironmentOperationReceiptV1,
   type EnvironmentResourceFrontierV1,
   type EnvironmentResourceInventoryV1,
@@ -134,10 +135,20 @@ import { buildSelectedJourneyResult } from "../evaluation/journey.js";
 import { buildDomainNotApplicable, missingDomainAncestors } from "../evaluation/domain.js";
 import { buildGenericEvaluationIndex, buildPrecleanupResultJoin, deriveJoinOrdering } from "../evaluation/join.js";
 import { buildEnvironmentValidity, type GateResult } from "../evaluation/validity.js";
-import { gateForEnvironmentFailurePhase } from "../evaluation/invalidityAttribution.js";
+import {
+  JOURNEY_EXECUTION_GATE,
+  gateForEnvironmentFailurePhase,
+} from "../evaluation/invalidityAttribution.js";
 import { JOURNEY_PLANE_METRICS } from "../evaluation/genericMetrics.js";
 import { verifyLifecycleChain } from "../lifecycle/log.js";
 import { assertNoCanaryLeak } from "../journey/oracle.js";
+import {
+  CANONICAL_JOURNEY_INTENTS,
+  JOURNEY_PREREQUISITES,
+  assertJourneyPrerequisites,
+  isPostCaptureIntent,
+} from "../journey/prerequisites.js";
+import { NO_CRASH, type CrashBarrier } from "./crashBarrier.js";
 import { MutationIntentJournal, type ProbeVerdict } from "./mutationIntent.js";
 import { EVALUATOR_RELEASE, type RunWorkspace } from "./workspace.js";
 
@@ -182,6 +193,13 @@ export interface EnvironmentRunOptions {
   readonly cutoffPolicy: () => CutoffPolicyV1;
   readonly keys: EnvironmentKeyring;
   readonly clock: Clock;
+  /**
+   * Where a crash may be injected, for the crash matrix (ADR-ERL2-028 §7).
+   *
+   * Absent in production and on the release surface; the CLI installs one only
+   * under the explicit development profile.
+   */
+  readonly barrier?: CrashBarrier;
 }
 
 const RETAINED = "retained/environment";
@@ -251,14 +269,19 @@ export const ENVIRONMENT_PHASES: readonly EnvironmentPhase[] = [
   { command: "finalize-generic", from: ["teardown_verified"], to: "generic_finalized" },
 ];
 
-/** The intents that may run before the challenge is activated. */
-const SETUP_INTENTS: ReadonlySet<JourneyIntent> = new Set<JourneyIntent>([
-  "install",
-  "configure",
-  "authenticate",
-  "connect",
-  "discover",
-]);
+/**
+ * The intents that may run before the challenge is activated.
+ *
+ * Derived from the prerequisite matrix rather than restated, so the two can
+ * never disagree: an intent is a setup intent exactly when it does not owe the
+ * evidence cutoff (ADR-ERL2-028 §2).
+ */
+const SETUP_INTENTS: ReadonlySet<JourneyIntent> = new Set<JourneyIntent>(
+  CANONICAL_JOURNEY_INTENTS.filter(
+    (intent) =>
+      JOURNEY_PREREQUISITES[intent].branch === "environment" && !isPostCaptureIntent(intent),
+  ),
+);
 
 /** One committed step of the selected journey, and whether it has already run. */
 export interface CommittedJourneyStep {
@@ -285,6 +308,13 @@ export class EnvironmentRun {
    */
   private readonly intents: MutationIntentJournal;
   /**
+   * Where a crash may be injected, for the four boundaries this class owns.
+   *
+   * The other four belong to the intent journal, which receives the same
+   * barrier: the eight named boundaries of ADR-ERL2-028 §7 straddle both.
+   */
+  private readonly barrier: CrashBarrier;
+  /**
    * The driver receipt for the operation that just failed.
    *
    * Set immediately before a restoration or teardown failure is raised, and read
@@ -303,9 +333,11 @@ export class EnvironmentRun {
     this.cutoffPolicy = options.cutoffPolicy;
     this.keys = options.keys;
     this.clock = options.clock;
+    this.barrier = options.barrier ?? NO_CRASH;
     this.intents = new MutationIntentJournal({
       runRoot: options.workspace.store.root,
       runId: options.workspace.runId,
+      barrier: this.barrier,
     });
   }
 
@@ -944,6 +976,25 @@ export class EnvironmentRun {
   }
 
   /**
+   * Refuses a step occurrence whose prerequisites the run has not earned.
+   *
+   * Enforced here, at the library boundary, and not in the CLI: a caller holding
+   * an `EnvironmentRun` must be held to the same matrix as one holding the
+   * binary, or the matrix is advice (ADR-ERL2-028 §2.4).
+   */
+  private assertStepPrerequisites(intent: JourneyIntent, state: LabState): void {
+    assertJourneyPrerequisites(intent, {
+      state,
+      hasRole: (role) =>
+        role === "source-snapshot"
+          ? this.ws.hashesForRole(role).length > 0
+          : this.ws.hashForRole(role) !== undefined,
+      connectSucceeded: this.connectOutcome()?.status === "succeeded",
+      completedStepCount: this.ws.derivedStepOutcomes().length,
+    });
+  }
+
+  /**
    * Runs the next committed step of the selected journey.
    *
    * `intent` is a *guard*, not a selector: an intent-named command may only run
@@ -977,12 +1028,13 @@ export class EnvironmentRun {
         `the selected journey's next committed step is ${step.intent}, not ${intent}; a step may not be skipped or reordered`,
       );
     }
-    if (state === "execution_plan_frozen" && !SETUP_INTENTS.has(step.intent)) {
-      throw new Erl2Error(
-        CODES.POLICY_CONFLICT,
-        `${step.intent} runs after the challenge is activated and its evidence captured; only install through discover follow the execution plan`,
-      );
-    }
+    // Every applicable activation, cutoff, ordering and state prerequisite, for
+    // *this* occurrence — not only for the journey's first step (review P1-9).
+    // The previous gate was `state === "execution_plan_frozen" && !SETUP_INTENTS
+    // .has(...)`, and `step_outcome_frozen` recurs after every step, so a
+    // committed `exercise` step ran happily before activation and before the
+    // cutoff existed.
+    this.assertStepPrerequisites(step.intent, state);
 
     const plan = this.plannedPlan();
     const envelopeHash = this.ws.hashForRole("canonical-evidence-envelope");
@@ -1044,6 +1096,9 @@ export class EnvironmentRun {
       },
       this.now(),
     );
+    // Boundary 5: the subject has responded and not one byte of the response is
+    // retained yet. The durable intent says `dispatched`; nothing else does.
+    this.barrier("before_receipt_freeze", `op-step-${String(step.index)}`);
     // The subject's own output bytes are retained, not discarded. They are the
     // only thing in a step outcome that the *subject* wrote, so a run that threw
     // them away had no subject output to scan, evaluate or attribute — the
@@ -1059,6 +1114,15 @@ export class EnvironmentRun {
               classification: "INTERNAL",
             }),
           ];
+    // Boundary 6: the subject's output bytes are frozen and no lifecycle event
+    // names them. A retained byte the lifecycle never reached is precisely what
+    // the closure derivation rejects as unaccounted, so this boundary is the one
+    // that says whether a resumed run can still close.
+    this.barrier("after_receipt_freeze", `op-step-${String(step.index)}`);
+    // Boundary 7: immediately before the step submachine, which appends
+    // `_planned`, `_started`, the terminal event, freezes the outcome and appends
+    // `_outcome_frozen` as one pass.
+    this.barrier("before_lifecycle_append", `op-step-${String(step.index)}`);
     const { outcome } = this.ws.runJourneyStep({
       stepId: step.visibleStep.step_id,
       intent: step.intent,
@@ -1077,6 +1141,10 @@ export class EnvironmentRun {
         ...(response.errorCode === undefined ? {} : { errorCode: response.errorCode }),
       }),
     });
+    // Boundary 8: the outcome is frozen and its events are appended; only the
+    // intent's own `settled` marker is missing. A restart must be a true no-op —
+    // the step has an outcome, so `nextStep()` has moved on.
+    this.barrier("after_lifecycle_append", `op-step-${String(step.index)}`);
     this.intents.settle(`op-step-${String(step.index)}`, outcome.core_hash);
     return outcome;
   }
@@ -1102,8 +1170,16 @@ export class EnvironmentRun {
     // journey step, so only the retained activation receipt distinguishes a run
     // that has activated from one that has not.
     if (this.ws.hashForRole("mutation-receipt") !== undefined) {
+      const receiptHash = this.ws.requireHashForRole("mutation-receipt");
+      // Settle here too. A crash between the lifecycle append and the settle left
+      // an intent stuck at `dispatched` over an operation whose public evidence is
+      // complete, and this replay path returned without ever clearing it — so the
+      // journal accumulated a permanently pending entry for a finished operation.
+      // Harmless to the terminal, and not harmless to a reader: it is the
+      // difference between "one operation is unaccounted" and "none are".
+      this.intents.settle("op-activate", receiptHash);
       return {
-        receiptHash: this.ws.requireHashForRole("mutation-receipt"),
+        receiptHash,
         activationReceiptHash: this.ws.requireHashForRole("challenge-activation-receipt"),
       };
     }
@@ -1150,6 +1226,8 @@ export class EnvironmentRun {
     // records what the substrate did and has no signature field, so it can say
     // that a mutation happened but not who authorized it. ADR-ERL2-023 adds this
     // additive contract for exactly that gap.
+    // Boundary 5: the substrate is mutated and nothing is retained about it.
+    this.barrier("before_receipt_freeze", "op-activate");
     const baselineHash = this.ws.requireHashForRole("environment-baseline");
     const activation = assertContract<ChallengeActivationReceiptV1>(
       "ChallengeActivationReceiptV1",
@@ -1166,14 +1244,37 @@ export class EnvironmentRun {
           environment_fingerprint_hash: baselineHash,
           connection_step_outcome_hash: connected.core_hash,
           mutation_receipt_hash: receipt.core_hash,
-          activated_at: this.now(),
+          // The substrate's own account of when the mutation landed, not the
+          // moment the Lab got round to writing it down.
+          //
+          // This was `this.now()`, and it made the signed activation receipt
+          // **not byte-reproducible across a crash** between its freeze and its
+          // lifecycle append. The stepping clock is anchored to the run's latest
+          // durable instant, which is stable — but the *number of reads* before
+          // this point is not: the first pass dispatches `driver.mutate` and the
+          // resumed pass adopts the stored receipt instead, so the two passes
+          // arrive here at different ticks. Re-freezing the receipt then raised
+          // `ARTIFACT_ALREADY_FROZEN` and the run reached no terminal.
+          //
+          // Found by crash boundary `before_lifecycle_append` (ADR-ERL2-028 §7),
+          // which is the one window in which both receipts are retained and no
+          // event names either. Deriving the instant from the adopted receipt
+          // makes it stable by construction rather than by luck.
+          activated_at: receipt.ended_at,
         },
         this.keys.controller,
       ),
     );
 
     this.ws.store.freezeJson(`${RETAINED}/mutation-activate.json`, receipt, "INTERNAL");
+    // Boundary 6: the driver receipt is retained and the controller's signed one
+    // is not. Both are closure-required once the lifecycle shows
+    // `challenge_activated` (ADR-ERL2-024 §4.6), so this is the window in which a
+    // resumed run has to rebuild the second from the first.
+    this.barrier("after_receipt_freeze", "op-activate");
     this.ws.store.freezeJson(`${RETAINED}/activation-receipt.json`, activation, "INTERNAL");
+    // Boundary 7: both receipts retained, no event names either.
+    this.barrier("before_lifecycle_append", "op-activate");
     this.ws.lifecycle.append({
       eventType: "challenge_activated",
       stateTo: "challenge_activated",
@@ -1194,6 +1295,11 @@ export class EnvironmentRun {
         },
       ],
     });
+    // Boundary 8: the activation is complete and public; only the intent's
+    // `settled` marker is missing. A restart returns the retained receipts
+    // without touching the driver, from the evidence check at the top of this
+    // method rather than from state ordering.
+    this.barrier("after_lifecycle_append", "op-activate");
     this.intents.settle("op-activate", receipt.core_hash);
     return { receiptHash: receipt.core_hash, activationReceiptHash: activation.core_hash };
   }
@@ -1224,6 +1330,28 @@ export class EnvironmentRun {
     if (!this.enter("journey", this.ws.hashForRole("runtime-milestone") !== undefined)) {
       return { milestoneHash: this.ws.requireHashForRole("runtime-milestone") };
     }
+    // Every input that can refuse is resolved **here**, before the first byte is
+    // frozen (review P1-10, ADR-ERL2-028 §3).
+    //
+    // The cutoff policy used to be resolved at its freeze and the comparison
+    // policy on the line after it, so `journey` with an admitted `--cutoff-policy`
+    // and a missing `--comparison-policy` froze
+    // `retained/environment/cutoff-policy.json` and *then* refused
+    // `CFG_MISSING_REQUIRED`. The run was left holding retained cutoff-policy
+    // bytes that no lifecycle event reached — a refusal that wrote evidence, and
+    // one that made the run's own terminal fail offline verification as an
+    // unaccounted artifact.
+    //
+    // Resolving both up front is not a convenience: it is the whole fix. A
+    // resolution that can throw must never sit between two freezes.
+    const cutoffPolicy = this.cutoffPolicy();
+    const comparisonPolicy = this.comparisonPolicy();
+    // The substrate this run is bound to, checked before evidence is written for
+    // the same reason every dispatching phase checks it before dispatching
+    // (ADR-ERL2-024 §5): a run whose binding cannot be established has no
+    // business freezing a milestone about the environment it names.
+    this.assertBoundSubstrate({ expectProvisioned: true });
+
     const startedAt = this.now();
     const environmentFingerprintHash = this.ws.requireHashForRole("environment-baseline");
     const selectionCommitmentHash = this.ws.requireHashForRole("selection-commitment");
@@ -1305,8 +1433,8 @@ export class EnvironmentRun {
     // The cutoff policy is mirrored into the run for the same reason the trust
     // policy is: an offline reader must be able to re-derive the cutoff from
     // retained bytes alone.
-    this.ws.store.freezeJson(`${RETAINED}/cutoff-policy.json`, this.cutoffPolicy(), "INTERNAL");
-    this.ws.store.freezeJson(`${RETAINED}/comparison-policy.json`, this.comparisonPolicy(), "INTERNAL");
+    this.ws.store.freezeJson(`${RETAINED}/cutoff-policy.json`, cutoffPolicy, "INTERNAL");
+    this.ws.store.freezeJson(`${RETAINED}/comparison-policy.json`, comparisonPolicy, "INTERNAL");
     this.ws.store.freezeJson(`${RETAINED}/clock-domain.json`, clockDomain, "INTERNAL");
     this.ws.store.freezeJson(`${RETAINED}/traffic-start-receipt.json`, startReceipt, "INTERNAL");
     this.ws.store.freezeJson(`${RETAINED}/runtime-milestone.json`, milestone, "INTERNAL");
@@ -1335,12 +1463,12 @@ export class EnvironmentRun {
         },
         {
           artifact_role: "cutoff-policy",
-          artifact_core_hash: coreHash(this.cutoffPolicy()),
+          artifact_core_hash: coreHash(cutoffPolicy),
           artifact_schema_version: "cutoff-policy/v1",
         },
         {
           artifact_role: "comparison-policy",
-          artifact_core_hash: coreHash(this.comparisonPolicy()),
+          artifact_core_hash: coreHash(comparisonPolicy),
           artifact_schema_version: "comparison-policy/v1",
         },
       ],
@@ -2791,6 +2919,18 @@ export class EnvironmentRun {
    * therefore not a caller's choice of severity — it is which failure happened.
    */
   invalidate(input: {
+    /**
+     * The phase that failed.
+     *
+     * A string for the seven lifecycle phases. For a journey step it is the
+     * step's own identity, because `InvalidJourneyExecutionPhaseV1` — already in
+     * the frozen contract, and until now unreached by the environment walk —
+     * requires the intent and the step commitment. That is the route an
+     * ambiguous subject dispatch takes: `ENV_MUTATION_INTENT_AMBIGUOUS` used to
+     * propagate as an ordinary CLI error, leaving a durably accepted run with no
+     * terminal at all, which is the brief's own P1 definition
+     * (ADR-ERL2-028 §5.2).
+     */
     readonly phase:
       | "provisioning"
       | "baseline"
@@ -2798,7 +2938,12 @@ export class EnvironmentRun {
       | "activation"
       | "observation"
       | "environment_restoration"
-      | "teardown";
+      | "teardown"
+      | {
+          readonly kind: "journey_execution";
+          readonly intent: EnvironmentJourneyIntent;
+          readonly stepCommitmentHash: Hash;
+        };
     readonly classification:
       | "lab_invalidity"
       | "dependency_failure"
@@ -2821,11 +2966,18 @@ export class EnvironmentRun {
     //
     // Frozen here, before the frontier and before any cleanup dispatch: a
     // cleanup that then fails adds its own evidence and never replaces the cause.
+    const lifecyclePhase = typeof input.phase === "string" ? input.phase : undefined;
+    const journeyStep = typeof input.phase === "string" ? undefined : input.phase;
+    const phaseLabel = lifecyclePhase ?? `journey-${(journeyStep as { intent: string }).intent}`;
     const findingHash = this.ws.freezeInvalidityFinding({
-      findingId: `environment-${input.phase.replaceAll("_", "-")}-failure`,
+      findingId: `environment-${phaseLabel.replaceAll("_", "-")}-failure`,
       category: "lab_invalid",
       summary: `${input.failure.code}: ${input.failure.message}`.slice(0, 512),
-      failedGateIds: [gateForEnvironmentFailurePhase(input.phase)],
+      failedGateIds: [
+        lifecyclePhase === undefined
+          ? JOURNEY_EXECUTION_GATE
+          : gateForEnvironmentFailurePhase(lifecyclePhase),
+      ],
       proofRefs: [this.instanceHashForCleanup()],
     });
 
@@ -2862,7 +3014,13 @@ export class EnvironmentRun {
       // Named for the phase, not for the state: the state is
       // `invalid_failure_detected` for every one of them, and an event stream
       // that only said that would not say what failed.
-      eventType: `environment_${input.phase.replace(/^environment_/, "")}_failed`,
+      // A journey step's failure is named for the step, not for the walk: the
+      // event stream has to say *which* committed occurrence was left without an
+      // outcome, because that is the whole content of the finding.
+      eventType:
+        lifecyclePhase === undefined
+          ? `environment_journey_${(journeyStep as { intent: string }).intent}_failed`
+          : `environment_${lifecyclePhase.replace(/^environment_/, "")}_failed`,
       stateTo: "invalid_failure_detected",
       actorId: "operator",
       commandId: "cleanup",
@@ -2936,11 +3094,19 @@ export class EnvironmentRun {
       schema_version: "invalid-lab-run-record/v1" as const,
       run_id: this.runId,
       terminal_state: "invalidated" as const,
-      failed_phase: {
-        kind: "lifecycle_phase" as const,
-        phase: input.phase,
-        lifecycle_event_hash: detection.core_hash,
-      },
+      failed_phase:
+        lifecyclePhase === undefined
+          ? {
+              kind: "journey_execution" as const,
+              failed_intent: (journeyStep as { intent: EnvironmentJourneyIntent }).intent,
+              step_commitment_hash: (journeyStep as { stepCommitmentHash: Hash }).stepCommitmentHash,
+              lifecycle_event_hash: detection.core_hash,
+            }
+          : {
+              kind: "lifecycle_phase" as const,
+              phase: lifecyclePhase as InvalidNonJourneyPhase,
+              lifecycle_event_hash: detection.core_hash,
+            },
       terminal_reason: {
         kind: "classified_failure" as const,
         classification: input.classification,
@@ -3051,6 +3217,58 @@ export class EnvironmentRun {
   }
 
   /**
+   * The frontier this run already enumerated and froze, if it has one.
+   *
+   * Read by role, so it is the frontier the *lifecycle* reached — the same
+   * discipline every other phase uses. A run that has one has already observed
+   * its substrate once for cleanup purposes, and a continuation reads that
+   * observation rather than making a second one under a different trigger.
+   */
+  private retainedResourceFrontier(): EnvironmentResourceFrontierV1 | undefined {
+    const hash = this.ws.hashForRole("environment-resource-frontier");
+    if (hash === undefined) return undefined;
+    return this.ws.artifact<EnvironmentResourceFrontierV1>(hash, "EnvironmentResourceFrontierV1");
+  }
+
+  /**
+   * Every operation this run left unsettled, reconciled before the cancellation
+   * touches the substrate (ADR-ERL2-028 §6.3).
+   *
+   * A cancellation that interrupts a journey must not start another subject step
+   * — it does not, it never dispatches one — but it must also not describe the
+   * run as merely "cancelled during `exercise`" when the truth is "`exercise` was
+   * dispatched and nobody knows what happened". The reconciliation is the
+   * *probe*, run before any cleanup call, and its verdict is recorded in the
+   * cancellation's own reason so an offline reader sees the ambiguity rather than
+   * inferring it from an intent journal that is not public evidence.
+   *
+   * The probes themselves are read-only by contract, so running them here costs
+   * the substrate nothing and cannot dispatch anything.
+   */
+  private reconcilePendingOperations(): readonly string[] {
+    const ambiguous: string[] = [];
+    // The step ids this run has a frozen outcome for. A crash between the
+    // lifecycle append and the intent's `settled` marker leaves an intent that
+    // looks pending and an operation that demonstrably completed; reporting that
+    // as an ambiguity would be a fabricated one, and a cancellation record full
+    // of fabricated ambiguities is no more useful than one with none.
+    const completedStepIds = new Set(this.ws.derivedStepOutcomes().map((outcome) => outcome.step_id));
+    for (const intent of this.intents.unsettled()) {
+      // A driver operation can be asked; a subject step cannot, and that
+      // asymmetry is the claim rather than a gap in it (ADR-ERL2-024 §4.3).
+      // `declared` is the third answer: it proves nothing was dispatched.
+      const settled =
+        intent.state === "declared"
+          ? true
+          : intent.kind === "subject_step"
+            ? completedStepIds.has(intent.target_identity)
+            : this.driver.completedOperation?.(this.runId, intent.operation_id) !== undefined;
+      if (!settled) ambiguous.push(`${intent.kind}:${intent.operation_id}:${intent.state}`);
+    }
+    return ambiguous;
+  }
+
+  /**
    * True once the run has entered its cleanup sequence, so a cancellation from
    * here has exactly one authorized route: receipt-backed emergency cleanup
    * (design §12). Restoration and teardown are the two phases whose failure the
@@ -3156,6 +3374,16 @@ export class EnvironmentRun {
       this.ws.hashForRole("substrate-binding") === undefined
         ? this.retainedSubstrateBinding()
         : undefined;
+    // Reconcile before the substrate is touched, and record what could not be
+    // reconciled *in the hash-chained lifecycle* (ADR-ERL2-028 §6.3).
+    //
+    // A cancellation that interrupts a dispatched-but-unsettled operation used to
+    // describe itself as nothing more than "cancelled during exercise". The
+    // operator's ask and the pending operation's unknown outcome are two separate
+    // facts, and the second one belongs in public evidence: the intent journal is
+    // run-private by design (ADR-ERL2-024 §4.3) and an offline reader never sees
+    // it, so an ambiguity recorded only there is an ambiguity recorded nowhere.
+    const unreconciled = this.reconcilePendingOperations();
     const detection = this.ws.lifecycle.append({
       eventType: "environment_cancellation_requested",
       stateTo: "invalid_failure_detected",
@@ -3163,6 +3391,20 @@ export class EnvironmentRun {
       commandId: "cancel",
       operationId: "op-cancel-detected",
       requiredHashes: [request.core_hash],
+      ...(unreconciled.length === 0
+        ? {}
+        : {
+            failure: {
+              code: CODES.ENV_MUTATION_INTENT_AMBIGUOUS,
+              // Lab-owned: the Lab cannot establish what happened, and that is a
+              // fact about the Lab's own knowledge. Attributing it to the subject
+              // would be fabricating an outcome the run explicitly does not have.
+              owner: "lab" as const,
+              message:
+                `cancelled with ${String(unreconciled.length)} dispatched operation(s) whose outcome ` +
+                `could not be established: ${unreconciled.join(", ")}`.slice(0, 512),
+            },
+          }),
       ...(unrecordedBinding === undefined
         ? {}
         : {
@@ -3182,25 +3424,57 @@ export class EnvironmentRun {
       commandId: "cancel",
       operationId: "op-cancel-environment-cleanup-start",
     });
+    // A cancellation may not cancel mandatory safety cleanup, and it may not
+    // repeat one either. `frontierDerivedCleanup` adopts every driver action that
+    // already completed, because each one runs under a durable intent whose probe
+    // is the driver's own operation log (ADR-ERL2-024 §4.3) — so the actions are
+    // not re-dispatched. What needed fixing was the evidence around them, above:
+    // the frontier is adopted rather than re-observed, and its trigger is not
+    // relabelled.
 
     // 3. the actual resource frontier — never "this run probably has nothing".
     this.assertBoundSubstrate({ expectProvisioned: false });
-    const frontier = freezeResourceFrontier({
-      runId: this.runId,
-      environmentInstanceHash: this.instanceHashForCleanup(),
-      driverManifestHash: coreHash(this.driver.manifest),
-      trigger: emergency ? "teardown_failure" : "invalid_environment_failure",
-      observedResources: this.driver.inspect(this.runId).resources,
-      frozenAt: this.now(),
-    });
-    this.ws.store.freezeJson(`${RETAINED}/resource-frontier.json`, frontier, "INTERNAL");
+    // A cancellation that interrupts a cleanup **continues** it (ADR-ERL2-024
+    // §4.4's "emergency, resumed"), and the frontier is where continuing starts:
+    // it is an observation the run already made and froze.
+    //
+    // Re-freezing one was not merely wasteful, it was a wedge. The new frontier
+    // records `trigger: teardown_failure` for every emergency cancellation, so
+    // cancelling during the emergency cleanup that followed a *restoration*
+    // failure produced different bytes at the same logical path and raised
+    // `ARTIFACT_ALREADY_FROZEN` — no terminal, leases retained. The run had
+    // already enumerated its own frontier; the honest thing is to read it.
+    const alreadyFrozenFrontier = this.retainedResourceFrontier();
+    const frontier =
+      alreadyFrozenFrontier ??
+      freezeResourceFrontier({
+        runId: this.runId,
+        environmentInstanceHash: this.instanceHashForCleanup(),
+        driverManifestHash: coreHash(this.driver.manifest),
+        trigger: emergency ? "teardown_failure" : "invalid_environment_failure",
+        observedResources: this.driver.inspect(this.runId).resources,
+        frozenAt: this.now(),
+      });
+    if (alreadyFrozenFrontier === undefined) {
+      this.ws.store.freezeJson(`${RETAINED}/resource-frontier.json`, frontier, "INTERNAL");
+    }
 
     // The same executor the failure path uses, for the same reason: a
     // cancellation is a failure the operator chose, and it owes the substrate
     // exactly what any other invalid terminal owes it (ADR-ERL2-027 §4.1).
+    //
+    // The trigger is the frontier's own, not one re-derived from the cancellation:
+    // a continued cleanup must not relabel the failure it is cleaning up after.
+    // `provision_failure` is a frontier trigger the cleanup executor does not
+    // model, and it is treated as the general invalid-environment case rather than
+    // silently promoted to a teardown failure.
     const cleanup = this.frontierDerivedCleanup(
       frontier,
-      emergency ? "teardown_failure" : "invalid_environment_failure",
+      frontier.trigger === "restoration_failure" ||
+        frontier.trigger === "teardown_failure" ||
+        frontier.trigger === "invalid_environment_failure"
+        ? frontier.trigger
+        : "invalid_environment_failure",
       emergency,
     );
 
@@ -3325,12 +3599,25 @@ export class EnvironmentRun {
     readonly resultHash: Hash;
   } {
     if (emergency) {
+      // A cleanup that was interrupted has already appended
+      // `op-emergency-cleanup-start`. Re-appending it is a *no-op* — the lifecycle
+      // log dedupes by operation id — and a no-op leaves the state where it was,
+      // so the terminal append that follows becomes an illegal transition and the
+      // run reaches no terminal at all. That is what "continue rather than
+      // restart" costs if it is only half done (ADR-ERL2-028 §4.2).
+      //
+      // The continuation gets its own operation id and its own event type, so the
+      // state advances legally and the stream says plainly that this cleanup was
+      // resumed rather than begun.
+      const resumed = this.ws.lifecycle
+        .all()
+        .some((event) => event.operation_id === "op-emergency-cleanup-start");
       this.ws.lifecycle.append({
-        eventType: "emergency_cleanup_started",
+        eventType: resumed ? "emergency_cleanup_resumed" : "emergency_cleanup_started",
         stateTo: "emergency_cleanup_started",
         actorId: "operator",
         commandId: "cleanup",
-        operationId: "op-emergency-cleanup-start",
+        operationId: resumed ? "op-emergency-cleanup-resume" : "op-emergency-cleanup-start",
         produced: [
           {
             artifact_role: "environment-resource-frontier",

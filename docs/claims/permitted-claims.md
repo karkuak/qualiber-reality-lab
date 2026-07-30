@@ -83,24 +83,63 @@ The one claim this slice earns, stated at exactly its width:
   offline with the trust head and the randomness-source registry taken only from
   locally pinned configuration, and the derived closure reports zero missing roles
   and zero rejected extras.
-- **Crash-resumability of the environment walk may be claimed at *two* levels.**
-  Every one of the twenty-one phase boundaries has been interrupted and resumed
-  from retained evidence, with exactly one of each once-only artifact however the
-  run was cut; and, since ADR-ERL2-024, a crash *inside* a phase — between the
-  external call and the evidence that records it — is reconciled against observed
-  state before any retry, measured by **counting invocations of an instrumented
-  driver and subject port** rather than by counting artifacts.
-- **Exactly-once external effect may be claimed for the driver operations**
-  (provision, activation mutate, restore, destroy, per-action emergency destroy,
-  reservation acquire/release). It may **not** be claimed for a subject step: an
-  opaque subject has no probe, so an interrupted step is genuinely ambiguous and
-  the run fails closed rather than re-invoking it. That asymmetry is the claim,
-  not a gap in it.
-- **"A refusal writes no evidence" may be claimed for the environment commands**,
-  measured by full-tree byte manifest on a fresh run and again mid-path. The
-  exception recorded by the independent review — a refused `journey` freezing a
-  cutoff policy with no lifecycle event (P1-10) — is **still open** and is not
-  covered by this claim.
+- **Crash-resumability may be claimed for a subject step and for challenge
+  activation, across real process death.** Since ADR-ERL2-028 each of eight named
+  durability boundaries is exercised by ending the executing `erl2` process with
+  `SIGKILL` and resuming in a genuinely new one, and external invocations are
+  counted from a **file written before and after each call**, so the count survives
+  the process that made it.
+
+  It may **not** be claimed for `provision`, `restore`, `destroy` or the emergency
+  actions. Those keep the coverage ADR-ERL2-024 gave them — reconciliation against
+  observed state before any retry, measured in-process — and the eight boundaries
+  are not run for them.
+
+  The earlier form of this claim, which cited a suite that injected no crash, is
+  withdrawn: an injected *exception* unwinds through every `finally`, so it never
+  reached the stale-lease path, the unreproducible-receipt path or the
+  terminal-less-ambiguity path, all three of which were live defects
+  (`remediation-6.5-lifecycle-ordering.md` §4).
+- **Three exactly-once categories, and they may not be combined.**
+  - *Invocation-level exactly once* — external invocation count measured at one —
+    may be claimed for **challenge activation** at all eight boundaries, and for a
+    **subject step** at the three boundaries where the evidence is decisive
+    (nothing declared, the intent proves nothing was dispatched, or the outcome is
+    already frozen). Also for the other driver operations at the boundaries
+    ADR-ERL2-024 measured.
+  - *Evidence-backed idempotent reconciliation* — the transport may repeat while
+    the logical effect does not — is **not** claimed anywhere. No tested path
+    reaches a second transport invocation.
+  - *Fail-closed ambiguous outcome* is the honest description for a **subject
+    step** at the five remaining boundaries. No second invocation, the ambiguity is
+    retained, and the run reaches exactly one invalid terminal whose
+    `failed_phase.kind` is `journey_execution` and whose owner is the **Lab**, not
+    the subject.
+
+  One of those five is a *conservative* refusal and is not counted as an
+  exactly-once win: at `before_external_dispatch` the subject was not called, and
+  the run still fails closed, because the `dispatching` marker is durable before
+  the call and the evidence cannot separate "about to call" from "called and died".
+- **"A refusal writes no evidence" may now be claimed for the environment
+  commands**, measured by a full-tree byte manifest over the run root **and both
+  operational siblings**, including directory entries, across representative
+  refusal causes. P1-10 is closed: a refused `journey` freezes no cutoff policy,
+  and a refused command no longer creates `<run-root>.substrate` or
+  `<run-root>.reservations`. The two documented exceptions are the bounded run
+  lease and the derived snapshot, both excluded from every closure derivation by
+  construction.
+- **Every canonical journey intent may be claimed to enforce its own
+  prerequisites.** All fourteen have an explicit row keyed by the frozen contract's
+  own intent union, enforced at the library boundary from **retained evidence**
+  rather than from the departure state, so a post-capture intent refuses before
+  activation and before the evidence cutoff wherever it is invoked from. The
+  offline verifier re-derives the same ordering from the hash-chained event stream.
+- **Cancellation may be claimed to be dispatched from the run's own durable
+  evidence.** Two independent witnesses, `ENOENT` as the only absence, a typed
+  refusal for anything else, and a classifier shared by the CLI and the library. A
+  live or partially provisioned environment cannot receive a pre-environment
+  cancellation terminal, and a cancellation that interrupts a cleanup continues it
+  rather than restarting it under a relabelled trigger.
 - **The substrate a cleanup verdict was observed against may be claimed to be the
   one the run provisioned into.** `SubstrateBindingV1` is frozen before the first
   substrate-affecting dispatch, checked by every later phase before it dispatches,

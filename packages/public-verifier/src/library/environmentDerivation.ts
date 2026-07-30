@@ -50,7 +50,7 @@ import {
   assertFrontierActionsDerivable,
   deriveResidueProbeOutcome,
   deriveRestorationProbeOutcome,
-  gateForEnvironmentFailurePhase,
+  gateForInvalidFailurePhase,
   isEnvironmentFailurePhase,
   restorationProbePassed,
   safeActions,
@@ -887,8 +887,21 @@ export function assertInvalidFindingAttribution(options: {
 }): void {
   const { record } = options;
   if (record.terminal_reason.kind !== "classified_failure") return;
-  if (record.failed_phase.kind !== "lifecycle_phase") return;
-  if (!isEnvironmentFailurePhase(record.failed_phase.phase)) return;
+  // A cancellation is an operator's decision rather than the falsification of a
+  // gate, so it has no expected gate to check. Both *failing* kinds do, and the
+  // journey-execution one is checked here rather than skipped: an ambiguous
+  // subject dispatch reaches its terminal through that member (ADR-ERL2-028 §5.2),
+  // and it is precisely the terminal on which a producer might be tempted to blame
+  // the subject for an outcome nobody observed.
+  if (record.failed_phase.kind === "cancellation") return;
+  if (
+    record.failed_phase.kind === "lifecycle_phase" &&
+    !isEnvironmentFailurePhase(record.failed_phase.phase)
+  ) {
+    return;
+  }
+  const expectedGate = gateForInvalidFailurePhase(record.failed_phase);
+  if (expectedGate === undefined) return;
 
   const finding = options.index.get(record.terminal_reason.primary_finding_hash).value;
 
@@ -916,14 +929,81 @@ export function assertInvalidFindingAttribution(options: {
     );
   }
 
-  const expected = gateForEnvironmentFailurePhase(record.failed_phase.phase);
   const named = (finding["failed_gate_ids"] as readonly string[] | undefined) ?? [];
-  if (named.length !== 1 || named[0] !== expected) {
+  if (named.length !== 1 || named[0] !== expectedGate) {
+    const phaseLabel =
+      record.failed_phase.kind === "lifecycle_phase"
+        ? record.failed_phase.phase
+        : `journey_execution (${record.failed_phase.failed_intent})`;
     throw new Erl2Error(
       CODES.INVALID_REASON_PHASE_MISMATCH,
-      `this terminal failed in phase ${record.failed_phase.phase}, which falsifies gate ` +
-        `${expected}; its primary finding names [${named.join(", ")}]`,
+      `this terminal failed in phase ${phaseLabel}, which falsifies gate ` +
+        `${expectedGate}; its primary finding names [${named.join(", ")}]`,
     );
+  }
+}
+
+// -- 4c. Journey ordering, re-derived from the lifecycle ----------------------
+
+/**
+ * The design's post-capture intents, and the event prefix each one emits.
+ *
+ * Held here rather than imported from `@erl2/core` for the reason every other
+ * derivation in this file is: the verifier must not share the producer's decision
+ * about what a post-capture intent *is*. It shares only hashing and schema
+ * validation (ADR-ERL2-024 §4.6).
+ */
+const POST_CAPTURE_EVENT_PREFIXES: readonly string[] = [
+  "subject_interaction", // exercise
+  "subject_observation", // observe
+  "subject_diagnosis", // diagnose_decide
+  "subject_recovery", // recover
+  "subject_upgrade", // upgrade
+  "subject_rollback", // rollback
+  "subject_uninstall", // remove
+];
+
+/**
+ * Refuses a run whose lifecycle shows a post-capture journey step starting before
+ * the challenge was activated, or before the evidence cutoff was realized
+ * (review P1-9, ADR-ERL2-028 §2).
+ *
+ * Derived from the hash-chained event order alone, so it holds for any producer.
+ * The producer-side matrix is the primary guard; this is the half an offline
+ * reader can check without trusting it, and without it a bundle produced by an
+ * older or patched Lab would still verify `valid` — which is exactly what P1-9's
+ * reproduction did.
+ */
+export function assertJourneyOrderingFromLifecycle(
+  events: readonly { readonly event_type: string }[],
+): void {
+  const indexOf = (type: string): number => events.findIndex((event) => event.event_type === type);
+  const activatedAt = indexOf("challenge_activated");
+  const cutoffAt = indexOf("evidence_cutoff_realized");
+
+  for (const [position, event] of events.entries()) {
+    const prefix = POST_CAPTURE_EVENT_PREFIXES.find((candidate) =>
+      event.event_type.startsWith(`${candidate}_`),
+    );
+    if (prefix === undefined) continue;
+    // `_planned` is the first event of a step occurrence, so it is the one that
+    // dates the step. Using a later one would let an out-of-order step hide behind
+    // its own completion event.
+    if (!event.event_type.endsWith("_planned")) continue;
+    if (activatedAt < 0 || position < activatedAt) {
+      throw new Erl2Error(
+        CODES.POLICY_CONFLICT,
+        `${event.event_type} occurs before the challenge was activated; a post-capture journey ` +
+          `step may not run before activation`,
+      );
+    }
+    if (cutoffAt < 0 || position < cutoffAt) {
+      throw new Erl2Error(
+        CODES.POLICY_CONFLICT,
+        `${event.event_type} occurs before the evidence cutoff was realized; a post-capture ` +
+          `journey step may not run before the cutoff`,
+      );
+    }
   }
 }
 
@@ -1059,6 +1139,10 @@ export function deriveEnvironmentSemantics(options: {
   readonly lifecycle: readonly LabLifecycleEventV1[];
   readonly runId: string;
 }): EnvironmentSemanticReport {
+  // Ordering first: a valid terminal whose journey ran a post-capture step before
+  // activation or before the cutoff is not a terminal with a derived-verdict
+  // mismatch, it is a terminal that should never have been reachable (review P1-9).
+  assertJourneyOrderingFromLifecycle(options.lifecycle);
   const substrate = assertSubstrateBindingConsistent(options);
   const roles = rolesOf(options.lifecycle);
 
@@ -1186,6 +1270,7 @@ export function deriveInvalidEnvironmentSemantics(options: {
 }): void {
   assertCleanupApplicable({ record: options.record, lifecycle: options.lifecycle });
   assertInvalidFindingAttribution({ index: options.index, record: options.record });
+  assertJourneyOrderingFromLifecycle(options.lifecycle);
 
   const roles = rolesOf(options.lifecycle);
   const hadEnvironment =

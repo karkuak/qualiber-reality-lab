@@ -44,6 +44,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { CODES, Erl2Error, parseStrictJson, type Hash } from "@erl2/contracts";
+import { NO_CRASH, type CrashBarrier } from "./crashBarrier.js";
 
 /** How far an intent got before the process that owned it stopped. */
 export type MutationIntentState = "declared" | "dispatching" | "dispatched" | "settled";
@@ -143,10 +144,22 @@ export class MutationIntentJournal {
    * made and, for a `fail_closed` operation, refuse the run for its own work.
    */
   private readonly reconciled = new Set<string>();
+  /**
+   * Where a crash may be injected, for the four boundaries this class owns.
+   *
+   * Injected rather than read from the environment, and a no-op in production
+   * (ADR-ERL2-028 §7).
+   */
+  private readonly barrier: CrashBarrier;
 
-  constructor(options: { readonly runRoot: string; readonly runId: string }) {
+  constructor(options: {
+    readonly runRoot: string;
+    readonly runId: string;
+    readonly barrier?: CrashBarrier;
+  }) {
     this.dir = path.join(path.resolve(options.runRoot), DIR);
     this.runId = options.runId;
+    this.barrier = options.barrier ?? NO_CRASH;
   }
 
   private file(operationId: string): string {
@@ -242,6 +255,27 @@ export class MutationIntentJournal {
           { owner: "lab" },
         );
       }
+      // `declared` is `not_dispatched_proven`: the external call is made only
+      // after the `dispatching` marker is durable, so an intent still sitting at
+      // `declared` is positive evidence that no call was issued — not merely the
+      // absence of a receipt (ADR-ERL2-028 §8).
+      //
+      // Probing here would have been wrong in both directions. For an idempotent
+      // driver operation the probe answers `absent` and the dispatch proceeds, so
+      // the outcome was right by luck. For a subject step the probe answers
+      // `unknown` by construction and the run failed closed to an invalid
+      // terminal over an operation that had **demonstrably not happened** — an
+      // avoidable invalidation, which is not the same virtue as refusing to
+      // double-install. `at most once because the Lab gave up` is only acceptable
+      // when the ambiguity is real.
+      if (existing.state === "declared") {
+        this.advance(spec.operationId, "dispatching");
+        this.barrier("before_external_dispatch", spec.operationId);
+        const result = spec.dispatch();
+        this.barrier("after_external_dispatch", spec.operationId);
+        this.advance(spec.operationId, "dispatched");
+        return result;
+      }
       const observed = spec.probe();
       if (observed === "present") {
         if (spec.adopt === undefined) {
@@ -268,6 +302,11 @@ export class MutationIntentJournal {
       }
       // `absent` and explicitly idempotent: resume under the *same* key.
     }
+
+    // Boundary 1: nothing durable exists for this operation yet, and nothing
+    // external has been called. A crash here must leave the run exactly as it
+    // was.
+    this.barrier("before_intent_freeze", spec.operationId);
 
     if (existing === undefined) {
       this.write({
@@ -296,10 +335,23 @@ export class MutationIntentJournal {
         declared_at: declaredAt,
       });
     }
+    // Boundary 2: the intent is durable and says `declared`. Still nothing
+    // external. A restart must find the intent and dispatch under the same key.
+    this.barrier("after_intent_freeze", spec.operationId);
+
     // Durable *before* the call, so a crash during dispatch is distinguishable
     // from a crash before it.
     this.advance(spec.operationId, "dispatching");
+    // Boundary 3: the intent says `dispatching`, which is the durable statement
+    // "a call is about to be made and may already have been". This is the
+    // boundary the whole journal exists for: before it, absence of a receipt
+    // meant nothing happened; after it, absence of a receipt means nobody knows.
+    this.barrier("before_external_dispatch", spec.operationId);
     const result = spec.dispatch();
+    // Boundary 4: the external world has changed and the run's evidence has not.
+    // For a probeable driver operation a restart adopts; for a subject step there
+    // is no probe, so a restart fails closed (ADR-ERL2-024 §4.3).
+    this.barrier("after_external_dispatch", spec.operationId);
     this.advance(spec.operationId, "dispatched");
     return result;
   }

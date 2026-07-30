@@ -96,6 +96,91 @@ and the residue probe makes two further lies offline-detectable:
 substrate or frontier, and `RESIDUE_UNDECLARED_DESTRUCTION` when a resource left
 the substrate without an authorized action against it.
 
+## Cancelling a run
+
+`erl2 cancel` is dispatched from the run's **own durable evidence**, never from a
+flag. `classifyCancellationBranch` is shared by the CLI dispatcher and the library
+so the decision cannot disagree with itself, and it consults two independent
+witnesses:
+
+1. the retained `substrate-binding` artifact, read so that `ENOENT` is the only
+   condition meaning "this run never had an environment";
+2. the run's own lifecycle events, which name the roles they produced.
+
+Either one is enough to take the environment branch. **Anything other than
+absence is a typed refusal** (`ENV_SUBSTRATE_UNREADABLE`), never an answer: the
+previous `existsSync` read reported false for a permission fault as readily as for
+a missing file, and routed a live environment run to the pre-environment terminal
+where it froze cleanup status `not_required` over allocated resources.
+
+| Cancelled from | Route | Cleanup |
+|---|---|---|
+| before `provision` | pre-environment | `none` / `pre_environment` |
+| any state with a binding, including mid-provision | environment, frontier-derived | never `not_required` |
+| during restoration or teardown | emergency | continued, not restarted |
+| during emergency cleanup | emergency, **continued** | the existing frontier is adopted and its trigger kept |
+| after a terminal | the same record, idempotently | unchanged |
+
+### What "continued" means
+
+The frontier is **adopted by role** rather than re-observed, and the cleanup keeps
+the frontier's own trigger. A cancellation must not relabel the failure it is
+cleaning up after: freezing a second frontier with `trigger: teardown_failure`
+over a restoration failure's frontier produced different bytes at the same logical
+path, raised `ARTIFACT_ALREADY_FROZEN`, and left the run with no terminal and its
+leases still held.
+
+Completed driver actions are not re-dispatched — each runs under a durable intent
+whose probe is the driver's own operation log — so continuation is about the
+evidence, not the dispatch.
+
+### Pending operations
+
+Before any cleanup call, every unsettled operation is reconciled and anything that
+cannot be established is recorded in the **hash-chained lifecycle**, as the
+detection event's Lab-owned `failure`. The intent journal is run-private and an
+offline reader never sees it, so an ambiguity recorded only there is recorded
+nowhere.
+
+Three answers, not two: an intent at `declared` proves nothing was dispatched; a
+subject step with a frozen outcome is complete whatever its marker says; anything
+else the driver's log cannot confirm is genuinely ambiguous.
+
+## Recovering a crashed run
+
+A command that dies mid-phase leaves a durable intent naming exactly how far it
+got. The next process reconciles before it retries.
+
+```bash
+erl2 status --run <run-id> --artifact-root <run-root>
+```
+
+Then re-run the same command. Three things make that safe:
+
+- **the lease does not block you.** A killed process leaves its run lease held;
+  `RunLease.acquire` reclaims a lease whose pid the kernel reports absent, so
+  recovery does not wait out the five-minute TTL. Every ambiguity — including PID
+  reuse — resolves to *alive*, so a live holder is never displaced;
+- **a driver operation is adopted, not repeated.** Its probe is the driver's own
+  operation log, so the external invocation count stays at one;
+- **a subject step fails closed if it is genuinely ambiguous**, and reaches the
+  invalid terminal with `failed_phase.kind = "journey_execution"`, owned by the
+  **Lab**. The Lab cannot establish what the subject did and does not pretend to.
+
+To exercise this deliberately, under the development profile only:
+
+```bash
+ERL2_DEVELOPMENT_FAKE_SUBJECT=1 erl2 install ... \
+  --crash-at after_external_dispatch \
+  --invocation-log /tmp/invocations.jsonl
+```
+
+`--crash-at` ends the process with `SIGKILL` at one of the eight boundaries in
+`CRASH_BOUNDARIES`; `--invocation-log` appends one record before and after every
+external call, so the count survives the process. Both are refused on the release
+surface with `CFG_DEVELOPMENT_FLAG_UNAVAILABLE`, and an unknown boundary name is
+`CFG_MISSING_REQUIRED` rather than being ignored.
+
 ## Enabling Compose (ERL2-OQ-005)
 
 Follow `environments/otel-demo/README.md`. In short: capture the archive digest,

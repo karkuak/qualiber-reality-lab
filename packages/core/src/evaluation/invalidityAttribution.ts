@@ -82,6 +82,23 @@ export const ENVIRONMENT_PHASE_GATE: Readonly<Record<EnvironmentFailurePhase, st
 };
 
 /**
+ * The gate a failed *journey step* falsifies, whatever its intent.
+ *
+ * A step that was owed and never produced an outcome — the shape an ambiguous
+ * subject dispatch leaves behind (ADR-ERL2-024 §4.3) — makes the step closure
+ * unclosable: `deriveStepClosure` requires exactly one outcome per committed
+ * occurrence, so the mandatory artifact graph cannot close. That is the gate the
+ * failure actually falsifies, and it is deliberately *not* an intent-specific
+ * gate: the run does not know what the subject did, so it may not name a gate
+ * that would imply it does.
+ *
+ * It is one constant rather than a map over `EnvironmentJourneyIntent` because
+ * the falsified gate does not vary with the intent — only the recorded
+ * `failed_intent` does, and that lives in the record's own `failed_phase`.
+ */
+export const JOURNEY_EXECUTION_GATE = "mandatory-graph-closed";
+
+/**
  * The gate a failed environment phase falsifies.
  *
  * Refuses an unmapped phase rather than defaulting: a default would silently
@@ -103,4 +120,26 @@ export function gateForEnvironmentFailurePhase(phase: string): string {
 /** Whether a phase reaches its terminal through the environment invalid route. */
 export function isEnvironmentFailurePhase(phase: string): phase is EnvironmentFailurePhase {
   return Object.hasOwn(ENVIRONMENT_PHASE_GATE, phase);
+}
+
+/**
+ * The gate a record's own `failed_phase` falsifies, for either failing kind.
+ *
+ * One function over both kinds so the producer and the offline verifier cannot
+ * diverge on the journey-execution route the way they could have if each had
+ * grown its own branch. `cancellation` returns `undefined`: a cancellation is
+ * not a *failure* of a gate, it is an operator's decision, and naming a
+ * falsified gate for it would be exactly the fabrication ADR-ERL2-027 §4.5
+ * removed from the other phases.
+ */
+export function gateForInvalidFailurePhase(
+  failedPhase:
+    | { readonly kind: "lifecycle_phase"; readonly phase: string }
+    | { readonly kind: "journey_execution" }
+    | { readonly kind: "cancellation" },
+): string | undefined {
+  if (failedPhase.kind === "cancellation") return undefined;
+  if (failedPhase.kind === "journey_execution") return JOURNEY_EXECUTION_GATE;
+  if (!isEnvironmentFailurePhase(failedPhase.phase)) return undefined;
+  return gateForEnvironmentFailurePhase(failedPhase.phase);
 }
