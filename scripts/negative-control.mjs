@@ -1123,7 +1123,7 @@ export const CONTROLS = [
   {
     id: "window-verifier-requires-commitment",
     what: "a run that started traffic and retains no commitment is refused",
-    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
     // Re-pointed after the first campaign measured it.
     //
     // It originally disabled `retained.length === 0` in `windowDerivation.ts`,
@@ -1138,8 +1138,13 @@ export const CONTROLS = [
     // is defence for callers that run no closure; it is behind this rule on both
     // shipped branches, and the ledger records that rather than claiming two
     // kills for one guard.
-    find: '    if (single(roles, "evidence-window-commitment") === undefined) {',
-    replace: '    if (String(1) === "2" && single(roles, "evidence-window-commitment") === undefined) {',
+    // Returns `undefined` rather than making the condition unsatisfiable: leaving
+    // `retained[0]` undefined crashed the CLI on a TypeError instead of refusing,
+    // and a control that crashes the process has measured nothing. This keeps
+    // every type sound and still accepts a terminal that started traffic and
+    // committed no window.
+    find: "  if (retained.length === 0) {",
+    replace: '  if (retained.length === 0) return undefined;\n  if (String(1) === "2") {',
     tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
     expect: "fail",
   },

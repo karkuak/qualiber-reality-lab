@@ -1162,21 +1162,17 @@ export function deriveEnvironmentSemantics(options: {
     }
   }
 
-  // ADR-ERL2-031 §6. A run that started traffic committed an evidence window
-  // before it observed the milestone the cutoff is anchored on, and must retain
-  // exactly one. Conditional on the lifecycle for the same reason the activation
-  // receipt is: a run that terminated earlier committed none, and requiring one
-  // would force a synthetic commitment (design v2 §26).
-  if (options.lifecycle.some((event) => event.event_type === "traffic_or_journey_started")) {
-    if (single(roles, "evidence-window-commitment") === undefined) {
-      throw new Erl2Error(
-        CODES.GRAPH_CLOSURE_MISSING_ROLE,
-        "this run started traffic, so it must retain exactly one evidence-window commitment; " +
-          "without it the exact evidence window is unrecoverable and the cutoff can only be " +
-          "bounds-checked",
-      );
-    }
-  }
+  // ADR-ERL2-031 §6 deliberately does **not** require the evidence-window
+  // commitment here.
+  //
+  // It did, and the campaign showed why that was wrong: the requirement is also
+  // enforced by `resolveEvidenceWindowCommitment`, which runs on the valid *and*
+  // the invalid branch and derives applicability from the same lifecycle event.
+  // Two guards for one property meant neither could be killed — disabling either
+  // left the other refusing, so both scored zero and neither was measured.
+  //
+  // The branch-agnostic one is kept. A duplicate guard that makes both
+  // unmeasurable is worse than one guard a control can prove load-bearing.
 
   const validityHash = single(roles, "validity-result");
   if (validityHash === undefined) {
