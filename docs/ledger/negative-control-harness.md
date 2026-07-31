@@ -134,7 +134,7 @@ share one column.
 | `splice_changed_unrelated_bytes` | **no** | the patch moved bytes outside its target |
 | `control_declaration_invalid` | **no** | the control is malformed |
 | `build_failure` | **no** | the patched tree does not compile |
-| `test_runner_failed` | **no** | no parseable summary; never read as "nothing failed" |
+| `test_runner_failed` | **no** | no parseable summary, **or a summary with no outcomes**; never read as "nothing failed" |
 | `unrelated_tests_failed` | **no** | a suite the control did not name failed |
 | `restoration_failure` | **no** | the worktree could not be restored; the campaign stops |
 | `residue_failure` | **no** | something survived the campaign |
@@ -151,6 +151,35 @@ Two rules follow, and both are asserted in
   can never be scored as a passing or non-load-bearing control.
 
 ---
+
+### 3.1 Two defects the Step 6A campaign found, both in controls
+
+Recorded because they are the two shapes a hardened harness still cannot catch by
+targeting alone — the patch applied to exactly the right bytes in both cases.
+
+**A patch that changes nothing.** `window-producer-uses-frozen-commitment`
+substituted `2_000` / `4_000` for the frozen commitment's durations. Both are
+inside the policy bounds and the patch landed exactly where declared — but
+`2 000 + 4 000` is `1 000 + 5 000`, so the derived cutoff instant was
+byte-identical and the run was unchanged. It scored **29 pass / 0 fail** against
+an `expect: "fail"` and read as a guard that is not load-bearing.
+
+Unique targeting cannot see this: the bytes changed, the meaning did not. What
+catches it is the campaign, and what fixes it is choosing constants that move the
+value the guard protects — `2_000` / `3_000`.
+
+**A patch that crashes instead of refusing.**
+`window-verifier-requires-commitment` disabled `retained.length === 0`, which left
+`retained[0]` undefined; the CLI died on a TypeError rather than refusing, every
+case in the suite was **cancelled**, and the summary read `0 pass / 0 fail` — which
+the classifier scored as `tests_passed_unexpectedly`.
+
+That was a real gap and it is now closed: a summary reporting tests but no
+outcomes, or any cancellation, is `test_runner_failed`. A control that disables a
+guard and crashes the process has not shown the guard is unnecessary; it has shown
+the patch was wrong. The control was also re-pointed at the rule that actually
+fires on a missing commitment — the conditional role check in
+`deriveEnvironmentSemantics` — rather than at a refusal sitting behind it.
 
 ## 4. Restoration, signals and residue
 

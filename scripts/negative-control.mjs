@@ -1073,8 +1073,17 @@ export const CONTROLS = [
     // numbers instead of from the signed commitment the run froze. The bytes an
     // offline reader holds then stop governing the bytes the producer writes,
     // which is the residual restored under a different name.
+    // The substituted constants must not preserve the **sum**. The first version
+    // of this control used 2 000 / 4 000, and 2 000 + 4 000 is 1 000 + 5 000, so
+    // the derived cutoff instant was byte-identical and the control scored
+    // 29 pass / 0 fail against an `expect: "fail"`. It read as a guard that is not
+    // load-bearing; it was a patch that changed nothing.
+    //
+    // 2 000 / 3 000 moves the cutoff a second earlier while keeping both
+    // durations inside the policy bounds, so `realizeCutoff` still succeeds and
+    // only the comparison against the frozen commitment can catch it.
     find: "      warmupMs: commitment.warmup_ms,\n      observationMs: commitment.observation_ms,",
-    replace: "      warmupMs: 2_000,\n      observationMs: 4_000,",
+    replace: "      warmupMs: 2_000,\n      observationMs: 3_000,",
     tests: [
       "tests/dist/adversarial/evidenceWindowCommitment.test.js",
       "tests/dist/e2e/environmentRun.test.js",
@@ -1114,9 +1123,23 @@ export const CONTROLS = [
   {
     id: "window-verifier-requires-commitment",
     what: "a run that started traffic and retains no commitment is refused",
-    file: "packages/public-verifier/src/library/windowDerivation.ts",
-    find: "  if (retained.length === 0) {",
-    replace: '  if (String(1) === "2" && retained.length === 0) {',
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    // Re-pointed after the first campaign measured it.
+    //
+    // It originally disabled `retained.length === 0` in `windowDerivation.ts`,
+    // and scored 0 pass / 0 fail — the patched tree left `retained[0]` undefined,
+    // the CLI died on a TypeError rather than refusing, and every case in the
+    // file was cancelled. That is not a measurement, and the classifier now says
+    // so instead of reading it as "nothing failed".
+    //
+    // The requirement that actually fires on a missing commitment is the
+    // conditional role check in `deriveEnvironmentSemantics`, which the closure
+    // reaches first. `windowDerivation.ts`'s own `retained.length === 0` refusal
+    // is defence for callers that run no closure; it is behind this rule on both
+    // shipped branches, and the ledger records that rather than claiming two
+    // kills for one guard.
+    find: '    if (single(roles, "evidence-window-commitment") === undefined) {',
+    replace: '    if (String(1) === "2" && single(roles, "evidence-window-commitment") === undefined) {',
     tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
     expect: "fail",
   },
@@ -1280,12 +1303,33 @@ export function classifyTestRun({ stdout, expect, tests, mustFail }) {
   const tests_ = Number(/^ℹ tests (\d+)$/m.exec(stdout)?.[1] ?? "-1");
   const pass = Number(/^ℹ pass (\d+)$/m.exec(stdout)?.[1] ?? "-1");
   const fail = Number(/^ℹ fail (\d+)$/m.exec(stdout)?.[1] ?? "-1");
+  const cancelled = Number(/^ℹ cancelled (\d+)$/m.exec(stdout)?.[1] ?? "0");
 
   // No parseable summary means the runner never got far enough to have an
   // opinion — a module that would not load, a crash before the first test. That
   // is a harness failure and must not be read as "nothing failed".
   if (pass < 0 || fail < 0 || tests_ <= 0) {
     return { result: CONTROL_RESULT.RUNNER_FAILED, pass, fail, tests: tests_, failingFiles: [] };
+  }
+
+  // A summary that reports tests but no outcomes is the same thing wearing a
+  // number. `window-verifier-requires-commitment` produced exactly this on its
+  // first campaign: the patched verifier died on a TypeError instead of refusing,
+  // every case in the file was cancelled, and the run reported **0 pass / 0
+  // fail** — which the classifier read as "the guard killed nothing".
+  //
+  // It measured nothing at all. A control that disables a guard and crashes the
+  // process has not shown the guard is unnecessary; it has shown the patch was
+  // wrong. Cancellations are counted for the same reason.
+  if (pass + fail === 0 || cancelled > 0) {
+    return {
+      result: CONTROL_RESULT.RUNNER_FAILED,
+      pass,
+      fail,
+      tests: tests_,
+      failingFiles: [],
+      ...(cancelled > 0 ? { cancelled } : {}),
+    };
   }
 
   const failingFiles = [
