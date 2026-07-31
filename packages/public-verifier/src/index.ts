@@ -74,6 +74,12 @@ export {
   type CutoffDerivation,
 } from "./library/cutoffDerivation.js";
 export {
+  deriveExactEvidenceWindow,
+  resolveEvidenceWindowCommitment,
+  assertCommitmentPrecedesCapture,
+  type EvidenceWindowDerivation,
+} from "./library/windowDerivation.js";
+export {
   verifySubjectOutputPayloads,
   type PayloadAccountingReport,
 } from "./library/payloadAccounting.js";

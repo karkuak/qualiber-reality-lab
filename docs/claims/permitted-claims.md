@@ -217,23 +217,49 @@ The one claim this slice earns, stated at exactly its width:
   a subject's own output bytes refuses the run before anything freezes. Four
   surfaces remain unscanned and are named individually in
   `PENDING_ORACLE_SCAN_SURFACES`.
-- **The evidence cutoff may be claimed to be re-derived offline, to the width of
-  the committed bounds.** Since ADR-ERL2-029 the verifier resolves all three
-  cutoff inputs by exact hash *and* schema, requires the runtime milestone to bind
-  the process-start receipt the **cutoff** names, requires both to be
-  lifecycle-reached and run-bound, and re-checks clock-domain agreement,
-  wall/monotonic divergence and process-milestone skew. The warmup and observation
-  windows are derived from three separately signed instants — the supervisor's
-  process start, the runtime attestor's milestone and the cutoff itself — and
-  checked against every committed policy bound. An observation bundle naming a
-  **nonexistent** runtime milestone was previously valid; it is now a typed
-  refusal.
+- **The evidence cutoff may be claimed to be re-derived offline, exactly.** Since
+  ADR-ERL2-029 the verifier resolves all three cutoff inputs by exact hash *and*
+  schema, requires the runtime milestone to bind the process-start receipt the
+  **cutoff** names, requires both to be lifecycle-reached and run-bound, and
+  re-checks clock-domain agreement, wall/monotonic divergence and
+  process-milestone skew.
 
-  It may **not** be claimed that the cutoff instant is recomputed. The warmup and
-  observation durations are constants of the composition and are retained in no
-  contract, so a producer that moved the window *within* the committed bounds, and
-  moved its milestone with it, is not caught. Narrowing that needs a signed window
-  commitment on the producer side (ADR-ERL2-029 §3.2, §9).
+  ADR-ERL2-031 adds the value that made the rest bounds-exact rather than exact.
+  Before capture, the run freezes a signed `evidence-window-commitment/v1`
+  carrying the **exact** warmup and observation durations, sealed under
+  `policy_author` — the authority that already bounds the window in
+  `cutoff-policy/v1`, and deliberately not either of the two roles that stamp the
+  clocks the derivation is anchored on. The offline verifier resolves it by hash,
+  authorizes its signer under its own role table, checks its run, cutoff-policy,
+  process-start, clock-domain and observation bindings, requires it to be
+  lifecycle-reached and to precede the capture it governs, and then recomputes in
+  integer arithmetic:
+
+  - `cutoff.instant === process_started_at + warmup_ms + observation_ms`;
+  - `milestone.occurred_at === process_started_at + warmup_ms`;
+  - the observation bundle's window, and every source snapshot's.
+
+  **The residual ADR-ERL2-029 §3.2 recorded is closed.** A producer that moves the
+  window *within* the committed bounds and moves its milestone with it is now
+  caught, because the durations are signed bytes hash-bound into the terminal
+  chain and the shift contradicts them rather than leaving no trace. An
+  observation bundle naming a **nonexistent** runtime milestone was valid before
+  ADR-ERL2-029; a within-bounds shifted window was valid before ADR-ERL2-031. Both
+  are typed refusals.
+
+  It may **not** be claimed that this stops a fully authorized `policy_author`
+  from committing a different window on purpose. The commitment proves that a
+  window was fixed under an authorized key before capture and that every later
+  instant matches it exactly — **not** that the window was the right one. Which
+  windows are permissible is the cutoff policy's bounds; who may commit one is the
+  trust policy's. What changed is that the choice is now on the record and signed,
+  where before it was a module constant that left no trace at all (ADR-ERL2-031
+  §3.4).
+
+  It may **not** be claimed that key custody is demonstrated. The development
+  composition holds the `policy_author` key in the same process as the run, as it
+  already does for the governor, controller, supervisor and attestor keys.
+  Separating custody is a deployment property this profile does not exhibit.
 - **Subject-output payload bytes may be claimed to be completely accounted, in
   both directions.** Every declared payload must exist as a regular file inside
   the authorized payload root, match its declared length and digest exactly, and

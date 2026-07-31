@@ -162,6 +162,10 @@
     {
       "role": "challenge-activation-receipt",
       "count": 1
+    },
+    {
+      "role": "evidence-window-commitment",
+      "count": 1
     }
   ],
   "lifecycle_event_types": [
@@ -407,6 +411,7 @@
     "traffic-process-start-receipt",
     "runtime-milestone",
     "cutoff-policy",
+    "evidence-window-commitment",
     "comparison-policy",
     "source-snapshot",
     "source-snapshot",

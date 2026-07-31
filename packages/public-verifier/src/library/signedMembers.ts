@@ -214,6 +214,16 @@ const SIGNED_MEMBER_RULES = new Map<string, SignedMemberRule>([
   ["comparison-policy/v1", { role: "policy_author" }],
   ["evidence-equivalence-profile/v1", { role: "policy_author" }],
   ["cutoff-policy/v1", { role: "policy_author", securityTimestampField: "valid_from" }],
+  // ADR-ERL2-031 §4. The exact evidence window, committed before capture. The
+  // same authority that bounds it in the cutoff policy — and pointedly not either
+  // of the two roles below, whose clocks the cutoff derivation is anchored on. A
+  // signer that both chose the window and stamped the instant it is measured from
+  // could move both together and leave the arithmetic closing, which is the
+  // residual restored under a different name.
+  [
+    "evidence-window-commitment/v1",
+    { role: "policy_author", securityTimestampField: "committed_at" },
+  ],
   [
     "traffic-process-start-receipt/v1",
     { role: "traffic_supervisor", securityTimestampField: "process_started_at" },

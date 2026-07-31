@@ -69,6 +69,7 @@ import {
   type JourneyStepOutcomeV1,
   type JudgeExpectationRevealRecordV1,
   type MetricResultV1,
+  type EvidenceWindowCommitmentV1,
   type MonotonicClockDomainV1,
   type ObservationBundleV2,
   type LiveCanonicalEvidenceEnvelopeV1,
@@ -130,6 +131,7 @@ import { buildResidueProbe } from "../environment/residueProbe.js";
 import { buildEmergencyCleanup } from "../cleanup/cleanup.js";
 import { buildEnvironmentRestoration, buildTeardownVerification, type TeardownCheck } from "../cleanup/cleanup.js";
 import { realizeCutoff, freezeSourceSnapshot, freezeObservation, type RealizedCutoff } from "../capture/capture.js";
+import { assertMilestoneOnCommittedBoundary, sealWindowCommitment } from "../capture/evidenceWindow.js";
 import { assertComparisonModeAdmissible, assertTranslationTotality, buildLiveEnvelope } from "../capture/envelope.js";
 import { buildSelectedJourneyResult } from "../evaluation/journey.js";
 import { buildDomainNotApplicable, missingDomainAncestors } from "../evaluation/domain.js";
@@ -169,6 +171,17 @@ export interface EnvironmentKeyring {
   readonly trafficSupervisor: SigningKey;
   /** Signs the runtime milestone the cutoff is derived from. */
   readonly runtimeAttestor: SigningKey;
+  /**
+   * Signs the run's evidence-window commitment (ADR-ERL2-031 §4).
+   *
+   * The authority that bounds the window in `cutoff-policy/v1` is the one that
+   * commits the exact window inside those bounds — the same statement, one notch
+   * more specific. Deliberately **not** `trafficSupervisor` or `runtimeAttestor`:
+   * the party that chooses the window must not also stamp the clocks the
+   * derivation is anchored on, or "wall, monotonic, supervisor and
+   * runtime-attestor bounds agree" collapses into one operator's own bookkeeping.
+   */
+  readonly policyAuthor: SigningKey;
   /** Signs the exposure event when the sealed case is opened for judging. */
   readonly vaultAuthorizer: SigningKey;
   /** Anchors the terminal run record in the timestamp log. */
@@ -224,14 +237,22 @@ const RESERVATION_KINDS: ReadonlySet<string> = new Set<ReservationKind>([
 ]);
 
 /**
- * The warmup and observation windows this development profile uses.
+ * The evidence window this development profile **configures**.
  *
- * They are constants of the composition, not caller inputs: `realizeCutoff`
- * checks them against the committed policy bounds, and a caller-chosen window
- * would let an operator move the cutoff after seeing the environment.
+ * These were constants of the composition — retained in no contract, so no
+ * offline reader could recompute the cutoff scalar and the derivation was
+ * bounds-exact rather than exact (ADR-ERL2-029 §3.2). They are now inputs to one
+ * thing only: the signed `evidence-window-commitment/v1` the run freezes before
+ * it observes the runtime milestone. Every later phase reads the frozen
+ * commitment, so a producer that edits these values after the freeze changes
+ * bytes a reader can see (ADR-ERL2-031 §1.1).
+ *
+ * Whole seconds, because `erl2:common#/$defs/Instant` is second-precision and the
+ * renderer truncates rather than rounds; `sealWindowCommitment` refuses anything
+ * else before it signs (ADR-ERL2-031 §3.2).
  */
-const WARMUP_MS = 1_000;
-const OBSERVATION_MS = 5_000;
+const CONFIGURED_WARMUP_MS = 1_000;
+const CONFIGURED_OBSERVATION_MS = 5_000;
 
 /** One phase of the walk: where it departs from, and where it lands. */
 export interface EnvironmentPhase {
@@ -1404,6 +1425,33 @@ export class EnvironmentRun {
       ),
     );
 
+    // ADR-ERL2-031 §5: the exact window is **sealed** here, before the milestone
+    // is observed, so the milestone is measured against a window that was already
+    // fixed rather than chosen to fit it. That was the residual: a producer free
+    // to select the durations could move them inside the committed bounds and
+    // move the milestone with them, and no retained byte disagreed.
+    //
+    // Sealed, not written. Writing before the milestone check would leave retained
+    // bytes behind on a refusal — the P1-10 defect ADR-ERL2-028 §3 removed, where
+    // a resolution that can throw sits between two freezes. Both artifacts reach
+    // the disk together below, after nothing can still refuse.
+    const windowCommitment = sealWindowCommitment({
+      runId: this.runId,
+      policy: cutoffPolicy,
+      processStartReceipt: startReceipt,
+      monotonicClockDomainHash: clockDomain.core_hash,
+      comparisonPolicyHash: coreHash(comparisonPolicy),
+      // The instance the observation bundle names, not the baseline fingerprint
+      // the process-start receipt names. They are different artifacts and binding
+      // the wrong one is caught immediately by the verifier's own binding check —
+      // which is how this line got its first value wrong and its second right.
+      environmentInstanceHash: this.environmentInstanceHash(),
+      warmupMs: CONFIGURED_WARMUP_MS,
+      observationMs: CONFIGURED_OBSERVATION_MS,
+      committedAt: startedAt,
+      signingKey: this.keys.policyAuthor,
+    });
+
     // The milestone is observed one clock tick after the start, so wall and
     // monotonic elapsed time agree by construction and the divergence bound is
     // checked against a real interval rather than against zero.
@@ -1430,10 +1478,23 @@ export class EnvironmentRun {
       ),
     );
 
+    // The milestone is an observation and the commitment is the expectation it
+    // has to satisfy. Deriving the milestone from the committed warmup instead
+    // would be tidier and wrong — it is signed by the `runtime_attestor`, and
+    // computing it from a value the `policy_author` chose would make one party's
+    // arithmetic look like two parties' agreement. Refused here, before either
+    // artifact is written (ADR-ERL2-031 §3.3).
+    assertMilestoneOnCommittedBoundary(windowCommitment, startReceipt, milestone);
+
     // The cutoff policy is mirrored into the run for the same reason the trust
     // policy is: an offline reader must be able to re-derive the cutoff from
     // retained bytes alone.
     this.ws.store.freezeJson(`${RETAINED}/cutoff-policy.json`, cutoffPolicy, "INTERNAL");
+    this.ws.store.freezeJson(
+      `${RETAINED}/evidence-window-commitment.json`,
+      windowCommitment,
+      "INTERNAL",
+    );
     this.ws.store.freezeJson(`${RETAINED}/comparison-policy.json`, comparisonPolicy, "INTERNAL");
     this.ws.store.freezeJson(`${RETAINED}/clock-domain.json`, clockDomain, "INTERNAL");
     this.ws.store.freezeJson(`${RETAINED}/traffic-start-receipt.json`, startReceipt, "INTERNAL");
@@ -1466,6 +1527,18 @@ export class EnvironmentRun {
           artifact_core_hash: coreHash(cutoffPolicy),
           artifact_schema_version: "cutoff-policy/v1",
         },
+        // A produced artifact, not a supporting schema. That distinction carries
+        // the invalid branch for free: `available_evidence` is built from every
+        // event's `produced`, so a run that reached traffic accounts for its
+        // commitment and one that failed earlier fabricates none. A supporting
+        // schema would have accounted for it unconditionally — including on runs
+        // that never committed a window, which is the shape that hides an
+        // omission (ADR-ERL2-031 §6).
+        {
+          artifact_role: "evidence-window-commitment",
+          artifact_core_hash: windowCommitment.core_hash,
+          artifact_schema_version: "evidence-window-commitment/v1",
+        },
         {
           artifact_role: "comparison-policy",
           artifact_core_hash: coreHash(comparisonPolicy),
@@ -1482,8 +1555,19 @@ export class EnvironmentRun {
    * Deliberately recomputed rather than remembered: `observe` and
    * `freeze-observation` are separate processes, and the cutoff is the one value
    * every capture artifact is stamped from.
+   *
+   * The durations come from the run's own **frozen** window commitment, resolved
+   * by role like every other retained input — never from `CONFIGURED_WARMUP_MS`
+   * and `CONFIGURED_OBSERVATION_MS`. That is the whole producer-side content of
+   * ADR-ERL2-031: the values an offline reader can see are the values the cutoff
+   * is actually built from, so editing the module constants after the freeze
+   * cannot move the cutoff without moving signed bytes.
    */
   private cutoff(): RealizedCutoff {
+    const commitment = this.ws.artifact<EvidenceWindowCommitmentV1>(
+      this.ws.requireHashForRole("evidence-window-commitment"),
+      "EvidenceWindowCommitmentV1",
+    );
     return realizeCutoff({
       policy: this.cutoffPolicy(),
       processStartReceipt: this.ws.artifact<TrafficProcessStartReceiptV1>(
@@ -1494,8 +1578,8 @@ export class EnvironmentRun {
         this.ws.requireHashForRole("runtime-milestone"),
         "RuntimeMilestoneV1",
       ),
-      warmupMs: WARMUP_MS,
-      observationMs: OBSERVATION_MS,
+      warmupMs: commitment.warmup_ms,
+      observationMs: commitment.observation_ms,
     });
   }
 

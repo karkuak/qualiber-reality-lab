@@ -35,6 +35,7 @@ import { ArtifactIndex } from "./artifactIndex.js";
 import { assertClaimScopeWithinCeiling, deriveClaimCeiling } from "./claimScope.js";
 import { derivePreEnvironmentClosure, deriveInvalidClosure } from "./closure.js";
 import { assertCutoffOrderingFromLifecycle, deriveEvidenceCutoff } from "./cutoffDerivation.js";
+import { deriveExactEvidenceWindow } from "./windowDerivation.js";
 import { deriveEnvironmentClosure, deriveTerminalVariant } from "./environmentClosure.js";
 import {
   deriveEnvironmentSemantics,
@@ -660,15 +661,34 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
   //
   // `cutoff.runtime_milestone_hash` used to be a 32-byte string nothing resolved,
   // so an observation bundle naming a nonexistent runtime milestone verified as
-  // valid (review P2). The derivation is bounds-exact rather than scalar-exact —
-  // the warmup and observation durations are composition constants and are not
-  // retained — and that boundary is stated in the ADR rather than blurred here.
+  // valid (review P2). This pass resolves all three inputs, checks every
+  // committed bound, and decomposes the window against three separately signed
+  // instants.
   const cutoff = deriveEvidenceCutoff({
     index,
     lifecycle: options.lifecycle,
     runId: attestation.run_id,
   });
   assertCutoffOrderingFromLifecycle(options.lifecycle, cutoff?.milestoneHash);
+
+  // -- ADR-ERL2-031: and now the exact window, not merely a bounded one ------
+  //
+  // The pass above was bounds-exact by necessity: the warmup and observation
+  // durations were composition constants retained in no contract, so it derived
+  // them *out of* the same instants it was checking. A producer that moved the
+  // window inside the committed bounds and moved its milestone to match satisfied
+  // every one of those checks.
+  //
+  // The run now commits the exact durations before it observes the milestone, so
+  // the cutoff, the milestone boundary and the observation window are each
+  // recomputable from retained bytes with no freedom left. Ordered after the
+  // bounds derivation so a missing or unresolvable cutoff input keeps its own,
+  // more fundamental cause.
+  deriveExactEvidenceWindow({
+    index,
+    lifecycle: options.lifecycle,
+    runId: attestation.run_id,
+  });
 
   // -- ADR-ERL2-029 §5: the payload bytes, accounted in both directions ------
   //
@@ -847,6 +867,15 @@ export function verifyInvalidRecord(options: VerifyRecordOptions): MandatoryGrap
   // read. A cancellation that claimed `not_required` over a live environment
   // verified at exit 0 before this pass existed (review P1-2).
   deriveInvalidEnvironmentSemantics({ index, lifecycle: options.lifecycle, record });
+
+  // ADR-ERL2-031 on the invalid branch. An invalid terminal that reached
+  // `traffic_or_journey_started` committed a window, and it is accounted for here
+  // on exactly the terms a valid terminal is. One that failed earlier committed
+  // none, and the derivation returns without inventing one — the applicability is
+  // read from the lifecycle, never from whether a commitment happens to be
+  // retained, because letting the retained set answer that question would let an
+  // omission answer for itself.
+  deriveExactEvidenceWindow({ index, lifecycle: options.lifecycle, runId: record.run_id });
 
   // ADR-ERL2-029 §5 on the invalid branch. An invalid terminal may have frozen a
   // subject output before it failed; if it did, those payloads are accounted on

@@ -1044,6 +1044,192 @@ export const CONTROLS = [
     tests: ["tests/dist/adversarial/signerInventoryEnvironment.test.js"],
     expect: "fail",
   },
+  // -- ADR-ERL2-031: the signed evidence-window commitment -------------------
+  //
+  // Anchors are things each invariant owns — a named comparison, a role-table
+  // row, the `produced` entry itself — rather than a line that could become one
+  // of several. `NC-CAMPAIGN` re-checks every one against real source on each
+  // `npm test`, so an anchor that stops being unique fails in seconds rather than
+  // in a four-hour campaign.
+  {
+    id: "window-producer-lifecycle-reach",
+    what: "the evidence-window commitment is reached by the lifecycle event that produced it",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Relabels the `produced` row rather than deleting the freeze. Deleting the
+    // freeze would kill every window case at once and prove nothing about which
+    // rule each measures; relabelling isolates *reachability* from *presence*,
+    // which is the snapshot-only shape the closure refuses everywhere else.
+    find: '          artifact_role: "evidence-window-commitment",',
+    replace: '          artifact_role: "evidence-window-commitment-unreached",',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-producer-uses-frozen-commitment",
+    what: "the cutoff is built from the frozen commitment, not from a mutable constant",
+    file: "packages/core/src/run/environmentRun.ts",
+    // **The control this package exists to run.** It restores the composition
+    // constants ADR-ERL2-031 removed: the cutoff is rebuilt from module-level
+    // numbers instead of from the signed commitment the run froze. The bytes an
+    // offline reader holds then stop governing the bytes the producer writes,
+    // which is the residual restored under a different name.
+    find: "      warmupMs: commitment.warmup_ms,\n      observationMs: commitment.observation_ms,",
+    replace: "      warmupMs: 2_000,\n      observationMs: 4_000,",
+    tests: [
+      "tests/dist/adversarial/evidenceWindowCommitment.test.js",
+      "tests/dist/e2e/environmentRun.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "window-producer-milestone-boundary",
+    what: "the observed milestone must land on the committed warmup boundary",
+    file: "packages/core/src/capture/evidenceWindow.ts",
+    find: "  if (observedWarmupMs !== commitment.warmup_ms) {",
+    replace: '  if (String(1) === "2" && observedWarmupMs !== commitment.warmup_ms) {',
+    tests: ["tests/dist/integration/evidenceWindowDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-producer-policy-bounds",
+    what: "a configured window outside the policy's committed bounds is refused before it is signed",
+    file: "packages/core/src/capture/evidenceWindow.ts",
+    find: "  if (input.warmupMs > policy.maximum_warmup_ms) {",
+    replace: '  if (String(1) === "2" && input.warmupMs > policy.maximum_warmup_ms) {',
+    tests: ["tests/dist/integration/evidenceWindowDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-producer-whole-second-durations",
+    what: "a sub-second window is refused, because its derived instant is not representable",
+    file: "packages/core/src/capture/evidenceWindow.ts",
+    // `Instant` is second-precision and the renderer truncates rather than
+    // rounding, so a 900 ms warmup would render an instant disagreeing with its
+    // own arithmetic by 900 ms — silently.
+    find: "  if (value % MS_PER_SECOND !== 0) {",
+    replace: '  if (String(1) === "2" && value % MS_PER_SECOND !== 0) {',
+    tests: ["tests/dist/integration/evidenceWindowDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-requires-commitment",
+    what: "a run that started traffic and retains no commitment is refused",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    find: "  if (retained.length === 0) {",
+    replace: '  if (String(1) === "2" && retained.length === 0) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-exact-cutoff",
+    what: "the verifier compares the exact rederived cutoff, not merely the committed bounds",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    // **The control ADR-ERL2-031 §10 singles out.** Removing this comparison
+    // restores ADR-ERL2-029's bounds-only posture exactly, so a within-bounds
+    // shifted window — warmup 1s -> 2s, observation 5s -> 4s, milestone moved to
+    // match, commitment untouched — must verify again. If this control kills
+    // nothing, the exact derivation is not doing the work the ADR claims and the
+    // residual is still open.
+    find: "  if (derivedCutoffMs !== cutoffMs) {",
+    replace: '  if (String(1) === "2" && derivedCutoffMs !== cutoffMs) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-exact-milestone",
+    what: "the milestone must land exactly on the committed warmup boundary",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    find: "  if (derivedMilestoneMs !== milestoneMs) {",
+    replace: '  if (String(1) === "2" && derivedMilestoneMs !== milestoneMs) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-capture-window",
+    what: "every source snapshot's window must close at the committed cutoff",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    // Recorded as `expect: "pass"` because it is, not because it should be.
+    //
+    // Building the mutation needs a snapshot reseal, which moves the observation
+    // bundle that cites it, the canonical evidence envelope and the adapter
+    // translation receipt — and the terminal then refuses at the closure with
+    // three unaccounted artifacts, long before the window derivation runs. The
+    // rule is real and is covered by the pure cases in
+    // `evidenceWindowDerivation.test.ts`; what is missing is an end-to-end
+    // mutation that reaches it, and saying so is better than a control that
+    // reads as evidence and measures a rule that fires first.
+    find: "    if (toMs !== derivedCutoffMs) {",
+    replace: '    if (String(1) === "2" && toMs !== derivedCutoffMs) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "pass",
+    note: "no end-to-end mutation reaches it; the closure refuses a resealed snapshot chain first",
+  },
+  {
+    id: "window-verifier-policy-binding",
+    what: "the commitment must name the cutoff policy the cutoff was derived under",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    find: "  if (commitment.cutoff_policy_hash !== cutoff.policy_hash) {",
+    replace: '  if (String(1) === "2" && commitment.cutoff_policy_hash !== cutoff.policy_hash) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-process-binding",
+    what: "the commitment must name the process-start receipt the window is measured from",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    find: "  if (commitment.process_start_receipt_hash !== cutoff.process_start_receipt_hash) {",
+    replace:
+      '  if (String(1) === "2" && commitment.process_start_receipt_hash !== cutoff.process_start_receipt_hash) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-lifecycle-reachability",
+    what: "a commitment retained but never lifecycle-reached is refused",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    find: "  if (!reachedHashes(options.lifecycle).has(commitment.core_hash)) {",
+    replace:
+      '  if (String(1) === "2" && !reachedHashes(options.lifecycle).has(commitment.core_hash)) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-pre-capture-ordering",
+    what: "a commitment frozen after the capture it governs is refused",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    find: "    if (at >= 0 && at < producedAt) {",
+    replace: '    if (String(1) === "2" && at >= 0 && at < producedAt) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-signer-inventory-inclusion",
+    what: "the commitment participates in signer-inventory completeness like any signed member",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    // Removes exactly one row from the producer's role table. A signed contract
+    // with no declared role is a hard refusal, so this measures that the new
+    // contract goes through the *general* derivation — a special case for it
+    // would prove only that the special case works.
+    find: '  ["evidence-window-commitment/v1", "policy_author"],',
+    replace: "",
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-signer-role-separation",
+    what: "the window is signed by policy_author, never by a clock-stamping role",
+    file: "packages/public-verifier/src/library/signedMembers.ts",
+    // Grants the window to the traffic supervisor — the party that signs the
+    // instant the window is measured *from*. A signer that both chooses the
+    // window and stamps its origin can move both together and leave the
+    // arithmetic closing, which is the residual under another name
+    // (ADR-ERL2-031 §4).
+    find: '    { role: "policy_author", securityTimestampField: "committed_at" },',
+    replace: '    { role: "traffic_supervisor", securityTimestampField: "committed_at" },',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+
 ];
 
 // -- result classification ---------------------------------------------------

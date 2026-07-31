@@ -379,6 +379,13 @@ export {
   type FreezeObservationOptions,
 } from "./capture/capture.js";
 export {
+  sealWindowCommitment,
+  assertMilestoneOnCommittedBoundary,
+  committedCutoffMs,
+  addExactMs,
+  type WindowCommitmentInput,
+} from "./capture/evidenceWindow.js";
+export {
   assertComparisonModeAdmissible,
   buildReplayEnvelope,
   buildLiveEnvelope,

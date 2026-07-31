@@ -48,6 +48,34 @@ The global allocator stores **reservation leases only** — never resource state
   reclaimed.
 - A run cannot release another run's lease.
 
+## The evidence window
+
+`erl2 journey` freezes a signed `evidence-window-commitment/v1` before the run
+observes the runtime milestone. It carries the **exact** warmup and observation
+durations — 1 000 ms and 5 000 ms in the development profile — and every later
+phase reads it rather than a module constant.
+
+Three things follow that an operator should know:
+
+- **The window is fixed before the milestone is observed, and the milestone must
+  land on it.** A run whose milestone does not fall exactly at
+  `process_started_at + warmup_ms` refuses with `CUTOFF_BOUND_EXCEEDED` and
+  freezes nothing — the commitment is sealed in memory and written only once both
+  artifacts exist.
+- **The durations must be whole seconds.** Retained instants are second-precision
+  and the renderer truncates rather than rounds, so a sub-second window would
+  produce an instant that disagrees with its own arithmetic. It is refused before
+  it is signed.
+- **The window is signed by `policy_author`**, the authority that already bounds
+  it in `cutoff-policy/v1` — never by the traffic supervisor or the runtime
+  attestor, whose clocks the cutoff derivation is anchored on.
+
+An offline reader then rederives the cutoff exactly rather than checking it
+against bounds (ADR-ERL2-031). What that does **not** do is stop an authorized
+`policy_author` from committing a different window deliberately; which windows are
+permissible is the cutoff policy's business, and who may commit one is the trust
+policy's.
+
 ## Cleanup and the resource frontier
 
 Cleanup targets exact validated identities. A wildcard or unscoped selector is

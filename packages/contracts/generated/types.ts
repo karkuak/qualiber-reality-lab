@@ -1086,6 +1086,24 @@ export type RuntimeMilestoneV1 = {
   readonly signature: Signature;
 };
 
+export type EvidenceWindowCommitmentV1 = {
+  readonly schema_version: "evidence-window-commitment/v1";
+  readonly commitment_id: Id;
+  readonly run_id: RunId;
+  readonly cutoff_policy_hash: Hash;
+  readonly process_start_receipt_hash: Hash;
+  readonly monotonic_clock_domain_hash: Hash;
+  readonly comparison_policy_hash: Hash;
+  readonly environment_instance_hash: Hash;
+  readonly warmup_ms: number;
+  readonly observation_ms: number;
+  readonly instant_rule: "traffic_process_started_at_plus_warmup_ms_plus_observation_ms";
+  readonly milestone_relationship: "runtime_milestone_at_process_start_plus_warmup_ms";
+  readonly committed_at: Instant;
+  readonly core_hash: Hash;
+  readonly signature: Signature;
+};
+
 export type SourceSnapshotV1 = {
   readonly schema_version: "source-snapshot/v1";
   readonly run_id: RunId;

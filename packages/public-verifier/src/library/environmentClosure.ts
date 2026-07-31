@@ -98,6 +98,14 @@ const ENVIRONMENT_OPTIONAL_ROLES = [
   // enforces. Before this it was accounted for only as a supporting schema, so an
   // environment terminal that dropped it still verified valid (review P2).
   "challenge-activation-receipt",
+  // ADR-ERL2-031, on exactly the same terms and for the same reason: a run that
+  // terminated before `traffic_or_journey_started` committed no window, and
+  // requiring one would force a synthetic commitment. A run that *did* start
+  // traffic must retain exactly one, which `deriveEnvironmentSemantics` enforces.
+  // Making it a supporting schema instead would let a terminal that started
+  // traffic drop its commitment and still verify — the shape review P2 found for
+  // the activation receipt.
+  "evidence-window-commitment",
 ] as const;
 
 /** The three capture roles that must appear together or not at all. */

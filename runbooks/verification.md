@@ -73,12 +73,31 @@ What the verifier does, in order:
    and the warmup and observation windows — derived from three separately signed
    instants — must satisfy every committed policy bound.
 
-   Read the boundary before quoting it: this is **bounds-exact, not
-   scalar-exact**. The warmup and observation durations are constants of the
-   producer's composition and are retained in no contract, so a window moved
-   *within* the committed bounds, with its milestone moved to match, is not
-   caught. See ADR-ERL2-029 §3.2.
-9. Accounts the **subject-output payload root** in both directions
+9. Re-derives the **exact evidence window** for a run that started traffic
+   (ADR-ERL2-031). The run freezes a signed `evidence-window-commitment/v1`
+   carrying the exact warmup and observation durations before it observes the
+   milestone, sealed under `policy_author` — the authority that already bounds the
+   window, and deliberately not either of the roles that stamp the clocks the
+   derivation is anchored on. The verifier resolves it by hash, authorizes its
+   signer, checks its run, policy, process-start, clock-domain and observation
+   bindings, requires it to be lifecycle-reached and to precede the capture it
+   governs, and then recomputes in integer arithmetic:
+
+   - `cutoff.instant === process_started_at + warmup_ms + observation_ms`;
+   - `milestone.occurred_at === process_started_at + warmup_ms`;
+   - the observation bundle's window, and every source snapshot's.
+
+   Read the boundary before quoting it. What this proves is that a window was
+   fixed under an authorized key **before capture** and that every later instant
+   matches it exactly. It does **not** prove the window was the right one: an
+   authorized `policy_author` may commit a different window on purpose, and which
+   windows are permissible is the cutoff policy's bounds, not this arithmetic. See
+   ADR-ERL2-031 §3.4.
+
+   Step 8 was bounds-exact until this landed — a window moved *within* the
+   committed bounds, with its milestone moved to match, verified. It no longer
+   does.
+10. Accounts the **subject-output payload root** in both directions
    (ADR-ERL2-029 §5): every declared payload must exist as a regular file inside
    the authorized root with its exact declared length and digest, and every file
    in that root must be a declared payload or the freeze marker of one. Declared

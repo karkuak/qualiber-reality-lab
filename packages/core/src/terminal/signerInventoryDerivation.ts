@@ -112,6 +112,11 @@ export const PRODUCER_SIGNED_MEMBER_ROLES: ReadonlyMap<string, string> = new Map
   ["comparison-policy/v1", "policy_author"],
   ["evidence-equivalence-profile/v1", "policy_author"],
   ["cutoff-policy/v1", "policy_author"],
+  // ADR-ERL2-031: the exact evidence window, sealed under the authority that
+  // bounds it. Listed here for the same reason every other row is — so that a
+  // retained signed contract this producer cannot classify stops finalization
+  // rather than riding into a terminal chain uninventoried.
+  ["evidence-window-commitment/v1", "policy_author"],
   ["traffic-process-start-receipt/v1", "traffic_supervisor"],
   ["runtime-milestone/v1", "runtime_attestor"],
   ["exposure-event/v1", "vault_authorizer"],

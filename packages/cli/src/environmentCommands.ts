@@ -431,6 +431,12 @@ function environmentKeyring(): EnvironmentKeyring {
     controller: developmentKey("controller"),
     trafficSupervisor: developmentKey("traffic-supervisor"),
     runtimeAttestor: developmentKey("runtime-attestor"),
+    // ADR-ERL2-031 §4. The authority that bounds the evidence window in
+    // `cutoff-policy/v1` is the one that commits the exact window inside those
+    // bounds — never the supervisor or the attestor, whose clocks the derivation
+    // is anchored on. The development trust policy already grants `policy_author`
+    // to this key, which is how the shipped cutoff policy is signed.
+    policyAuthor: developmentKey("policy-author"),
     vaultAuthorizer: developmentKey("vault-authorizer"),
     timestampAuthority: developmentKey("timestamp"),
     finalizer: developmentKey("finalizer"),
