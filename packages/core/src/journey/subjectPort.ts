@@ -26,6 +26,25 @@ import { assertNoOracleFields } from "./oracle.js";
 export const FAKE_SUBJECT_PORT_ID = "fake-subject";
 
 /**
+ * The fake subject's step output at exactly `byteLength` bytes, when one is
+ * requested.
+ *
+ * Padding and truncation both happen on the *subject's* side of the boundary,
+ * which is where a real subject's output length is decided. The Lab measures
+ * whatever arrives, against a ceiling the subject cannot reach.
+ */
+function sizedOutput(natural: Buffer, byteLength: number | undefined): Buffer {
+  if (byteLength === undefined) return natural;
+  // 0xFF is deliberate: it is not valid UTF-8 in any position, so a sized output
+  // is genuinely binary. A scanner that decoded before matching would mangle it
+  // into replacement characters — and a token split by that mangling would stop
+  // being found.
+  const out = Buffer.alloc(byteLength, 0xff);
+  natural.copy(out, 0, 0, Math.min(natural.byteLength, byteLength));
+  return out;
+}
+
+/**
  * The adapter-manifest operation name each journey intent asks for.
  *
  * `SubjectAdapterManifestV1.operations` is the subject's own declaration of what
@@ -116,6 +135,19 @@ export interface FakeSubjectBehaviour {
    * surface can be shown to be load-bearing rather than merely present.
    */
   readonly leakCanaryId?: string;
+  /**
+   * The exact byte length of the output this fake subject writes for one step.
+   *
+   * Development-only, and — like `leakCanaryId` — the point of it is to make an
+   * invariant *reachable* rather than to add a capability. The declared
+   * subject-output ceiling is 64 MiB; without a way to produce a payload of a
+   * chosen size, "refused one byte over, admitted exactly at" is a property that
+   * can only be asserted about a helper, never observed on the shipped path.
+   *
+   * It steers the subject's own bytes. It cannot move the ceiling those bytes are
+   * measured against, which is frozen in the run's execution plan.
+   */
+  readonly outputByteLength?: number;
   readonly unsupportedInputs?: readonly string[];
   readonly packageBytes?: Buffer;
 }
@@ -206,13 +238,14 @@ export class FakeSubjectPort implements SubjectPort {
     const undeclared = declared !== undefined && !declared.includes(OPERATION_FOR_INTENT[intent]);
     const status = this.behaviour.stepStatus?.[intent] ?? (undeclared ? "unsupported" : "succeeded");
     const unsupportedInputs = this.behaviour.unsupportedInputs ?? [];
+    const natural = Buffer.from(
+      `${intent} output\n${this.behaviour.leakCanaryId === undefined ? "" : `${this.behaviour.leakCanaryId}\n`}`,
+      "utf8",
+    );
     return {
       status,
       activeOperatorMs: 750,
-      outputBytes: Buffer.from(
-        `${intent} output\n${this.behaviour.leakCanaryId === undefined ? "" : `${this.behaviour.leakCanaryId}\n`}`,
-        "utf8",
-      ),
+      outputBytes: sizedOutput(natural, this.behaviour.outputByteLength),
       ...(status === "failed" ? { errorCode: `SUBJECT_RUNTIME_${intent.toUpperCase()}_FAILED` } : {}),
       ...(status === "unsupported"
         ? { unsupportedInputs: undeclared ? [`operation:${OPERATION_FOR_INTENT[intent]}`] : unsupportedInputs }
