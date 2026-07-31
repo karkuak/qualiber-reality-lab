@@ -347,7 +347,9 @@ directory remains; no `node --test` or harness process survives; `git status
 
 ## 11. What this package does not claim
 
-- **Payload contents are still not scanned.** Secret canaries and forbidden
+- **Payload contents are still not scanned.** *(Closed by Step 6B —
+  [`remediation-6.5-evidence-boundaries.md`](remediation-6.5-evidence-boundaries.md).)*
+  Secret canaries and forbidden
   identifiers on the environment subject-output surface remain unscanned, and the
   declared output-size ceiling remains unenforced. Producer-side, Step 6.
 - **The cutoff's residual is unchanged** — a signed window commitment, producer

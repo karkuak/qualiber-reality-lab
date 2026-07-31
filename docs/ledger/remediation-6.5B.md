@@ -167,6 +167,14 @@ paths reachable and is refused on the release surface.
 `adapter_request`, `lab_telemetry`, `mounted_file`, `subject_output_prefill`. The
 other four stay pending and stay named individually.
 
+> **Superseded in part by Step 6B.** The independent review found that two of
+> those four were not doing what "live" describes: `mounted_file` scanned entry
+> metadata that structurally cannot contain the mounted content, and
+> `lab_telemetry` had no control proving a run reached it. Both are fixed and
+> proven in [`remediation-6.5-evidence-boundaries.md`](remediation-6.5-evidence-boundaries.md);
+> `adapter_request` is now recorded as shadowed rather than counted. The honest
+> number at this commit was two, not four.
+
 ## 7. Negative controls for the later cuts
 
 | Guard | Disabled how | Result |

@@ -270,7 +270,8 @@ a stated gap, not an implied pass — and §8.2 is the reason it is worth closin
   against descriptors; secret canaries and forbidden identifiers on the
   environment subject-output surface remain unscanned, and the declared
   output-size ceiling remains unenforced. Both are producer-side and belong to
-  Step 6.
+  Step 6. *(Closed by Step 6B —
+  [`remediation-6.5-evidence-boundaries.md`](remediation-6.5-evidence-boundaries.md).)*
 - The cutoff derivation does not prove the operator's chosen window (§2).
 - The signer inventory is not claimed complete (§4).
 - The claims ceiling is **unchanged: T1**.

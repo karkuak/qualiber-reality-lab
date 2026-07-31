@@ -283,6 +283,10 @@ makes it *checkable*.
   control, secret canaries and forbidden identifiers unscanned on the environment
   subject-output surface, and the declared subject-output size ceiling hashed and
   unenforced.
+
+  *Closed by Step 6B* — [`remediation-6.5-evidence-boundaries.md`](remediation-6.5-evidence-boundaries.md),
+  [ADR-ERL2-032](../adr/ADR-ERL2-032.md). All four, with a production-path
+  regression and a load-bearing negative control each.
 - **The remaining P3 drift** and crash coverage for `provision`, `restore`,
   `destroy` and the emergency actions.
 - **ERL2-OQ-005, ERL2-OQ-007, ERL2-OQ-008** — unchanged, still fail-closed.

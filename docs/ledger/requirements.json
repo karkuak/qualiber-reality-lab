@@ -266,7 +266,7 @@
         "JOURNEY-ORACLE-CANARY"
       ],
       "owner": "core",
-      "note": "Split visible step / age-x25519 encrypted expectation / commitment, with canary scanning on all eight design-named surfaces and a structural field guard on the subject side."
+      "note": "Split visible step / age-x25519 encrypted expectation / commitment, with a structural field guard on the subject side. Canary scanning covers three of the eight design-named surfaces with a production-path regression and a load-bearing negative control each (mounted_file, lab_telemetry, subject_output_prefill); adapter_request is live but shadowed by the mounted-file scan and is not counted; the remaining four are named in PENDING_ORACLE_SCAN_SURFACES and are not scanned. The earlier claim of all eight was wrong (ADR-ERL2-032, review Slice 6.5B P2)."
     },
     {
       "requirement_id": "ERL2-FR-016",
@@ -1289,6 +1289,10 @@
     },
     {
       "id": "ADR-ERL2-031",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-032",
       "status": "accepted"
     }
   ],

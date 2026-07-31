@@ -212,11 +212,42 @@ The one claim this slice earns, stated at exactly its width:
   missing evidence never raises. It may **not** be claimed that this widens
   anything: it removes a claim the evidence never supported and adds none
   (ADR-ERL2-025).
-- **Four oracle-canary surfaces are scanned live** — adapter request, Lab
-  telemetry, mounted evidence entry, and subject output — and a canary planted in
-  a subject's own output bytes refuses the run before anything freezes. Four
-  surfaces remain unscanned and are named individually in
+- **Three oracle-canary surfaces are scanned live *and proven***, and the fourth
+  is recorded as shadowed rather than counted (ADR-ERL2-032). Since Step 6B a
+  surface may be called live only when a shipped run refuses on it and a negative
+  control proves that refusal is load-bearing; the previous form of this claim
+  counted four on the strength of a coverage test that proved only that the
+  *scanner* recognises a target labelled with each surface.
+
+  - **`mounted_file`** — the exact bytes of every file the Lab publishes into the
+    adapter-visible tree are scanned **before the file exists**, and the published
+    bytes are then verified against the bytes that were scanned. A mount whose
+    descriptor, commitment and adapter request are all clean and whose *content*
+    carries a canary is refused before dispatch, and nothing is written. It could
+    **not** be claimed before: the scan read `JSON.stringify(entry)` over an id, a
+    state and two digests, so no leak in mounted content could appear in it.
+  - **`lab_telemetry`** — one scanner, called before any source snapshot is
+    retained and again over the snapshots the observation bundle is built from. A
+    canary in an admitted evidence-source id refuses `observe` with no snapshot
+    frozen and nothing derived. The scan was already live and correct; what was
+    missing, and is now present, is a production-path regression and a control
+    that kills it.
+  - **`subject_output_prefill`** — unchanged, and deliberately still the sole
+    owner of the judge-canary rule on the subject-output surface.
+  - **`adapter_request`** — live, and **shadowed**. Every request field that could
+    carry a token is a hash, an id or the visible-step path, and that step's own
+    bytes are now refused as a `mounted_file` one call earlier. No shipped input
+    reaches it, so no control can kill it and it is not counted. This is a
+    consequence of fixing the ordering, and the better trade: the alternative was
+    to keep publishing the leaking mount and then refuse the request naming it.
+
+  Four surfaces remain unscanned and are named individually in
   `PENDING_ORACLE_SCAN_SURFACES`.
+- **A refusal may be claimed not to republish what it refused.** A scan label is
+  built from run data, and where the leak lives in that identifier the refusal
+  message used to reprint the exact token into stderr and the CLI envelope. Every
+  new evidence-boundary regression asserts the whole envelope is free of the token
+  it planted.
 - **The evidence cutoff may be claimed to be re-derived offline, exactly.** Since
   ADR-ERL2-029 the verifier resolves all three cutoff inputs by exact hash *and*
   schema, requires the runtime milestone to bind the process-start receipt the
@@ -269,11 +300,30 @@ The one claim this slice earns, stated at exactly its width:
   silently skipped, so both an absent payload and an undeclared extra verified at
   exit 0 / `valid`.
 
-  It may **not** be claimed that payloads are **scanned**. This is byte
-  correspondence against descriptors. Secret canaries and forbidden identifiers on
-  the environment subject-output surface remain unscanned, and the declared
-  output-size ceiling remains hashed and unenforced; both are producer-side and
-  are not touched here.
+  ADR-ERL2-029's payload accounting is byte correspondence against descriptors,
+  and the two producer-side gaps it recorded as open are **closed by
+  ADR-ERL2-032**:
+
+  - **Retained subject-output payload bytes may be claimed to be scanned for
+    secret canaries and forbidden identifiers**, over the same definitions the
+    adapter host's output and diagnostics paths already enforce, before the
+    subject-output manifest freezes. Both refusals are Lab-owned evidence-boundary
+    invalidity, never a subject finding. Matching is byte-wise: a token
+    surrounded by invalid UTF-8 is still found.
+  - **The declared subject-output byte ceiling may be claimed to be enforced
+    against the bytes the subject actually produced.** The limit is the run's own
+    `SubjectExecutionPlanV1.limits.output_bytes` — the value hashed into every
+    step request's `resource_limit_hash`, not an adapter frame bound, a
+    diagnostics bound, a file count, a path depth or a flag. Bytes are counted
+    from the payloads read back from the store, per occurrence, with no decoding;
+    a payload one byte over is refused before the manifest freezes and a payload
+    exactly at the ceiling is admitted. Both halves are measured end to end
+    through the shipped CLI at the real 64 MiB ceiling, not at an injected one.
+
+  It may **not** be claimed that these scans see anything the subject chose not to
+  return. They govern the bytes the run retains, which is what the ceiling and the
+  partition are about; a subject that withholds output withholds it from the
+  evidence too, and that is a separate, already-recorded limit.
 - **The mandatory evidence gate may be claimed to verify invalid goldens
   semantically.** `evidence:verify` now invokes the real offline invalid-record
   verifier in a fresh process for every invalid-run golden and requires exit 0 and
