@@ -207,6 +207,129 @@ export function assertOutputClean(files: readonly CollectedFile[]): void {
   }
 }
 
+/**
+ * One retained subject-output payload, as the bytes actually on disk.
+ *
+ * `path` is the Lab-authored logical path, kept for diagnosis; it is never the
+ * payload's content, so naming it cannot republish what the scan refused.
+ */
+export interface RetainedSubjectOutputPayload {
+  readonly path: string;
+  readonly bytes: Buffer;
+}
+
+/**
+ * Total retained subject-output payload bytes.
+ *
+ * Byte counting, stated exactly, because every loose reading of it is a way to
+ * hide a total:
+ *
+ * - the unit is the **byte**, from `Buffer.byteLength`, never the JavaScript
+ *   character. A multibyte UTF-8 payload counts more bytes than it has
+ *   characters, and the ceiling is a retention bound on bytes;
+ * - the bytes counted are the ones **read back from the store**, never a
+ *   descriptor's `byte_length`, a manifest total or a file name. A declared
+ *   length is the producer's claim about the payload, not the payload;
+ * - every *occurrence* counts. Two references naming one path are two exposures
+ *   of those bytes and count twice; deduplicating by path would let a duplicated
+ *   reference shrink the measured total below the real one;
+ * - nothing is decoded, decompressed or re-encoded first. The retained bytes are
+ *   what the ceiling governs, whatever they encode.
+ *
+ * The running total is asserted to stay an exact integer at every step, so the
+ * comparison against the ceiling can never be made against a value that silently
+ * lost precision.
+ */
+export function subjectOutputPayloadByteTotal(
+  payloads: readonly RetainedSubjectOutputPayload[],
+): number {
+  let total = 0;
+  for (const payload of payloads) {
+    total += payload.bytes.byteLength;
+    if (!Number.isSafeInteger(total)) {
+      throw new Erl2Error(
+        CODES.SUBJECT_OUTPUT_LIMIT_EXCEEDED,
+        "retained subject output exceeds any exactly representable byte total",
+        { owner: "lab" },
+      );
+    }
+  }
+  return total;
+}
+
+/**
+ * Enforces the run's **declared** subject-output byte ceiling against the bytes
+ * the subject actually produced.
+ *
+ * The ceiling is `SubjectExecutionPlanV1.limits.output_bytes` — the value the
+ * run froze into its own execution plan and hashed into every step request's
+ * `resource_limit_hash`. It is deliberately not the adapter host's output-tree
+ * bound, not the diagnostics bound, and not any flag: a limit a caller can move
+ * at the moment of enforcement is not a commitment.
+ *
+ * Exactly at the ceiling is admitted; one byte over is refused. The message
+ * carries two integers and no payload byte.
+ */
+export function assertSubjectOutputWithinDeclaredBytes(
+  payloads: readonly RetainedSubjectOutputPayload[],
+  declaredOutputBytes: number,
+): void {
+  const total = subjectOutputPayloadByteTotal(payloads);
+  if (total > declaredOutputBytes) {
+    throw new Erl2Error(
+      CODES.SUBJECT_OUTPUT_LIMIT_EXCEEDED,
+      `retained subject output is ${String(total)} bytes against a declared ceiling of ${String(declaredOutputBytes)}`,
+      { owner: "lab" },
+    );
+  }
+}
+
+/**
+ * Scans retained subject-output payload bytes for secrets.
+ *
+ * Deliberately **not** a judge-canary gate. The judge-canary rule on this
+ * surface is owned by the `subject_output_prefill` oracle scan that runs just
+ * before this one, and that scan has a load-bearing negative control proving it.
+ * A second gate answering the same question with the same code would make that
+ * control kill nothing — it would still refuse, from here — and retire the only
+ * evidence that the first scan works. So this closes exactly the two rules the
+ * environment subject-output surface had no gate for at all.
+ *
+ * The vocabulary is the established one: `scanBytes` and
+ * `FORBIDDEN_OUTPUT_IDENTIFIERS`, the same definitions the adapter host's output
+ * and diagnostics paths already enforce. Inventing a second forbidden-token list
+ * would mean two answers to one question.
+ *
+ * Matching is over `latin1`, which is a byte-for-byte view: a payload that is
+ * not valid UTF-8 is scanned as it is rather than mangled into replacement
+ * characters that could break a token apart.
+ *
+ * Both refusals are **Lab-owned**. A secret or an identifier in retained output
+ * is an evidence-boundary failure of the Lab's own partition; it is not a
+ * finding about the subject's behaviour and must never be attributed as one.
+ */
+export function assertSubjectOutputContentClean(
+  payloads: readonly RetainedSubjectOutputPayload[],
+): void {
+  for (const payload of payloads) {
+    const counts = scanBytes(payload.bytes.toString("latin1"));
+    if (counts.secretCanaries > 0) {
+      throw new Erl2Error(
+        CODES.SECRET_CANARY_IN_SUBJECT_OUTPUT,
+        `a secret canary reached retained subject output at ${payload.path}`,
+        { owner: "lab" },
+      );
+    }
+    if (counts.forbiddenIdentifiers > 0) {
+      throw new Erl2Error(
+        CODES.SECRET_PLAINTEXT_IN_CONTRACT,
+        `retained subject output at ${payload.path} carries a forbidden identifier`,
+        { owner: "lab" },
+      );
+    }
+  }
+}
+
 export function redact(text: string): { readonly text: string; readonly redactions: number } {
   let redactions = 0;
   let out = text.replace(SECRET_CANARY, () => {

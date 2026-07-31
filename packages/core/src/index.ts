@@ -185,6 +185,7 @@ export {
   scanForCanaries,
   assertNoCanaryLeak,
   assertNoOracleFields,
+  redactOracleLabel,
   type OracleScanSurface,
   type OracleScanTarget,
   type OracleScanFinding,
@@ -277,15 +278,19 @@ export {
 export {
   assertNoExecutionAfterOutputFreeze,
   assertOutputClean,
+  assertSubjectOutputContentClean,
+  assertSubjectOutputWithinDeclaredBytes,
   collectBoundedTree,
   freezeAdapterOutput,
   freezeDiagnostics,
   redact,
   scanBytes,
+  subjectOutputPayloadByteTotal,
   DEFAULT_OUTPUT_BOUNDS,
   FORBIDDEN_OUTPUT_IDENTIFIERS,
   type CollectedFile,
   type OutputBounds,
+  type RetainedSubjectOutputPayload,
 } from "./adapter/outputFreezer.js";
 export {
   ALLOWED_ENVIRONMENT_VARIABLE_NAMES,
@@ -369,6 +374,7 @@ export {
   type ChallengeAdmissionOptions,
 } from "./registry/admission.js";
 export {
+  assertTelemetryOracleClean,
   realizeCutoff,
   isEligibleAtCutoff,
   freezeSourceSnapshot,

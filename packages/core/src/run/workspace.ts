@@ -79,6 +79,7 @@ import {
   assertNotSelfAnchoring,
   coreHash,
   hashBytes,
+  jcsBytes,
   sealSigned,
   signCoreHash,
   SIGNATURE_DOMAINS,
@@ -2935,11 +2936,57 @@ export class RunWorkspace {
   }
 
   visibleStepRef(step: SubjectVisibleJourneyStepV1): ArtifactRef {
-    return this.store.freezeJson(
+    return this.freezeMountedFile(
       `subject-visible/steps/${step.step_id}.json`,
       step,
-      "PUBLIC",
+      `visible-step:${step.step_id}`,
     );
+  }
+
+  /**
+   * Publishes Lab-authored bytes into the adapter-visible tree, scanning the
+   * exact bytes the mount will expose.
+   *
+   * This is the `mounted_file` surface, and the ordering is the whole point.
+   *
+   * 1. The canonical bytes are built **in memory** and scanned there, so a
+   *    refusal happens before the file exists. An adapter cannot read what was
+   *    never written, and the refusal therefore writes no evidence.
+   * 2. Only then are those same bytes frozen.
+   * 3. The freeze is verified against the reference it just issued, which
+   *    re-reads the published file and compares its length and digest with the
+   *    bytes that were scanned. That binding is what closes the gap between
+   *    *what was inspected* and *what is exposed*: a concurrent replacement
+   *    between the two is a typed refusal, not a silent substitution.
+   *
+   * `ArtifactStore.freeze` supplies the rest of the fail-closed behaviour for
+   * free — a path resolving through a symlink or a hard link is refused before
+   * any write (`resolveConfined`), and a path already frozen with *different*
+   * bytes is `ARTIFACT_ALREADY_FROZEN` rather than an overwrite, so a resumed
+   * run cannot publish a mount its first attempt did not scan.
+   *
+   * The predecessor of this method scanned `JSON.stringify(entry)` — a
+   * descriptor carrying an id, a state and two hashes. A canary in the mounted
+   * *content* could not appear there, so that scan could never fire on the leak
+   * it was named for (review P2: "`mounted_file` is scanned with metadata that
+   * cannot contain the mounted content").
+   */
+  freezeMountedFile(logicalPath: string, value: unknown, label: string): ArtifactRef {
+    const bytes = Buffer.concat([jcsBytes(value), Buffer.from("\n", "utf8")]);
+    // Buffer, not string: matching is byte-wise and never assumes the payload is
+    // valid UTF-8.
+    assertNoCanaryLeak(
+      [{ surface: "mounted_file" as const, label, bytes }],
+      this.knownCanaryIds(),
+    );
+    const ref = this.store.freeze({
+      logicalPath,
+      bytes,
+      mediaType: "application/json",
+      classification: "PUBLIC",
+    });
+    this.store.verify(ref);
+    return ref;
   }
 
   /**

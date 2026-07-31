@@ -130,7 +130,13 @@ import { freezeResourceFrontier, safeActions } from "../environment/frontier.js"
 import { buildResidueProbe } from "../environment/residueProbe.js";
 import { buildEmergencyCleanup } from "../cleanup/cleanup.js";
 import { buildEnvironmentRestoration, buildTeardownVerification, type TeardownCheck } from "../cleanup/cleanup.js";
-import { realizeCutoff, freezeSourceSnapshot, freezeObservation, type RealizedCutoff } from "../capture/capture.js";
+import {
+  assertTelemetryOracleClean,
+  realizeCutoff,
+  freezeSourceSnapshot,
+  freezeObservation,
+  type RealizedCutoff,
+} from "../capture/capture.js";
 import { assertMilestoneOnCommittedBoundary, sealWindowCommitment } from "../capture/evidenceWindow.js";
 import { assertComparisonModeAdmissible, assertTranslationTotality, buildLiveEnvelope } from "../capture/envelope.js";
 import { buildSelectedJourneyResult } from "../evaluation/journey.js";
@@ -144,6 +150,10 @@ import {
 import { JOURNEY_PLANE_METRICS } from "../evaluation/genericMetrics.js";
 import { verifyLifecycleChain } from "../lifecycle/log.js";
 import { assertNoCanaryLeak } from "../journey/oracle.js";
+import {
+  assertSubjectOutputContentClean,
+  assertSubjectOutputWithinDeclaredBytes,
+} from "../adapter/outputFreezer.js";
 import {
   CANONICAL_JOURNEY_INTENTS,
   JOURNEY_PREREQUISITES,
@@ -1637,6 +1647,11 @@ export class EnvironmentRun {
           : {}),
       }),
     );
+    // The Lab's own telemetry is scanned before one byte of it is retained.
+    // The scan used to sit only in `freezeObservation`, one phase later, by which
+    // point the snapshots were already frozen artifacts: the refusal was real but
+    // it arrived after the leaking bytes had been written.
+    assertTelemetryOracleClean(snapshots, this.ws.knownCanaryIds());
     for (const snapshot of snapshots) {
       this.ws.store.freezeJson(`retained/observation/${snapshot.snapshot_id}.json`, snapshot, "INTERNAL");
     }
@@ -1721,10 +1736,13 @@ export class EnvironmentRun {
     //     adapter or plan identity so its bytes can be identical across subjects.
     const entryRefs = new Map<string, ArtifactRef>();
     const entries = snapshots.map((snapshot) => {
-      const ref = this.ws.store.freezeJson(
+      // The bytes an adapter would mount are this snapshot's canonical bytes, so
+      // they are scanned before they are published rather than after — and the
+      // published bytes are bound to the scanned ones.
+      const ref = this.ws.freezeMountedFile(
         `subject-visible/canonical/${snapshot.snapshot_id}.json`,
         snapshot,
-        "PUBLIC",
+        `canonical-evidence:${snapshot.source_id}`,
       );
       entryRefs.set(snapshot.source_id, ref);
       return {
@@ -1742,17 +1760,6 @@ export class EnvironmentRun {
         "a live envelope requires the comparison policy's equivalence profile; a replay policy has none",
       );
     }
-    // Every entry the adapter can mount is scanned before the envelope that names
-    // them is retained. A canary here would mean judge truth reached the subject's
-    // read-only mount, which invalidates the run before any subject attribution.
-    assertNoCanaryLeak(
-      entries.map((entry) => ({
-        surface: "mounted_file" as const,
-        label: `canonical-evidence:${entry.entryId}`,
-        bytes: JSON.stringify(entry),
-      })),
-      this.ws.knownCanaryIds(),
-    );
 
     const envelope = buildLiveEnvelope({
       runId: this.runId,
@@ -1839,10 +1846,13 @@ export class EnvironmentRun {
     for (const entry of envelope.entries) {
       translated.set(
         entry.entry_id,
-        this.ws.store.freezeJson(
+        // Also an adapter-visible mount, and scanned as one: the projection is
+        // derived from bytes this run already scanned, but "derived from clean
+        // input" is an argument, not a check.
+        this.ws.freezeMountedFile(
           `subject-visible/translated/${entry.entry_id}.json`,
           { entry_id: entry.entry_id, source_content_hash: entry.source_content_hash },
-          "PUBLIC",
+          `translated-evidence:${entry.entry_id}`,
         ),
       );
     }
@@ -1921,6 +1931,29 @@ export class EnvironmentRun {
     const outcomes = this.ws.derivedStepOutcomes();
     const terminalStage = this.terminalStage(outcomes);
 
+    // Every retained payload byte the subject produced, read back from the store
+    // rather than taken from any descriptor. `store.read` resolves component by
+    // component and refuses a symlink or a hard link, so these are the bytes at
+    // the authorized path and not bytes something pointed there.
+    //
+    // One read, three gates, in this order and for these reasons:
+    //
+    //   1. the declared byte ceiling, first — it is the one check that must not
+    //      require materialising an over-large payload as text to reach a verdict;
+    //   2. the judge-canary scan, unchanged, which owns that rule on this surface;
+    //   3. secret canaries and forbidden identifiers, which had no gate here at
+    //      all.
+    //
+    // All three run before anything freezes, so each refusal leaves no subject
+    // output manifest and no step-outcome copy behind.
+    const payloads = outcomes.flatMap((outcome) =>
+      outcome.output_refs.map((ref) => ({
+        path: ref.path,
+        bytes: this.ws.store.read(ref.path),
+      })),
+    );
+    assertSubjectOutputWithinDeclaredBytes(payloads, this.plannedPlan().limits.output_bytes);
+
     // The output is the last subject-visible surface before the reveal, and the
     // one a leak would be most likely to survive on. Scanned **before anything is
     // frozen**, so a canary invalidates the run rather than travelling into the
@@ -1948,6 +1981,7 @@ export class EnvironmentRun {
       ],
       this.ws.knownCanaryIds(),
     );
+    assertSubjectOutputContentClean(payloads);
 
     const entries = outcomes.map((outcome) =>
       this.ws.store.freezeJson(
