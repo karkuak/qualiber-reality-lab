@@ -453,35 +453,56 @@ test("NC-RESTORE: a control's patch is restored from the object store, and the r
  * of the two ways a long campaign actually ends. The independent review found
  * that by killing a run by hand; a property discovered that way should not stay
  * discoverable only that way.
+ *
+ * ## Why every path kills the child
+ *
+ * The first version of this helper did not, and it hung the **entire suite** for
+ * seven hours. `spawn` with piped stdio keeps the parent's event loop alive until
+ * the child exits, and the child holds itself open with a `setInterval`. So any
+ * early failure — a marker that never appeared because thirty concurrent test
+ * processes made `git worktree add` slower than the poll window — left the child
+ * running, left the parent unable to exit, and left `node --test` waiting on a
+ * file that would never finish. `--test-timeout=0` means nothing rescues it.
+ *
+ * The bug was mine, not the harness's: driven directly, `installSignalHandlers`
+ * fires, releases and exits cleanly every time. What was missing was the
+ * discipline this file exists to check — clean up on every path, including the
+ * ones taken when something has already gone wrong.
+ *
+ * So: the child is killed in a `finally`, its streams are destroyed, and the wait
+ * for its exit is bounded. A test that cannot prove cleanup must **fail**, never
+ * hang.
  */
 async function releasesOnSignal(signal: "SIGINT" | "SIGTERM"): Promise<void> {
   const repo = makeThrowawayRepo();
   const marker = path.join(repo.root, "worktree.json");
+  const driver = [
+    `import { createDisposableWorktree } from ${JSON.stringify(pathToFileURL(worktreeModulePath).href)};`,
+    "import { writeFileSync } from 'node:fs';",
+    "const d = createDisposableWorktree({",
+    "  repoRoot: process.env['HARNESS_REPO'],",
+    "  prefix: 'erl2-harness-signal-',",
+    "});",
+    "d.installSignalHandlers(() => {});",
+    "writeFileSync(process.env['HARNESS_MARKER'], JSON.stringify({",
+    "  worktree: d.worktree, worktreeRoot: d.worktreeRoot,",
+    "}));",
+    "setInterval(() => {}, 1_000);",
+  ].join("\n");
+
+  const child = spawn(process.execPath, ["--input-type=module", "-e", driver], {
+    env: { ...process.env, HARNESS_REPO: repo.root, HARNESS_MARKER: marker },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stderr = "";
+  child.stderr?.on("data", (chunk: Buffer) => {
+    stderr += chunk.toString();
+  });
+
   try {
-    const driver = [
-      `import { createDisposableWorktree } from ${JSON.stringify(pathToFileURL(worktreeModulePath).href)};`,
-      "import { writeFileSync } from 'node:fs';",
-      "const d = createDisposableWorktree({",
-      "  repoRoot: process.env['HARNESS_REPO'],",
-      "  prefix: 'erl2-harness-signal-',",
-      "});",
-      "d.installSignalHandlers(() => {});",
-      "writeFileSync(process.env['HARNESS_MARKER'], JSON.stringify({",
-      "  worktree: d.worktree, worktreeRoot: d.worktreeRoot,",
-      "}));",
-      "setInterval(() => {}, 1_000);",
-    ].join("\n");
-
-    const child = spawn(process.execPath, ["--input-type=module", "-e", driver], {
-      env: { ...process.env, HARNESS_REPO: repo.root, HARNESS_MARKER: marker },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let stderr = "";
-    child.stderr?.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString();
-    });
-
-    for (let waited = 0; waited < 10_000 && !existsSync(marker); waited += 50) await sleep(50);
+    // Generous, because this runs alongside every other suite and `git worktree
+    // add` is not fast under that load. Exceeding it is a failure, not a hang.
+    for (let waited = 0; waited < 60_000 && !existsSync(marker); waited += 50) await sleep(50);
     assert.ok(existsSync(marker), `the driver never created its worktree: ${stderr}`);
     const created = JSON.parse(readFileSync(marker, "utf8")) as { worktree: string; worktreeRoot: string };
     assert.equal(existsSync(created.worktree), true);
@@ -492,7 +513,15 @@ async function releasesOnSignal(signal: "SIGINT" | "SIGTERM"): Promise<void> {
       });
     });
     child.kill(signal);
-    await exited;
+
+    // Bounded. If the handler does not terminate the child, that is exactly the
+    // defect this case exists to catch, and it must surface as a failure.
+    const timedOut = Symbol("timeout");
+    const outcome = await Promise.race([
+      exited.then(() => "exited" as const),
+      sleep(30_000).then(() => timedOut),
+    ]);
+    assert.notEqual(outcome, timedOut, `${signal} did not terminate the driver: ${stderr}`);
 
     const lib = (await import(pathToFileURL(worktreeModulePath).href)) as unknown as {
       worktreeResidue: (o: Record<string, unknown>) => string[];
@@ -509,6 +538,11 @@ async function releasesOnSignal(signal: "SIGINT" | "SIGTERM"): Promise<void> {
     );
     assert.equal(readFileSync(repo.file, "utf8"), repo.original);
   } finally {
+    // Every path, including the ones taken when an assertion already failed.
+    // Piped stdio keeps this process alive until the child is gone.
+    if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    child.stderr?.destroy();
+    child.stdout?.destroy();
     rmSync(repo.root, { recursive: true, force: true });
   }
 }

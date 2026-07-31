@@ -204,6 +204,30 @@ a throwaway repository, rather than asserted by reading the code.
 
 ---
 
+### 4.1 The cleanup discipline applies to the test that checks cleanup
+
+The first version of `releasesOnSignal` hung the **entire suite for seven hours**,
+and the bug was in the test, not in the harness. Driven directly,
+`installSignalHandlers` fires, releases the worktree and exits cleanly every time
+— reproduced in isolation before anything was changed.
+
+What the test got wrong is the discipline this file exists to check. `spawn` with
+piped stdio keeps the *parent's* event loop alive until the child exits, and the
+driver child holds itself open with a `setInterval`. Every assertion before
+`child.kill()` was therefore a path on which the child was never killed: the
+parent could not exit, `node --test` waited on a file that would never finish, and
+`--test-timeout=0` meant nothing rescued it.
+
+The trigger was ordinary. Under the full suite, thirty test processes run
+concurrently and `git worktree add` is slow; the marker did not appear inside the
+poll window, the `assert.ok` threw, and the child outlived the run. In isolation
+it had always passed.
+
+Now: the child is killed in a `finally` on every path, its streams are destroyed,
+and the wait for its exit is bounded and asserted. **A test that cannot prove
+cleanup must fail, never hang** — the same rule the campaign applies to itself,
+applied one layer out.
+
 ## 5. The tests
 
 `tests/integration/negativeControlHarness.test.ts` — 26 cases:
