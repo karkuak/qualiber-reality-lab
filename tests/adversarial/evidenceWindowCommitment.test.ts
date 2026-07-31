@@ -143,6 +143,12 @@ interface ResealOptions {
   readonly signWith?: Parameters<typeof sealSigned>[1];
   /** Drops the commitment's signer-inventory entry, for the wholly-absent case. */
   readonly dropInventoryEntry?: boolean;
+  /**
+   * Moves the commitment's `produced` row from the traffic event to the
+   * observation freeze, so it stays lifecycle-reached but is reached **after**
+   * the capture it governs.
+   */
+  readonly commitAfterCapture?: boolean;
 }
 
 /**
@@ -219,6 +225,10 @@ function resealWindowChain(root: string, options: ResealOptions): void {
   // Every lifecycle event from the commitment's own onward: `produced` is remapped
   // wherever it names a rebound artifact, and the chain is re-hashed throughout.
   const start = eventIndexProducing(root, "evidence-window-commitment");
+  const movedCommitmentRow = (readJson(eventFiles(root)[start] as string)["produced"] as {
+    artifact_role: string;
+    artifact_core_hash: string;
+  }[]).find((p) => p.artifact_role === "evidence-window-commitment");
   resealLifecycleFrom(root, start, (event) => {
     let produced = (event["produced"] as { artifact_role: string; artifact_core_hash: string }[]).map(
       (p) => (rebound.has(p.artifact_core_hash)
@@ -227,6 +237,15 @@ function resealWindowChain(root: string, options: ResealOptions): void {
     );
     if (options.unreachCommitment === true) {
       produced = produced.filter((p) => p.artifact_role !== "evidence-window-commitment");
+    }
+    if (options.commitAfterCapture === true) {
+      // Off the traffic event, onto the observation freeze. Still reached — so
+      // the closure is satisfied and does not shadow the rule — but reached
+      // after the capture the window governs.
+      const isTraffic = event["event_type"] === "traffic_or_journey_started";
+      const isFreeze = event["event_type"] === "observation_frozen";
+      if (isTraffic) produced = produced.filter((p) => p.artifact_role !== "evidence-window-commitment");
+      if (isFreeze) produced = [...produced, movedCommitmentRow as { artifact_role: string; artifact_core_hash: string }];
     }
     return { ...event, produced };
   });
@@ -533,6 +552,18 @@ test("WINDOW-UNREACHED: a commitment retained but produced by no event refuses",
   const result = verify(root);
   assert.notEqual(result.exitCode, 0);
   assert.equal(firstError(result.body), "GRAPH_CLOSURE_EXTRA_ARTIFACT", JSON.stringify(result.body.errors));
+});
+
+test("WINDOW-LATE-COMMITMENT: a window committed after the capture it governs refuses", () => {
+  // The ordering rule, measured. The commitment's `produced` row moves from the
+  // traffic event to the observation freeze, so it is still lifecycle-reached —
+  // the closure has nothing to say — but the run committed its window after the
+  // evidence it governs, which commits nothing.
+  const root = freshCopy();
+  resealWindowChain(root, { commitAfterCapture: true });
+  const result = verify(root);
+  assert.notEqual(result.exitCode, 0);
+  assert.equal(firstError(result.body), "POLICY_CONFLICT", JSON.stringify(result.body.errors));
 });
 
 test("WINDOW-WRONG-SIGNER: a commitment signed by the traffic supervisor refuses", () => {

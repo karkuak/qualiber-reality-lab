@@ -208,16 +208,19 @@ export function resolveEvidenceWindowCommitment(options: {
     );
   }
 
-  // Lifecycle reachability. A retained signed artifact no event ever produced is
-  // the snapshot-only shape the closure refuses everywhere else (ADR-ERL2-030
-  // §3.4), and a commitment the run never reached cannot have governed a window.
-  if (!reachedHashes(options.lifecycle).has(commitment.core_hash)) {
-    throw new Erl2Error(
-      CODES.GRAPH_CLOSURE_UNREACHABLE_ARTIFACT,
-      `the evidence-window commitment ${commitment.core_hash} is retained but no lifecycle event ` +
-        `produced it`,
-    );
-  }
+  // Lifecycle reachability is **not** re-checked here, deliberately.
+  //
+  // It was, and the campaign showed the check could never be killed: a retained
+  // artifact no lifecycle event produced is a rejected extra to the closure on
+  // both branches — `deriveEnvironmentClosure` on the valid one, and
+  // `deriveInvalidClosure` on the invalid one, whose `available_evidence` is
+  // built from every event's `produced`. Both run before this derivation and
+  // both refuse first, with the more fundamental cause.
+  //
+  // `WINDOW-UNREACHED` measures exactly that and asserts
+  // `GRAPH_CLOSURE_EXTRA_ARTIFACT`. A second check standing behind the first
+  // adds no refusal and makes neither measurable — the same lesson the
+  // duplicated commitment requirement taught one function over.
 
   return { commitment, hash: commitment.core_hash };
 }

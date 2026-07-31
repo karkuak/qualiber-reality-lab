@@ -1212,16 +1212,6 @@ export const CONTROLS = [
     expect: "fail",
   },
   {
-    id: "window-verifier-lifecycle-reachability",
-    what: "a commitment retained but never lifecycle-reached is refused",
-    file: "packages/public-verifier/src/library/windowDerivation.ts",
-    find: "  if (!reachedHashes(options.lifecycle).has(commitment.core_hash)) {",
-    replace:
-      '  if (String(1) === "2" && !reachedHashes(options.lifecycle).has(commitment.core_hash)) {',
-    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
-    expect: "fail",
-  },
-  {
     id: "window-verifier-pre-capture-ordering",
     what: "a commitment frozen after the capture it governs is refused",
     file: "packages/public-verifier/src/library/windowDerivation.ts",
@@ -1240,7 +1230,17 @@ export const CONTROLS = [
     // would prove only that the special case works.
     find: '  ["evidence-window-commitment/v1", "policy_author"],',
     replace: "",
-    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    // Measured, and re-pointed once. `signerInventoryDerivation.test.js` is a
+    // **pure** suite: it builds its own fixtures and none of them retains an
+    // evidence-window commitment, so removing the role row changed nothing there
+    // and the control scored 17 pass / 0 fail. The suites that retain one are the
+    // end-to-end battery — where the producer refuses to finalize a real
+    // environment run it cannot classify — and the architecture case that pins
+    // the two role tables in agreement.
+    tests: [
+      "tests/dist/architecture/evidenceWindowIndependence.test.js",
+      "tests/dist/adversarial/evidenceWindowCommitment.test.js",
+    ],
     expect: "fail",
   },
   {
