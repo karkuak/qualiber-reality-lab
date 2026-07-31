@@ -286,3 +286,61 @@ makes it *checkable*.
 - **The remaining P3 drift** and crash coverage for `provision`, `restore`,
   `destroy` and the emergency actions.
 - **ERL2-OQ-005, ERL2-OQ-007, ERL2-OQ-008** — unchanged, still fail-closed.
+
+### 8.3 The final campaign
+
+Run against the committed candidate `c4e809c`, 10:00 → 12:45 (2 h 45 m).
+**86 of 86 scored, 86 agreed, 0 disagreed, 0 harness errors.**
+
+| | total | patch applied | load-bearing | disagreed |
+|---|---|---|---|---|
+| inherited | 72 | 72 | 70 + 2 recorded `expect: "pass"` | 0 |
+| new (this package) | 14 | 14 | **13** + 1 recorded `expect: "pass"` | 0 |
+
+By classification: 83 `named_tests_failed`, 3 `no_kill_as_declared`, and **zero**
+of every harness-error class — no ambiguous target, no patch that failed to apply,
+no build failure, no runner failure, no restoration failure. Every patch was
+proven to land on its declared target before its suite ran.
+
+The three `expect: "pass"` rows are the two pre-existing ones —
+`baseline-repeatability` and `case-selected-comparisons` — plus
+`window-verifier-capture-window` (§8.2). None is claimed as proof.
+
+The thirteen load-bearing new controls:
+
+| Control | Result |
+|---|---|
+| `window-producer-lifecycle-reach` | **0 pass / 18 fail** |
+| `window-producer-uses-frozen-commitment` | 25 pass / **5 fail** |
+| `window-producer-milestone-boundary` | 13 pass / **3 fail** |
+| `window-producer-policy-bounds` | 15 pass / **1 fail** |
+| `window-producer-whole-second-durations` | 15 pass / **1 fail** |
+| `window-verifier-requires-commitment` | 17 pass / **1 fail** |
+| `window-verifier-exact-cutoff` | 17 pass / **1 fail** |
+| `window-verifier-exact-milestone` | 16 pass / **2 fail** |
+| `window-verifier-policy-binding` | 17 pass / **1 fail** |
+| `window-verifier-process-binding` | 17 pass / **1 fail** |
+| `window-verifier-pre-capture-ordering` | 17 pass / **1 fail** |
+| `window-signer-inventory-inclusion` | 3 pass / **19 fail** |
+| `window-signer-role-separation` | 5 pass / **13 fail** |
+
+Two are worth reading twice.
+
+**`window-producer-uses-frozen-commitment` kills 5 of 30.** It rebuilds the cutoff
+from module constants instead of the frozen commitment — the exact posture
+ADR-ERL2-031 removes — and five cases die. That is the measurement that the
+retained bytes govern the produced bytes, and it is the control this package
+exists to run.
+
+**`window-signer-inventory-inclusion` kills 19 of 22.** Removing the producer's
+role row does not merely omit a member: the producer refuses to finalize a
+terminal chain carrying a signed contract it cannot classify, so the whole
+environment run stops. The new contract goes through the general derivation, not
+a special case.
+
+### 8.4 Residue
+
+`the working tree is byte-identical to how the campaign started`. Afterwards:
+`git worktree list` shows only the repository; no `erl2-negative-control-*` temp
+directory remains; no `node --test` or harness process survives; `git status
+--short` is empty and `git diff --check` is clean.

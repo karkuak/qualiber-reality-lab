@@ -296,6 +296,7 @@ table)*
 |---|---|---|---|---|---|---|
 | Step 5B (pre-hardening) | `723935f` | 72 | 72 | — (not distinguished) | yes | none |
 | **harness hardening** | **`6985297`** | **72** | **72** | **0** | yes | none |
+| **Step 6A** | **`c4e809c`** | **86** | **86** | **0** | yes | none |
 
 ### 7.1 The hardening campaign, in full
 
