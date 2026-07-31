@@ -206,7 +206,58 @@ Recorded because it is evidence about the binding check rather than an
 embarrassment: the environment-instance binding is load-bearing, and it proved so
 against its own producer within minutes of existing.
 
-## 8. Claims
+## 8. Negative controls
+
+Fifteen new controls were written; **fourteen** ship, one was deleted as dead. The
+full campaign — inherited **and** new — was run against the committed candidate,
+never a subset.
+
+### 8.1 What the first campaign found
+
+84 of 87 agreed, **zero harness errors**, working tree byte-identical, 2 h 22 m.
+Every patch landed on exactly the bytes it declared: the hardened targeting did
+its job, and the three disagreements were all `tests_passed_unexpectedly` — real
+"this control measures nothing" findings.
+
+**None of the five controls that measured nothing, across both campaigns, was a
+defect in a guard.** Two shapes recur, and neither is visible to targeting:
+
+| control | scored | cause | repair |
+|---|---|---|---|
+| `window-producer-uses-frozen-commitment` | 29 / 0 | `2 000 + 4 000` is `1 000 + 5 000`, so the derived cutoff was byte-identical | constants that move the value: `2 000 / 3 000` |
+| `window-verifier-requires-commitment` | 0 / 0, then 17 / 0 | the property was guarded **twice** on the valid branch | removed the duplicate; kept the branch-agnostic guard |
+| `window-verifier-lifecycle-reachability` | 17 / 0 | the closure refuses an unproduced artifact first, on both branches | removed the redundant check, deleted the control |
+| `window-verifier-pre-capture-ordering` | 17 / 0 | no mutation reached the rule | built `WINDOW-LATE-COMMITMENT` |
+| `window-signer-inventory-inclusion` | 17 / 0 | pointed at a **pure** suite whose fixtures retain no commitment | re-pointed at suites that do |
+
+Three of those are the same shape — *a guard standing behind another guard* — and
+each was repaired by removing the redundancy rather than by re-scoring the
+control. An `expect: "pass"` row would have preserved dead code to keep a row in a
+table. The two rules that are genuinely un-shadowed got the opposite treatment:
+the missing mutation was built, and the mis-pointed control was re-aimed.
+
+`window-verifier-requires-commitment` also exposed a **classifier gap**: the
+patched verifier died on a TypeError instead of refusing, every case was
+cancelled, and `0 pass / 0 fail` was scored as "the guard killed nothing". A
+summary reporting tests but no outcomes, or any cancellation, is now
+`test_runner_failed`. Recorded in
+[`negative-control-harness.md`](negative-control-harness.md) §3.1.
+
+### 8.2 One rule recorded as unmeasured
+
+`window-verifier-capture-window` ships as `expect: "pass"`, with the reason in the
+control itself. No end-to-end mutation reaches the source-snapshot window
+comparison: resealing a snapshot moves the observation bundle that cites it, the
+canonical evidence envelope and the adapter translation receipt, and the terminal
+then refuses at the closure with three unaccounted artifacts — long before the
+window derivation runs.
+
+The rule is real and is exercised by the pure cases in
+`evidenceWindowDerivation.test.ts`. What is missing is a mutation that reaches it
+end to end, and saying so is better than a control that reads as evidence while
+measuring a rule that fires first.
+
+## 9. Claims
 
 The cutoff claim moves from **bounds-exact** to **exact**, and gains two explicit
 limits it does not earn:
@@ -225,7 +276,7 @@ artifact and adds verifier refusals. It measures no new environment, no new
 subject and no new robustness. It does not make the Lab's window *correct* — it
 makes it *checkable*.
 
-## 9. What this package does not claim
+## 10. What this package does not claim
 
 - **The producer-side scanning cluster is untouched**: `mounted_file` scanned with
   metadata that cannot contain the mount, `lab_telemetry` with no negative

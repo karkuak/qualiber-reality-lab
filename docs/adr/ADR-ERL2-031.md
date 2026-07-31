@@ -316,7 +316,11 @@ made it conditional rather than merely supporting):
 
 A run that reached traffic and dropped its commitment is
 `GRAPH_CLOSURE_MISSING_ROLE`. A commitment that no lifecycle event produced is
-`GRAPH_CLOSURE_UNREACHABLE_ARTIFACT`. Two commitments are
+`GRAPH_CLOSURE_EXTRA_ARTIFACT`, from the closure's own rejected-extra rule —
+which is the more fundamental cause and reaches it before any window derivation
+runs, on the valid branch and the invalid one alike. The window derivation does
+**not** re-check reachability: measured, a second check there could never be
+killed and made neither measurable. Two commitments are
 `GRAPH_CLOSURE_EXTRA_ARTIFACT`. A pre-environment terminal carrying one is
 `GRAPH_CLOSURE_TERMINAL_MISMATCH`.
 
@@ -353,7 +357,7 @@ a catalogued one.
 |---|---|
 | commitment missing on a run that reached traffic | `GRAPH_CLOSURE_MISSING_ROLE` |
 | two commitments, or one on a pre-environment terminal | `GRAPH_CLOSURE_EXTRA_ARTIFACT` / `GRAPH_CLOSURE_TERMINAL_MISMATCH` |
-| commitment retained but never lifecycle-reached | `GRAPH_CLOSURE_UNREACHABLE_ARTIFACT` |
+| commitment retained but never lifecycle-reached | `GRAPH_CLOSURE_EXTRA_ARTIFACT` (the closure, not the window derivation) |
 | commitment from another run | `GRAPH_CLOSURE_TERMINAL_MISMATCH` |
 | wrong signer role, or a key not granted it | `TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE` |
 | invalid signature, undeclared authority field | `TRUST_SIGNATURE_INVALID` |
@@ -464,12 +468,22 @@ accepted on:
 - an **identity case** (`WINDOW-HARNESS`: re-sealing the chain unchanged still
   verifies), without which every other refusal in the file could be an artefact
   of the re-signing;
-- **thirteen new negative controls**, each disabling exactly one guard;
+- **fourteen new negative controls**, each disabling exactly one guard. A
+  fifteenth was written and deleted: it re-checked a lifecycle reachability the
+  closure already refuses, so it could never be killed and made neither guard
+  measurable. Removing the redundant check was the repair; re-scoring the control
+  would have preserved dead code to keep a row in a table;
 - and one control that matters more than the rest: **replacing the verifier's
   exact comparison with ADR-ERL2-029's bounds-only derivation.** A within-bounds
-  shifted window — warmup 2 000 / observation 4 000, milestone and cutoff moved to
-  match, commitment left at 1 000 / 5 000 — must then verify, and the control must
-  die. If it does not, the exact derivation is not doing the work this ADR claims
+  shifted window — warmup 1 s → 2 s, observation 5 s → 4 s, milestone and cutoff
+  moved to match, commitment left at 1 000 / 5 000 — must then verify, and the
+  control must die.
+
+  The arithmetic matters here and cost a campaign: substituted constants must not
+  preserve the **sum**. The first version of the producer-side control used
+  2 000 / 4 000, and `2 000 + 4 000` is `1 000 + 5 000`, so the derived cutoff was
+  byte-identical and the control measured nothing while reading as a guard that is
+  not load-bearing. If it does not, the exact derivation is not doing the work this ADR claims
   and the residual is still open.
 
 Every control patch targets through the hardened unique-target mechanism
