@@ -14,7 +14,11 @@ import { fileURLToPath } from "node:url";
 import { coreHash } from "@erl2/integrity";
 import { DevelopmentBeaconSource } from "@erl2/core";
 import type { Hash } from "@erl2/contracts";
-import { buildGovernorRegistry, type GovernorRegistry } from "./governorRegistry.js";
+import {
+  buildGovernorRegistry,
+  type BuildGovernorRegistryOptions,
+  type GovernorRegistry,
+} from "./governorRegistry.js";
 import { developmentKeyring } from "./keys.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -201,8 +205,10 @@ export function runToEnvironmentTerminal(): ValidTerminalRun {
  * Drives a run only as far as a durably-accepted, mid-flight state (after
  * `acquire`), for exercising cancellation and replay from a non-terminal run.
  */
-export function runToAcquired(): ValidTerminalRun {
-  const registry = buildGovernorRegistry();
+export function runToAcquired(
+  registryOptions: BuildGovernorRegistryOptions = {},
+): ValidTerminalRun {
+  const registry = buildGovernorRegistry(registryOptions);
   const runRoot = mkdtempSync(path.join(tmpdir(), "erl2-mid-"));
   const prereg = erl2([
     "preregister-acquisition",

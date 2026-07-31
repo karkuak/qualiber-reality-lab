@@ -1258,6 +1258,109 @@ export const CONTROLS = [
     expect: "fail",
   },
 
+  // -- Step 6B: the four producer evidence boundaries ------------------------
+  //
+  // The review's producer cluster was not "these scans are missing"; it was that
+  // each scan inspected something other than what crossed the boundary. So each
+  // control below disables exactly the byte-level rule, and each names a test
+  // that plants its leak in admitted data or in the subject's own bytes and
+  // drives the shipped binary. A control killed by an earlier guard would prove
+  // that the boundary is covered by something else, not that this rule works, so
+  // every designated case asserts the *surface or code the intended rule emits*.
+  {
+    id: "mounted-file-byte-scan",
+    what: "the bytes an adapter can mount are scanned before they are published",
+    file: "packages/core/src/run/workspace.ts",
+    // Deletes the scan and leaves the publication. The declared postimage keeps
+    // `bytes` referenced so the surrounding function still typechecks under
+    // `noUnusedLocals`: a patched tree that does not compile measures nothing.
+    find: [
+      "    assertNoCanaryLeak(",
+      '      [{ surface: "mounted_file" as const, label, bytes }],',
+      "      this.knownCanaryIds(),",
+      "    );",
+    ].join("\n"),
+    replace: "    void label;",
+    tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "lab-telemetry-oracle-scan",
+    what: "Lab telemetry is scanned before one byte of it is retained",
+    file: "packages/core/src/capture/capture.ts",
+    // The single scanner both call sites share, so this disables the production
+    // `lab_telemetry` scan everywhere rather than one of two copies.
+    find: "  assertNoCanaryLeak(scanTargets, knownCanaryIds);",
+    replace: "  void scanTargets;\n  void knownCanaryIds;",
+    tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "subject-output-secret-canary-scan",
+    what: "a secret canary in retained subject-output bytes refuses before the freeze",
+    file: "packages/core/src/adapter/outputFreezer.ts",
+    find: [
+      "    if (counts.secretCanaries > 0) {",
+      "      throw new Erl2Error(",
+      "        CODES.SECRET_CANARY_IN_SUBJECT_OUTPUT,",
+      "        `a secret canary reached retained subject output at ${payload.path}`,",
+      '        { owner: "lab" },',
+      "      );",
+      "    }",
+    ].join("\n"),
+    replace: "",
+    tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "subject-output-forbidden-identifier-scan",
+    what: "a forbidden identifier in retained subject-output bytes refuses before the freeze",
+    file: "packages/core/src/adapter/outputFreezer.ts",
+    find: [
+      "    if (counts.forbiddenIdentifiers > 0) {",
+      "      throw new Erl2Error(",
+      "        CODES.SECRET_PLAINTEXT_IN_CONTRACT,",
+      "        `retained subject output at ${payload.path} carries a forbidden identifier`,",
+      '        { owner: "lab" },',
+      "      );",
+      "    }",
+    ].join("\n"),
+    replace: "",
+    tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "subject-output-declared-byte-ceiling",
+    what: "the declared output ceiling is compared with the bytes the subject produced",
+    file: "packages/core/src/adapter/outputFreezer.ts",
+    // `String(1) === "2"` rather than `false`: a literal `false` lets TypeScript
+    // drop the branch and stop narrowing, and the control then reports a build
+    // failure instead of measuring anything.
+    find: "  if (total > declaredOutputBytes) {",
+    replace: '  if (String(1) === "2") {\n    void total;\n    void declaredOutputBytes;',
+    tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "subject-output-byte-total-counts-payloads",
+    what: "the byte total is summed from the payloads, not read off a descriptor",
+    file: "packages/core/src/adapter/outputFreezer.ts",
+    // A subtler mutation than deleting the comparison: the ceiling still runs,
+    // and the number it is given is wrong. Counting *references* instead of
+    // bytes is the exact shape the review found on this surface — a bound
+    // enforced against a proxy for the thing it governs.
+    find: "    total += payload.bytes.byteLength;",
+    replace: "    total += payload.path.length;",
+    tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    expect: "fail",
+  },
+
 ];
 
 // -- result classification ---------------------------------------------------

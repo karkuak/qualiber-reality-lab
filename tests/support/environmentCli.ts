@@ -17,7 +17,7 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { erl2, runToAcquired, type CliResult } from "./cliRun.js";
-import type { GovernorRegistry } from "./governorRegistry.js";
+import type { BuildGovernorRegistryOptions, GovernorRegistry } from "./governorRegistry.js";
 
 export interface EnvironmentRun {
   readonly runRoot: string;
@@ -27,8 +27,8 @@ export interface EnvironmentRun {
 }
 
 /** A run driven through the shipped CLI to `case_selected`. */
-export function selectedRun(): EnvironmentRun {
-  const run = runToAcquired();
+export function selectedRun(registryOptions: BuildGovernorRegistryOptions = {}): EnvironmentRun {
+  const run = runToAcquired(registryOptions);
   const base = [
     "--run-root", run.runRoot,
     "--registry", run.registry.root,
