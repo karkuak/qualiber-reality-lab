@@ -4,9 +4,6 @@
  * held-out or blind selection against this source is refused by design.
  */
 
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import {
   assertContract,
   type ExternalBeaconRandomnessPolicyV1,
@@ -36,6 +33,7 @@ import {
 } from "@erl2/core";
 import { developmentKeyring, developmentTrustPolicy, localTrustConfiguration } from "./keys.js";
 import type { DevelopmentKeyring } from "./keys.js";
+import { ownedTempDir } from "./tempDirs.js";
 
 const START = "2026-07-01T00:00:00Z";
 
@@ -61,7 +59,7 @@ export interface SelectionFixture {
 }
 
 export function buildSelectionFixture(): SelectionFixture {
-  const root = mkdtempSync(path.join(tmpdir(), "erl2-selection-"));
+  const root = ownedTempDir("erl2-selection-");
   const runId = uuidV7From(Date.parse(START), Buffer.alloc(10, 0x44));
   const keyring = developmentKeyring();
   const store = new ArtifactStore(root);

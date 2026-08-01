@@ -7,8 +7,7 @@
  */
 import { strict as assert } from "node:assert";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { coreHash } from "@erl2/integrity";
@@ -20,6 +19,7 @@ import {
   type GovernorRegistry,
 } from "./governorRegistry.js";
 import { developmentKeyring } from "./keys.js";
+import { ownedTempDir } from "./tempDirs.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const cli = path.join(repoRoot, "packages", "cli", "dist", "src", "bin.js");
@@ -77,7 +77,7 @@ export interface ValidTerminalRun {
  */
 export function runToValidTerminal(verifyStatus: "failed" | "unsupported" = "failed"): ValidTerminalRun {
   const registry = buildGovernorRegistry();
-  const runRoot = mkdtempSync(path.join(tmpdir(), "erl2-mut-"));
+  const runRoot = ownedTempDir("erl2-mut-");
   const prereg = erl2([
     "preregister-acquisition",
     ...common(registry, runRoot),
@@ -209,7 +209,7 @@ export function runToAcquired(
   registryOptions: BuildGovernorRegistryOptions = {},
 ): ValidTerminalRun {
   const registry = buildGovernorRegistry(registryOptions);
-  const runRoot = mkdtempSync(path.join(tmpdir(), "erl2-mid-"));
+  const runRoot = ownedTempDir("erl2-mid-");
   const prereg = erl2([
     "preregister-acquisition",
     ...common(registry, runRoot),
@@ -239,7 +239,7 @@ export function erl2Run(run: ValidTerminalRun, args: readonly string[]): CliResu
 /** Drives a run only through preregistration (durably accepted, no step run yet). */
 export function runToPreregistered(): ValidTerminalRun {
   const registry = buildGovernorRegistry();
-  const runRoot = mkdtempSync(path.join(tmpdir(), "erl2-prereg-"));
+  const runRoot = ownedTempDir("erl2-prereg-");
   const prereg = erl2([
     "preregister-acquisition",
     ...common(registry, runRoot),

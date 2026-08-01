@@ -8,9 +8,6 @@
  * verifying offline — are executable evidence rather than a claim.
  */
 
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import {
   assertContract,
   type ArtifactRef,
@@ -49,6 +46,7 @@ import {
 } from "./keys.js";
 import type { LocalTrustConfiguration } from "@erl2/integrity";
 import { applicableSignedMembers, scanRetainedSignedMembers } from "./signedMemberScan.js";
+import { ownedTempDir } from "./tempDirs.js";
 
 export interface FakeRunResult {
   readonly runId: string;
@@ -64,7 +62,7 @@ export interface FakeRunResult {
 const RUN_START = "2026-07-01T00:00:00Z";
 
 function newWorkspace(label: string): string {
-  return mkdtempSync(path.join(tmpdir(), `erl2-${label}-`));
+  return ownedTempDir(`erl2-${label}-`);
 }
 
 function fakeRunId(seed: number): string {

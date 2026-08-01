@@ -12,8 +12,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import type { Hash, JourneyIntent } from "@erl2/contracts";
 import {
@@ -28,6 +27,7 @@ import {
 import { commitJourneyStep, DEVELOPMENT_BEACON_SOURCE_ID, type CommittedStep } from "@erl2/core";
 import { developmentKeyring, developmentTrustPolicy, type DevelopmentKeyring } from "./keys.js";
 import { REFERENCE_CORRECT_MANIFEST, REFERENCE_LIMITED_MANIFEST } from "./adapterFixtures.js";
+import { ownedTempDir } from "./tempDirs.js";
 
 export interface GovernorRegistry {
   readonly root: string;
@@ -171,8 +171,8 @@ export interface BuildGovernorRegistryOptions {
 
 export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}): GovernorRegistry {
   const random = options.random;
-  const root = mkdtempSync(path.join(tmpdir(), "erl2-registry-"));
-  const vaultRoot = mkdtempSync(path.join(tmpdir(), "erl2-vault-"));
+  const root = ownedTempDir("erl2-registry-");
+  const vaultRoot = ownedTempDir("erl2-vault-");
   mkdirSync(root, { recursive: true });
   const keyring = developmentKeyring();
   const judgeIdentity = developmentAgeIdentity("judge");

@@ -15,7 +15,7 @@
  * no score, no partial credit and no override.
  */
 
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
@@ -127,13 +127,30 @@ function fakePackageRequest(runId: string, operationId: string, packageKind: str
   return { ...base, core_hash: coreHash(base) };
 }
 
-function newHost(options: CertifyAdapterOptions, runId: string, wallClockMs: number): AdapterHost {
+/**
+ * A certification host, with both of its temporary roots recorded for teardown.
+ *
+ * A certification run builds up to eight hosts, each with a workspace and an
+ * artifact store, and every one of them used to be abandoned where it was
+ * created. Small per call and unbounded over time — this is the production half
+ * of review R-08. The roots are collected rather than removed here because a
+ * host's bytes are live until the run that produced them has been read.
+ */
+function newHost(
+  options: CertifyAdapterOptions,
+  runId: string,
+  wallClockMs: number,
+  hostRoots: string[],
+): AdapterHost {
+  const workspaceRoot = mkdtempSync(path.join(tmpdir(), "erl2-cert-"));
+  const storeRoot = mkdtempSync(path.join(tmpdir(), "erl2-cert-store-"));
+  hostRoots.push(workspaceRoot, storeRoot);
   return new AdapterHost({
     runId,
     adapterManifest: options.adapterManifest,
     adapterEntryPath: options.adapterEntryPath,
-    workspaceRoot: mkdtempSync(path.join(tmpdir(), "erl2-cert-")),
-    store: new ArtifactStore(mkdtempSync(path.join(tmpdir(), "erl2-cert-store-"))),
+    workspaceRoot,
+    store: new ArtifactStore(storeRoot),
     clock: options.clock,
     wallClockMs,
   });
@@ -145,6 +162,12 @@ function newHost(options: CertifyAdapterOptions, runId: string, wallClockMs: num
  * The harness never throws for a candidate's misbehaviour — misbehaviour is the
  * thing it measures. It throws only when the *request to certify* is itself
  * invalid, such as an adapter trying to certify itself.
+ *
+ * Every temporary root the run created is removed on the way out — on the
+ * certified path, on every refusal, on the deadline probe that SIGKILLs its
+ * adapter, and on a throw. Teardown lives in a `finally` around the suite and
+ * never in the suite itself, because there is exactly one way to be sure a check
+ * has finished reading a host's bytes, and that is for the run to be over.
  */
 export function certifyAdapter(
   options: CertifyAdapterOptions,
@@ -155,6 +178,27 @@ export function certifyAdapter(
       "an adapter cannot certify itself; the certifier must be an independent party",
     );
   }
+  const hostRoots: string[] = [];
+  try {
+    return runCertification(options, hostRoots);
+  } finally {
+    for (const dir of hostRoots) {
+      try {
+        rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
+      } catch {
+        // A temporary directory that will not delete is a hygiene problem, and
+        // the receipt is the certification result. Rethrowing here would replace
+        // a refusal — or a certification — with a filesystem error, which is the
+        // one outcome teardown must never produce.
+      }
+    }
+  }
+}
+
+function runCertification(
+  options: CertifyAdapterOptions,
+  hostRoots: string[],
+): SubjectAdapterCertificationReceiptV1 {
   const runId = options.runId ?? CERT_RUN_ID;
   const manifest = options.adapterManifest;
   const checks: Finding[] = [];
@@ -250,7 +294,7 @@ export function certifyAdapter(
       : fakePackageRequest(runId, operationId, manifest.supported_package_kinds[0] ?? "archive");
 
   const firstRun = attempt(() => {
-    const host = newHost(options, runId, 30_000);
+    const host = newHost(options, runId, 30_000, hostRoots);
     return host.run({
       operation: probeOperation,
       operationId: "cert-probe-1",
@@ -294,7 +338,7 @@ export function certifyAdapter(
 
   // 6. Deterministic behaviour for identical inputs -------------------------
   const secondRun = attempt(() => {
-    const host = newHost(options, runId, 30_000);
+    const host = newHost(options, runId, 30_000, hostRoots);
     return host.run({
       operation: probeOperation,
       operationId: "cert-probe-1",
@@ -329,7 +373,7 @@ export function certifyAdapter(
 
   // 7. Phase-specific request ancestry --------------------------------------
   const poisoned = attempt(() => {
-    const host = newHost(options, runId, 30_000);
+    const host = newHost(options, runId, 30_000, hostRoots);
     return host.run({
       operation: probeOperation,
       operationId: "cert-ancestry",
@@ -357,7 +401,7 @@ export function certifyAdapter(
 
   // 8. Judge canary in the request ------------------------------------------
   const canaried = attempt(() => {
-    const host = newHost(options, runId, 30_000);
+    const host = newHost(options, runId, 30_000, hostRoots);
     return host.run({
       operation: probeOperation,
       operationId: "cert-canary",
@@ -411,7 +455,7 @@ export function certifyAdapter(
       );
     } else {
       const probe = attempt(() => {
-        const host = newHost(options, runId, 30_000);
+        const host = newHost(options, runId, 30_000, hostRoots);
         return host.run({
           operation: "validate-package",
           operationId: "cert-unsupported-kind",
@@ -443,7 +487,7 @@ export function certifyAdapter(
 
   // 11. Deadline and process-tree termination -------------------------------
   const timed = attempt(() => {
-    const host = newHost(options, runId, 1);
+    const host = newHost(options, runId, 1, hostRoots);
     return host.run({
       operation: probeOperation,
       operationId: "cert-deadline",
@@ -463,7 +507,7 @@ export function certifyAdapter(
 
   // 12. No execution after output freeze ------------------------------------
   const afterFreeze = attempt(() => {
-    const host = newHost(options, runId, 30_000);
+    const host = newHost(options, runId, 30_000, hostRoots);
     host.markOutputFrozen();
     return host.run({
       operation: probeOperation,
