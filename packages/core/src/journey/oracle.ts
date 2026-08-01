@@ -42,10 +42,14 @@ export type OracleScanSurface = (typeof ORACLE_SCAN_SURFACES)[number];
  *
  *   - `adapter_request` — every request before dispatch, and the execution plan
  *     before it is retained (`assertRequestOracleClean`);
- *   - `lab_telemetry` — every source snapshot before the observation bundle is
- *     retained (`freezeObservation`);
- *   - `mounted_file` — every canonical evidence entry the adapter can mount,
- *     before the envelope is retained;
+ *   - `lab_telemetry` — the exact retained bytes of every source snapshot,
+ *     scanned before the snapshot is written and again before the observation
+ *     bundle cites it (`assertTelemetryOracleClean`);
+ *   - `mounted_file` — the exact bytes of every file the Lab publishes into the
+ *     adapter-visible tree, scanned **before** they exist on disk and bound to
+ *     the published bytes afterwards (`RunWorkspace.freezeMountedFile`). A
+ *     descriptor about a mount is not the mount: scanning the entry metadata
+ *     could never fire on a leak that lives in the file's content;
  *   - `subject_output_prefill` — the whole subject output manifest and its step
  *     outcomes, before the output freezes.
  *
@@ -75,6 +79,21 @@ export const PENDING_ORACLE_SCAN_SURFACES: readonly OracleScanSurface[] = ORACLE
 );
 
 const CANARY_PATTERN = /erl2-canary-[0-9a-f]{32}/g;
+
+/**
+ * Redaction for the operator-facing half of a refusal.
+ *
+ * A label is built from run data — a source id, an entry id, a step id — and the
+ * leak is sometimes *in* that identifier. The naive message then republishes the
+ * exact token the scan exists to refuse, into stderr, the CLI envelope and every
+ * log that captures them. The patterns are the ones the scan itself matches on,
+ * so this is one vocabulary used in both directions rather than a second one.
+ */
+export function redactOracleLabel(label: string): string {
+  return label
+    .replace(/erl2-canary-[0-9a-f]{32}/g, "[redacted-canary]")
+    .replace(/erl2-secret-[0-9a-f]{32}/g, "[redacted-secret]");
+}
 
 export interface OracleScanTarget {
   readonly surface: OracleScanSurface;
@@ -125,7 +144,7 @@ export function assertNoCanaryLeak(
   const first = findings[0] as OracleScanFinding;
   throw new Erl2Error(
     "JOURNEY_ORACLE_CANARY_LEAKED",
-    `judge canary reached ${first.surface} (${first.label}); ${String(findings.length)} leak(s) total`,
+    `judge canary reached ${first.surface} (${redactOracleLabel(first.label)}); ${String(findings.length)} leak(s) total`,
     { owner: "lab" },
   );
 }

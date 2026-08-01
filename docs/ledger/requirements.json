@@ -266,7 +266,7 @@
         "JOURNEY-ORACLE-CANARY"
       ],
       "owner": "core",
-      "note": "Split visible step / age-x25519 encrypted expectation / commitment, with canary scanning on all eight design-named surfaces and a structural field guard on the subject side."
+      "note": "Split visible step / age-x25519 encrypted expectation / commitment, with a structural field guard on the subject side. Canary scanning covers three of the eight design-named surfaces with a production-path regression and a load-bearing negative control each (mounted_file, lab_telemetry, subject_output_prefill); adapter_request is live but shadowed by the mounted-file scan and is not counted; the remaining four are named in PENDING_ORACLE_SCAN_SURFACES and are not scanned. The earlier claim of all eight was wrong (ADR-ERL2-032, review Slice 6.5B P2)."
     },
     {
       "requirement_id": "ERL2-FR-016",
@@ -424,13 +424,14 @@
       "owning_package": "packages/core, packages/contracts, packages/public-verifier",
       "contracts": [
         "ERL2-C-078",
-        "ERL2-C-085"
+        "ERL2-C-085",
+        "ERL2-C-158"
       ],
       "test_families": [
         "EMERGENCY-CLEANUP"
       ],
       "owner": "core",
-      "note": "Frontier derivation, receipt-backed emergency actions and the verifier's bypass refusal are covered end to end by tests/e2e/preEnvironmentRun.test.ts."
+      "note": "Frontier derivation, receipt-backed per-action cleanup and the verifier's bypass refusal are covered end to end. ADR-ERL2-027 extends the discipline from the emergency branch to every invalid environment terminal and adds cleanup-residue-probe/v1 (ERL2-C-158), the independent post-cleanup observation that makes a fabricated empty residue and an unauthorized destruction offline-detectable: tests/adversarial/invalidCleanupDiscipline.test.ts, tests/integration/cleanupDerivation.test.ts."
     },
     {
       "requirement_id": "ERL2-FR-026",
@@ -1024,7 +1025,7 @@
     {
       "acceptance_id": "ERL2-AC-029",
       "status": "passing",
-      "evidence": "tests/e2e/preEnvironmentRun.test.ts EMERGENCY-CLEANUP cases"
+      "evidence": "tests/e2e/preEnvironmentRun.test.ts EMERGENCY-CLEANUP cases; tests/adversarial/emergencyCleanupAdversarial.test.ts EMERGENCY-ADV cases; tests/adversarial/invalidCleanupDiscipline.test.ts BOUNDED-CLEANUP cases (ADR-ERL2-027)"
     },
     {
       "acceptance_id": "ERL2-AC-030",
@@ -1054,7 +1055,7 @@
     {
       "acceptance_id": "ERL2-AC-035",
       "status": "passing",
-      "evidence": "tests/contract/contracts.test.ts"
+      "evidence": "tests/contract/contracts.test.ts; tests/adversarial/emergencyCleanupAdversarial.test.ts; tests/adversarial/invalidCleanupDiscipline.test.ts (bounded route, ADR-ERL2-027)"
     },
     {
       "acceptance_id": "ERL2-AC-036",
@@ -1269,6 +1270,30 @@
     {
       "id": "ADR-ERL2-026",
       "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-027",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-028",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-029",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-030",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-031",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-032",
+      "status": "accepted"
     }
   ],
   "normative_conflicts": [
@@ -1276,7 +1301,7 @@
       "id": "CONFLICT-ERL2-001",
       "status": "resolved_option_1",
       "resolution_adr": "ADR-ERL2-012",
-      "summary": "Design v2 \u00a716.2 lists TrustPolicyManifestV1, ProductSafeSignerInventoryV1 and TrustVerificationReportV1 as retained byte-compatible, but V2 requires signer roles, terminal variants and schema identities those contracts cannot express.",
+      "summary": "Design v2 §16.2 lists TrustPolicyManifestV1, ProductSafeSignerInventoryV1 and TrustVerificationReportV1 as retained byte-compatible, but V2 requires signer roles, terminal variants and schema identities those contracts cannot express.",
       "resolved_at": "2026-07-23",
       "design_revision": "2.0.0-draft.10"
     }
@@ -1296,7 +1321,7 @@
       "slice": 3,
       "title": "Environment archetypes and clean ecosystem",
       "status": "complete_fake_driver_compose_disabled",
-      "exit_gate": "Fake driver satisfies the full EnvironmentDriver suite; clean environment reaches a stable baseline twice with identical fingerprints; teardown leaves zero applicable residue; ERL2-OQ-005 unresolved so the Compose driver stays disabled and the plan stays on the fake driver (implementation plan \u00a79.4)."
+      "exit_gate": "Fake driver satisfies the full EnvironmentDriver suite; clean environment reaches a stable baseline twice with identical fingerprints; teardown leaves zero applicable residue; ERL2-OQ-005 unresolved so the Compose driver stays disabled and the plan stays on the fake driver (implementation plan §9.4)."
     },
     {
       "slice": 4,

@@ -44,13 +44,32 @@ import {
  * Drives a run to a restoration failure, which design §12 routes through
  * receipt-backed emergency cleanup.
  *
- * `sharedResourceIds` in the fake driver marks one resource shared with another
- * run, so the frontier derives it as `contain_residual`/unsafe — the foreign
- * member whose presence used to abort the whole branch.
+ * Three fixtures, and the distinction between the last two is load-bearing:
+ *
+ *  - plain — every resource is the run's own and destroyable;
+ *  - `withShared` — one resource the driver reports `shared_with_other_runs`, so
+ *    the frontier derives it `contain_residual`/unsafe;
+ *  - `withForeign` — one resource named and hashed for **another run**.
+ *
+ * The middle one used to be called "foreign", and it is not. A shared resource's
+ * `run_scoped_name` still embeds *this* run, so `assertOwnedByRun` passes for it
+ * and `FakeEnvironmentDriver.destroy` — which validates ownership of every live
+ * resource before touching any — would never have thrown on it. The case that
+ * claimed to prove "a foreign resource no longer aborts the branch" was
+ * therefore proving something about unsafe classification and nothing about
+ * ownership (ADR-ERL2-027 §1.5). `foreignResourceKinds` produces the resource
+ * that actually throws.
  */
-function emergencyRun(options: { readonly withForeign: boolean }): EnvironmentRun {
+function emergencyRun(options: {
+  readonly withForeign?: boolean;
+  readonly withShared?: boolean;
+}): EnvironmentRun {
   const run = selectedRun();
-  const fault = options.withForeign ? "failed-restore-shared" : "failed-restore";
+  const fault = options.withForeign
+    ? "failed-restore-foreign"
+    : options.withShared === true
+      ? "failed-restore-shared"
+      : "failed-restore";
   // The fault is applied from `provision` onward, not only to the failing
   // command: `sharedResourceIds` decides a resource's `shared_with_other_runs`
   // flag when the *inventory* is created, so a fault supplied late would build a
@@ -90,7 +109,7 @@ function verifyRecord(run: EnvironmentRun): { exitCode: number; code: string | u
 }
 
 test("EMERGENCY-ADV: a restoration failure reaches an emergency terminal that verifies", () => {
-  const run = emergencyRun({ withForeign: false });
+  const run = emergencyRun({});
   const roles = new Set(producedRoles(run));
   assert.ok(roles.has("environment-resource-frontier"));
   assert.ok(roles.has("emergency-cleanup-verification"));
@@ -100,7 +119,7 @@ test("EMERGENCY-ADV: a restoration failure reaches an emergency terminal that ve
 });
 
 test("EMERGENCY-ADV: every independently safe action is attempted, each with its own receipt", () => {
-  const run = emergencyRun({ withForeign: false });
+  const run = emergencyRun({});
   const frontier = retained(run, "environment/resource-frontier.json") as unknown as {
     derived_actions: { action_id: string; independently_safe: boolean }[];
   };
@@ -126,7 +145,7 @@ test("EMERGENCY-ADV: every independently safe action is attempted, each with its
 });
 
 test("EMERGENCY-ADV: an unsafe skip carries a reason and no receipt", () => {
-  const run = emergencyRun({ withForeign: false });
+  const run = emergencyRun({});
   const cleanup = retained(run, "emergency-cleanup-verification.json") as unknown as {
     actions: { status: string; reason_code?: string; attempt_receipt_hash?: string }[];
   };
@@ -172,13 +191,13 @@ function refusalCode(fn: () => unknown): string | undefined {
 }
 
 test("EMERGENCY-ADV: the unmutated cleanup derives cleanly", () => {
-  const run = emergencyRun({ withForeign: false });
+  const run = emergencyRun({});
   const { index, frontier, cleanup } = emergencyEvidence(run);
   assert.equal(refusalCode(() => deriveEmergencyCleanup({ index, frontier, cleanup })), undefined);
 });
 
 test("EMERGENCY-ADV: an omitted safe action is refused by the verifier's own derivation", () => {
-  const run = emergencyRun({ withForeign: false });
+  const run = emergencyRun({});
   const { index, frontier, cleanup } = emergencyEvidence(run);
   const dropped = frontier.derived_actions.find((a) => a.independently_safe);
   assert.ok(dropped !== undefined);
@@ -193,7 +212,7 @@ test("EMERGENCY-ADV: an omitted safe action is refused by the verifier's own der
 });
 
 test("EMERGENCY-ADV: a safe action relabelled as an unsafe skip is refused", () => {
-  const run = emergencyRun({ withForeign: false });
+  const run = emergencyRun({});
   const { index, frontier, cleanup } = emergencyEvidence(run);
   const target = frontier.derived_actions.find((a) => a.independently_safe);
   assert.ok(target !== undefined);
@@ -218,7 +237,7 @@ test("EMERGENCY-ADV: a safe action relabelled as an unsafe skip is refused", () 
 });
 
 test("EMERGENCY-ADV: an attempted action with no receipt is refused", () => {
-  const run = emergencyRun({ withForeign: false });
+  const run = emergencyRun({});
   const { index, frontier, cleanup } = emergencyEvidence(run);
   const mutated = {
     ...cleanup,
@@ -235,7 +254,7 @@ test("EMERGENCY-ADV: an attempted action with no receipt is refused", () => {
 });
 
 test("EMERGENCY-ADV: a skip carrying a receipt is refused", () => {
-  const run = emergencyRun({ withForeign: true });
+  const run = emergencyRun({ withShared: true });
   const { index, frontier, cleanup } = emergencyEvidence(run);
   const skipped = cleanup.actions.find((a) => a.status === "skipped_unsafe");
   assert.ok(skipped !== undefined, "the mixed fixture must contain an unsafe skip");
@@ -257,7 +276,7 @@ test("EMERGENCY-ADV: a skip carrying a receipt is refused", () => {
 });
 
 test("EMERGENCY-ADV: a cleanup citing a frontier the run never froze is refused", () => {
-  const run = emergencyRun({ withForeign: false });
+  const run = emergencyRun({});
   const { index, frontier, cleanup } = emergencyEvidence(run);
   const mutated = {
     ...cleanup,
@@ -280,7 +299,7 @@ test("EMERGENCY-ADV: a frontier whose actions its own resources do not imply is 
   // cleanup, so the two agree with each other and disagree only with the
   // resources the frontier observed. Nothing but re-deriving the action set from
   // those resources can catch it.
-  const run = emergencyRun({ withForeign: true });
+  const run = emergencyRun({ withShared: true });
   const { index, frontier, cleanup } = emergencyEvidence(run);
   const target = frontier.derived_actions.find((a) => a.kind === "isolate_network");
   assert.ok(target !== undefined, "this fixture must derive a network isolation action");
@@ -315,7 +334,7 @@ test("EMERGENCY-ADV: a frontier whose actions its own resources do not imply is 
 });
 
 test("EMERGENCY-ADV: post-cleanup residue must account for every unresolved action", () => {
-  const run = emergencyRun({ withForeign: true });
+  const run = emergencyRun({ withShared: true });
   const { index, frontier, cleanup } = emergencyEvidence(run);
   assert.ok(cleanup.remaining_resources.length > 0, "the mixed fixture leaves residue");
   const mutated = { ...cleanup, remaining_resources: [] } as EmergencyCleanupVerificationV1;
@@ -325,11 +344,10 @@ test("EMERGENCY-ADV: post-cleanup residue must account for every unresolved acti
   );
 });
 
-test("EMERGENCY-ADV: a foreign resource does not prevent safe cleanup of the run's own", () => {
-  // P1-5 exactly: one resource the driver reports as shared with another run.
-  // The whole-environment destroy used to throw on it, aborting the branch with
-  // zero safe actions attempted and no terminal reached.
-  const run = emergencyRun({ withForeign: true });
+test("EMERGENCY-ADV: an unsafe resource does not prevent safe cleanup of the run's own", () => {
+  // One resource the driver reports as shared with another run: the frontier
+  // must contain it and still attempt everything around it.
+  const run = emergencyRun({ withShared: true });
 
   const frontier = retained(run, "environment/resource-frontier.json") as unknown as {
     derived_actions: { action_id: string; independently_safe: boolean; unsafe_reason_code?: string }[];
@@ -366,7 +384,7 @@ test("EMERGENCY-ADV: a foreign resource does not prevent safe cleanup of the run
 });
 
 test("EMERGENCY-ADV: a mixed frontier still accounts for its residue", () => {
-  const run = emergencyRun({ withForeign: true });
+  const run = emergencyRun({ withShared: true });
   const cleanup = retained(run, "emergency-cleanup-verification.json") as unknown as {
     actions: { action_id: string; status: string }[];
     remaining_resources: { identity_hash: string; containment_status: string }[];
@@ -384,4 +402,57 @@ test("EMERGENCY-ADV: a mixed frontier still accounts for its residue", () => {
       "residue must carry an explicit containment status",
     );
   }
+});
+
+test("EMERGENCY-ADV: a genuinely foreign resource does not abort the branch either", () => {
+  // P1-5 exactly, with the resource the case was always named for: one that is
+  // named and hashed for **another run**, so `assertOwnedByRun` fails and
+  // `FakeEnvironmentDriver.destroy` throws on it. The whole-environment destroy
+  // used to be the only call, so this threw out of the branch: zero safe actions
+  // attempted, no invalid record, leases retained.
+  //
+  // Until `foreignResourceKinds` existed this case could not be written at all,
+  // and the invariant had never been measured (ADR-ERL2-027 §1.5, §4.7).
+  const run = emergencyRun({ withForeign: true });
+
+  const frontier = retained(run, "environment/resource-frontier.json") as unknown as {
+    observed_resources: { resource_id: string; run_scoped_name: string }[];
+    derived_actions: { action_id: string; independently_safe: boolean; unsafe_reason_code?: string; target_resource_id: string }[];
+  };
+  const foreign = frontier.derived_actions.filter(
+    (a) => a.unsafe_reason_code === "RESOURCE_NOT_PROVABLY_OWNED_BY_RUN",
+  );
+  assert.equal(foreign.length, 1, "this fixture must observe exactly one foreign resource");
+  // Foreign because it is another run's, not because a flag says so: its own
+  // name does not contain this run's id.
+  const observed = frontier.observed_resources.find(
+    (r) => r.resource_id === foreign[0]?.target_resource_id,
+  );
+  assert.ok(observed !== undefined);
+  assert.ok(
+    !observed.run_scoped_name.includes(run.runId),
+    "a resource that embeds this run's id is not foreign, whatever else it is flagged",
+  );
+
+  const safe = frontier.derived_actions.filter((a) => a.independently_safe);
+  assert.ok(safe.length > 0, "the run's own resources must still derive safe actions");
+  const cleanup = retained(run, "emergency-cleanup-verification.json") as unknown as {
+    actions: { action_id: string; status: string; attempt_receipt_hash?: string }[];
+  };
+  for (const action of safe) {
+    const reported = cleanup.actions.find((a) => a.action_id === action.action_id);
+    assert.ok(reported !== undefined, `safe action ${action.action_id} was never reported`);
+    assert.notEqual(reported.status, "skipped_unsafe", "a foreign resource must not veto an owned one");
+    assert.ok(reported.attempt_receipt_hash !== undefined);
+  }
+
+  // And the terminal is reached, which under the previous implementation it
+  // was not.
+  assert.equal(
+    producedRoles(run).filter((r) => r === "invalid-run-record").length,
+    1,
+    "exactly one invalid record",
+  );
+  const verified = verifyRecord(run);
+  assert.equal(verified.exitCode, 0, verified.code);
 });

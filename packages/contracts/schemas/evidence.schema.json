@@ -95,6 +95,30 @@
       }
     },
 
+    "EvidenceWindowCommitmentV1": {
+      "$comment": "ADR-ERL2-031. The exact evidence-window composition, frozen and signed before capture, so an offline reader rederives the cutoff instead of proving it falls within bounds. `warmup_ms` and `observation_ms` are `multipleOf: 1000` because erl2:common#/$defs/Instant is second-precision and the producer truncates rather than rounds — a sub-second window would render an instant that disagrees with the arithmetic that produced it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "commitment_id", "run_id", "cutoff_policy_hash", "process_start_receipt_hash", "monotonic_clock_domain_hash", "comparison_policy_hash", "environment_instance_hash", "warmup_ms", "observation_ms", "instant_rule", "milestone_relationship", "committed_at", "core_hash", "signature"],
+      "properties": {
+        "schema_version": { "const": "evidence-window-commitment/v1" },
+        "commitment_id": { "$ref": "erl2:common#/$defs/Id" },
+        "run_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "cutoff_policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "process_start_receipt_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "monotonic_clock_domain_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "comparison_policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "environment_instance_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "warmup_ms": { "type": "integer", "minimum": 0, "maximum": 5400000, "multipleOf": 1000 },
+        "observation_ms": { "type": "integer", "minimum": 1000, "maximum": 5400000, "multipleOf": 1000 },
+        "instant_rule": { "const": "traffic_process_started_at_plus_warmup_ms_plus_observation_ms" },
+        "milestone_relationship": { "const": "runtime_milestone_at_process_start_plus_warmup_ms" },
+        "committed_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      }
+    },
+
     "SourceSnapshotV1": {
       "$comment": "Every source state is explicit. `unavailable`, `partial` and `error` are retained results, never silent omissions (design v2 §13).",
       "type": "object",

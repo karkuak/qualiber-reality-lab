@@ -63,6 +63,7 @@ export const COMMON_FLAGS: readonly FlagSpec[] = [
   { name: "fake-verify-package", kind: "string" },
   { name: "adapter-entry", kind: "string" },
   { name: "fake-leak-canary", kind: "string" },
+  { name: "fake-output-bytes", kind: "string" },
   { name: "fake-step-status", kind: "string" },
 ];
 
@@ -85,11 +86,13 @@ function assertFakeFlagsUnavailableUnlessDevelopmentProfile(flags: ParsedFlags):
     flags["fake-acquire"] !== undefined ||
     flags["fake-verify-package"] !== undefined ||
     flags["fake-leak-canary"] !== undefined ||
+    flags["fake-output-bytes"] !== undefined ||
     flags["fake-step-status"] !== undefined;
   if (usesFakeFlag && !developmentFakeSubjectProfileEnabled()) {
     throw new Erl2Error(
       CODES.CFG_DEVELOPMENT_FLAG_UNAVAILABLE,
-      "--fake-acquire, --fake-verify-package, --fake-leak-canary and --fake-step-status are " +
+      "--fake-acquire, --fake-verify-package, --fake-leak-canary, --fake-output-bytes and " +
+        "--fake-step-status are " +
         "development-only shortcuts; they " +
         "require the explicit development profile (ERL2_DEVELOPMENT_FAKE_SUBJECT=1) and are not reachable " +
         "on the release surface",
@@ -170,7 +173,18 @@ function runClock(runRoot: string): Clock {
 export function openWorkspace(
   flags: ParsedFlags,
   runId: string,
-  options: { readonly allowBootstrap?: boolean } = {},
+  options: {
+    readonly allowBootstrap?: boolean;
+    /**
+     * Wraps the subject port before the workspace holds it.
+     *
+     * Used only by the development-gated crash matrix, to count subject
+     * invocations into a durable log that survives the `SIGKILL` the matrix
+     * injects (ADR-ERL2-028 §7). Absent, the port is the production one,
+     * unwrapped.
+     */
+    readonly wrapSubjectPort?: (port: SubjectPort) => SubjectPort;
+  } = {},
 ): RunWorkspace {
   const runRoot = requireString(flags, "run-root");
   assertWorkspaceRunIdentity({
@@ -187,7 +201,9 @@ export function openWorkspace(
     clock,
     keyring: developmentKeyring(flags),
     tier: requireDevelopmentTier(flags),
-    subjectPort: subjectPort(flags, runId, runRoot, registry, clock),
+    subjectPort: (options.wrapSubjectPort ?? ((port: SubjectPort) => port))(
+      subjectPort(flags, runId, runRoot, registry, clock),
+    ),
     ...(options.allowBootstrap === true ? { allowBootstrap: true } : {}),
   });
 }
@@ -222,10 +238,14 @@ function subjectPort(
       ...declaredOperations(flags, runRoot, registry),
     });
   }
-  if (flags["fake-acquire"] !== undefined || flags["fake-verify-package"] !== undefined) {
+  if (
+    flags["fake-acquire"] !== undefined ||
+    flags["fake-verify-package"] !== undefined ||
+    flags["fake-output-bytes"] !== undefined
+  ) {
     throw new Erl2Error(
       CODES.CFG_MISSING_REQUIRED,
-      "--fake-acquire and --fake-verify-package script the development fake port; they cannot steer a real adapter",
+      "--fake-acquire, --fake-verify-package and --fake-output-bytes script the development fake port; they cannot steer a real adapter",
     );
   }
   const manifest = registry.require<SubjectAdapterManifestV1>(
@@ -320,7 +340,31 @@ function fakeSubjectBehaviour(flags: ParsedFlags): FakeSubjectBehaviour {
     ...(acquire === undefined ? {} : { acquireStatus: acquire }),
     ...(verify === undefined ? {} : { packageVerificationStatus: verify }),
     ...(leak === undefined ? {} : { leakCanaryId: leak }),
+    ...outputByteLength(flags),
   };
+}
+
+/**
+ * `--fake-output-bytes <n>`, the development-only way to give the fake subject's
+ * step output an exact byte length.
+ *
+ * The declared subject-output ceiling is 64 MiB and is frozen in the run's own
+ * execution plan. Without a way to produce a payload of a chosen size, "one byte
+ * over is refused, exactly at the ceiling is admitted" could only ever be
+ * asserted about a helper function. This steers the *subject's* bytes; it cannot
+ * move the ceiling they are measured against.
+ */
+function outputByteLength(flags: ParsedFlags): { readonly outputByteLength?: number } {
+  const raw = flags["fake-output-bytes"] as string | undefined;
+  if (raw === undefined) return {};
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Erl2Error(
+      CODES.CFG_MISSING_REQUIRED,
+      "--fake-output-bytes must be a non-negative safe integer",
+    );
+  }
+  return { outputByteLength: value };
 }
 
 /**

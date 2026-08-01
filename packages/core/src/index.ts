@@ -128,6 +128,14 @@ export {
   type RestorationProbeVerdict,
 } from "./environment/restorationProbe.js";
 export {
+  buildResidueProbe,
+  deriveResidueProbeOutcome,
+  residueProbeClean,
+  type ObservedResourceIdentity,
+  type ResidueObservations,
+  type ResidueProbeVerdict,
+} from "./environment/residueProbe.js";
+export {
   assertSubstrateBinding,
   buildSubstrateBinding,
   reservationNamespaceHash,
@@ -177,6 +185,7 @@ export {
   scanForCanaries,
   assertNoCanaryLeak,
   assertNoOracleFields,
+  redactOracleLabel,
   type OracleScanSurface,
   type OracleScanTarget,
   type OracleScanFinding,
@@ -190,6 +199,27 @@ export {
   type StepExecutionResult,
   type StepStatus,
 } from "./journey/engine.js";
+export {
+  CRASH_BOUNDARIES,
+  NO_CRASH,
+  isCrashBoundary,
+  type CrashBarrier,
+  type CrashBoundary,
+} from "./run/crashBarrier.js";
+export {
+  classifyCancellationBranch,
+  type CancellationBranch,
+} from "./run/cancellationBranch.js";
+export {
+  JOURNEY_PREREQUISITES,
+  CANONICAL_JOURNEY_INTENTS,
+  assertJourneyPrerequisites,
+  isPostCaptureIntent,
+  type JourneyPrerequisite,
+  type JourneyBranch,
+  type JourneyIntentRow,
+  type JourneyPrerequisiteEvidence,
+} from "./journey/prerequisites.js";
 export {
   FakeSubjectPort,
   FAKE_SUBJECT_PORT_ID,
@@ -248,15 +278,19 @@ export {
 export {
   assertNoExecutionAfterOutputFreeze,
   assertOutputClean,
+  assertSubjectOutputContentClean,
+  assertSubjectOutputWithinDeclaredBytes,
   collectBoundedTree,
   freezeAdapterOutput,
   freezeDiagnostics,
   redact,
   scanBytes,
+  subjectOutputPayloadByteTotal,
   DEFAULT_OUTPUT_BOUNDS,
   FORBIDDEN_OUTPUT_IDENTIFIERS,
   type CollectedFile,
   type OutputBounds,
+  type RetainedSubjectOutputPayload,
 } from "./adapter/outputFreezer.js";
 export {
   ALLOWED_ENVIRONMENT_VARIABLE_NAMES,
@@ -340,6 +374,7 @@ export {
   type ChallengeAdmissionOptions,
 } from "./registry/admission.js";
 export {
+  assertTelemetryOracleClean,
   realizeCutoff,
   isEligibleAtCutoff,
   freezeSourceSnapshot,
@@ -349,6 +384,13 @@ export {
   type SnapshotInput,
   type FreezeObservationOptions,
 } from "./capture/capture.js";
+export {
+  sealWindowCommitment,
+  assertMilestoneOnCommittedBoundary,
+  committedCutoffMs,
+  addExactMs,
+  type WindowCommitmentInput,
+} from "./capture/evidenceWindow.js";
 export {
   assertComparisonModeAdmissible,
   buildReplayEnvelope,
@@ -476,6 +518,14 @@ export {
   type GateResult,
 } from "./evaluation/validity.js";
 export {
+  ENVIRONMENT_PHASE_GATE,
+  gateForEnvironmentFailurePhase,
+  gateForInvalidFailurePhase,
+  JOURNEY_EXECUTION_GATE,
+  isEnvironmentFailurePhase,
+  type EnvironmentFailurePhase,
+} from "./evaluation/invalidityAttribution.js";
+export {
   DEEP_ANCESTRY_FORBIDDEN_FIELDS,
   assertNoDeepAncestry,
   buildGenericEvaluationIndex,
@@ -524,6 +574,16 @@ export {
   type PreEnvironmentRunRecordInput,
   type SignerInventoryEntryInput,
 } from "./terminal/finalize.js";
+export {
+  assertInventoryCoversDerivation,
+  deriveSignedMembers,
+  signerInventoryEntriesFrom,
+  PRODUCER_SIGNED_MEMBER_ROLES,
+  SELF_REFERENTIAL_INVENTORY_SCHEMA,
+  type DerivedSignedMember,
+  type RetainedArtifactView,
+  type SignerInventoryDerivation,
+} from "./terminal/signerInventoryDerivation.js";
 export { buildRoleSeparationAudit, buildSelectionRequest, loadSelectionPool, POOL_MANIFEST_PATH, poolEntryPath } from "./run/selectionContext.js";
 export { SELECTION_STEPS, assertResumable, stepFrom, type SelectionStep } from "./run/selectionWalk.js";
 export type { SelectionPreludeInput } from "./run/workspace.js";

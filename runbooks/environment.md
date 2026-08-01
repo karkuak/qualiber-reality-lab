@@ -48,28 +48,166 @@ The global allocator stores **reservation leases only** — never resource state
   reclaimed.
 - A run cannot release another run's lease.
 
+## The evidence window
+
+`erl2 journey` freezes a signed `evidence-window-commitment/v1` before the run
+observes the runtime milestone. It carries the **exact** warmup and observation
+durations — 1 000 ms and 5 000 ms in the development profile — and every later
+phase reads it rather than a module constant.
+
+Three things follow that an operator should know:
+
+- **The window is fixed before the milestone is observed, and the milestone must
+  land on it.** A run whose milestone does not fall exactly at
+  `process_started_at + warmup_ms` refuses with `CUTOFF_BOUND_EXCEEDED` and
+  freezes nothing — the commitment is sealed in memory and written only once both
+  artifacts exist.
+- **The durations must be whole seconds.** Retained instants are second-precision
+  and the renderer truncates rather than rounds, so a sub-second window would
+  produce an instant that disagrees with its own arithmetic. It is refused before
+  it is signed.
+- **The window is signed by `policy_author`**, the authority that already bounds
+  it in `cutoff-policy/v1` — never by the traffic supervisor or the runtime
+  attestor, whose clocks the cutoff derivation is anchored on.
+
+An offline reader then rederives the cutoff exactly rather than checking it
+against bounds (ADR-ERL2-031). What that does **not** do is stop an authorized
+`policy_author` from committing a different window deliberately; which windows are
+permissible is the cutoff policy's business, and who may commit one is the trust
+policy's.
+
 ## Cleanup and the resource frontier
 
 Cleanup targets exact validated identities. A wildcard or unscoped selector is
 refused with `ENV_BROAD_DELETE_REJECTED`; ambient project discovery does not
 exist.
 
-When restoration or teardown fails:
+**Every** invalid environment terminal takes the same route — not only a
+restoration or teardown failure (ADR-ERL2-027 §4.1). The `emergency` flag decides
+which lifecycle states the terminal passes through and which trigger the frontier
+records; it does not decide which safety rules apply. Until ADR-ERL2-027 it did,
+and the other five failure phases reached an unconditional whole-environment
+`driver.destroy()` issued one line after the frontier was frozen and without
+reading it.
 
-1. Freeze the frontier with `freezeResourceFrontier`. It records what the driver
-   *observed*.
-2. The safe-action set is **derived here**, not supplied by the driver. A
+1. Freeze the failure's own Lab-owned finding, **before** anything else. It names
+   the gate its phase falsifies (`ENVIRONMENT_PHASE_GATE`), so a cleanup that
+   later fails adds evidence and never replaces the cause.
+2. Freeze the frontier with `freezeResourceFrontier`. It records what the driver
+   *observed*, before any dispatch.
+3. The safe-action set is **derived here**, not supplied by the driver. A
    resource is independently safe to act on only when it is provably this run's,
    marked destroyable, and not shared with another run. Anything else becomes a
    `contain_residual` action marked unsafe with a reason.
-3. Attempt every independently safe action and freeze a receipt for each — for
-   failures as well as successes.
-4. Record each unsafe skip with a reason and **no** receipt.
-5. Freeze `EmergencyCleanupVerificationV1`, and only then the invalid record.
+4. Attempt every independently safe action, each inside its own failure boundary,
+   and freeze a receipt for each — for failures as well as successes. A foreign
+   or unsafe resource fails or skips exactly one action; it never stops the
+   others.
+5. Record each unsafe skip with a reason and **no** receipt.
+6. Re-observe the substrate and freeze `CleanupResidueProbeV1`. This is the
+   independent post-cleanup observation: without it the residue is derived by the
+   producer from its own action outcomes, so an empty one cannot be contradicted.
+7. Freeze `EmergencyCleanupVerificationV1` (skipped when the frontier derived no
+   action — the contract's `actions` has `minItems: 1`), and only then the
+   invalid record.
+
+A whole-environment dispatch is permitted only when the driver offers no narrower
+granularity **and** every observed frontier member derives an authorized action.
+Otherwise the affected actions are recorded `failed` with
+`EMERGENCY_ACTION_UNDECLARED_TARGET` and nothing is dispatched.
 
 `erl2 verify-record` refuses a restoration or teardown failure that reached the
-invalid record without this path (`EMERGENCY_CLEANUP_BYPASSED`), and
-`assertFrontierActionsDerivable` refuses a frontier whose action list was edited.
+invalid record without this path (`EMERGENCY_CLEANUP_BYPASSED`),
+`assertFrontierActionsDerivable` refuses a frontier whose action list was edited,
+and the residue probe makes two further lies offline-detectable:
+`RESIDUE_PROBE_MISSING` when the observation is absent or is about another run,
+substrate or frontier, and `RESIDUE_UNDECLARED_DESTRUCTION` when a resource left
+the substrate without an authorized action against it.
+
+## Cancelling a run
+
+`erl2 cancel` is dispatched from the run's **own durable evidence**, never from a
+flag. `classifyCancellationBranch` is shared by the CLI dispatcher and the library
+so the decision cannot disagree with itself, and it consults two independent
+witnesses:
+
+1. the retained `substrate-binding` artifact, read so that `ENOENT` is the only
+   condition meaning "this run never had an environment";
+2. the run's own lifecycle events, which name the roles they produced.
+
+Either one is enough to take the environment branch. **Anything other than
+absence is a typed refusal** (`ENV_SUBSTRATE_UNREADABLE`), never an answer: the
+previous `existsSync` read reported false for a permission fault as readily as for
+a missing file, and routed a live environment run to the pre-environment terminal
+where it froze cleanup status `not_required` over allocated resources.
+
+| Cancelled from | Route | Cleanup |
+|---|---|---|
+| before `provision` | pre-environment | `none` / `pre_environment` |
+| any state with a binding, including mid-provision | environment, frontier-derived | never `not_required` |
+| during restoration or teardown | emergency | continued, not restarted |
+| during emergency cleanup | emergency, **continued** | the existing frontier is adopted and its trigger kept |
+| after a terminal | the same record, idempotently | unchanged |
+
+### What "continued" means
+
+The frontier is **adopted by role** rather than re-observed, and the cleanup keeps
+the frontier's own trigger. A cancellation must not relabel the failure it is
+cleaning up after: freezing a second frontier with `trigger: teardown_failure`
+over a restoration failure's frontier produced different bytes at the same logical
+path, raised `ARTIFACT_ALREADY_FROZEN`, and left the run with no terminal and its
+leases still held.
+
+Completed driver actions are not re-dispatched — each runs under a durable intent
+whose probe is the driver's own operation log — so continuation is about the
+evidence, not the dispatch.
+
+### Pending operations
+
+Before any cleanup call, every unsettled operation is reconciled and anything that
+cannot be established is recorded in the **hash-chained lifecycle**, as the
+detection event's Lab-owned `failure`. The intent journal is run-private and an
+offline reader never sees it, so an ambiguity recorded only there is recorded
+nowhere.
+
+Three answers, not two: an intent at `declared` proves nothing was dispatched; a
+subject step with a frozen outcome is complete whatever its marker says; anything
+else the driver's log cannot confirm is genuinely ambiguous.
+
+## Recovering a crashed run
+
+A command that dies mid-phase leaves a durable intent naming exactly how far it
+got. The next process reconciles before it retries.
+
+```bash
+erl2 status --run <run-id> --artifact-root <run-root>
+```
+
+Then re-run the same command. Three things make that safe:
+
+- **the lease does not block you.** A killed process leaves its run lease held;
+  `RunLease.acquire` reclaims a lease whose pid the kernel reports absent, so
+  recovery does not wait out the five-minute TTL. Every ambiguity — including PID
+  reuse — resolves to *alive*, so a live holder is never displaced;
+- **a driver operation is adopted, not repeated.** Its probe is the driver's own
+  operation log, so the external invocation count stays at one;
+- **a subject step fails closed if it is genuinely ambiguous**, and reaches the
+  invalid terminal with `failed_phase.kind = "journey_execution"`, owned by the
+  **Lab**. The Lab cannot establish what the subject did and does not pretend to.
+
+To exercise this deliberately, under the development profile only:
+
+```bash
+ERL2_DEVELOPMENT_FAKE_SUBJECT=1 erl2 install ... \
+  --crash-at after_external_dispatch \
+  --invocation-log /tmp/invocations.jsonl
+```
+
+`--crash-at` ends the process with `SIGKILL` at one of the eight boundaries in
+`CRASH_BOUNDARIES`; `--invocation-log` appends one record before and after every
+external call, so the count survives the process. Both are refused on the release
+surface with `CFG_DEVELOPMENT_FLAG_UNAVAILABLE`, and an unknown boundary name is
+`CFG_MISSING_REQUIRED` rather than being ignored.
 
 ## Enabling Compose (ERL2-OQ-005)
 

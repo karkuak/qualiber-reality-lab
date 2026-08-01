@@ -833,6 +833,29 @@ export type SubstrateBindingV1 = {
   readonly signature: Signature;
 };
 
+export type ObservedResourceIdentity = {
+  readonly resource_id: Id;
+  readonly identity_hash: Hash;
+};
+
+export type CleanupResidueProbeV1 = {
+  readonly schema_version: "cleanup-residue-probe/v1";
+  readonly probe_id: Id;
+  readonly run_id: RunId;
+  readonly substrate_binding_hash: Hash;
+  readonly environment_instance_hash: Hash;
+  readonly resource_frontier_hash: Hash;
+  readonly observed_before: readonly ObservedResourceIdentity[];
+  readonly observed_after: readonly ObservedResourceIdentity[];
+  readonly authorized_targets: IdArray;
+  readonly undeclared_destroyed_resources: IdArray;
+  readonly residual_resources: IdArray;
+  readonly probe_status: "observed" | "unavailable";
+  readonly outcome: "clean" | "residual" | "undeclared_destruction" | "unobservable";
+  readonly probed_at: Instant;
+  readonly core_hash: Hash;
+};
+
 export type ExpectedRevertedMutation = {
   readonly mutation_id: Id;
   readonly mutation_receipt_hash: Hash;
@@ -1059,6 +1082,24 @@ export type RuntimeMilestoneV1 = {
   readonly monotonic_clock_domain_hash: Hash;
   readonly occurred_at: Instant;
   readonly monotonic_elapsed_ms: number;
+  readonly core_hash: Hash;
+  readonly signature: Signature;
+};
+
+export type EvidenceWindowCommitmentV1 = {
+  readonly schema_version: "evidence-window-commitment/v1";
+  readonly commitment_id: Id;
+  readonly run_id: RunId;
+  readonly cutoff_policy_hash: Hash;
+  readonly process_start_receipt_hash: Hash;
+  readonly monotonic_clock_domain_hash: Hash;
+  readonly comparison_policy_hash: Hash;
+  readonly environment_instance_hash: Hash;
+  readonly warmup_ms: number;
+  readonly observation_ms: number;
+  readonly instant_rule: "traffic_process_started_at_plus_warmup_ms_plus_observation_ms";
+  readonly milestone_relationship: "runtime_milestone_at_process_start_plus_warmup_ms";
+  readonly committed_at: Instant;
   readonly core_hash: Hash;
   readonly signature: Signature;
 };

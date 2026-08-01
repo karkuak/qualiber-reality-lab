@@ -69,6 +69,10 @@ const PRE_ENVIRONMENT_FORBIDDEN_ROLES = [
   "canonical-evidence-envelope",
   "environment-restoration",
   "teardown-verification",
+  // ADR-ERL2-031 §6: an evidence window is a statement about an environment run
+  // that started traffic. A pre-environment terminal reaches neither, so a
+  // commitment on that branch means the run finalized through the wrong variant.
+  "evidence-window-commitment",
 ] as const;
 
 /**

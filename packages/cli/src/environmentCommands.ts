@@ -23,7 +23,7 @@
  * substituting its adapter after preregistration.
  */
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseStrictJson } from "@erl2/contracts";
 import { CODES, Erl2Error, type Hash } from "./contractsFacade.js";
@@ -32,17 +32,23 @@ import type {
   ComparisonPolicyV1,
   CutoffPolicyV1,
   EnvironmentArchetypeV1,
+  EnvironmentJourneyIntent,
   JourneyIntent,
   SelectedChallengeJourneyBindingV1,
 } from "@erl2/contracts";
 import {
+  CRASH_BOUNDARIES,
   EnvironmentRun,
   FakeEnvironmentDriver,
   FileSubstrateStore,
   ReservationAllocator,
   RunWorkspace,
+  isCrashBoundary,
+  type CrashBarrier,
+  type EnvironmentDriver,
   type EnvironmentKeyring,
   type FakeDriverFaults,
+  type SubjectPort,
 } from "@erl2/core";
 import {
   ArtifactIndex,
@@ -68,7 +74,86 @@ const ENVIRONMENT_FLAGS: readonly FlagSpec[] = [
   { name: "comparison-policy", kind: "string" },
   { name: "cutoff-policy", kind: "string" },
   { name: "fake-driver-fault", kind: "string" },
+  { name: "crash-at", kind: "string" },
+  { name: "invocation-log", kind: "string" },
 ];
+
+/**
+ * Where this process must die, and where every external invocation is recorded
+ * (ADR-ERL2-028 §7).
+ *
+ * Both are development-only, on exactly the terms `--fake-driver-fault` is: the
+ * explicit development profile or `CFG_DEVELOPMENT_FLAG_UNAVAILABLE`. Neither is
+ * reachable on the release surface, and with neither supplied the composition
+ * below is byte-for-byte the production one — `NO_CRASH` is an empty function and
+ * the driver and subject port are unwrapped.
+ *
+ * ## Why the invocation log is a file
+ *
+ * Because the process it measures is about to be `SIGKILL`ed. A counter in memory
+ * is evidence that dies with its witness, which is why the previous matrix could
+ * only count invocations in a process that survived — and a process that survives
+ * did not crash. Every entry is appended with a synchronous write before *and*
+ * after the call, so the log distinguishes "the call was entered" from "the call
+ * returned", and a crash inside the external call is visible as an unmatched
+ * `enter`.
+ */
+function developmentOnlyFlag(flags: ParsedFlags, name: string): string | undefined {
+  const value = flags[name] as string | undefined;
+  if (value === undefined) return undefined;
+  if (process.env["ERL2_DEVELOPMENT_FAKE_SUBJECT"] !== "1") {
+    throw new Erl2Error(
+      CODES.CFG_DEVELOPMENT_FLAG_UNAVAILABLE,
+      `--${name} is a development-only shortcut; it requires the explicit development profile ` +
+        "(ERL2_DEVELOPMENT_FAKE_SUBJECT=1) and is not reachable on the release surface",
+    );
+  }
+  return value;
+}
+
+/** Appends one external-invocation record, synchronously, before the process can die. */
+function invocationRecorder(logPath: string | undefined): (entry: Record<string, unknown>) => void {
+  if (logPath === undefined) return () => undefined;
+  const absolute = path.resolve(logPath);
+  mkdirSync(path.dirname(absolute), { recursive: true, mode: 0o700 });
+  return (entry) => {
+    appendFileSync(absolute, `${JSON.stringify(entry)}\n`, { mode: 0o600 });
+  };
+}
+
+/**
+ * The barrier that ends this process at a named boundary.
+ *
+ * `SIGKILL`, not `process.exit` and not a thrown error: `exit` runs `process.on`
+ * handlers and a throw unwinds through every `finally` in the stack, releasing the
+ * run lease and flushing whatever the real crash would have lost.
+ */
+function crashBarrier(flags: ParsedFlags): CrashBarrier | undefined {
+  const requested = developmentOnlyFlag(flags, "crash-at");
+  if (requested === undefined) return undefined;
+  // `<boundary>` fires at the first operation to reach that boundary;
+  // `<boundary>@<operation-id-prefix>` fires only for a matching operation.
+  //
+  // The prefix form exists because some durable states are reachable only *past*
+  // an earlier operation's boundary of the same name. A cleanup interrupted after
+  // its frontier is frozen and before its terminal is one: the failing `op-restore`
+  // passes `after_external_dispatch` first, so an unqualified boundary can never
+  // reach the emergency actions behind it. The negative-control campaign found this
+  // by way of `cleanup-continuation` killing nothing (ADR-ERL2-028 §7.1).
+  const [name, prefix] = requested.split("@", 2) as [string, string | undefined];
+  if (!isCrashBoundary(name)) {
+    throw new Erl2Error(
+      CODES.CFG_MISSING_REQUIRED,
+      `--crash-at must be one of ${[...CRASH_BOUNDARIES].join(", ")}, optionally suffixed ` +
+        `with @<operation-id-prefix>`,
+    );
+  }
+  return (boundary, operationId) => {
+    if (boundary !== name) return;
+    if (prefix !== undefined && !operationId.startsWith(prefix)) return;
+    process.kill(process.pid, "SIGKILL");
+  };
+}
 
 /**
  * Scripted environment-driver faults, for exercising the invalid terminal from
@@ -90,6 +175,24 @@ const DRIVER_FAULTS: Readonly<Record<string, FakeDriverFaults>> = {
   // action alongside the safe ones — the mixed frontier whose foreign member
   // used to abort emergency cleanup entirely (review P1-5).
   "failed-restore-shared": { failRestore: true },
+  // A failed restoration and a resource belonging to **another run**, sitting in
+  // the same substrate. Distinct from `failed-restore-shared`, and the
+  // distinction is the whole point: a *shared* resource still embeds this run's
+  // id, so `assertOwnedByRun` passes for it and a whole-environment destroy
+  // never throws — which means the only case claiming to prove P1-5 was proving
+  // something about shared resources and nothing about foreign ones. A foreign
+  // resource fails `assertOwnedByRun`, so `driver.destroy` throws on it
+  // (ADR-ERL2-027 §1.5, §4.7).
+  "failed-restore-foreign": { failRestore: true },
+  // The bounded route: a contaminated baseline is a non-emergency failure, and
+  // until ADR-ERL2-027 it reached an unconditional whole-environment
+  // `driver.destroy()` over a frontier that had just been frozen and never read.
+  // With a shared resource present, that destroy removed a resource the frontier
+  // had classified `contain_residual` and left no record of having done so
+  // (review P1-1); with a foreign one it threw, and the run reached no terminal
+  // at all (review P1-5).
+  "contaminated-baseline-shared": { contaminationCodes: ["PREEXISTING_RESIDUE"] },
+  "contaminated-baseline-foreign": { contaminationCodes: ["PREEXISTING_RESIDUE"] },
   // The compensation returns `succeeded` and reverts nothing (review P1-4). Not
   // a variant of `failed-restore`: a failed restoration is honest and already
   // routes to emergency cleanup, while this one produces a receipt that reads
@@ -124,6 +227,15 @@ function driverFaults(flags: ParsedFlags, runId: string): FakeDriverFaults {
   if (name === "residue") return { residualResourceIds: [`volume-${runId.slice(0, 8)}`] };
   if (name === "failed-restore-shared") {
     return { failRestore: true, sharedResourceIds: [`volume-${runId.slice(0, 8)}`] };
+  }
+  if (name === "contaminated-baseline-shared") {
+    return { ...fault, sharedResourceIds: [`volume-${runId.slice(0, 8)}`] };
+  }
+  // The foreign resource is another run's, so it is named by *kind* rather than
+  // by one of this run's resource ids — there is no id of ours that could name
+  // something that is not ours.
+  if (name === "failed-restore-foreign" || name === "contaminated-baseline-foreign") {
+    return { ...fault, foreignResourceKinds: ["volume"] };
   }
   return fault;
 }
@@ -319,9 +431,93 @@ function environmentKeyring(): EnvironmentKeyring {
     controller: developmentKey("controller"),
     trafficSupervisor: developmentKey("traffic-supervisor"),
     runtimeAttestor: developmentKey("runtime-attestor"),
+    // ADR-ERL2-031 §4. The authority that bounds the evidence window in
+    // `cutoff-policy/v1` is the one that commits the exact window inside those
+    // bounds — never the supervisor or the attestor, whose clocks the derivation
+    // is anchored on. The development trust policy already grants `policy_author`
+    // to this key, which is how the shipped cutoff policy is signed.
+    policyAuthor: developmentKey("policy-author"),
     vaultAuthorizer: developmentKey("vault-authorizer"),
     timestampAuthority: developmentKey("timestamp"),
     finalizer: developmentKey("finalizer"),
+  };
+}
+
+/**
+ * Records every subject-port step invocation to the durable log.
+ *
+ * A decorator rather than a change to `FakeSubjectPort`, so what is counted is
+ * the *port the run actually calls* — including, when `--adapter-entry` is used,
+ * a real out-of-process adapter. Counting inside the fake would measure the
+ * fake.
+ */
+function countingSubjectPort(
+  port: SubjectPort,
+  record: (entry: Record<string, unknown>) => void,
+): SubjectPort {
+  return {
+    get portId(): string {
+      return port.portId;
+    },
+    acquire: (...args) => port.acquire(...args),
+    validatePackage: (...args) => port.validatePackage(...args),
+    step: (request, intent) => {
+      record({
+        surface: "subject_port",
+        phase: "enter",
+        operation_id: request.operation_id,
+        request_hash: request.core_hash,
+        intent,
+      });
+      const response = port.step(request, intent);
+      record({
+        surface: "subject_port",
+        phase: "return",
+        operation_id: request.operation_id,
+        request_hash: request.core_hash,
+        intent,
+      });
+      return response;
+    },
+  };
+}
+
+/**
+ * Records every mutating driver invocation to the durable log.
+ *
+ * Read-only operations (`probe`, `inspect`, `substrateInstance`,
+ * `completedOperation`) are passed through uncounted: they carry no durable
+ * intent by contract (ADR-ERL2-024 §4.3), and counting them would drown the
+ * signal the matrix is looking for. `completedOperation` in particular is the
+ * *reconciliation probe*, so counting it as an invocation would make a correct
+ * adopt-instead-of-redispatch look like a second call.
+ */
+function countingDriver(
+  driver: FakeEnvironmentDriver,
+  record: (entry: Record<string, unknown>) => void,
+): EnvironmentDriver {
+  const counted = <T>(operationId: string, kind: string, call: () => T): T => {
+    record({ surface: "driver", phase: "enter", operation_id: operationId, kind });
+    const result = call();
+    record({ surface: "driver", phase: "return", operation_id: operationId, kind });
+    return result;
+  };
+  return {
+    get manifest() {
+      return driver.manifest;
+    },
+    provision: (r) => counted(r.operationId, "provision", () => driver.provision(r)),
+    probe: (r) => driver.probe(r),
+    mutate: (r) => counted(r.operationId, "mutate", () => driver.mutate(r)),
+    restore: (r) => counted(r.operationId, "restore", () => driver.restore(r)),
+    destroy: (r) => counted(r.operationId, "destroy", () => driver.destroy(r)),
+    destroyResource: (r) =>
+      counted(r.operationId, "destroy_resource", () => driver.destroyResource(r)),
+    inspect: (runId) => driver.inspect(runId),
+    substrateInstance: () => driver.substrateInstance(),
+    establishSubstrateInstance: (runId) => driver.establishSubstrateInstance(runId),
+    completedOperation: (runId, operationId) => driver.completedOperation(runId, operationId),
+    observedMutations: (runId) => driver.observedMutations(runId),
   };
 }
 
@@ -354,7 +550,15 @@ export function openEnvironment(argv: readonly string[], extra: readonly FlagSpe
   // contradicts the run's binding refuses before any directory is created —
   // including the substrate and reservation roots themselves.
   const locators = resolveLocators(flags, runId);
-  const workspace = openWorkspace(flags, runId);
+  // The crash seam and the invocation log, both development-gated. With neither
+  // flag supplied `record` is a no-op, `barrier` is undefined, and the driver and
+  // subject port below are the unwrapped production ones.
+  const record = invocationRecorder(developmentOnlyFlag(flags, "invocation-log"));
+  const barrier = crashBarrier(flags);
+  const counting = developmentOnlyFlag(flags, "invocation-log") !== undefined;
+  const workspace = openWorkspace(flags, runId, {
+    ...(counting ? { wrapSubjectPort: (port) => countingSubjectPort(port, record) } : {}),
+  });
   const clock = workspace.productionClock();
 
   const archetype = resolveAdmitted<EnvironmentArchetypeV1>({
@@ -388,7 +592,7 @@ export function openEnvironment(argv: readonly string[], extra: readonly FlagSpe
       label: "cutoff policy",
     });
 
-  const driver = new FakeEnvironmentDriver({
+  const fakeDriver = new FakeEnvironmentDriver({
     clock,
     // The driver manifest is the environment governor's, and the development
     // policy grants that role to the challenge-governor key (ADR-ERL2-020 §4).
@@ -399,6 +603,7 @@ export function openEnvironment(argv: readonly string[], extra: readonly FlagSpe
     substrate: new FileSubstrateStore(locators.substrateRoot),
     faults: driverFaults(flags, runId),
   });
+  const driver: EnvironmentDriver = counting ? countingDriver(fakeDriver, record) : fakeDriver;
 
   const run = new EnvironmentRun({
     workspace,
@@ -409,6 +614,7 @@ export function openEnvironment(argv: readonly string[], extra: readonly FlagSpe
     cutoffPolicy,
     keys: environmentKeyring(),
     clock,
+    ...(barrier === undefined ? {} : { barrier }),
   });
   return {
     workspace,
@@ -573,7 +779,38 @@ export function plan(argv: readonly string[]): JourneyCommandOutput {
  */
 function step(argv: readonly string[], intent?: JourneyIntent): JourneyCommandOutput {
   const ctx = openEnvironment(argv);
-  const outcome = intent === undefined ? ctx.run.runStep() : ctx.run.runStep(intent);
+  // The occurrence is read *before* the step runs, because the step is what may
+  // fail: an ambiguous dispatch leaves no outcome to read the intent and the
+  // commitment off afterwards, and those are exactly what
+  // `InvalidJourneyExecutionPhaseV1` requires.
+  const owed = ctx.run.nextStep();
+  let outcome;
+  try {
+    outcome = intent === undefined ? ctx.run.runStep() : ctx.run.runStep(intent);
+  } catch (cause) {
+    // An ambiguous subject dispatch is Lab-owned and reaches a terminal.
+    //
+    // Before this it propagated as an ordinary CLI error: the run refused
+    // correctly, never re-invoked the subject — and was then a durably accepted
+    // run with no reachable terminal, which is the brief's own P1 definition. The
+    // ambiguity is recorded as what it is, and the subject is not blamed for it
+    // (ADR-ERL2-024 §4.3, ADR-ERL2-028 §5.2).
+    if (owed === undefined) throw cause;
+    return routed(
+      ctx,
+      cause,
+      [CODES.ENV_MUTATION_INTENT_AMBIGUOUS, CODES.ENV_MUTATION_INTENT_MISSING],
+      {
+        kind: "journey_execution" as const,
+        intent: owed.intent as EnvironmentJourneyIntent,
+        stepCommitmentHash: owed.commitment.core_hash,
+      },
+      // Not `subject`: the Lab cannot establish what the subject did, and
+      // `lab_invalidity` is the honest owner of "I do not know".
+      "lab_invalidity",
+      false,
+    );
+  }
   const next = ctx.run.nextStep();
   return output(ctx, {
     step_id: outcome.step_id,
@@ -596,7 +833,28 @@ export const remove = (argv: readonly string[]): JourneyCommandOutput => step(ar
 
 export function activate(argv: readonly string[]): JourneyCommandOutput {
   const ctx = openEnvironment(argv);
-  const result = ctx.run.activate();
+  let result;
+  try {
+    result = ctx.run.activate();
+  } catch (cause) {
+    // A failed activation mutation, and an activation whose prior dispatch cannot
+    // be reconciled, both reach the activation terminal rather than stranding the
+    // run. `activation` is the phase, and `environment-not-contaminated` the gate
+    // it falsifies: a failed or unknown activation leaves the environment in an
+    // unproven state, which is precisely what that gate asserted.
+    return routed(
+      ctx,
+      cause,
+      [
+        CODES.ENV_PROVISION_FAILED,
+        CODES.ENV_MUTATION_INTENT_AMBIGUOUS,
+        CODES.ENV_MUTATION_INTENT_MISSING,
+      ],
+      "activation",
+      "lab_invalidity",
+      false,
+    );
+  }
   return output(ctx, {
     mutation_receipt_hash: result.receiptHash,
     activation_receipt_hash: result.activationReceiptHash,

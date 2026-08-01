@@ -34,11 +34,15 @@ import {
 import { ArtifactIndex } from "./artifactIndex.js";
 import { assertClaimScopeWithinCeiling, deriveClaimCeiling } from "./claimScope.js";
 import { derivePreEnvironmentClosure, deriveInvalidClosure } from "./closure.js";
+import { assertCutoffOrderingFromLifecycle, deriveEvidenceCutoff } from "./cutoffDerivation.js";
+import { deriveExactEvidenceWindow } from "./windowDerivation.js";
 import { deriveEnvironmentClosure, deriveTerminalVariant } from "./environmentClosure.js";
 import {
   deriveEnvironmentSemantics,
   deriveInvalidEnvironmentSemantics,
 } from "./environmentDerivation.js";
+import { verifySignerInventoryCompleteness } from "./inventoryCompleteness.js";
+import { verifySubjectOutputPayloads } from "./payloadAccounting.js";
 import { verifyReferencedBytes } from "./referencedBytes.js";
 import { verifyRetainedFileAccounting } from "./retainedFiles.js";
 import { verifySignedMembers } from "./signedMembers.js";
@@ -246,6 +250,21 @@ function verifyPreEnvironmentBundle(options: VerifyBundleOptions): BundleVerific
     asOf: attestation.finalized_at,
     inventoryEntries: inventory.entries,
   });
+  // ADR-ERL2-030. The other direction: the inventory must be *exactly* the set
+  // of applicable signed members this verifier derives from the retained bytes.
+  // `complete_for_terminal_chain` is not consulted — an inventory that omitted a
+  // member while asserting completeness is refused by the derivation, not by
+  // disagreeing with a producer constant.
+  verifySignerInventoryCompleteness({
+    index,
+    trust,
+    lifecycle: options.lifecycle,
+    runId: attestation.run_id,
+    terminalVariant: "pre_environment",
+    inventoryEntries: inventory.entries,
+    inventoryRunId: inventory.run_id,
+    declaredExcludedTypes: inventory.excluded_public_terminal_types,
+  });
   verifyRetainedFileAccounting(index);
   // A pre-environment terminal has no selection, so retaining any selection
   // contract is a branch crossover rather than a partial chain.
@@ -259,6 +278,11 @@ function verifyPreEnvironmentBundle(options: VerifyBundleOptions): BundleVerific
   // named check for the crossover is cheaper than relying on a general rule to
   // keep covering a specific hazard.
   assertNoSelectionArtifacts(index);
+  // ADR-ERL2-029 §5. The payload root and its accounting rule are identical on
+  // both terminal variants — a payload is a descendant of the manifest that
+  // declares it, and that is not a branch-specific fact — so this is the one
+  // shared derivation with the variant supplied by what the lifecycle reached.
+  verifySubjectOutputPayloads({ index, lifecycle: options.lifecycle });
   if (attestation.run_record_hash !== requiredHash(closure, "run-record")) {
     throw new Erl2Error(
       CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
@@ -432,7 +456,28 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
       "the bundle presents a selection verification receipt the attestation does not attest",
     );
   }
-  index.get(attestation.exposure_event_hash);
+  // ADR-ERL2-029 §6. `index.get` proves the bytes are retained; it does not prove
+  // the run ever reached them. An attestation naming a retained exposure event
+  // that no lifecycle event produced is the snapshot-only-artifact shape the
+  // closure refuses everywhere else, and it is not exempt here.
+  const exposure = index.get(attestation.exposure_event_hash);
+  if (
+    !options.lifecycle.some((event) =>
+      event.produced.some((p) => p.artifact_core_hash === attestation.exposure_event_hash),
+    )
+  ) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_UNREACHABLE_ARTIFACT,
+      `the attestation names exposure event ${attestation.exposure_event_hash}, which is retained ` +
+        `but which no lifecycle event produced`,
+    );
+  }
+  if (exposure.value["run_id"] !== attestation.run_id) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
+      `the attestation names an exposure event belonging to run ${String(exposure.value["run_id"])}`,
+    );
+  }
 
   const inventory = index.typed<EnvironmentSignerInventoryV2>(
     bundle.signer_inventory.artifact_core_hash,
@@ -505,6 +550,20 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
     trust,
     asOf: attestation.finalized_at,
     inventoryEntries: inventory.entries,
+  });
+  // ADR-ERL2-030, on the branch where the omission was largest: the environment
+  // terminal retained 66 signed members, listed 61 and asserted completeness.
+  // The two it omitted were exactly the two whose authority field is not named
+  // `signature` — the beacon association wrapper and the mirrored trust root.
+  verifySignerInventoryCompleteness({
+    index,
+    trust,
+    lifecycle: options.lifecycle,
+    runId: attestation.run_id,
+    terminalVariant: "environment",
+    inventoryEntries: inventory.entries,
+    inventoryRunId: inventory.run_id,
+    declaredExcludedTypes: inventory.excluded_public_terminal_types,
   });
   verifyRetainedFileAccounting(index);
   if (attestation.run_record_hash !== requiredHash(closure, "run-record")) {
@@ -597,6 +656,46 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
     lifecycle: options.lifecycle,
     runId: attestation.run_id,
   });
+
+  // -- ADR-ERL2-029 §3: the evidence cutoff, re-derived offline --------------
+  //
+  // `cutoff.runtime_milestone_hash` used to be a 32-byte string nothing resolved,
+  // so an observation bundle naming a nonexistent runtime milestone verified as
+  // valid (review P2). This pass resolves all three inputs, checks every
+  // committed bound, and decomposes the window against three separately signed
+  // instants.
+  const cutoff = deriveEvidenceCutoff({
+    index,
+    lifecycle: options.lifecycle,
+    runId: attestation.run_id,
+  });
+  assertCutoffOrderingFromLifecycle(options.lifecycle, cutoff?.milestoneHash);
+
+  // -- ADR-ERL2-031: and now the exact window, not merely a bounded one ------
+  //
+  // The pass above was bounds-exact by necessity: the warmup and observation
+  // durations were composition constants retained in no contract, so it derived
+  // them *out of* the same instants it was checking. A producer that moved the
+  // window inside the committed bounds and moved its milestone to match satisfied
+  // every one of those checks.
+  //
+  // The run now commits the exact durations before it observes the milestone, so
+  // the cutoff, the milestone boundary and the observation window are each
+  // recomputable from retained bytes with no freedom left. Ordered after the
+  // bounds derivation so a missing or unresolvable cutoff input keeps its own,
+  // more fundamental cause.
+  deriveExactEvidenceWindow({
+    index,
+    lifecycle: options.lifecycle,
+    runId: attestation.run_id,
+  });
+
+  // -- ADR-ERL2-029 §5: the payload bytes, accounted in both directions ------
+  //
+  // `retained/` accounting never saw these: the payload root is outside that
+  // subtree, and a *missing* declared payload was silently skipped by the
+  // referenced-bytes layer (review P2).
+  verifySubjectOutputPayloads({ index, lifecycle: options.lifecycle });
 
   // -- ADR-ERL2-025: how strongly this run may be spoken about ---------------
   //
@@ -691,6 +790,25 @@ export function verifyInvalidRecord(options: VerifyRecordOptions): MandatoryGrap
   const record = assertContract<InvalidLabRunRecordV1>("InvalidLabRunRecordV1", options.record);
   const index = ArtifactIndex.scan(options.artifactRoot);
   verifyReferencedBytes(index);
+
+  // ADR-ERL2-030 §3.5. A signer inventory attests *a terminal chain*, and an
+  // invalid record has none: it carries no attestation and no public bundle, so
+  // there is nothing for an inventory to be complete *for*.
+  //
+  // Checked *before* the closure derivation on purpose. The closure would refuse
+  // it too — `signer-inventory/v2` is not one of the invalid branch's supporting
+  // schemas, so it lands in `rejected_extra_hashes` — but as an anonymous
+  // unaccounted artifact. A reader deserves the actual cause, and the invalid
+  // branch has no terminal variant from which to derive an applicable set, so
+  // this is the only place the category error can be named.
+  const strayInventories = index.ofSchema("signer-inventory/v2");
+  if (strayInventories.length > 0) {
+    throw new Erl2Error(
+      CODES.INVENTORY_ENTRY_EXTRA,
+      "an invalid record retains a signer inventory; a signer inventory attests a terminal chain, " +
+        "and an invalid terminal has none",
+    );
+  }
   const indexed = index.tryGet(coreHash(record));
   if (!indexed) {
     throw new Erl2Error(
@@ -749,5 +867,20 @@ export function verifyInvalidRecord(options: VerifyRecordOptions): MandatoryGrap
   // read. A cancellation that claimed `not_required` over a live environment
   // verified at exit 0 before this pass existed (review P1-2).
   deriveInvalidEnvironmentSemantics({ index, lifecycle: options.lifecycle, record });
+
+  // ADR-ERL2-031 on the invalid branch. An invalid terminal that reached
+  // `traffic_or_journey_started` committed a window, and it is accounted for here
+  // on exactly the terms a valid terminal is. One that failed earlier committed
+  // none, and the derivation returns without inventing one — the applicability is
+  // read from the lifecycle, never from whether a commitment happens to be
+  // retained, because letting the retained set answer that question would let an
+  // omission answer for itself.
+  deriveExactEvidenceWindow({ index, lifecycle: options.lifecycle, runId: record.run_id });
+
+  // ADR-ERL2-029 §5 on the invalid branch. An invalid terminal may have frozen a
+  // subject output before it failed; if it did, those payloads are accounted on
+  // exactly the same terms. If it did not, the derivation returns without a
+  // finding rather than inventing a missing role.
+  verifySubjectOutputPayloads({ index, lifecycle: options.lifecycle });
   return closure;
 }

@@ -26,17 +26,40 @@
  * refuses to run against a dirty tree: an uncommitted change to a guard would be
  * measured against source that does not contain it.
  *
+ * ## Why every patch must prove it hit its target
+ *
+ * This campaign used to apply patches with `source.replace(find, replace)`, which
+ * takes the **first** occurrence and reports nothing when there are several.
+ * Three controls have silently expired that way after a later package inserted
+ * similar text above their anchor, and two of the three were found only by
+ * running the full set — the focused subsets in between reported a number for a
+ * measurement that had not happened.
+ *
+ * So targeting is now a proof rather than an assumption, in
+ * `scripts/lib/controlTarget.mjs`: a control declares its preimage and how many
+ * occurrences it means, the default is exactly one, zero and "more than declared"
+ * are both refusals, and the postimage is verified positionally after the splice.
+ * A control whose anchor is ambiguous is a **harness error** that fails the
+ * campaign. It is never reported as a passing or non-load-bearing control,
+ * because a patch that modified the wrong location is not evidence.
+ *
  * Usage:
  *   npm run negative-control              # every control
  *   npm run negative-control -- substrate # controls whose id matches
  */
 
-import { createHash } from "node:crypto";
-import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { TARGET_OUTCOME, planControlPatch, verifyPatchOnDisk } from "./lib/controlTarget.mjs";
+import {
+  certifyTreeUnchanged,
+  createDisposableWorktree,
+  treeDigest,
+  worktreeResidue,
+} from "./lib/disposableWorktree.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -47,8 +70,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  * Two of these guards genuinely do not fail any test when removed; recording
  * that as an expectation is the point, because it stops a later reader from
  * assuming they are proven. See the ledger for why each one is kept anyway.
+ *
+ * `expectedMatches` is optional and defaults to **exactly one**. A control whose
+ * preimage legitimately occurs more than once must say so, or name an `anchor`
+ * that occurs exactly once and locate the preimage after it. Neither is a
+ * formality: the default is what turns a preimage that stopped being unique from
+ * a silent mis-patch into a failed campaign.
  */
-const CONTROLS = [
+export const CONTROLS = [
   {
     id: "activate-connect-guard",
     what: "activation requires a succeeded connect outcome",
@@ -245,8 +274,26 @@ const CONTROLS = [
     file: "packages/core/src/run/mutationIntent.ts",
     // The dispatch still happens; only the durable record *before* it is
     // removed. That is the defect exactly: the call was made and nothing said so.
-    find: '    this.advance(spec.operationId, "dispatching");',
-    replace: "    void spec.operationId;",
+    //
+    // Anchored on the comment above the *first-dispatch* advance, not on the
+    // advance alone. `this.advance(spec.operationId, "dispatching")` occurs
+    // twice: once on the resume path ADR-ERL2-028 added, which is taken only
+    // when an existing intent already sits at `declared`, and once on the path
+    // every operation takes. `String.replace` took the first, so from
+    // ADR-ERL2-028 onward this control disabled the resume branch and killed
+    // nothing — 7 pass / 0 fail on the Step 5B campaign. That is the third
+    // recorded instance of a control expiring because a later package edited
+    // the file above its anchor (`invalid-finding-lab-attribution` was the
+    // second), and it is the case the unique-target requirement now catches
+    // structurally rather than by memory.
+    find:
+      "    // Durable *before* the call, so a crash during dispatch is distinguishable\n" +
+      "    // from a crash before it.\n" +
+      '    this.advance(spec.operationId, "dispatching");',
+    replace:
+      "    // Durable *before* the call, so a crash during dispatch is distinguishable\n" +
+      "    // from a crash before it.\n" +
+      "    void spec.operationId;",
     tests: ["tests/dist/e2e/mutationIntentCrashMatrix.test.js"],
     expect: "fail",
   },
@@ -430,164 +477,1304 @@ const CONTROLS = [
     tests: ["tests/dist/adversarial/claimScopeEscalation.test.js"],
     expect: "fail",
   },
+
+  // -- ADR-ERL2-027: one cleanup discipline, and an observed residue ---------
+  {
+    id: "unconditional-bounded-destroy",
+    what: "the bounded invalid route derives its cleanup instead of destroying the environment (review P1-1/P1-5)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Restores `boundedEnvironmentCleanup` in the one respect that matters: the
+    // non-emergency route swings a whole-environment `driver.destroy()` before
+    // it reads the frontier it just froze. The per-action executor still runs
+    // afterwards, so the patch compiles and the *only* thing that changes is
+    // that an unauthorized aggregate dispatch happens first — which is the
+    // defect, and which the frontier-unsafe survivor and the residue probe both
+    // see.
+    find: "    const safe = safeActions(frontier);\n    const attemptHashes: Hash[] = [];",
+    replace:
+      "    if (!emergency) this.driver.destroy({ runId: this.runId, operationId: \"op-invalid-destroy\" });\n" +
+      "    const safe = safeActions(frontier);\n    const attemptHashes: Hash[] = [];",
+    tests: ["tests/dist/adversarial/invalidCleanupDiscipline.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cleanup-residue-probe",
+    what: "the substrate is re-observed after cleanup and the observation retained (ADR-ERL2-027 §4.3)",
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    // The verifier stops requiring the independent observation. Everything the
+    // producer writes about its own residue then stands unchallenged, which is
+    // the state §1.6 describes.
+    find: "  const probeHash = single(roles, \"cleanup-residue-probe\");\n  if (probeHash === undefined) {",
+    replace:
+      "  const probeHash = single(roles, \"cleanup-residue-probe\");\n" +
+      "  if (probeHash === undefined || String(1) !== \"2\") return;\n" +
+      "  if (probeHash === undefined) {",
+    tests: [
+      "tests/dist/adversarial/invalidCleanupDiscipline.test.js",
+      "tests/dist/adversarial/emergencyCleanupAdversarial.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "undeclared-destruction-detection",
+    what: "a resource that vanished without an authorized action is a refusal (ADR-ERL2-027 §4.3)",
+    file: "packages/core/src/environment/residueProbe.ts",
+    // The arithmetic still runs; only the verdict is suppressed, so a resource
+    // the frontier said not to touch can disappear and the probe reports
+    // `clean`. This is the offline-invisible half of P1-1.
+    find: "  if (undeclaredDestroyed.length > 0) {",
+    replace: '  if (undeclaredDestroyed.length > 0 && String(1) === "2") {',
+    tests: ["tests/dist/integration/cleanupDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "actions-agree-with-residue",
+    what: "a reported outcome must agree with the substrate that was observed (ADR-ERL2-027 §4.6)",
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    find: "  for (const action of cleanup.actions) {\n    const target = targetOf.get(action.action_id);",
+    replace:
+      "  for (const action of [] as typeof cleanup.actions) {\n" +
+      "    const target = targetOf.get(action.action_id);",
+    tests: ["tests/dist/adversarial/invalidCleanupDiscipline.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "invalid-finding-phase-gate",
+    what: "the invalid terminal's finding names the gate its own phase falsifies (review P1-3)",
+    file: "packages/core/src/evaluation/invalidityAttribution.ts",
+    // Restores the branch-keyed answer: every phase gets the baseline gate,
+    // which is what the producer did for five of the seven.
+    find: "  const gate = ENVIRONMENT_PHASE_GATE[phase as EnvironmentFailurePhase];",
+    replace: '  const gate = "environment-baseline-clean";',
+    tests: [
+      "tests/dist/integration/cleanupDerivation.test.js",
+      "tests/dist/adversarial/invalidCleanupDiscipline.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "invalid-finding-lab-attribution",
+    what: "a Lab environment failure cannot be attributed to the subject (ADR-ERL2-027 §4.5.2)",
+    file: "packages/public-verifier/src/library/environmentDerivation.ts",
+    // Repaired for ADR-ERL2-028: that package replaced the
+    // `failed_phase.kind !== "lifecycle_phase"` early return this patch anchored
+    // on with the cancellation / journey-execution branching, so the control had
+    // been **silently not applying** ever since. It went unnoticed because the
+    // full 47 were never re-run after the change — the lifecycle-ordering handoff
+    // §9.2 says so in as many words, and this is what that costs.
+    //
+    // Anchored on the function's own first two lines now, which are the stable
+    // part: a patch anchored on a branch is a patch that expires the next time
+    // the branch is edited.
+    find:
+      "  const { record } = options;\n" +
+      '  if (record.terminal_reason.kind !== "classified_failure") return;',
+    replace:
+      "  const { record } = options;\n" +
+      '  if (String(1) !== "2") return;\n' +
+      '  if (record.terminal_reason.kind !== "classified_failure") return;',
+    tests: ["tests/dist/adversarial/invalidCleanupDiscipline.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "foreign-resource-classification",
+    what: "a resource that is not provably this run's is never an authorized target (review P1-5)",
+    file: "packages/core/src/environment/frontier.ts",
+    // The frontier stops re-deriving ownership and believes whatever it was
+    // handed. Another run's resource then becomes an independently safe action,
+    // which is the classification failure every downstream guard depends on not
+    // happening.
+    find: "    if (!owned) {",
+    replace: '    if (!owned && String(1) === "2") {',
+    tests: [
+      "tests/dist/integration/cleanupDerivation.test.js",
+      "tests/dist/adversarial/invalidCleanupDiscipline.test.js",
+    ],
+    expect: "fail",
+  },
+
+  // -- Step 4: lifecycle ordering and crash recovery (ADR-ERL2-028) ----------
+  {
+    id: "journey-prerequisite-matrix",
+    what: "every journey intent enforces its own activation/cutoff prerequisites (review P1-9)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Removes the per-occurrence enforcement entirely. This is the defect itself:
+    // without it a committed post-capture step runs before activation and before
+    // the evidence cutoff, exactly as it did before this package.
+    find: "    this.assertStepPrerequisites(step.intent, state);",
+    replace: "    void this.assertStepPrerequisites;",
+    tests: [
+      "tests/dist/adversarial/lifecycleOrdering.test.js",
+      "tests/dist/e2e/environmentRun.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "post-capture-activation-requirement",
+    what: "a post-capture intent may not run before the challenge is activated",
+    file: "packages/core/src/journey/prerequisites.ts",
+    // Keeps the matrix and the enforcement, and drops only the three facts that
+    // separate a post-capture intent from a setup one. A run can then reach
+    // `exercise` with no activation receipt and no realized cutoff.
+    //
+    // The postimage here is `];`, which occurs ten times in this file — which is
+    // exactly why the harness verifies the postimage **positionally** rather than
+    // by counting occurrences, and why `uniquePostimage` is opt-in.
+    find: '  "challenge_activation",\n  "evidence_cutoff",\n  "observation_bundle",\n];',
+    replace: "];",
+    tests: ["tests/dist/integration/journeyPrerequisites.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "prerequisite-evidence-derivation",
+    what: "prerequisites are answered from retained evidence, not from the departure state",
+    file: "packages/core/src/journey/prerequisites.ts",
+    // Every prerequisite becomes satisfied. The departure-state check survives, so
+    // this isolates the half of the matrix that the state machine does *not*
+    // already imply — and `step_outcome_frozen` is a legal post-capture departure
+    // state, which is exactly why the state alone cannot be the gate.
+    find: "  const unmet = row.requires.filter((prerequisite) => !SATISFIED_BY[prerequisite](evidence));",
+    replace: "  const unmet = row.requires.filter(() => false);",
+    tests: [
+      "tests/dist/integration/journeyPrerequisites.test.js",
+      "tests/dist/adversarial/lifecycleOrdering.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "refusal-before-cutoff-freeze",
+    what: "every refusable input is resolved before the first retained byte (review P1-10)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Restores the original ordering: the comparison policy is resolved at its
+    // freeze rather than up front, so a `journey` missing it freezes the cutoff
+    // policy and only then refuses.
+    find: "    const comparisonPolicy = this.comparisonPolicy();",
+    replace: "    const comparisonPolicy = { get bytes() { return this; } } as never;",
+    tests: ["tests/dist/adversarial/lifecycleOrdering.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "lazy-operational-directories",
+    what: "a refused command creates no substrate or reservation directory",
+    file: "packages/core/src/environment/allocator.ts",
+    // Puts the eager mkdir back in the constructor, which `openEnvironment` runs
+    // for every command including the ones that refuse.
+    find: "    this.ttlMs = options.ttlMs ?? 3_600_000;",
+    replace: "    this.ttlMs = options.ttlMs ?? 3_600_000;\n    mkdirSync(this.root, { recursive: true, mode: 0o700 });",
+    tests: ["tests/dist/adversarial/lifecycleOrdering.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cancellation-branch-classification",
+    what: "the cancellation branch is derived from durable evidence, not one file's existence (review P1-2)",
+    file: "packages/core/src/run/cancellationBranch.ts",
+    // Reinstates the `existsSync` semantics: absence and unreadability become the
+    // same answer, and the lifecycle witness is dropped. A live environment run
+    // whose binding artifact is gone then takes the pre-environment branch and
+    // freezes `not_required` over allocated resources.
+    find: "  if (bindingPresent(runRoot)) return \"environment\";\n  if (lifecycleShowsEnvironment(runRoot)) return \"environment\";",
+    replace:
+      "  try {\n" +
+      "    if (bindingPresent(runRoot)) return \"environment\";\n" +
+      "  } catch {\n" +
+      "    return \"pre_environment\";\n" +
+      "  }",
+    tests: ["tests/dist/adversarial/lifecycleOrdering.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cleanup-continuation",
+    what: "a cancellation continues an in-flight cleanup instead of re-observing its frontier",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Drops the adoption, so a cancellation during emergency cleanup freezes a
+    // second frontier under a relabelled trigger and collides with the first.
+    find: "    const alreadyFrozenFrontier = this.retainedResourceFrontier();",
+    replace: "    const alreadyFrozenFrontier = undefined as ReturnType<typeof this.retainedResourceFrontier>;",
+    tests: ["tests/dist/adversarial/lifecycleOrdering.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "not-dispatched-proven",
+    what: "a `declared` intent proves nothing was dispatched, so it is resumed rather than failed closed",
+    file: "packages/core/src/run/mutationIntent.ts",
+    // Removes the third reconciliation answer. A subject step interrupted between
+    // its intent freeze and its dispatch marker then fails closed to an invalid
+    // terminal over an operation that demonstrably never ran.
+    find: '      if (existing.state === "declared") {',
+    replace: '      if (existing.state === "declared" && String(1) === "2") {',
+    tests: ["tests/dist/e2e/crashBoundaryMatrix.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "crash-lease-reclamation",
+    what: "a lease whose holder is gone is reclaimed, so a crashed run can be recovered at all",
+    file: "packages/core/src/lifecycle/lease.ts",
+    // Without it, every crash recovery waits out the five-minute TTL — so the
+    // process that must reconcile the interrupted operation is refused before it
+    // reads a single intent.
+    find: "        if (!RunLease.ownerAlive(existing)) {",
+    replace: '        if (!RunLease.ownerAlive(existing) && String(1) === "2") {',
+    tests: [
+      "tests/dist/integration/runLease.test.js",
+      "tests/dist/e2e/crashBoundaryMatrix.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "invocation-count-not-dedup",
+    what: "the crash matrix counts external invocations, and artifact deduplication is not a substitute",
+    file: "packages/core/src/run/mutationIntent.ts",
+    // **The control this package exists to run.** It removes reconciliation
+    // entirely — every unsettled operation is re-dispatched — while leaving the
+    // artifact store's duplicate refusal, the lifecycle log's `operation_id`
+    // dedupe and the driver's own operation log completely intact.
+    //
+    // A suite that asserted "exactly one retained receipt" therefore still
+    // passes. The invocation-count assertions must fail anyway, because the
+    // external port really was entered twice. If this control kills nothing, the
+    // matrix is counting artifacts and the exactly-once claim is unfounded.
+    // Disables the condition's middle clause rather than the whole `if`. Replacing
+    // the condition with `false` removes the `existing !== undefined` narrowing, so
+    // the block below stops compiling under `strictNullChecks` — the same
+    // narrowing trap that broke two controls in the 6.5-B campaign
+    // (`remediation-6.5-invariants.md` §8). This keeps every identifier used and
+    // every type narrowed, and still makes the condition unsatisfiable.
+    find: '      existing.state !== "settled" &&',
+    replace: '      String(1) === "2" &&',
+    tests: ["tests/dist/e2e/crashBoundaryMatrix.test.js"],
+    expect: "fail",
+  },
+
+  // -- ADR-ERL2-029: the cutoff, the payload root and the invalid-golden gate --
+  {
+    id: "cutoff-milestone-resolution",
+    what: "the cutoff's runtime milestone is resolved, not merely named (review P2)",
+    file: "packages/public-verifier/src/library/cutoffDerivation.ts",
+    // Restores the pre-remediation posture: a well-formed hash is believed
+    // without being resolved to the artifact it names. Any artifact of the right
+    // schema stands in, which is exactly what "nothing resolved the hash" meant.
+    //
+    // Disabling the `if` instead — the obvious patch — does **not** compile: it
+    // removes the `undefined` narrowing and the three uses of `found` below fail
+    // `strictNullChecks`. That is the same trap that broke two controls in the
+    // 6.5-B campaign (`remediation-6.5-invariants.md` §8) and one in the
+    // lifecycle-ordering campaign, and it is the third time it has been hit. The
+    // substitution keeps every identifier used and every type narrowed, and still
+    // makes resolution meaningless.
+    find: "  const found = index.tryGet(hash);",
+    replace:
+      "  const found =\n" +
+      "    index.tryGet(hash) ?? index.all().find((a) => a.schemaVersion === schemaVersion);",
+    tests: ["tests/dist/integration/cutoffDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cutoff-bounds-derivation",
+    what: "the derived warmup and observation windows are checked against the committed policy bounds",
+    file: "packages/public-verifier/src/library/cutoffDerivation.ts",
+    // Removes only the observation-window bounds, leaving resolution, binding,
+    // clock-domain and divergence checks intact. A control that removed the whole
+    // arithmetic would kill every case and prove nothing about which rule each
+    // one measures.
+    find: "  if (observationMs < policy.minimum_observation_ms) {",
+    replace: "  if (String(1) === \"2\" && observationMs < policy.minimum_observation_ms) {",
+    tests: ["tests/dist/integration/cutoffDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cutoff-clock-divergence",
+    what: "wall and monotonic views of the warmup interval must agree within the committed bound",
+    file: "packages/public-verifier/src/library/cutoffDerivation.ts",
+    find: "  if (Math.abs(warmupMs - monotonicElapsedMs) > policy.maximum_monotonic_wall_divergence_ms) {",
+    replace:
+      '  if (String(1) === "2" && Math.abs(warmupMs - monotonicElapsedMs) > policy.maximum_monotonic_wall_divergence_ms) {',
+    tests: ["tests/dist/integration/cutoffDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "cutoff-lifecycle-reachability",
+    what: "a cutoff input retained but never lifecycle-reached is refused",
+    file: "packages/public-verifier/src/library/cutoffDerivation.ts",
+    find: "  if (!reached.has(hash)) {",
+    replace: '  if (String(1) === "2" && !reached.has(hash)) {',
+    tests: ["tests/dist/integration/cutoffDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "payload-presence-accounting",
+    what: "a declared subject-output payload must actually be retained (review P2)",
+    file: "packages/public-verifier/src/library/payloadAccounting.ts",
+    // Restores the referenced-bytes layer's "a missing reference may have been
+    // scrubbed" allowance to the payload root, which is exactly the gap: that
+    // allowance is right for `raw/` and wrong for a payload the terminal's own
+    // manifest declares.
+    find: "  for (const payload of declaredByPath.values()) {\n    const bytes = readDeclared(root, payload);",
+    replace:
+      "  for (const payload of [] as DeclaredPayload[]) {\n    const bytes = readDeclared(root, payload);",
+    tests: ["tests/dist/adversarial/subjectOutputPayloads.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "payload-directory-enumeration",
+    what: "every file in the subject-output payload root is declared by a reached manifest",
+    file: "packages/public-verifier/src/library/payloadAccounting.ts",
+    // The other direction, and the one §24 names explicitly: skip the payload
+    // directory enumeration. Presence checking stays intact, so only the
+    // extra-file cases may die.
+    find: "  for (const [relative, kind] of present) {",
+    replace: "  for (const [relative, kind] of [] as [string, \"file\" | \"other\"][]) {\n    void present;",
+    tests: ["tests/dist/adversarial/subjectOutputPayloads.test.js"],
+    expect: "fail",
+  },
+
+  // -- ADR-ERL2-030: signer-inventory completeness, in all three layers -------
+  //
+  // The producer controls all substitute the field list rather than deleting the
+  // loop, for the reason the cutoff controls record: removing a guard usually
+  // removes a type narrowing too, and a patched tree that does not compile
+  // measures nothing. Substituting the *set of fields the producer looks in* is
+  // also the more faithful reproduction — the defect was never "no enumeration",
+  // it was "an enumeration over one field name".
+  //
+  // All three share one preimage, `for (const field of AUTHORITY_SIGNATURE_FIELDS) {`,
+  // which occurs exactly once in that file. The unique-target requirement is what
+  // keeps that true: if a later package adds a second enumeration over the same
+  // constant, these three become ambiguous and fail the campaign rather than
+  // quietly measuring whichever one comes first.
+  {
+    id: "signer-producer-ordinary-signature",
+    what: "the producer enumerates members whose authority field is `signature`",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    find: "  for (const field of AUTHORITY_SIGNATURE_FIELDS) {",
+    replace: '  for (const field of ["root_signature", "wrapper_signature"] as const) {',
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-producer-root-signature",
+    what: "the producer enumerates `root_signature` members — the mirrored trust policy, on every run",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    find: "  for (const field of AUTHORITY_SIGNATURE_FIELDS) {",
+    replace: '  for (const field of ["signature", "wrapper_signature"] as const) {',
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-producer-wrapper-signature",
+    what: "the producer enumerates `wrapper_signature` members — the review's original finding",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    find: "  for (const field of AUTHORITY_SIGNATURE_FIELDS) {",
+    replace: '  for (const field of ["signature", "root_signature"] as const) {',
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-producer-unknown-contract",
+    what: "a signed contract the producer declares no role for stops finalization",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    // Keeps `role` a string and every use below type-correct, and still makes an
+    // unclassified signed contract silently inventoried under a borrowed role.
+    find: "    const role = PRODUCER_SIGNED_MEMBER_ROLES.get(artifact.schemaVersion);\n    if (role === undefined) {",
+    replace:
+      '    const role = PRODUCER_SIGNED_MEMBER_ROLES.get(artifact.schemaVersion) ?? "policy_author";\n' +
+      '    if (String(1) === "2") {',
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-producer-completeness-derivation",
+    what: "`complete_for_terminal_chain` is derived from the actual set, not asserted",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    // The exact pre-remediation posture: a constant where a result belongs.
+    find: "    completeForTerminalChain: ordered.length === seen.size && ordered.length > 0,",
+    replace: "    completeForTerminalChain: true,",
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-producer-finalization-gate",
+    what: "an inventory the derivation cannot certify is refused rather than sealed",
+    file: "packages/core/src/terminal/finalize.ts",
+    find: "function assertInventoryComplete(complete: boolean, entryCount: number): void {\n  if (complete) return;",
+    replace:
+      "function assertInventoryComplete(complete: boolean, entryCount: number): void {\n" +
+      '  if (complete || String(1) === "1") return;',
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-producer-postfreeze-recheck",
+    what: "completeness is re-established against the tree as it stands after the inventory is sealed",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    // Re-derives the listed set from the derivation instead of from the sealed
+    // entries, which makes the comparison agree with itself by construction.
+    find: "  const listed = new Set(entries.map((entry) => entry.artifactCoreHash as string));",
+    replace:
+      "  const listed = new Set(derivation.applicableMembers.map((member) => member.coreHash as string));\n" +
+      "  void entries;",
+    tests: ["tests/dist/integration/signerInventoryDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-fixture-complete-set",
+    what: "the fixture inventories every signed member it retains, rather than hand-writing one entry",
+    file: "tests/support/fakeRun.ts",
+    // Restores the shape the ledger measured: one entry, completeness asserted.
+    find: "    entries: applicable.map((member) => ({",
+    replace: "    entries: applicable.slice(0, 1).map((member) => ({",
+    tests: ["tests/dist/e2e/preEnvironmentRun.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-trusts-producer-flag",
+    what: "the verifier derives completeness instead of reading `complete_for_terminal_chain`",
+    file: "packages/public-verifier/src/library/verify.ts",
+    // The status quo ADR-ERL2-029 §9 rejected, restored exactly: the field is
+    // `const: true`, so guarding the derivation on it disables the derivation.
+    find:
+      "  verifySignerInventoryCompleteness({\n    index,\n    trust,\n    lifecycle: options.lifecycle,\n" +
+      '    runId: attestation.run_id,\n    terminalVariant: "pre_environment",',
+    replace:
+      "  if (!inventory.complete_for_terminal_chain) verifySignerInventoryCompleteness({\n    index,\n    trust,\n" +
+      "    lifecycle: options.lifecycle,\n" +
+      '    runId: attestation.run_id,\n    terminalVariant: "pre_environment",',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-missing-direction",
+    what: "an applicable signed member with no inventory entry is refused (retained -> inventory)",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    find: "  if (missing.length > 0) {",
+    replace: '  if (String(1) === "2" && missing.length > 0) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-extra-detection",
+    what: "an inventory entry that is not an applicable member is refused (inventory -> retained)",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    find: "  if (extra.length > 0) {",
+    replace: '  if (String(1) === "2" && extra.length > 0) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-duplicate-detection",
+    what: "an applicable member inventoried twice is refused",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    find: "  if (duplicates.length > 0) {",
+    replace: '  if (String(1) === "2" && duplicates.length > 0) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-lifecycle-reachability",
+    what: "an inventoried member no lifecycle event produced is refused",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    find: "  if (reachabilityFailures.length > 0) {",
+    replace: '  if (String(1) === "2" && reachabilityFailures.length > 0) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-member-run-binding",
+    what: "a signed member belonging to another run is refused",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    find: "  if (foreignRunMembers.length > 0) {",
+    replace: '  if (String(1) === "2" && foreignRunMembers.length > 0) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-inventory-run-scope",
+    what: "an inventory naming another run is refused even when every member hash resolves",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    find: "  if (input.inventoryRunId !== input.runId) {",
+    replace: '  if (String(1) === "2" && input.inventoryRunId !== input.runId) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-entry-signature-binding",
+    what: "an entry whose declared signature hash contradicts the artifact is refused",
+    file: "packages/public-verifier/src/library/inventoryCompleteness.ts",
+    // The one entry field `verifySignedMembers` does not cross-check, so this
+    // control isolates the completeness layer rather than an inherited rule.
+    find: "    if (entry.signature_sha256 !== member.signedHash) {",
+    replace: '    if (String(1) === "2" && entry.signature_sha256 !== member.signedHash) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-invalid-record-inventory",
+    what: "an invalid record that retains a signer inventory is refused",
+    file: "packages/public-verifier/src/library/verify.ts",
+    find:
+      '  const strayInventories = index.ofSchema("signer-inventory/v2");\n  if (strayInventories.length > 0) {',
+    replace:
+      '  const strayInventories = index.ofSchema("signer-inventory/v2");\n' +
+      '  if (String(1) === "2" && strayInventories.length > 0) {',
+    tests: ["tests/dist/adversarial/signerInventoryCompleteness.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-wrapper-field",
+    what: "the verifier recognizes wrapper-signed members as applicable inventory members",
+    file: "packages/public-verifier/src/library/signedMembers.ts",
+    // Removing wrapper recognition on the *verifier* side does not hide the
+    // member — it makes the honest environment inventory look like it lists
+    // something inapplicable, which is why the environment battery is the target.
+    find: "const SIGNATURE_FIELDS = AUTHORITY_SIGNATURE_FIELDS;",
+    replace: 'const SIGNATURE_FIELDS = ["signature", "root_signature"] as const;',
+    tests: ["tests/dist/adversarial/signerInventoryEnvironment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "signer-verifier-environment-completeness",
+    what: "the environment branch derives completeness too, not only the pre-environment one",
+    file: "packages/public-verifier/src/library/verify.ts",
+    find:
+      "  verifySignerInventoryCompleteness({\n    index,\n    trust,\n    lifecycle: options.lifecycle,\n" +
+      '    runId: attestation.run_id,\n    terminalVariant: "environment",',
+    replace:
+      "  if (!inventory.complete_for_terminal_chain) verifySignerInventoryCompleteness({\n    index,\n    trust,\n" +
+      "    lifecycle: options.lifecycle,\n" +
+      '    runId: attestation.run_id,\n    terminalVariant: "environment",',
+    tests: ["tests/dist/adversarial/signerInventoryEnvironment.test.js"],
+    expect: "fail",
+  },
+  // -- ADR-ERL2-031: the signed evidence-window commitment -------------------
+  //
+  // Anchors are things each invariant owns — a named comparison, a role-table
+  // row, the `produced` entry itself — rather than a line that could become one
+  // of several. `NC-CAMPAIGN` re-checks every one against real source on each
+  // `npm test`, so an anchor that stops being unique fails in seconds rather than
+  // in a four-hour campaign.
+  {
+    id: "window-producer-lifecycle-reach",
+    what: "the evidence-window commitment is reached by the lifecycle event that produced it",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Relabels the `produced` row rather than deleting the freeze. Deleting the
+    // freeze would kill every window case at once and prove nothing about which
+    // rule each measures; relabelling isolates *reachability* from *presence*,
+    // which is the snapshot-only shape the closure refuses everywhere else.
+    find: '          artifact_role: "evidence-window-commitment",',
+    replace: '          artifact_role: "evidence-window-commitment-unreached",',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-producer-uses-frozen-commitment",
+    what: "the cutoff is built from the frozen commitment, not from a mutable constant",
+    file: "packages/core/src/run/environmentRun.ts",
+    // **The control this package exists to run.** It restores the composition
+    // constants ADR-ERL2-031 removed: the cutoff is rebuilt from module-level
+    // numbers instead of from the signed commitment the run froze. The bytes an
+    // offline reader holds then stop governing the bytes the producer writes,
+    // which is the residual restored under a different name.
+    // The substituted constants must not preserve the **sum**. The first version
+    // of this control used 2 000 / 4 000, and 2 000 + 4 000 is 1 000 + 5 000, so
+    // the derived cutoff instant was byte-identical and the control scored
+    // 29 pass / 0 fail against an `expect: "fail"`. It read as a guard that is not
+    // load-bearing; it was a patch that changed nothing.
+    //
+    // 2 000 / 3 000 moves the cutoff a second earlier while keeping both
+    // durations inside the policy bounds, so `realizeCutoff` still succeeds and
+    // only the comparison against the frozen commitment can catch it.
+    find: "      warmupMs: commitment.warmup_ms,\n      observationMs: commitment.observation_ms,",
+    replace: "      warmupMs: 2_000,\n      observationMs: 3_000,",
+    tests: [
+      "tests/dist/adversarial/evidenceWindowCommitment.test.js",
+      "tests/dist/e2e/environmentRun.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "window-producer-milestone-boundary",
+    what: "the observed milestone must land on the committed warmup boundary",
+    file: "packages/core/src/capture/evidenceWindow.ts",
+    find: "  if (observedWarmupMs !== commitment.warmup_ms) {",
+    replace: '  if (String(1) === "2" && observedWarmupMs !== commitment.warmup_ms) {',
+    tests: ["tests/dist/integration/evidenceWindowDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-producer-policy-bounds",
+    what: "a configured window outside the policy's committed bounds is refused before it is signed",
+    file: "packages/core/src/capture/evidenceWindow.ts",
+    find: "  if (input.warmupMs > policy.maximum_warmup_ms) {",
+    replace: '  if (String(1) === "2" && input.warmupMs > policy.maximum_warmup_ms) {',
+    tests: ["tests/dist/integration/evidenceWindowDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-producer-whole-second-durations",
+    what: "a sub-second window is refused, because its derived instant is not representable",
+    file: "packages/core/src/capture/evidenceWindow.ts",
+    // `Instant` is second-precision and the renderer truncates rather than
+    // rounding, so a 900 ms warmup would render an instant disagreeing with its
+    // own arithmetic by 900 ms — silently.
+    find: "  if (value % MS_PER_SECOND !== 0) {",
+    replace: '  if (String(1) === "2" && value % MS_PER_SECOND !== 0) {',
+    tests: ["tests/dist/integration/evidenceWindowDerivation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-requires-commitment",
+    what: "a run that started traffic and retains no commitment is refused",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    // Re-pointed after the first campaign measured it.
+    //
+    // It originally disabled `retained.length === 0` in `windowDerivation.ts`,
+    // and scored 0 pass / 0 fail — the patched tree left `retained[0]` undefined,
+    // the CLI died on a TypeError rather than refusing, and every case in the
+    // file was cancelled. That is not a measurement, and the classifier now says
+    // so instead of reading it as "nothing failed".
+    //
+    // The requirement that actually fires on a missing commitment is the
+    // conditional role check in `deriveEnvironmentSemantics`, which the closure
+    // reaches first. `windowDerivation.ts`'s own `retained.length === 0` refusal
+    // is defence for callers that run no closure; it is behind this rule on both
+    // shipped branches, and the ledger records that rather than claiming two
+    // kills for one guard.
+    // Returns `undefined` rather than making the condition unsatisfiable: leaving
+    // `retained[0]` undefined crashed the CLI on a TypeError instead of refusing,
+    // and a control that crashes the process has measured nothing. This keeps
+    // every type sound and still accepts a terminal that started traffic and
+    // committed no window.
+    find: "  if (retained.length === 0) {",
+    replace: '  if (retained.length === 0) return undefined;\n  if (String(1) === "2") {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-exact-cutoff",
+    what: "the verifier compares the exact rederived cutoff, not merely the committed bounds",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    // **The control ADR-ERL2-031 §10 singles out.** Removing this comparison
+    // restores ADR-ERL2-029's bounds-only posture exactly, so a within-bounds
+    // shifted window — warmup 1s -> 2s, observation 5s -> 4s, milestone moved to
+    // match, commitment untouched — must verify again. If this control kills
+    // nothing, the exact derivation is not doing the work the ADR claims and the
+    // residual is still open.
+    find: "  if (derivedCutoffMs !== cutoffMs) {",
+    replace: '  if (String(1) === "2" && derivedCutoffMs !== cutoffMs) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-exact-milestone",
+    what: "the milestone must land exactly on the committed warmup boundary",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    find: "  if (derivedMilestoneMs !== milestoneMs) {",
+    replace: '  if (String(1) === "2" && derivedMilestoneMs !== milestoneMs) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-capture-window",
+    what: "every source snapshot's window must close at the committed cutoff",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    // Recorded as `expect: "pass"` because it is, not because it should be.
+    //
+    // Building the mutation needs a snapshot reseal, which moves the observation
+    // bundle that cites it, the canonical evidence envelope and the adapter
+    // translation receipt — and the terminal then refuses at the closure with
+    // three unaccounted artifacts, long before the window derivation runs. The
+    // rule is real and is covered by the pure cases in
+    // `evidenceWindowDerivation.test.ts`; what is missing is an end-to-end
+    // mutation that reaches it, and saying so is better than a control that
+    // reads as evidence and measures a rule that fires first.
+    find: "    if (toMs !== derivedCutoffMs) {",
+    replace: '    if (String(1) === "2" && toMs !== derivedCutoffMs) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "pass",
+    note: "no end-to-end mutation reaches it; the closure refuses a resealed snapshot chain first",
+  },
+  {
+    id: "window-verifier-policy-binding",
+    what: "the commitment must name the cutoff policy the cutoff was derived under",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    find: "  if (commitment.cutoff_policy_hash !== cutoff.policy_hash) {",
+    replace: '  if (String(1) === "2" && commitment.cutoff_policy_hash !== cutoff.policy_hash) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-process-binding",
+    what: "the commitment must name the process-start receipt the window is measured from",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    find: "  if (commitment.process_start_receipt_hash !== cutoff.process_start_receipt_hash) {",
+    replace:
+      '  if (String(1) === "2" && commitment.process_start_receipt_hash !== cutoff.process_start_receipt_hash) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-verifier-pre-capture-ordering",
+    what: "a commitment frozen after the capture it governs is refused",
+    file: "packages/public-verifier/src/library/windowDerivation.ts",
+    find: "    if (at >= 0 && at < producedAt) {",
+    replace: '    if (String(1) === "2" && at >= 0 && at < producedAt) {',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "window-signer-inventory-inclusion",
+    what: "the commitment participates in signer-inventory completeness like any signed member",
+    file: "packages/core/src/terminal/signerInventoryDerivation.ts",
+    // Removes exactly one row from the producer's role table. A signed contract
+    // with no declared role is a hard refusal, so this measures that the new
+    // contract goes through the *general* derivation — a special case for it
+    // would prove only that the special case works.
+    find: '  ["evidence-window-commitment/v1", "policy_author"],',
+    replace: "",
+    // Measured, and re-pointed once. `signerInventoryDerivation.test.js` is a
+    // **pure** suite: it builds its own fixtures and none of them retains an
+    // evidence-window commitment, so removing the role row changed nothing there
+    // and the control scored 17 pass / 0 fail. The suites that retain one are the
+    // end-to-end battery — where the producer refuses to finalize a real
+    // environment run it cannot classify — and the architecture case that pins
+    // the two role tables in agreement.
+    tests: [
+      "tests/dist/architecture/evidenceWindowIndependence.test.js",
+      "tests/dist/adversarial/evidenceWindowCommitment.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "window-signer-role-separation",
+    what: "the window is signed by policy_author, never by a clock-stamping role",
+    file: "packages/public-verifier/src/library/signedMembers.ts",
+    // Grants the window to the traffic supervisor — the party that signs the
+    // instant the window is measured *from*. A signer that both chooses the
+    // window and stamps its origin can move both together and leave the
+    // arithmetic closing, which is the residual under another name
+    // (ADR-ERL2-031 §4).
+    find: '    { role: "policy_author", securityTimestampField: "committed_at" },',
+    replace: '    { role: "traffic_supervisor", securityTimestampField: "committed_at" },',
+    tests: ["tests/dist/adversarial/evidenceWindowCommitment.test.js"],
+    expect: "fail",
+  },
+
+  // -- Step 6B: the four producer evidence boundaries ------------------------
+  //
+  // The review's producer cluster was not "these scans are missing"; it was that
+  // each scan inspected something other than what crossed the boundary. So each
+  // control below disables exactly the byte-level rule, and each names a test
+  // that plants its leak in admitted data or in the subject's own bytes and
+  // drives the shipped binary. A control killed by an earlier guard would prove
+  // that the boundary is covered by something else, not that this rule works, so
+  // every designated case asserts the *surface or code the intended rule emits*.
+  {
+    id: "mounted-file-byte-scan",
+    what: "the bytes an adapter can mount are scanned before they are published",
+    file: "packages/core/src/run/workspace.ts",
+    // Deletes the scan and leaves the publication. The declared postimage keeps
+    // `bytes` referenced so the surrounding function still typechecks under
+    // `noUnusedLocals`: a patched tree that does not compile measures nothing.
+    find: [
+      "    assertNoCanaryLeak(",
+      '      [{ surface: "mounted_file" as const, label, bytes }],',
+      "      this.knownCanaryIds(),",
+      "    );",
+    ].join("\n"),
+    replace: "    void label;",
+    tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "lab-telemetry-oracle-scan",
+    what: "Lab telemetry is scanned before one byte of it is retained",
+    file: "packages/core/src/capture/capture.ts",
+    // The single scanner both call sites share, so this disables the production
+    // `lab_telemetry` scan everywhere rather than one of two copies.
+    find: "  assertNoCanaryLeak(scanTargets, knownCanaryIds);",
+    replace: "  void scanTargets;\n  void knownCanaryIds;",
+    tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "subject-output-secret-canary-scan",
+    what: "a secret canary in retained subject-output bytes refuses before the freeze",
+    file: "packages/core/src/adapter/outputFreezer.ts",
+    find: [
+      "    if (counts.secretCanaries > 0) {",
+      "      throw new Erl2Error(",
+      "        CODES.SECRET_CANARY_IN_SUBJECT_OUTPUT,",
+      "        `a secret canary reached retained subject output at ${payload.path}`,",
+      '        { owner: "lab" },',
+      "      );",
+      "    }",
+    ].join("\n"),
+    replace: "",
+    tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "subject-output-forbidden-identifier-scan",
+    what: "a forbidden identifier in retained subject-output bytes refuses before the freeze",
+    file: "packages/core/src/adapter/outputFreezer.ts",
+    find: [
+      "    if (counts.forbiddenIdentifiers > 0) {",
+      "      throw new Erl2Error(",
+      "        CODES.SECRET_PLAINTEXT_IN_CONTRACT,",
+      "        `retained subject output at ${payload.path} carries a forbidden identifier`,",
+      '        { owner: "lab" },',
+      "      );",
+      "    }",
+    ].join("\n"),
+    replace: "",
+    tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "subject-output-declared-byte-ceiling",
+    what: "the declared output ceiling is compared with the bytes the subject produced",
+    file: "packages/core/src/adapter/outputFreezer.ts",
+    // `String(1) === "2"` rather than `false`: a literal `false` lets TypeScript
+    // drop the branch and stop narrowing, and the control then reports a build
+    // failure instead of measuring anything.
+    find: "  if (total > declaredOutputBytes) {",
+    replace: '  if (String(1) === "2") {\n    void total;\n    void declaredOutputBytes;',
+    tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "subject-output-byte-total-counts-payloads",
+    what: "the byte total is summed from the payloads, not read off a descriptor",
+    file: "packages/core/src/adapter/outputFreezer.ts",
+    // A subtler mutation than deleting the comparison: the ceiling still runs,
+    // and the number it is given is wrong. Counting *references* instead of
+    // bytes is the exact shape the review found on this surface — a bound
+    // enforced against a proxy for the thing it governs.
+    find: "    total += payload.bytes.byteLength;",
+    replace: "    total += payload.path.length;",
+    tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    expect: "fail",
+  },
+
 ];
 
-// -- the disposable tree -----------------------------------------------------
-
-function git(args, cwd = root) {
-  return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
-}
-
-/** A digest of every tracked file, so "the tree is unchanged" is checkable. */
-function treeDigest() {
-  const status = git(["status", "--porcelain"]);
-  const files = git(["ls-files"]).split("\n").filter(Boolean);
-  const hash = createHash("sha256");
-  for (const file of files.sort()) {
-    hash.update(file);
-    hash.update("\0");
-    try {
-      hash.update(readFileSync(path.join(root, file)));
-    } catch {
-      hash.update("<unreadable>");
-    }
-  }
-  return { digest: hash.digest("hex"), status };
-}
-
-const before = treeDigest();
+// -- result classification ---------------------------------------------------
 
 /**
- * Paths whose uncommitted state could change a control's result.
+ * How one control ended.
  *
- * Narrower than "the whole tree" on purpose. Refusing on *any* dirt sounds
- * stricter, but it fires on an unrelated markdown edit, and a check that fires
- * for reasons the operator knows are irrelevant trains them to pass
- * `--allow-dirty` reflexively — at which point it stops protecting the case it
- * exists for. These are the roots the build and the controls actually read.
+ * The distinction that matters is between a **behavioural kill** — the guard was
+ * disabled and the named suite noticed — and everything else. A build failure is
+ * not a kill: it says the patched tree does not compile, which is a fact about
+ * the patch. A patch that landed in the wrong place is not evidence at all. Both
+ * used to be scored in the same column as a real result, and reading a campaign
+ * summary required knowing which rows to distrust.
  */
-const BUILD_RELEVANT = ["packages/", "tests/", "scripts/", "adapters/", "packs/", "package.json", "tsconfig"];
-const dirty = before.status
-  .split("\n")
-  .filter(Boolean)
-  .map((line) => line.slice(3));
-const blocking = dirty.filter((f) => BUILD_RELEVANT.some((prefix) => f.startsWith(prefix)));
-if (blocking.length > 0 && !process.argv.includes("--allow-dirty")) {
-  console.error(
-    "negative-control refuses to run: uncommitted changes to source it measures.\n\n" +
-      "Controls are applied to a worktree checked out at HEAD, so an uncommitted\n" +
-      "change to a guard would be measured against source that does not contain\n" +
-      "it — the result would look authoritative and mean nothing. Commit first, or\n" +
-      "pass --allow-dirty if you know the difference does not matter.\n\n" +
-      blocking.map((f) => `  ${f}`).join("\n"),
-  );
-  process.exit(2);
-}
-if (dirty.length > blocking.length) {
-  console.log(
-    `note: ${String(dirty.length - blocking.length)} uncommitted file(s) outside the build ` +
-      "are ignored; they cannot change a control's result",
-  );
-}
-// Comma-separated, so a remediation package can measure exactly the controls it
-// touches. A full campaign is ~30 builds and ~30 suite runs; a package that
-// changed nine guards should be able to say which nine it measured rather than
-// choosing between four hours and a partial answer with no record of which part.
-const filter = process.argv.find((a) => !a.startsWith("--") && a !== process.argv[0] && a !== process.argv[1]);
-const wanted = filter === undefined ? undefined : filter.split(",").filter(Boolean);
-const selected = CONTROLS.filter(
-  (c) => wanted === undefined || wanted.some((needle) => c.id.includes(needle)),
-);
-if (selected.length === 0) {
-  console.error(`no control matches ${String(filter)}`);
-  process.exit(2);
+export const CONTROL_RESULT = Object.freeze({
+  NAMED_TESTS_FAILED: "named_tests_failed",
+  UNRELATED_TESTS_FAILED: "unrelated_tests_failed",
+  TESTS_PASSED_UNEXPECTEDLY: "tests_passed_unexpectedly",
+  NO_KILL_AS_DECLARED: "no_kill_as_declared",
+  BUILD_FAILED: "build_failure",
+  RUNNER_FAILED: "test_runner_failed",
+  RESTORATION_FAILED: "restoration_failure",
+  RESIDUE_FAILED: "residue_failure",
+});
+
+/** Result values that mean the campaign measured the guard rather than itself. */
+const MEASURED = new Set([
+  CONTROL_RESULT.NAMED_TESTS_FAILED,
+  CONTROL_RESULT.TESTS_PASSED_UNEXPECTEDLY,
+  CONTROL_RESULT.NO_KILL_AS_DECLARED,
+]);
+
+/** True when the result says something about the harness, not about the guard. */
+export function isHarnessError(result) {
+  return !MEASURED.has(result);
 }
 
-const worktreeRoot = mkdtempSync(path.join(tmpdir(), "erl2-negative-control-"));
-const worktree = path.join(worktreeRoot, "tree");
-console.log(`negative controls: ${String(selected.length)} of ${String(CONTROLS.length)}`);
-console.log(`worktree: ${worktree}`);
-git(["worktree", "add", "--detach", worktree, "HEAD"]);
+/**
+ * Parse one `node --test` run and decide what it says about the control.
+ *
+ * The spec reporter names the file of every failing test in its trailing
+ * `failing tests:` section, which is what makes "a test failed that this control
+ * did not name" expressible at all. `mustFail`, when a control declares it,
+ * narrows the expectation further: the listed files are run, and the failures
+ * must fall inside the declared subset.
+ */
+export function classifyTestRun({ stdout, expect, tests, mustFail }) {
+  const tests_ = Number(/^ℹ tests (\d+)$/m.exec(stdout)?.[1] ?? "-1");
+  const pass = Number(/^ℹ pass (\d+)$/m.exec(stdout)?.[1] ?? "-1");
+  const fail = Number(/^ℹ fail (\d+)$/m.exec(stdout)?.[1] ?? "-1");
+  const cancelled = Number(/^ℹ cancelled (\d+)$/m.exec(stdout)?.[1] ?? "0");
 
-const results = [];
-try {
-  console.log("installing dependencies in the worktree (once)…");
-  const install = spawnSync("npm", ["install", "--silent"], { cwd: worktree, encoding: "utf8" });
-  if (install.status !== 0) {
-    throw new Error(`npm install failed in the worktree:\n${install.stderr.slice(0, 2000)}`);
+  // No parseable summary means the runner never got far enough to have an
+  // opinion — a module that would not load, a crash before the first test. That
+  // is a harness failure and must not be read as "nothing failed".
+  if (pass < 0 || fail < 0 || tests_ <= 0) {
+    return { result: CONTROL_RESULT.RUNNER_FAILED, pass, fail, tests: tests_, failingFiles: [] };
   }
 
-  for (const control of selected) {
-    const target = path.join(worktree, control.file);
-    const source = readFileSync(target, "utf8");
-    if (!source.includes(control.find)) {
-      // A control whose patch no longer applies is a *failure of the campaign*,
-      // not a silent skip: the guard may have moved, been renamed, or been
-      // deleted, and any of those needs a human.
-      results.push({ id: control.id, outcome: "PATCH DID NOT APPLY", detail: control.find.slice(0, 80) });
-      console.log(`  ✖ ${control.id}: patch did not apply`);
-      continue;
-    }
-    writeFileSync(target, source.replace(control.find, control.replace));
-
-    const build = spawnSync("npm", ["run", "build"], { cwd: worktree, encoding: "utf8" });
-    if (build.status !== 0) {
-      results.push({ id: control.id, outcome: "BUILD FAILED", detail: build.stdout.slice(-800) });
-      console.log(`  ✖ ${control.id}: the patched tree does not build`);
-      git(["checkout", "--", "."], worktree);
-      continue;
-    }
-    const run = spawnSync("node", ["--test", ...control.tests], { cwd: worktree, encoding: "utf8" });
-    const pass = Number(/^ℹ pass (\d+)$/m.exec(run.stdout)?.[1] ?? "0");
-    const fail = Number(/^ℹ fail (\d+)$/m.exec(run.stdout)?.[1] ?? "0");
-    const outcome = fail > 0 ? "fail" : "pass";
-    const agreed = outcome === control.expect;
-    results.push({
-      id: control.id,
-      what: control.what,
-      expected: control.expect,
-      outcome,
+  // A summary that reports tests but no outcomes is the same thing wearing a
+  // number. `window-verifier-requires-commitment` produced exactly this on its
+  // first campaign: the patched verifier died on a TypeError instead of refusing,
+  // every case in the file was cancelled, and the run reported **0 pass / 0
+  // fail** — which the classifier read as "the guard killed nothing".
+  //
+  // It measured nothing at all. A control that disables a guard and crashes the
+  // process has not shown the guard is unnecessary; it has shown the patch was
+  // wrong. Cancellations are counted for the same reason.
+  if (pass + fail === 0 || cancelled > 0) {
+    return {
+      result: CONTROL_RESULT.RUNNER_FAILED,
       pass,
       fail,
-      agreed,
-      ...(control.note === undefined ? {} : { note: control.note }),
-    });
-    console.log(
-      `  ${agreed ? "✔" : "✖"} ${control.id}: ${String(pass)} pass / ${String(fail)} fail ` +
-        `(expected ${control.expect})${control.note === undefined ? "" : ` — ${control.note}`}`,
+      tests: tests_,
+      failingFiles: [],
+      ...(cancelled > 0 ? { cancelled } : {}),
+    };
+  }
+
+  const failingFiles = [
+    ...new Set(
+      [...stdout.matchAll(/^test at (.+?):\d+:\d+$/gm)].map((m) => m[1].replace(/^\.\//, "")),
+    ),
+  ].sort();
+
+  if (fail === 0) {
+    return {
+      result: expect === "fail" ? CONTROL_RESULT.TESTS_PASSED_UNEXPECTEDLY : CONTROL_RESULT.NO_KILL_AS_DECLARED,
+      pass,
+      fail,
+      tests: tests_,
+      failingFiles,
+    };
+  }
+
+  const permitted = (mustFail ?? tests).map((t) => t.replace(/^\.\//, ""));
+  const stray = failingFiles.filter((file) => !permitted.some((t) => file.endsWith(t) || t.endsWith(file)));
+  return {
+    result: stray.length > 0 ? CONTROL_RESULT.UNRELATED_TESTS_FAILED : CONTROL_RESULT.NAMED_TESTS_FAILED,
+    pass,
+    fail,
+    tests: tests_,
+    failingFiles,
+    ...(stray.length > 0 ? { strayFiles: stray } : {}),
+  };
+}
+
+/** Whether a measured result matches what the control declared. */
+export function agreesWithExpectation(result, expect) {
+  if (expect === "fail") return result === CONTROL_RESULT.NAMED_TESTS_FAILED;
+  if (expect === "pass") return result === CONTROL_RESULT.NO_KILL_AS_DECLARED;
+  return false;
+}
+
+/**
+ * Structural checks on the control table itself, run before any worktree exists.
+ *
+ * A malformed declaration should fail in the first second of a four-hour
+ * campaign, not in its last.
+ */
+export function validateControlDeclarations(controls) {
+  const problems = [];
+  const seen = new Set();
+  for (const control of controls) {
+    const where = control.id ?? "<control with no id>";
+    if (typeof control.id !== "string" || control.id === "") problems.push("a control has no id");
+    else if (seen.has(control.id)) problems.push(`${control.id}: duplicate control id`);
+    else seen.add(control.id);
+    if (typeof control.what !== "string" || control.what === "") {
+      problems.push(`${where}: no named invariant (\`what\`)`);
+    }
+    if (typeof control.file !== "string" || control.file === "") problems.push(`${where}: no target file`);
+    if (typeof control.find !== "string" || control.find === "") problems.push(`${where}: no preimage`);
+    if (typeof control.replace !== "string") problems.push(`${where}: no postimage`);
+    if (!Array.isArray(control.tests) || control.tests.length === 0) {
+      problems.push(`${where}: names no test expected to notice`);
+    }
+    if (control.expect !== "fail" && control.expect !== "pass") {
+      problems.push(`${where}: \`expect\` must be "fail" or "pass"`);
+    }
+    if (control.expectedMatches !== undefined && !Number.isSafeInteger(control.expectedMatches)) {
+      problems.push(`${where}: \`expectedMatches\` must be an integer`);
+    }
+    if (control.mustFail !== undefined) {
+      const outside = control.mustFail.filter((t) => !control.tests.includes(t));
+      if (outside.length > 0) problems.push(`${where}: \`mustFail\` names suites it does not run: ${outside.join(", ")}`);
+    }
+  }
+  return problems;
+}
+// -- the campaign ------------------------------------------------------------
+
+async function main() {
+  const declarationProblems = validateControlDeclarations(CONTROLS);
+  if (declarationProblems.length > 0) {
+    console.error("negative-control refuses to run: the control table is malformed\n");
+    for (const problem of declarationProblems) console.error(`  ${problem}`);
+    process.exit(2);
+  }
+
+  const before = treeDigest(root);
+
+  /**
+   * Paths whose uncommitted state could change a control's result.
+   *
+   * Narrower than "the whole tree" on purpose. Refusing on *any* dirt sounds
+   * stricter, but it fires on an unrelated markdown edit, and a check that fires
+   * for reasons the operator knows are irrelevant trains them to pass
+   * `--allow-dirty` reflexively — at which point it stops protecting the case it
+   * exists for. These are the roots the build and the controls actually read.
+   */
+  const BUILD_RELEVANT = ["packages/", "tests/", "scripts/", "adapters/", "packs/", "package.json", "tsconfig"];
+  const dirty = before.status
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => line.slice(3));
+  const blocking = dirty.filter((f) => BUILD_RELEVANT.some((prefix) => f.startsWith(prefix)));
+  if (blocking.length > 0 && !process.argv.includes("--allow-dirty")) {
+    console.error(
+      "negative-control refuses to run: uncommitted changes to source it measures.\n\n" +
+        "Controls are applied to a worktree checked out at HEAD, so an uncommitted\n" +
+        "change to a guard would be measured against source that does not contain\n" +
+        "it — the result would look authoritative and mean nothing. Commit first, or\n" +
+        "pass --allow-dirty if you know the difference does not matter.\n\n" +
+        blocking.map((f) => `  ${f}`).join("\n"),
     );
-    git(["checkout", "--", "."], worktree);
+    process.exit(2);
   }
-} finally {
-  // The worktree goes whatever happened, and the real tree is proven untouched.
-  try {
-    git(["worktree", "remove", "--force", worktree]);
-  } catch {
-    /* the prune below covers a worktree that was already gone */
+  if (dirty.length > blocking.length) {
+    console.log(
+      `note: ${String(dirty.length - blocking.length)} uncommitted file(s) outside the build ` +
+        "are ignored; they cannot change a control's result",
+    );
   }
-  git(["worktree", "prune"]);
-  rmSync(worktreeRoot, { recursive: true, force: true });
-}
 
-const after = treeDigest();
-if (after.digest !== before.digest || after.status !== before.status) {
-  console.error(
-    "\nnegative-control FAILED: the working tree changed while controls ran.\n" +
-      "This harness must never modify the tree it is measuring.",
+  // Comma-separated, so a remediation package can measure exactly the controls it
+  // touches. A full campaign is ~70 builds and ~70 suite runs; a package that
+  // changed nine guards should be able to say which nine it measured rather than
+  // choosing between four hours and a partial answer with no record of which part.
+  const filter = process.argv.find((a) => !a.startsWith("--") && a !== process.argv[0] && a !== process.argv[1]);
+  const wanted = filter === undefined ? undefined : filter.split(",").filter(Boolean);
+  const selected = CONTROLS.filter(
+    (c) => wanted === undefined || wanted.some((needle) => c.id.includes(needle)),
   );
-  console.error(`  before: ${before.digest}\n  after:  ${after.digest}`);
-  process.exit(1);
-}
-console.log("\nthe working tree is byte-identical to how the campaign started");
+  if (selected.length === 0) {
+    console.error(`no control matches ${String(filter)}`);
+    process.exit(2);
+  }
 
-const disagreed = results.filter((r) => r.agreed === false || r.outcome === "PATCH DID NOT APPLY" || r.outcome === "BUILD FAILED");
-writeFileSync(
-  path.join(root, "docs", "ledger", "negative-controls.json"),
-  `${JSON.stringify({ generated_by: "scripts/negative-control.mjs", results }, null, 2)}\n`,
-);
-if (disagreed.length > 0) {
-  console.error(`\nnegative-control FAILED: ${String(disagreed.length)} control(s) disagreed with their recorded expectation`);
-  for (const r of disagreed) console.error(`  ${r.id}: ${JSON.stringify(r)}`);
-  process.exit(1);
+  const disposable = createDisposableWorktree({ repoRoot: root });
+  const { worktree, worktreeRoot } = disposable;
+  console.log(`negative controls: ${String(selected.length)} of ${String(CONTROLS.length)}`);
+  console.log(`worktree: ${worktree}`);
+  disposable.installSignalHandlers((signal) => {
+    console.error(`\nnegative-control: ${signal} received — removing the worktree before exiting.`);
+  });
+
+  const results = [];
+  let aborted;
+  try {
+    console.log("installing dependencies in the worktree (once)…");
+    const install = spawnSync("npm", ["install", "--silent"], { cwd: worktree, encoding: "utf8" });
+    if (install.status !== 0) {
+      throw new Error(`npm install failed in the worktree:\n${install.stderr.slice(0, 2000)}`);
+    }
+
+    for (const control of selected) {
+      const target = path.join(worktree, control.file);
+      const source = readFileSync(target, "utf8");
+
+      const plan = planControlPatch({
+        source,
+        find: control.find,
+        replace: control.replace,
+        ...(control.expectedMatches === undefined ? {} : { expectedMatches: control.expectedMatches }),
+        ...(control.anchor === undefined ? {} : { anchor: control.anchor }),
+        ...(control.uniquePostimage === undefined ? {} : { uniquePostimage: control.uniquePostimage }),
+      });
+
+      if (plan.outcome !== TARGET_OUTCOME.APPLIED) {
+        // A control whose patch cannot be proven to hit its declared target is a
+        // *failure of the campaign*, not a silent skip and not a result: the
+        // guard may have moved, been renamed, been deleted, or — the case that
+        // cost three controls — acquired a second occurrence above the intended
+        // one. Any of those needs a human.
+        results.push({
+          id: control.id,
+          what: control.what,
+          expected: control.expect,
+          result: plan.outcome,
+          harnessError: true,
+          agreed: false,
+          detail: { ...plan, patched: undefined, preimage: control.find.slice(0, 90) },
+        });
+        console.log(`  ✖ ${control.id}: ${plan.outcome}`);
+        continue;
+      }
+
+      writeFileSync(target, plan.patched);
+
+      // Re-read rather than trusting the write: the compiler is about to read
+      // these bytes, so these are the bytes the control must have proven.
+      const landed = verifyPatchOnDisk({
+        written: readFileSync(target, "utf8"),
+        plan,
+        replace: control.replace,
+      });
+      if (landed.outcome !== TARGET_OUTCOME.APPLIED) {
+        results.push({
+          id: control.id,
+          what: control.what,
+          expected: control.expect,
+          result: landed.outcome,
+          harnessError: true,
+          agreed: false,
+          detail: landed,
+        });
+        console.log(`  ✖ ${control.id}: ${landed.outcome}`);
+        const residualAfterLanding = disposable.restore();
+        if (residualAfterLanding !== undefined) {
+          aborted = { id: control.id, residual: residualAfterLanding };
+          break;
+        }
+        continue;
+      }
+
+      const build = spawnSync("npm", ["run", "build"], { cwd: worktree, encoding: "utf8" });
+      if (build.status !== 0) {
+        // Not a behavioural kill. The patched tree does not compile, which is a
+        // fact about the patch and says nothing about whether the guard is
+        // load-bearing.
+        results.push({
+          id: control.id,
+          what: control.what,
+          expected: control.expect,
+          result: CONTROL_RESULT.BUILD_FAILED,
+          harnessError: true,
+          agreed: false,
+          detail: build.stdout.slice(-800),
+        });
+        console.log(`  ✖ ${control.id}: the patched tree does not build`);
+        const residualAfterBuild = disposable.restore();
+        if (residualAfterBuild !== undefined) {
+          aborted = { id: control.id, residual: residualAfterBuild };
+          break;
+        }
+        continue;
+      }
+
+      const run = spawnSync("node", ["--test", ...control.tests], { cwd: worktree, encoding: "utf8" });
+      const classified = classifyTestRun({
+        stdout: run.stdout,
+        expect: control.expect,
+        tests: control.tests,
+        ...(control.mustFail === undefined ? {} : { mustFail: control.mustFail }),
+      });
+      const agreed = agreesWithExpectation(classified.result, control.expect);
+      results.push({
+        id: control.id,
+        what: control.what,
+        expected: control.expect,
+        result: classified.result,
+        harnessError: isHarnessError(classified.result),
+        replacedCount: plan.replacedCount,
+        offsets: plan.offsets,
+        pass: classified.pass,
+        fail: classified.fail,
+        agreed,
+        ...(classified.strayFiles === undefined ? {} : { strayFiles: classified.strayFiles }),
+        ...(control.note === undefined ? {} : { note: control.note }),
+      });
+      console.log(
+        `  ${agreed ? "✔" : "✖"} ${control.id}: ${String(classified.pass)} pass / ${String(classified.fail)} fail ` +
+          `(expected ${control.expect}, ${classified.result})${control.note === undefined ? "" : ` — ${control.note}`}`,
+      );
+
+      const residual = disposable.restore();
+      if (residual !== undefined) {
+        results.push({
+          id: control.id,
+          result: CONTROL_RESULT.RESTORATION_FAILED,
+          harnessError: true,
+          agreed: false,
+          detail: residual.slice(0, 800),
+        });
+        aborted = { id: control.id, residual };
+        break;
+      }
+    }
+  } finally {
+    // The worktree goes whatever happened, and the real tree is proven untouched.
+    // Shared with the signal handlers above, so a normal exit and an interrupted
+    // one release exactly the same things.
+    disposable.release();
+  }
+
+  const residue = worktreeResidue({ repoRoot: root, worktree, worktreeRoot });
+
+  const certified = certifyTreeUnchanged(before, treeDigest(root));
+  if (!certified.certified) {
+    console.error(
+      "\nnegative-control FAILED: the working tree changed while controls ran.\n" +
+        "This harness must never modify the tree it is measuring.",
+    );
+    console.error(`  ${certified.reason}\n  before: ${certified.before}\n  after:  ${certified.after}`);
+    process.exit(1);
+  }
+  console.log("\nthe working tree is byte-identical to how the campaign started");
+
+  writeFileSync(
+    path.join(root, "docs", "ledger", "negative-controls.json"),
+    `${JSON.stringify(
+      {
+        generated_by: "scripts/negative-control.mjs",
+        selected: selected.length,
+        of: CONTROLS.length,
+        results,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  if (residue.length > 0) {
+    console.error(`\nnegative-control FAILED: ${CONTROL_RESULT.RESIDUE_FAILED}`);
+    for (const line of residue) console.error(`  ${line}`);
+    process.exit(1);
+  }
+
+  if (aborted !== undefined) {
+    console.error(
+      `\nnegative-control FAILED: the worktree could not be restored after ${aborted.id}.\n` +
+        "The campaign stopped there rather than measuring later controls against a\n" +
+        "tree still carrying this control's patch.\n\n" +
+        aborted.residual,
+    );
+    process.exit(1);
+  }
+
+  const disagreed = results.filter((r) => r.agreed === false);
+  if (disagreed.length > 0) {
+    const harnessErrors = disagreed.filter((r) => r.harnessError === true);
+    console.error(
+      `\nnegative-control FAILED: ${String(disagreed.length)} control(s) disagreed with their recorded expectation` +
+        (harnessErrors.length > 0
+          ? `, of which ${String(harnessErrors.length)} measured nothing (a harness error rather than a result)`
+          : ""),
+    );
+    for (const r of disagreed) console.error(`  ${r.id}: ${JSON.stringify(r)}`);
+    process.exit(1);
+  }
+  console.log(`all ${String(results.length)} control(s) matched their recorded expectation`);
 }
-console.log(`all ${String(results.length)} control(s) matched their recorded expectation`);
+
+// Importable for its own tests without starting a four-hour campaign.
+const entry = process.argv[1] === undefined ? undefined : pathToFileURL(process.argv[1]).href;
+if (entry === import.meta.url) await main();

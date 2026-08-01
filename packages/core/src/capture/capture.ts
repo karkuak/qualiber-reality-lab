@@ -23,7 +23,7 @@ import {
   type SourceState,
   type TrafficProcessStartReceiptV1,
 } from "@erl2/contracts";
-import { ArtifactStore, coreHash, treeHash } from "@erl2/integrity";
+import { ArtifactStore, coreHash, jcsBytes, treeHash } from "@erl2/integrity";
 import { assertNoCanaryLeak, type OracleScanTarget } from "../journey/oracle.js";
 
 export interface CutoffInput {
@@ -177,6 +177,35 @@ export function freezeSourceSnapshot(input: SnapshotInput): SourceSnapshotV1 {
   });
 }
 
+/**
+ * The Lab-telemetry oracle scan, in one place.
+ *
+ * A source snapshot *is* the Lab's own telemetry about the environment, and it
+ * becomes adapter-visible later as a canonical evidence entry. So it is scanned
+ * at both boundaries and by the same function: once in `observe`, before the
+ * snapshot is retained at all, and once here, over the snapshots the observation
+ * bundle is actually built from — which are read back from the store and are
+ * therefore not, by construction, the objects the first scan saw.
+ *
+ * One scanner with two call sites, deliberately: a second copy of the rule would
+ * mean a control that disables one of them proves nothing about the other.
+ *
+ * The bytes handed to the scan are the canonical bytes the snapshot is retained
+ * as, not a `JSON.stringify` of the in-memory object, and they are passed as a
+ * `Buffer` so matching is byte-wise rather than dependent on UTF-8 validity.
+ */
+export function assertTelemetryOracleClean(
+  snapshots: readonly SourceSnapshotV1[],
+  knownCanaryIds: readonly string[],
+): void {
+  const scanTargets: OracleScanTarget[] = snapshots.map((snapshot) => ({
+    surface: "lab_telemetry" as const,
+    label: `source-snapshot:${snapshot.snapshot_id}`,
+    bytes: jcsBytes(snapshot),
+  }));
+  assertNoCanaryLeak(scanTargets, knownCanaryIds);
+}
+
 export interface FreezeObservationOptions {
   readonly runId: string;
   readonly planHash: Hash;
@@ -202,12 +231,7 @@ export interface FreezeObservationOptions {
  * constructed.
  */
 export function freezeObservation(options: FreezeObservationOptions): ObservationBundleV2 {
-  const scanTargets: OracleScanTarget[] = options.snapshots.map((snapshot) => ({
-    surface: "lab_telemetry" as const,
-    label: `source-snapshot:${snapshot.snapshot_id}`,
-    bytes: JSON.stringify(snapshot),
-  }));
-  assertNoCanaryLeak(scanTargets, options.knownCanaryIds);
+  assertTelemetryOracleClean(options.snapshots, options.knownCanaryIds);
 
   const base = {
     schema_version: "observation-bundle/v2" as const,

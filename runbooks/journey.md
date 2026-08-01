@@ -17,6 +17,41 @@ frozen events, so ordering is enforced by the state machine, not by anything
 held in memory. Skipping a stage fails with `GRAPH_CLOSURE_MISSING_ROLE`
 because the next command cannot resolve the role its predecessor produces.
 
+## Which journey intent may run when
+
+Every canonical journey intent has one row in
+`packages/core/src/journey/prerequisites.ts`, keyed by the frozen contract's own
+`JourneyIntent` union, and enforced inside `EnvironmentRun.runStep` — at the
+library boundary, so driving `EnvironmentRun` directly is held to the same rule as
+driving the binary.
+
+| Intent | May depart from | Beyond package/case/environment/baseline/plan |
+|---|---|---|
+| `acquire`, `verify_package` | the acquisition walk only | refused as an environment step |
+| `install`, `configure`, `authenticate`, `connect` | `execution_plan_frozen`, `step_outcome_frozen` | — |
+| `discover` | `step_outcome_frozen` | a prior committed step |
+| `exercise`, `observe`, `diagnose_decide`, `upgrade`, `recover`, `rollback`, `remove` | `adapter_translation_frozen`, `step_outcome_frozen` | succeeded connection, challenge activation, realized cutoff, observation bundle |
+
+**The departure state is not the gate**, and this is the thing to understand
+before changing a row. A journey committing `exercise, observe, remove` departs
+from `adapter_translation_frozen` once and from `step_outcome_frozen` twice, so
+`step_outcome_frozen` is common to post-capture and pre-activation steps alike.
+What separates them is whether the activation receipt, the realized cutoff and the
+observation bundle are **retained**.
+
+A refusal names its unmet prerequisites:
+
+```text
+exercise requires challenge_activation, evidence_cutoff, observation_bundle: the
+challenge is not activated; the evidence cutoff has not been realized; the
+observation bundle is not frozen
+```
+
+Adding a canonical intent without a row does not compile. `recover`, `rollback`
+and `remove` carry `designAlsoPermits: ["pre_reveal_subject_cleanup_started"]`:
+design v2 §12 allows that departure and the edge has never shipped, so the refusal
+says so explicitly rather than implying the design forbids it.
+
 ## Preparing the admission registry
 
 The challenge governor authors artifacts **before any run exists** and places

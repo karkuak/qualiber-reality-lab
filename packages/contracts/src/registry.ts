@@ -147,6 +147,20 @@ export const CONTRACTS: readonly ContractDescriptor[] = [
   // post-compensation state, so the observation gets its own identity rather
   // than an optional field on a frozen schema.
   d("ERL2-C-157", "RestorationProbeV1", "environment", "restoration-probe/v1"),
+  // ADR-ERL2-027 §6.1: additive, on the same terms as ERL2-C-157. The emergency
+  // cleanup verification is frozen, and its `remaining_resources` is a
+  // producer-derived summary of the producer's own action outcomes — which is
+  // exactly why the independent post-cleanup observation needs its own identity
+  // rather than an optional field on a frozen schema.
+  d("ERL2-C-158", "CleanupResidueProbeV1", "environment", "cleanup-residue-probe/v1"),
+  // ADR-ERL2-031: additive, and the reason it is a new identity rather than two
+  // fields on `ObservationBundleV2` is ordering, not migration cost. The bundle is
+  // frozen *after* capture, so durations carried there would be a post-hoc
+  // statement about a window already used; a commitment must precede the thing it
+  // governs or it commits nothing. The exact warmup and observation durations were
+  // composition constants retained in no contract, which is what made the offline
+  // cutoff derivation bounds-exact rather than exact (ADR-ERL2-029 §3.2).
+  d("ERL2-C-159", "EvidenceWindowCommitmentV1", "evidence", "evidence-window-commitment/v1"),
   d("ERL2-C-058", "LabRunRecordV1", "terminal", undefined, true),
   d("ERL2-C-059", "MandatoryGraphClosureReportV1", "terminal", "mandatory-graph-closure-report/v1"),
   d("ERL2-C-060", "PreEnvironmentFinalLabAttestationV1", "terminal", "pre-environment-final-lab-attestation/v1"),

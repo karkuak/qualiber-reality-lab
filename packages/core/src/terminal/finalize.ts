@@ -129,17 +129,45 @@ export interface SignerInventoryEntryInput {
 }
 
 /**
+ * The one gate both inventory builders share (ADR-ERL2-030 §4.3).
+ *
+ * `complete_for_terminal_chain` is `const: true` in the frozen schema, so an
+ * inventory that is *not* complete cannot be represented — and a producer that
+ * cannot prove completeness therefore has exactly one honest move, which is not
+ * to seal one. This refusal is the difference between a derived value and the
+ * `true as const` it replaces: the boolean now has to come from somewhere.
+ */
+function assertInventoryComplete(complete: boolean, entryCount: number): void {
+  if (complete) return;
+  throw new Erl2Error(
+    CODES.INVENTORY_ENTRY_MISSING,
+    `finalization refused: the signer inventory derivation covers ${String(entryCount)} member(s) and ` +
+      `could not establish that they are every applicable signed member of the terminal chain. ` +
+      `\`complete_for_terminal_chain\` is a schema constant, so an incomplete inventory is not ` +
+      `representable and must not be signed`,
+  );
+}
+
+/**
  * Recomputes the pre-environment signer inventory.
  *
  * The public terminal attestation type is *excluded* from its own inventory:
  * the inventory attests the chain the attestation covers, so including the
  * attestation would let it vouch for itself (design v2 §14).
+ *
+ * `completeForTerminalChain` is a **derived** input (ADR-ERL2-030 §4), not a
+ * constant this builder writes. The schema pins the field to `const: true`, so
+ * an incomplete inventory is not representable at all — which means the only
+ * honest behaviour when the derivation could not establish completeness is to
+ * refuse to seal one. Passing `false` here does not produce a `false` inventory
+ * and continue; it stops finalization, before any signature exists.
  */
 export function buildPreEnvironmentSignerInventory(input: {
   readonly inventoryId: string;
   readonly runId: string;
   readonly acquisitionPreregistrationHash: Hash;
   readonly entries: readonly SignerInventoryEntryInput[];
+  readonly completeForTerminalChain: boolean;
   readonly inventoriedAt: Instant;
   readonly signingKey: SigningKey;
 }): PreEnvironmentSignerInventoryV2 {
@@ -152,6 +180,13 @@ export function buildPreEnvironmentSignerInventory(input: {
       );
     }
   }
+  if (input.entries.length === 0) {
+    throw new Erl2Error(
+      CODES.INVENTORY_ENTRY_MISSING,
+      "a pre-environment signer inventory covers at least one signed artifact",
+    );
+  }
+  assertInventoryComplete(input.completeForTerminalChain, input.entries.length);
   const body = {
     schema_version: "signer-inventory/v2" as const,
     terminal_variant: "pre_environment" as const,
@@ -191,6 +226,12 @@ export interface FinalizationPreconditions {
   readonly derivedExtraHashes: readonly Hash[];
   /** Exposure state must be recorded before an attestation may be signed. */
   readonly exposureStateRecorded: boolean;
+  /**
+   * Independently derived by the producer from the retained evidence; a
+   * producer boolean is never trusted, and this one is *computed* rather than
+   * asserted (ADR-ERL2-030 §4).
+   */
+  readonly signerInventoryComplete: boolean;
   readonly signerInventoryHash: Hash;
   readonly trustPolicyHash: Hash;
   readonly timestampCheckpointHash: Hash;
@@ -254,6 +295,18 @@ export function assertFinalizable(pre: FinalizationPreconditions): void {
     );
   }
   // 5-7. trust, signer inventory and timestamps.
+  //
+  // The inventory gate is the one ADR-ERL2-029 §1.1 found missing: an inventory
+  // that omits an applicable signed member while asserting completeness used to
+  // reach an attestation, because the assertion was a schema constant. It is
+  // checked here as well as in the builder so a caller that assembles its own
+  // inventory still meets the same gate.
+  if (!pre.signerInventoryComplete) {
+    throw new Erl2Error(
+      CODES.INVENTORY_ENTRY_MISSING,
+      "finalization refused: the signer inventory is not derivably complete for the terminal chain",
+    );
+  }
   if (!pre.trustVerifiedAtCreation) {
     throw new Erl2Error(
       CODES.BUNDLE_FINALIZED_BEFORE_TRUST_CLOSURE,

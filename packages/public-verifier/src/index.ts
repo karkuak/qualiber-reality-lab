@@ -14,10 +14,23 @@ export {
   type Descriptor,
 } from "./library/referencedBytes.js";
 export {
+  authoritySignatureOf,
+  declaredSignedMemberSchemas,
+  signedMemberRuleFor,
   verifySignedMembers,
   type SignedMemberOptions,
   type SignedMemberReport,
+  type SignedMemberRule,
 } from "./library/signedMembers.js";
+export {
+  deriveExpectedSignedMembers,
+  excludedTerminalTypesFor,
+  verifySignerInventoryCompleteness,
+  SELF_REFERENTIAL_INVENTORY_SCHEMA,
+  type ExpectedSignedMember,
+  type InventoryEntryView,
+  type SignerInventoryCompletenessReport,
+} from "./library/inventoryCompleteness.js";
 export {
   verifyRetainedFileAccounting,
   type RetainedAccountingReport,
@@ -40,17 +53,36 @@ export {
   type EnvironmentPreFinalizationVerdict,
 } from "./library/environmentClosure.js";
 export {
+  assertActionsAgreeWithResidue,
   assertCleanupApplicable,
+  assertInvalidFindingAttribution,
+  assertJourneyOrderingFromLifecycle,
   assertSubstrateBindingConsistent,
   deriveEmergencyCleanup,
   deriveEnvironmentSemantics,
   deriveInvalidEnvironmentSemantics,
+  deriveResidueProbe,
   deriveRestorationOutcome,
   deriveTeardownOutcome,
   deriveValidityOutcome,
   type EnvironmentSemanticReport,
   type SubstrateBindingReport,
 } from "./library/environmentDerivation.js";
+export {
+  assertCutoffOrderingFromLifecycle,
+  deriveEvidenceCutoff,
+  type CutoffDerivation,
+} from "./library/cutoffDerivation.js";
+export {
+  deriveExactEvidenceWindow,
+  resolveEvidenceWindowCommitment,
+  assertCommitmentPrecedesCapture,
+  type EvidenceWindowDerivation,
+} from "./library/windowDerivation.js";
+export {
+  verifySubjectOutputPayloads,
+  type PayloadAccountingReport,
+} from "./library/payloadAccounting.js";
 export {
   assertClaimScopeWithinCeiling,
   claimScopeExceeds,

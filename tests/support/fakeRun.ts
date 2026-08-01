@@ -28,9 +28,13 @@ import {
 import {
   assertBaselineClean,
   assertFrontierActionsDerivable,
+  buildResidueProbe,
+  buildSubstrateBinding,
   FakeEnvironmentDriver,
   freezeResourceFrontier,
   LifecycleLog,
+  reservationNamespaceHash,
+  safeActions,
   SteppingClock,
   SeededRandom,
   TimestampLog,
@@ -44,6 +48,7 @@ import {
   type DevelopmentKeyring,
 } from "./keys.js";
 import type { LocalTrustConfiguration } from "@erl2/integrity";
+import { applicableSignedMembers, scanRetainedSignedMembers } from "./signedMemberScan.js";
 
 export interface FakeRunResult {
   readonly runId: string;
@@ -221,6 +226,27 @@ function preregister(ctx: Ctx) {
         artifact_role: "acquisition-source-manifest",
         artifact_core_hash: source.hash,
         artifact_schema_version: "acquisition-source-manifest/v1",
+      },
+      // The shipped producer's `acquisition_preregistered` event produces these
+      // three as well, and this fixture did not — so three of its retained
+      // signed members were reachable by nothing. That is invisible while the
+      // signer inventory lists one member; it is a refusal the moment the
+      // inventory has to contain every applicable signed member and every one of
+      // them has to be lifecycle-reached (ADR-ERL2-030 §3.4).
+      {
+        artifact_role: "acquisition-preregistration-verification-receipt",
+        artifact_core_hash: verificationReceipt.hash,
+        artifact_schema_version: "acquisition-preregistration-verification-receipt/v1",
+      },
+      {
+        artifact_role: "adapter-manifest",
+        artifact_core_hash: adapter.hash,
+        artifact_schema_version: "subject-adapter-manifest/v1",
+      },
+      {
+        artifact_role: "generic-run-policy",
+        artifact_core_hash: policy.hash,
+        artifact_schema_version: "generic-run-policy/v1",
       },
     ],
   });
@@ -715,23 +741,39 @@ export function runFakeValidPreEnvironmentRun(): FakeRunResult {
   });
   const checkpointPublished = publish(ctx, "retained/timestamp-checkpoint.json", checkpoint);
 
+  // The signer inventory, enumerated from what this fixture actually retained.
+  //
+  // It used to hand-write **one** entry — the preregistration — and assert
+  // `complete_for_terminal_chain: true` over a run that retains seven applicable
+  // signed members. That is the recurring failure ADR-ERL2-028's handoff §6
+  // names, *a test fixture that names a condition it does not contain*, and it
+  // is why a completeness gate could not simply be switched on: the gate would
+  // have failed the goldens, which is a rule refusing the fixtures rather than a
+  // defect being caught.
+  //
+  // The scan is the fixture's own (`signedMemberScan.ts`), deliberately not the
+  // producer's derivation and not the verifier's: a fixture that built its
+  // inventory by calling either would prove only that the caller agrees with
+  // itself (ADR-ERL2-030 §5).
+  const inventoryStamp = (checkpoint.entries[0] as { security_timestamp: string }).security_timestamp;
+  const applicable = applicableSignedMembers(scanRetainedSignedMembers(root), [
+    "pre-environment-final-lab-attestation/v1",
+  ]);
   const inventoryBase = {
     schema_version: "signer-inventory/v2" as const,
     terminal_variant: "pre_environment" as const,
     inventory_id: "fake-signer-inventory",
     run_id: runId,
     acquisition_preregistration_hash: scaffold.prereg.hash,
-    entries: [
-      {
-        artifact_schema_version: "acquisition-preregistration/v1",
-        artifact_core_hash: scaffold.prereg.hash,
-        signer_key_id: keyring.preregistrar.keyId,
-        signature_sha256: scaffold.prereg.hash,
-        security_timestamp: "2026-07-01T00:00:05Z",
-        timestamp_log_id: "erl2-development-log",
-        timestamp_sequence: 0,
-      },
-    ],
+    entries: applicable.map((member) => ({
+      artifact_schema_version: member.schemaVersion,
+      artifact_core_hash: member.coreHash,
+      signer_key_id: member.signerKeyId,
+      signature_sha256: member.signedHash,
+      security_timestamp: inventoryStamp,
+      timestamp_log_id: checkpoint.log_id,
+      timestamp_sequence: checkpoint.first_sequence,
+    })),
     excluded_public_terminal_types: ["pre-environment-final-lab-attestation/v1"] as const,
     complete_for_terminal_chain: true as const,
     inventoried_at: ctx.clock.now(),
@@ -820,6 +862,28 @@ export function runFakeValidPreEnvironmentRun(): FakeRunResult {
       },
     ],
   });
+
+  // The fixture-consistency assertion (ADR-ERL2-030 §6).
+  //
+  // Re-scanned over the *finished* tree, so it sees the attestation and the
+  // inventory that the enumeration above could not: the inventory must list
+  // every applicable signed member the completed fixture retains, exactly once,
+  // and nothing else. A fixture may not claim a condition it does not contain,
+  // and this is the line that makes that checkable inside the fixture rather
+  // than only in the verifier that reads its output.
+  const finalMembers = scanRetainedSignedMembers(root);
+  const finalApplicable = applicableSignedMembers(finalMembers, [
+    "pre-environment-final-lab-attestation/v1",
+  ]);
+  const listedHashes = [...inventoryBase.entries].map((e) => e.artifact_core_hash).sort();
+  const applicableHashes = finalApplicable.map((m) => m.coreHash).sort();
+  if (JSON.stringify(listedHashes) !== JSON.stringify(applicableHashes)) {
+    throw new Error(
+      `fake pre-environment run: the signer inventory lists ${String(listedHashes.length)} member(s) ` +
+        `but the fixture retains ${String(applicableHashes.length)} applicable signed member(s). ` +
+        `A fixture must contain the condition it claims.`,
+    );
+  }
 
   return {
     runId,
@@ -1147,7 +1211,52 @@ export function runFakeEnvironmentEmergencyCleanupRun(): FakeRunResult {
   const preregEvent = ctx.lifecycle.find((e) => e.event_type === "acquisition_preregistered");
 
   // --- provision a real (fake-driver) environment -------------------------
-  const archetypeHash = h("clean-greenfield-archetype");
+  //
+  // A real retained archetype, because the substrate binding below names one and
+  // the offline verifier cross-checks the two. It used to be
+  // `h("clean-greenfield-archetype")` — a hash naming nothing retained — which is
+  // why this fixture could carry no binding at all, and therefore why its cleanup
+  // verdicts could be attributed to no substrate.
+  const archetypePublished = publish(
+    ctx,
+    "retained/environment-archetype.json",
+    sealSigned(
+      {
+        schema_version: "environment-archetype/v1" as const,
+        archetype_id: "erl2-clean-greenfield",
+        version: 1,
+        domain: "software_delivery_operations" as const,
+        topology: [
+          { node_id: "project", kind: "project-root", version_constraint: "*" },
+          { node_id: "network", kind: "isolated-network", version_constraint: "*" },
+          { node_id: "volume", kind: "scratch-volume", version_constraint: "*" },
+          { node_id: "container", kind: "service-container", version_constraint: "*" },
+          { node_id: "port", kind: "loopback-port", version_constraint: "*" },
+        ],
+        evidence_sources: [
+          { source_id: "deployment-log", kind: "deployment", required: true },
+          { source_id: "service-metric", kind: "metric", required: true },
+          { source_id: "change-record", kind: "change", required: true },
+        ],
+        organization_metadata_schema: "erl2-generic-organization/v1",
+        access_constraints: [{ constraint_id: "loopback-only", kind: "egress", scope: "loopback" }],
+        normal_disorder: [],
+        resource_budget: {
+          cpu_millis: 8_000,
+          memory_mib: 16_384,
+          disk_mib: 40_960,
+          runtime_ms: 2_700_000,
+        },
+        cleanup_contract_hash: h("cleanup-contract-clean-greenfield"),
+        compatibility_tags: ["clean-greenfield"],
+        admission_proof_hash: h("admission-proof-archetype"),
+      },
+      // The development policy grants the challenge governor both governor roles
+      // and reports that concentration rather than hiding it (ADR-ERL2-020 §4).
+      keyring.challengeGovernor,
+    ),
+  );
+  const archetypeHash = archetypePublished.hash;
   const driver = new FakeEnvironmentDriver({
     clock,
     signingKey: keyring.challengeGovernor,
@@ -1157,6 +1266,33 @@ export function runFakeEnvironmentEmergencyCleanupRun(): FakeRunResult {
     faults: { failRestore: true, sharedResourceIds: [`volume-${runId.slice(0, 8)}`] },
   });
   const driverManifest = publish(ctx, "retained/environment-driver-manifest.json", driver.manifest);
+  // The permanent run-to-substrate binding ADR-ERL2-024 §10 said these goldens
+  // would gain "where they model a run that provisioned". They did not, and this
+  // fixture models exactly such a run — so the cleanup verdicts it retains could
+  // be attributed to no substrate at all, which is the artifact P0-1 produced.
+  const substrateInstance = driver.establishSubstrateInstance(runId);
+  const substrateBinding = publish(
+    ctx,
+    "retained/substrate-binding.json",
+    buildSubstrateBinding({
+      runId,
+      driverManifest: driver.manifest,
+      archetypeHash,
+      substrateKind: substrateInstance.kind,
+      substrateInstanceHash: substrateInstance.instanceHash,
+      // A fixed synthetic namespace, not `${root}/reservations`. The workspace
+      // root is an `mkdtemp` path, so hashing it would make the binding — and
+      // every event and record downstream of it — differ on every run, and would
+      // bake a host path into signed evidence. That is the leak ADR-ERL2-024
+      // §4.2 excludes the locator to avoid, reached through the back door.
+      reservationNamespaceHash: reservationNamespaceHash("erl2-fake-emergency-reservations"),
+      boundAt: clock.now(),
+      // The development keyring grants `environment_governor` to this key
+      // (`keys.ts` maps it to both governor roles); the driver never signs its
+      // own binding.
+      signingKey: keyring.challengeGovernor,
+    }),
+  );
   const provisioned = driver.provision({
     runId,
     archetypeHash,
@@ -1183,9 +1319,19 @@ export function runFakeEnvironmentEmergencyCleanupRun(): FakeRunResult {
     operationId: "op-env-started",
     produced: [
       {
+        artifact_role: "environment-archetype",
+        artifact_core_hash: archetypePublished.hash,
+        artifact_schema_version: "environment-archetype/v1",
+      },
+      {
         artifact_role: "environment-driver-manifest",
         artifact_core_hash: driverManifest.hash,
         artifact_schema_version: "environment-driver-manifest/v1",
+      },
+      {
+        artifact_role: "substrate-binding",
+        artifact_core_hash: substrateBinding.hash,
+        artifact_schema_version: "substrate-binding/v1",
       },
       {
         artifact_role: "environment-resource-inventory",
@@ -1213,7 +1359,12 @@ export function runFakeEnvironmentEmergencyCleanupRun(): FakeRunResult {
     safe_summary: "Environment restoration failed; the run is Lab-invalid and no subject attribution is possible.",
     owner: "lab" as const,
     category: "lab_restoration_failure" as const,
-    failed_gate_ids: ["environment-restoration"],
+    // The gate this phase's failure falsifies, from ADR-ERL2-027 §4.5's map. It
+    // used to be `environment-restoration`, which is not a Lab validity gate id
+    // at all — `environmentGates()` names `restoration-verified` — so the
+    // fixture cited a gate that does not exist. The verifier now re-derives this
+    // from the record's own `failed_phase` and refuses anything else.
+    failed_gate_ids: ["restoration-verified"],
     subject_attribution_proven: false as const,
     scoreable_planes: [] as const,
   };
@@ -1283,8 +1434,15 @@ export function runFakeEnvironmentEmergencyCleanupRun(): FakeRunResult {
     ],
   });
 
-  // Every independently safe action is attempted and receipted; every unsafe
-  // one is skipped with a reason and no receipt.
+  // Every independently safe action is **actually attempted** against the driver
+  // and receipted; every unsafe one is skipped with a reason and no receipt.
+  //
+  // It used to fabricate a `status: "succeeded"` receipt per action and never
+  // call the driver at all — so the fixture modelled a cleanup that destroyed
+  // nothing while claiming it destroyed everything, and its residue was empty
+  // because it was derived from those claims. `deriveResidueProbe` and
+  // `assertActionsAgreeWithResidue` refuse exactly that, and refused this, which
+  // is how the fixture's own lie was found (ADR-ERL2-027 §1.6).
   const attemptHashes: Hash[] = [];
   const actions = frontier.derived_actions.map((action) => {
     if (!action.independently_safe) {
@@ -1296,31 +1454,31 @@ export function runFakeEnvironmentEmergencyCleanupRun(): FakeRunResult {
         reason_code: action.unsafe_reason_code ?? "UNSAFE",
       };
     }
-    const receiptBase = {
-      schema_version: "environment-operation-receipt/v1" as const,
-      run_id: runId,
-      operation: "destroy" as const,
-      operation_id: action.action_id,
-      idempotency_key: coreHash({ run: runId, action: action.action_id }).slice("sha256:".length),
-      driver_manifest_hash: driverManifest.hash,
-      target_identity_hash: h(`target-${action.target_resource_id}`),
-      before_state_hash: h(`before-${action.action_id}`),
-      after_state_hash: h(`after-${action.action_id}`),
-      status: "succeeded" as const,
-      started_at: ctx.clock.now(),
-      ended_at: ctx.clock.now(),
-    };
-    const receipt = publish(ctx, `retained/emergency-receipt-${action.action_id}.json`, {
-      ...receiptBase,
-      core_hash: coreHash(receiptBase),
-    });
+    const receipt = publish(
+      ctx,
+      `retained/emergency-receipt-${action.action_id}.json`,
+      driver.destroyResource({
+        runId,
+        resourceId: action.target_resource_id,
+        operationId: `op-emergency-${action.action_id}`,
+      }),
+    );
     attemptHashes.push(receipt.hash);
+    // Success is an observation, not the receipt's claim (ADR-ERL2-023 §2a).
+    const stillThere = driver
+      .inspect(runId)
+      .resources.some((r) => r.resource_id === action.target_resource_id);
     return {
       action_id: action.action_id,
       kind: action.kind,
       independently_safe: true as const,
-      status: "succeeded" as const,
-      attempt_receipt_hash: receipt.hash,
+      ...(stillThere
+        ? {
+            status: "failed" as const,
+            attempt_receipt_hash: receipt.hash,
+            reason_code: "RESOURCE_SURVIVED_EMERGENCY_DESTROY",
+          }
+        : { status: "succeeded" as const, attempt_receipt_hash: receipt.hash }),
     };
   });
 
@@ -1348,7 +1506,14 @@ export function runFakeEnvironmentEmergencyCleanupRun(): FakeRunResult {
         return {
           kind: (resource as { kind: string }).kind,
           identity_hash: (resource as { identity_hash: Hash }).identity_hash,
-          containment_status: "contained" as const,
+          // Observed, not asserted. A skipped resource that is still sitting
+          // there is `uncontained`, and this used to say `contained` over a
+          // substrate nobody had looked at.
+          containment_status: driver
+            .inspect(runId)
+            .resources.some((r) => r.resource_id === a.target_resource_id)
+            ? ("uncontained" as const)
+            : ("contained" as const),
         };
       }),
     completed_at: ctx.clock.now(),
@@ -1359,6 +1524,28 @@ export function runFakeEnvironmentEmergencyCleanupRun(): FakeRunResult {
   });
   assertContract("EmergencyCleanupVerificationV1", { ...emergencyBase, core_hash: emergency.hash });
 
+  // The independent post-cleanup observation (ADR-ERL2-027 §4.3). Built from the
+  // substrate the fake driver actually holds after the attempts above, not from
+  // the action list — a fixture that derived its residue from its own outcomes
+  // would model exactly the artifact the contract exists to make checkable.
+  const residueProbe = buildResidueProbe({
+    runId,
+    substrateBindingHash: substrateBinding.hash,
+    environmentInstanceHash: provisioned.environmentInstanceHash,
+    resourceFrontierHash: frontierPublished.hash,
+    observedBefore: frontier.observed_resources.map((r) => ({
+      resourceId: r.resource_id,
+      identityHash: r.identity_hash,
+    })),
+    observedAfter: driver
+      .inspect(runId)
+      .resources.map((r) => ({ resourceId: r.resource_id, identityHash: r.identity_hash })),
+    authorizedTargets: safeActions(frontier).map((a) => a.target_resource_id),
+    probeStatus: "observed",
+    probedAt: ctx.clock.now(),
+  });
+  const residuePublished = publish(ctx, "retained/cleanup-residue-probe.json", residueProbe);
+
   const emergencyEvent = ctx.lifecycle.append({
     eventType: "emergency_cleanup_terminal",
     stateTo: "emergency_cleanup_terminal",
@@ -1366,6 +1553,11 @@ export function runFakeEnvironmentEmergencyCleanupRun(): FakeRunResult {
     commandId: "cleanup",
     operationId: "op-emergency-terminal",
     produced: [
+      {
+        artifact_role: "cleanup-residue-probe",
+        artifact_core_hash: residuePublished.hash,
+        artifact_schema_version: "cleanup-residue-probe/v1",
+      },
       {
         artifact_role: "emergency-cleanup-verification",
         artifact_core_hash: emergency.hash,
@@ -1393,12 +1585,15 @@ export function runFakeEnvironmentEmergencyCleanupRun(): FakeRunResult {
     available_evidence: [
       { artifact_role: "acquisition-preregistration", artifact_hash: scaffold.prereg.hash, reached_event_hash: preregEvent?.core_hash as Hash },
       { artifact_role: "acquisition-source-manifest", artifact_hash: scaffold.source.hash, reached_event_hash: preregEvent?.core_hash as Hash },
+      { artifact_role: "environment-archetype", artifact_hash: archetypePublished.hash, reached_event_hash: provisionEvent.core_hash },
       { artifact_role: "environment-driver-manifest", artifact_hash: driverManifest.hash, reached_event_hash: provisionEvent.core_hash },
+      { artifact_role: "substrate-binding", artifact_hash: substrateBinding.hash, reached_event_hash: provisionEvent.core_hash },
       { artifact_role: "environment-resource-inventory", artifact_hash: inventory.hash, reached_event_hash: provisionEvent.core_hash },
       { artifact_role: "environment-baseline", artifact_hash: baselinePublished.hash, reached_event_hash: provisionEvent.core_hash },
       { artifact_role: "environment-operation-receipt", artifact_hash: restorePublished.hash, reached_event_hash: failureEvent.core_hash },
       { artifact_role: "primary-finding", artifact_hash: finding.hash, reached_event_hash: failureEvent.core_hash },
       { artifact_role: "environment-resource-frontier", artifact_hash: frontierPublished.hash, reached_event_hash: frontierEvent.core_hash },
+      { artifact_role: "cleanup-residue-probe", artifact_hash: residuePublished.hash, reached_event_hash: emergencyEvent.core_hash },
       { artifact_role: "emergency-cleanup-verification", artifact_hash: emergency.hash, reached_event_hash: emergencyEvent.core_hash },
       ...attemptHashes.map((hash) => ({
         artifact_role: "emergency-attempt-receipt",
@@ -1408,7 +1603,14 @@ export function runFakeEnvironmentEmergencyCleanupRun(): FakeRunResult {
     ] as { artifact_role: string; artifact_hash: Hash; reached_event_hash: Hash }[],
     cleanup: {
       variant: "emergency_environment" as const,
-      status: "attempted_succeeded" as const,
+      // Derived from what the probe observed, not asserted. It read
+      // `attempted_succeeded` while the shared resource was still sitting there —
+      // the same shape as the fabricated receipts above, one field over, and the
+      // verifier now refuses it (ADR-ERL2-027 §4.6).
+      status:
+        residueProbe.residual_resources.length === 0
+          ? ("attempted_succeeded" as const)
+          : ("attempted_failed" as const),
       attempt_hashes: attemptHashes,
       result_hash: emergency.hash,
     },

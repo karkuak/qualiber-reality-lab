@@ -66,6 +66,23 @@ unrecognised document into an empty substrate — is closed, so only `ENOENT` me
 [`docs/ledger/remediation-6.5-false-attestation.md`](docs/ledger/remediation-6.5-false-attestation.md)
 records what was measured and §7 lists what is still open.
 
+A third audit found that the cleanup findings recorded as closed were closed on
+**one branch of two**. `emergency` selected which safety rules applied, so the
+five failure phases that are not restoration or teardown still issued an
+unconditional whole-environment `driver.destroy()` over a frontier frozen one line
+above and never read — which destroyed resources that frontier had classified
+"do not touch", and aborted outright on a resource belonging to another run.
+[ADR-ERL2-027](docs/adr/ADR-ERL2-027.md) gives **every** invalid environment
+terminal the same discipline, and adds the observation none of them had: the
+substrate is re-observed after the last dispatch and the result retained beside
+the pre-action frontier, so a fabricated empty residue and a resource that
+vanished without an authorized action are both offline-detectable. It also fixes
+a regression test that could not have failed — the only case claiming to prove
+"a foreign resource no longer aborts cleanup" used a *shared* resource, which
+passes the ownership check. [`docs/ledger/remediation-6.5-cleanup.md`](docs/ledger/remediation-6.5-cleanup.md)
+records what was measured, including the negative control that killed nothing on
+its first run and what that turned out to mean.
+
 **What that environment terminal is, exactly.** It is a **development-tier** run
 against the **fake environment driver** with a **trusted reference subject** and
 **non-blind** selection. It is evidence that the mechanism closes — one archetype,

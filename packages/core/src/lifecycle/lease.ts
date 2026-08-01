@@ -90,6 +90,22 @@ export class RunLease {
           rmSync(absolutePath, { force: true });
           continue; // stale — retry the atomic create.
         }
+        if (!RunLease.ownerAlive(existing)) {
+          // The holder is gone. Waiting out the TTL would be correct but not
+          // *recovery*: a process killed mid-command holds its lease for the full
+          // five minutes, so the very next process — the one that must reconcile
+          // the interrupted operation — is refused `POLICY_RUN_LEASE_HELD` before
+          // it can read a single intent. Crash recovery that cannot start for five
+          // minutes is a bounded wedge, not a bounded recovery
+          // (ADR-ERL2-028 §9).
+          //
+          // This was found by the crash matrix in this package, and only because
+          // the matrix injects `SIGKILL`: an injected *exception* unwinds through
+          // `release()`'s `finally`, so the lease was always tidied up and the
+          // stale-lease path was never on the tested route.
+          rmSync(absolutePath, { force: true });
+          continue;
+        }
         throw new Erl2Error(
           CODES.POLICY_RUN_LEASE_HELD,
           `run is locked by a live command (owner ${existing.owner}, command ${existing.command}); retry when it completes`,
@@ -100,6 +116,34 @@ export class RunLease {
     throw new Erl2Error(CODES.POLICY_RUN_LEASE_HELD, "run lease contended; could not acquire after recovery", {
       owner: "lab",
     });
+  }
+
+  /**
+   * Whether the process that holds this lease still exists.
+   *
+   * `kill(pid, 0)` sends no signal and only asks the kernel about the pid.
+   * `ESRCH` is the one answer that means "gone"; `EPERM` means it exists and
+   * belongs to another user, which is *alive*. Every ambiguity therefore resolves
+   * to alive, so this check can only ever release a lease whose holder the kernel
+   * says is absent — it cannot steal a live one.
+   *
+   * PID reuse is the obvious objection and it fails safe for the same reason: a
+   * reused pid reports alive, and the lease is left held until its TTL. The
+   * conservative direction is the one that keeps two live commands off one run.
+   *
+   * A lease with no usable pid is treated as alive, because an old lease record
+   * that predates this field must not become reclaimable just for being old.
+   */
+  private static ownerAlive(record: LeaseRecord): boolean {
+    if (typeof record.pid !== "number" || !Number.isInteger(record.pid) || record.pid <= 1) {
+      return true;
+    }
+    try {
+      process.kill(record.pid, 0);
+      return true;
+    } catch (cause) {
+      return (cause as NodeJS.ErrnoException).code !== "ESRCH";
+    }
   }
 
   private static read(absolutePath: string): LeaseRecord | undefined {

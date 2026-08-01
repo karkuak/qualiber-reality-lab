@@ -143,6 +143,30 @@ export interface BuildGovernorRegistryOptions {
    * (review 6R-D). The seeded path never touches held-out selection.
    */
   readonly random?: (n: number) => Buffer;
+  /**
+   * The `actor_role` every *environment* journey step is admitted with.
+   *
+   * A leak has to enter the run through admitted governor data, because that is
+   * the only side of the partition that ever holds a canary. Setting this to a
+   * canary token puts one inside the `SubjectVisibleJourneyStepV1` the Lab
+   * publishes into the adapter-visible tree — with the step's descriptor, its
+   * commitment and the adapter request that names it all still clean, since each
+   * of those carries a hash rather than the content. That is exactly the shape
+   * the review said a metadata scan could never catch.
+   *
+   * The acquisition steps keep the ordinary role, so the pre-environment path
+   * still runs and the refusal lands where the test aims it.
+   */
+  readonly environmentActorRole?: string;
+  /**
+   * An extra evidence source the archetype declares, beyond the three the fake
+   * driver ordinarily serves.
+   *
+   * Its id reaches the baseline fingerprint, and from there every
+   * `SourceSnapshotV1` the capture freezes — the Lab's own telemetry. A canary
+   * token here is the production route to the `lab_telemetry` scan.
+   */
+  readonly extraEvidenceSourceId?: string;
 }
 
 export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}): GovernorRegistry {
@@ -255,6 +279,9 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
         { source_id: "deployment-log", kind: "deployment", required: true },
         { source_id: "service-metric", kind: "metric", required: true },
         { source_id: "change-record", kind: "change", required: true },
+        ...(options.extraEvidenceSourceId === undefined
+          ? []
+          : [{ source_id: options.extraEvidenceSourceId, kind: "change", required: true }]),
       ],
       organization_metadata_schema: "erl2-generic-organization/v1",
       access_constraints: [{ constraint_id: "loopback-only", kind: "egress", scope: "loopback" }],
@@ -353,12 +380,13 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
     stepId: string,
     intent: JourneyIntent,
     truthScope: "journey_only" | "functional",
+    actorRole = "operations-engineer",
   ): CommittedStep => {
     const step = commitJourneyStep({
       visible: {
         stepId,
         intent,
-        actorRole: "operations-engineer",
+        actorRole,
         interactionKinds: ["cli", "documentation"],
         timeoutMs: 60_000,
         maxAttempts: 3,
@@ -424,6 +452,9 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
         `${candidate.challengeId}-${intent.replaceAll("_", "-")}`,
         intent,
         FUNCTIONAL_TRUTH_INTENTS.has(intent) ? "functional" : "journey_only",
+        // Every candidate carries it, so the property under test does not depend
+        // on which challenge the beacon drew.
+        options.environmentActorRole,
       ),
     );
     const orderedStepCommitmentHashes = steps.map((s) => s.commitmentHash);

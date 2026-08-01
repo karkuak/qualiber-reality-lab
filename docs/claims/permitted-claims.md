@@ -83,24 +83,63 @@ The one claim this slice earns, stated at exactly its width:
   offline with the trust head and the randomness-source registry taken only from
   locally pinned configuration, and the derived closure reports zero missing roles
   and zero rejected extras.
-- **Crash-resumability of the environment walk may be claimed at *two* levels.**
-  Every one of the twenty-one phase boundaries has been interrupted and resumed
-  from retained evidence, with exactly one of each once-only artifact however the
-  run was cut; and, since ADR-ERL2-024, a crash *inside* a phase — between the
-  external call and the evidence that records it — is reconciled against observed
-  state before any retry, measured by **counting invocations of an instrumented
-  driver and subject port** rather than by counting artifacts.
-- **Exactly-once external effect may be claimed for the driver operations**
-  (provision, activation mutate, restore, destroy, per-action emergency destroy,
-  reservation acquire/release). It may **not** be claimed for a subject step: an
-  opaque subject has no probe, so an interrupted step is genuinely ambiguous and
-  the run fails closed rather than re-invoking it. That asymmetry is the claim,
-  not a gap in it.
-- **"A refusal writes no evidence" may be claimed for the environment commands**,
-  measured by full-tree byte manifest on a fresh run and again mid-path. The
-  exception recorded by the independent review — a refused `journey` freezing a
-  cutoff policy with no lifecycle event (P1-10) — is **still open** and is not
-  covered by this claim.
+- **Crash-resumability may be claimed for a subject step and for challenge
+  activation, across real process death.** Since ADR-ERL2-028 each of eight named
+  durability boundaries is exercised by ending the executing `erl2` process with
+  `SIGKILL` and resuming in a genuinely new one, and external invocations are
+  counted from a **file written before and after each call**, so the count survives
+  the process that made it.
+
+  It may **not** be claimed for `provision`, `restore`, `destroy` or the emergency
+  actions. Those keep the coverage ADR-ERL2-024 gave them — reconciliation against
+  observed state before any retry, measured in-process — and the eight boundaries
+  are not run for them.
+
+  The earlier form of this claim, which cited a suite that injected no crash, is
+  withdrawn: an injected *exception* unwinds through every `finally`, so it never
+  reached the stale-lease path, the unreproducible-receipt path or the
+  terminal-less-ambiguity path, all three of which were live defects
+  (`remediation-6.5-lifecycle-ordering.md` §4).
+- **Three exactly-once categories, and they may not be combined.**
+  - *Invocation-level exactly once* — external invocation count measured at one —
+    may be claimed for **challenge activation** at all eight boundaries, and for a
+    **subject step** at the three boundaries where the evidence is decisive
+    (nothing declared, the intent proves nothing was dispatched, or the outcome is
+    already frozen). Also for the other driver operations at the boundaries
+    ADR-ERL2-024 measured.
+  - *Evidence-backed idempotent reconciliation* — the transport may repeat while
+    the logical effect does not — is **not** claimed anywhere. No tested path
+    reaches a second transport invocation.
+  - *Fail-closed ambiguous outcome* is the honest description for a **subject
+    step** at the five remaining boundaries. No second invocation, the ambiguity is
+    retained, and the run reaches exactly one invalid terminal whose
+    `failed_phase.kind` is `journey_execution` and whose owner is the **Lab**, not
+    the subject.
+
+  One of those five is a *conservative* refusal and is not counted as an
+  exactly-once win: at `before_external_dispatch` the subject was not called, and
+  the run still fails closed, because the `dispatching` marker is durable before
+  the call and the evidence cannot separate "about to call" from "called and died".
+- **"A refusal writes no evidence" may now be claimed for the environment
+  commands**, measured by a full-tree byte manifest over the run root **and both
+  operational siblings**, including directory entries, across representative
+  refusal causes. P1-10 is closed: a refused `journey` freezes no cutoff policy,
+  and a refused command no longer creates `<run-root>.substrate` or
+  `<run-root>.reservations`. The two documented exceptions are the bounded run
+  lease and the derived snapshot, both excluded from every closure derivation by
+  construction.
+- **Every canonical journey intent may be claimed to enforce its own
+  prerequisites.** All fourteen have an explicit row keyed by the frozen contract's
+  own intent union, enforced at the library boundary from **retained evidence**
+  rather than from the departure state, so a post-capture intent refuses before
+  activation and before the evidence cutoff wherever it is invoked from. The
+  offline verifier re-derives the same ordering from the hash-chained event stream.
+- **Cancellation may be claimed to be dispatched from the run's own durable
+  evidence.** Two independent witnesses, `ENOENT` as the only absence, a typed
+  refusal for anything else, and a classifier shared by the CLI and the library. A
+  live or partially provisioned environment cannot receive a pre-environment
+  cancellation terminal, and a cancellation that interrupts a cleanup continues it
+  rather than restarting it under a relabelled trigger.
 - **The substrate a cleanup verdict was observed against may be claimed to be the
   one the run provisioned into.** `SubstrateBindingV1` is frozen before the first
   substrate-affecting dispatch, checked by every later phase before it dispatches,
@@ -108,18 +147,46 @@ The one claim this slice earns, stated at exactly its width:
   substrate is a typed refusal before any cleanup evidence freezes. This closes
   the review's P0-1: before it, a run could be torn down and finalized against an
   empty directory and the resulting bundle verified at exit 0.
-- **The mandatory emergency route may be claimed.** A restoration or teardown
-  failure enters receipt-backed emergency cleanup: every independently safe action
-  the frontier derived is attempted **individually** and receipted, every unsafe
-  action skipped with a reason and no receipt, and a foreign or shared resource
-  fails exactly its own action rather than aborting the branch.
+- **One cleanup discipline may be claimed for every invalid environment
+  terminal.** Every failure phase — not only restoration and teardown — freezes
+  its frontier before it acts, attempts every independently safe action
+  **individually** and receipts each attempt, and skips every unsafe action with
+  a reason and no receipt. A foreign or shared resource fails or skips exactly its
+  own action rather than aborting the branch, and a run that meets one still
+  reaches exactly one invalid record. A whole-environment dispatch happens only
+  when the driver offers no narrower granularity and every observed frontier
+  member is an authorized target. Before ADR-ERL2-027 this held on the emergency
+  branch only: the other five phases issued an unconditional whole-environment
+  destroy over a frontier they had just frozen and never read, which destroyed
+  resources that frontier had classified `contain_residual` and aborted outright
+  on a foreign one (review P1-1, P1-5).
+- **The post-cleanup residue may be claimed to rest on an observation rather than
+  on the producer's own account of what it did.** The substrate is re-observed
+  after the last dispatch and a `CleanupResidueProbeV1` retains that observation
+  beside the pre-action frontier and the derived authorized-target set, so an
+  offline reader recomputes both what survived and what left without
+  authorization. A fabricated empty residue and a resource that vanished with no
+  authorized action against it are typed refusals. It may **not** be claimed that
+  the Lab takes an independent census of the substrate: the observation is the
+  driver's `inspect`, and what the Lab owns is that its record agrees with what it
+  observed at two separate moments. A consistently lying driver remains
+  undetectable, and nothing retained by one process can change that.
+- **The invalid terminal's finding may be claimed to name what actually failed.**
+  The gate it cites is a total, deterministic function of the run's own failure
+  phase, re-applied offline to the record's own `failed_phase`; it is Lab-owned
+  with no subject attribution and no scoreable plane; and it is frozen before the
+  frontier, so a cleanup that then fails adds evidence and never replaces the
+  cause. Before this the gate was chosen by *cleanup branch*, so a provisioning
+  failure cited a baseline gate the run never evaluated (review P1-3).
 - **Branch-specific cancellation may be claimed.** `erl2 cancel` routes on the
   run's own evidence: a run holding an environment enumerates its actual frontier
   and can never record cleanup as `not_required`.
 - **Offline verification of environment validity and cleanup may be claimed to be
   independent.** The verifier re-derives the validity verdict, the restoration and
-  teardown outcomes and the emergency action set from retained bytes, and refuses
-  a producer field that disagrees with them. It may **not** be claimed that the
+  teardown outcomes and the cleanup action set from retained bytes — on **every**
+  invalid environment terminal since ADR-ERL2-027, where it previously returned
+  early on any non-emergency variant (review P1-6) — and refuses a producer field
+  that disagrees with them. It may **not** be claimed that the
   verifier re-runs every Lab validity *gate*: several read evidence a public
   reader does not hold, so what is checked is that the retained gate set is
   self-consistent and corroborated by the retained findings.
@@ -145,11 +212,147 @@ The one claim this slice earns, stated at exactly its width:
   missing evidence never raises. It may **not** be claimed that this widens
   anything: it removes a claim the evidence never supported and adds none
   (ADR-ERL2-025).
-- **Four oracle-canary surfaces are scanned live** — adapter request, Lab
-  telemetry, mounted evidence entry, and subject output — and a canary planted in
-  a subject's own output bytes refuses the run before anything freezes. Four
-  surfaces remain unscanned and are named individually in
+- **Three oracle-canary surfaces are scanned live *and proven***, and the fourth
+  is recorded as shadowed rather than counted (ADR-ERL2-032). Since Step 6B a
+  surface may be called live only when a shipped run refuses on it and a negative
+  control proves that refusal is load-bearing; the previous form of this claim
+  counted four on the strength of a coverage test that proved only that the
+  *scanner* recognises a target labelled with each surface.
+
+  - **`mounted_file`** — the exact bytes of every file the Lab publishes into the
+    adapter-visible tree are scanned **before the file exists**, and the published
+    bytes are then verified against the bytes that were scanned. A mount whose
+    descriptor, commitment and adapter request are all clean and whose *content*
+    carries a canary is refused before dispatch, and nothing is written. It could
+    **not** be claimed before: the scan read `JSON.stringify(entry)` over an id, a
+    state and two digests, so no leak in mounted content could appear in it.
+  - **`lab_telemetry`** — one scanner, called before any source snapshot is
+    retained and again over the snapshots the observation bundle is built from. A
+    canary in an admitted evidence-source id refuses `observe` with no snapshot
+    frozen and nothing derived. The scan was already live and correct; what was
+    missing, and is now present, is a production-path regression and a control
+    that kills it.
+  - **`subject_output_prefill`** — unchanged, and deliberately still the sole
+    owner of the judge-canary rule on the subject-output surface.
+  - **`adapter_request`** — live, and **shadowed**. Every request field that could
+    carry a token is a hash, an id or the visible-step path, and that step's own
+    bytes are now refused as a `mounted_file` one call earlier. No shipped input
+    reaches it, so no control can kill it and it is not counted. This is a
+    consequence of fixing the ordering, and the better trade: the alternative was
+    to keep publishing the leaking mount and then refuse the request naming it.
+
+  Four surfaces remain unscanned and are named individually in
   `PENDING_ORACLE_SCAN_SURFACES`.
+- **A refusal may be claimed not to republish what it refused.** A scan label is
+  built from run data, and where the leak lives in that identifier the refusal
+  message used to reprint the exact token into stderr and the CLI envelope. Every
+  new evidence-boundary regression asserts the whole envelope is free of the token
+  it planted.
+- **The evidence cutoff may be claimed to be re-derived offline, exactly.** Since
+  ADR-ERL2-029 the verifier resolves all three cutoff inputs by exact hash *and*
+  schema, requires the runtime milestone to bind the process-start receipt the
+  **cutoff** names, requires both to be lifecycle-reached and run-bound, and
+  re-checks clock-domain agreement, wall/monotonic divergence and
+  process-milestone skew.
+
+  ADR-ERL2-031 adds the value that made the rest bounds-exact rather than exact.
+  Before capture, the run freezes a signed `evidence-window-commitment/v1`
+  carrying the **exact** warmup and observation durations, sealed under
+  `policy_author` — the authority that already bounds the window in
+  `cutoff-policy/v1`, and deliberately not either of the two roles that stamp the
+  clocks the derivation is anchored on. The offline verifier resolves it by hash,
+  authorizes its signer under its own role table, checks its run, cutoff-policy,
+  process-start, clock-domain and observation bindings, requires it to be
+  lifecycle-reached and to precede the capture it governs, and then recomputes in
+  integer arithmetic:
+
+  - `cutoff.instant === process_started_at + warmup_ms + observation_ms`;
+  - `milestone.occurred_at === process_started_at + warmup_ms`;
+  - the observation bundle's window, and every source snapshot's.
+
+  **The residual ADR-ERL2-029 §3.2 recorded is closed.** A producer that moves the
+  window *within* the committed bounds and moves its milestone with it is now
+  caught, because the durations are signed bytes hash-bound into the terminal
+  chain and the shift contradicts them rather than leaving no trace. An
+  observation bundle naming a **nonexistent** runtime milestone was valid before
+  ADR-ERL2-029; a within-bounds shifted window was valid before ADR-ERL2-031. Both
+  are typed refusals.
+
+  It may **not** be claimed that this stops a fully authorized `policy_author`
+  from committing a different window on purpose. The commitment proves that a
+  window was fixed under an authorized key before capture and that every later
+  instant matches it exactly — **not** that the window was the right one. Which
+  windows are permissible is the cutoff policy's bounds; who may commit one is the
+  trust policy's. What changed is that the choice is now on the record and signed,
+  where before it was a module constant that left no trace at all (ADR-ERL2-031
+  §3.4).
+
+  It may **not** be claimed that key custody is demonstrated. The development
+  composition holds the `policy_author` key in the same process as the run, as it
+  already does for the governor, controller, supervisor and attestor keys.
+  Separating custody is a deployment property this profile does not exhibit.
+- **Subject-output payload bytes may be claimed to be completely accounted, in
+  both directions.** Every declared payload must exist as a regular file inside
+  the authorized payload root, match its declared length and digest exactly, and
+  be declared exactly once; and every file in that root must be a declared payload
+  or the freeze marker of one. Before this the payload root was outside the
+  `retained/` accounting subtree entirely, and a *missing* declared payload was
+  silently skipped, so both an absent payload and an undeclared extra verified at
+  exit 0 / `valid`.
+
+  ADR-ERL2-029's payload accounting is byte correspondence against descriptors,
+  and the two producer-side gaps it recorded as open are **closed by
+  ADR-ERL2-032**:
+
+  - **Retained subject-output payload bytes may be claimed to be scanned for
+    secret canaries and forbidden identifiers**, over the same definitions the
+    adapter host's output and diagnostics paths already enforce, before the
+    subject-output manifest freezes. Both refusals are Lab-owned evidence-boundary
+    invalidity, never a subject finding. Matching is byte-wise: a token
+    surrounded by invalid UTF-8 is still found.
+  - **The declared subject-output byte ceiling may be claimed to be enforced
+    against the bytes the subject actually produced.** The limit is the run's own
+    `SubjectExecutionPlanV1.limits.output_bytes` — the value hashed into every
+    step request's `resource_limit_hash`, not an adapter frame bound, a
+    diagnostics bound, a file count, a path depth or a flag. Bytes are counted
+    from the payloads read back from the store, per occurrence, with no decoding;
+    a payload one byte over is refused before the manifest freezes and a payload
+    exactly at the ceiling is admitted. Both halves are measured end to end
+    through the shipped CLI at the real 64 MiB ceiling, not at an injected one.
+
+  It may **not** be claimed that these scans see anything the subject chose not to
+  return. They govern the bytes the run retains, which is what the ceiling and the
+  partition are about; a subject that withholds output withholds it from the
+  evidence too, and that is a separate, already-recorded limit.
+- **The mandatory evidence gate may be claimed to verify invalid goldens
+  semantically.** `evidence:verify` now invokes the real offline invalid-record
+  verifier in a fresh process for every invalid-run golden and requires exit 0 and
+  a derived closure verdict of `valid`, with the fixture list enumerated from the
+  directory and its count asserted. Previously those exit codes were recorded only
+  in `cli-transcript.json`, the single file excluded from the byte pin, so a
+  verifier regression against invalid records — which changes no producer bytes —
+  left the gate green.
+- **Signer-inventory completeness MAY now be claimed, in both directions**
+  (ADR-ERL2-030). The producer derives the applicable signed-member set from the
+  retained evidence and refuses to seal an inventory it cannot certify; the
+  offline verifier derives the expected set *independently*, from its own role
+  table and the authority field each frozen schema declares, and compares it with
+  the retained inventory bijectively. `complete_for_terminal_chain` is **never
+  read as evidence** — an inventory that omitted a member while asserting
+  completeness is refused by the derivation, not by disagreeing with a boolean.
+  Measured before and after, on terminals that all asserted completeness:
+  `valid-pre-environment-run` 7 applicable / **1** listed → 7; the CLI-produced
+  pre-environment goldens 7 / **6** → 7; a CLI-produced environment terminal 63 /
+  **61** → 63. The two the producer had never listed were exactly the two whose
+  authority field is not named `signature`: the mirrored trust root
+  (`root_signature`) and the beacon association wrapper (`wrapper_signature`).
+- **What completeness does NOT claim.** It is a statement about the *set* of
+  signed members and about each member's schema, key, signature binding, role
+  authorization, run scope and lifecycle reachability. It is not a statement about
+  what those members say. Two contracts — the trust policy manifest and the
+  terminal timestamp checkpoint — are exempt from lifecycle reachability by name,
+  because neither is produced by any lifecycle event; both are bound to the
+  terminal by hash instead, and the exemption is pinned by an architecture test.
 
 ### Slice 6 — generic evaluation, terminal closure and finalization
 
@@ -273,6 +476,15 @@ The one claim this slice earns, stated at exactly its width:
   intents come back `unsupported` because the fixture adapter manifest does not
   declare them. That is a true statement about a declaration, not about a
   subject's capability.
+- **No claim that a golden's own verification outcome is pinned.** The exit codes
+  of the `verify-record` and `verify` calls the evidence harness makes are
+  recorded only in `fixtures/golden/cli-transcript.json`, which is **excluded**
+  from the byte pin because it carries absolute CLI paths. ADR-ERL2-027's work
+  broke the `invalid-run-emergency-cleanup` fixture badly enough that its
+  verification began failing with `INVALID_REASON_PHASE_MISMATCH`, and
+  `evidence:verify` still reported OK. The fixture is repaired and the codes are
+  now asserted by named tests, but the *pin* does not cover them and a future
+  change can move them silently. Recorded as an open gap rather than closed.
 
 - **No evaluated-domain claim from a real run.** `DomainResultEvaluatedV1` is
   implemented and exercised against real reference-adapter projections, but no

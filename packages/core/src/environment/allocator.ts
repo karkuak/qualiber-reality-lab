@@ -59,7 +59,42 @@ export class ReservationAllocator {
     this.root = path.resolve(options.root);
     this.clock = options.clock;
     this.ttlMs = options.ttlMs ?? 3_600_000;
+  }
+
+  /**
+   * Creates the namespace directory, on the first write and never before.
+   *
+   * The constructor used to do this, and the constructor runs in
+   * `openEnvironment` — so *every* refused environment command left an empty
+   * `<run-root>.reservations` behind it. A refusal that creates a directory is a
+   * refusal that wrote something, and a byte manifest taken across a refused
+   * command has to come back identical (ADR-ERL2-028 §4).
+   */
+  private ensureRoot(): void {
     mkdirSync(this.root, { recursive: true, mode: 0o700 });
+  }
+
+  /**
+   * The lease file names, or none when the namespace has never been written.
+   *
+   * `ENOENT` is the only condition that means "no leases". Any other errno is a
+   * fault and is raised: answering "this run holds nothing" for a permission
+   * fault would release a live environment's identities to the next run, which
+   * is the fail-open class ADR-ERL2-026 §2 removed from the substrate reader.
+   */
+  private leaseNames(): readonly string[] {
+    try {
+      return readdirSync(this.root)
+        .filter((name) => name.endsWith(".lease.json"))
+        .sort();
+    } catch (cause) {
+      if ((cause as NodeJS.ErrnoException | null)?.code === "ENOENT") return [];
+      throw new Erl2Error(
+        CODES.ENV_RESERVATION_CONFLICT,
+        "the reservation namespace could not be read; an unreadable namespace is not an empty one",
+        { owner: "lab", cause },
+      );
+    }
   }
 
   private leasePath(kind: ReservationKind, value: string): string {
@@ -112,6 +147,7 @@ export class ReservationAllocator {
     );
 
     let fd: number;
+    this.ensureRoot();
     try {
       fd = openSync(file, "wx", 0o600);
     } catch (cause) {
@@ -147,8 +183,7 @@ export class ReservationAllocator {
   reclaimExpired(): readonly ReclaimedLease[] {
     const now = Date.parse(this.clock.now());
     const reclaimed: ReclaimedLease[] = [];
-    for (const name of readdirSync(this.root).sort()) {
-      if (!name.endsWith(".lease.json")) continue;
+    for (const name of this.leaseNames()) {
       const file = path.join(this.root, name);
       const lease = this.read(file);
       if (Date.parse(lease.expires_at) <= now) {
@@ -160,9 +195,7 @@ export class ReservationAllocator {
   }
 
   held(runId: string): readonly EnvironmentReservationLeaseV1[] {
-    return readdirSync(this.root)
-      .filter((n) => n.endsWith(".lease.json"))
-      .sort()
+    return this.leaseNames()
       .map((n) => this.read(path.join(this.root, n)))
       .filter((l) => l.run_id === runId);
   }

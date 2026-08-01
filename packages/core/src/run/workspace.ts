@@ -79,6 +79,7 @@ import {
   assertNotSelfAnchoring,
   coreHash,
   hashBytes,
+  jcsBytes,
   sealSigned,
   signCoreHash,
   SIGNATURE_DOMAINS,
@@ -146,6 +147,12 @@ import {
   buildPreEnvironmentSignerInventory,
   type SignerInventoryEntryInput,
 } from "../terminal/finalize.js";
+import {
+  assertInventoryCoversDerivation,
+  deriveSignedMembers,
+  signerInventoryEntriesFrom,
+  type SignerInventoryDerivation,
+} from "../terminal/signerInventoryDerivation.js";
 
 /** The evaluator release recorded in every `GenericEvaluationIndexV1`. */
 export const EVALUATOR_RELEASE = "erl2-generic-evaluator/0.1.0";
@@ -180,10 +187,15 @@ export interface OpenWorkspaceOptions {
 }
 
 interface IndexedArtifact {
+  /** Root-relative path of the file this artifact was read from. */
+  readonly logicalPath: string;
   readonly coreHash: Hash;
   readonly schemaVersion: string;
   readonly value: Record<string, unknown>;
 }
+
+/** The retained subtree, the only place a signed Lab artifact may live. */
+const RETAINED_PREFIX = "retained/";
 
 /**
  * Artifact fields that record when the Lab *produced* something, as opposed to
@@ -337,9 +349,31 @@ export class RunWorkspace {
     return assertContract<T>(contractName, found.value);
   }
 
+  /**
+   * **Every** file beneath `retained/`, in walk order, core-hash collisions
+   * included.
+   *
+   * `index()` is keyed by core hash and is therefore lossy by construction: a
+   * signature field is excluded from the core, so two retained files can agree
+   * on every hashed byte and disagree on their authority. Any *completeness*
+   * question — which is what the signer inventory is — has to be asked of each
+   * retained file, not of one representative per hash (ADR-ERL2-030 §4.2).
+   */
+  retainedArtifacts(): readonly IndexedArtifact[] {
+    return this.indexFiles().filter((a) => a.logicalPath.startsWith(RETAINED_PREFIX));
+  }
+
   private index(): Map<string, IndexedArtifact> {
     const out = new Map<string, IndexedArtifact>();
-    const walk = (absolute: string): void => {
+    for (const artifact of this.indexFiles()) {
+      if (!out.has(artifact.coreHash)) out.set(artifact.coreHash, artifact);
+    }
+    return out;
+  }
+
+  private indexFiles(): readonly IndexedArtifact[] {
+    const out: IndexedArtifact[] = [];
+    const walk = (absolute: string, relative: string): void => {
       let entries: string[];
       try {
         entries = readdirSync(absolute);
@@ -348,12 +382,13 @@ export class RunWorkspace {
       }
       for (const name of entries.sort()) {
         const child = path.join(absolute, name);
+        const childRelative = relative === "" ? name : `${relative}/${name}`;
         if (statSync(child).isDirectory()) {
           // `state/` holds the derived snapshot cache and the run lease — never
           // artifacts.  Walking it would let a torn snapshot crash every command
           // that builds the index (§11.9); it is authoritative for nothing.
           if (absolute === this.store.root && name === "state") continue;
-          walk(child);
+          walk(child, childRelative);
           continue;
         }
         if (!name.endsWith(".json") || name.endsWith(".frozen")) continue;
@@ -375,10 +410,10 @@ export class RunWorkspace {
             `retained artifact ${name} was mutated after freezing`,
           );
         }
-        out.set(recomputed, { coreHash: recomputed, schemaVersion, value: record });
+        out.push({ logicalPath: childRelative, coreHash: recomputed, schemaVersion, value: record });
       }
     };
-    walk(this.store.root);
+    walk(this.store.root, "");
     return out;
   }
 
@@ -2515,12 +2550,17 @@ export class RunWorkspace {
     // the ordering graph stays acyclic (ERL2-FR-033).
     assertNotSelfAnchoring(checkpoint);
 
-    // 7.8 the signer inventory, recomputed from the retained chain.
+    // 7.8 the signer inventory, derived from the retained chain — every
+    //     applicable signed member, found by the authority field its own frozen
+    //     contract declares, and refused rather than sealed if the set cannot be
+    //     shown complete (ADR-ERL2-030 §4).
+    const signerInventory = this.deriveSignerInventory(checkpoint);
     const inventory = buildPreEnvironmentSignerInventory({
       inventoryId: `inv-${this.runId.slice(0, 8)}`,
       runId: this.runId,
       acquisitionPreregistrationHash: this.requireHashForRole("acquisition-preregistration"),
-      entries: this.signerInventoryEntries(checkpoint),
+      entries: signerInventory.entries,
+      completeForTerminalChain: signerInventory.derivation.completeForTerminalChain,
       inventoriedAt: this.clock.now() as Instant,
       signingKey: this.keyring.finalizer,
     });
@@ -2529,6 +2569,10 @@ export class RunWorkspace {
       inventory,
       "INTERNAL",
     );
+    // Re-derived against the tree *including* the sealed inventory, so a signed
+    // artifact that appeared between the derivation and the freeze cannot ride
+    // in uncovered.
+    this.assertSignerInventoryStillComplete(signerInventory.entries);
 
     // 7.9 the ordered finalization gate. Nothing above this line is signed by
     //     the finalizer as an attestation; nothing below runs if a check fails.
@@ -2540,6 +2584,7 @@ export class RunWorkspace {
       derivedMissingRoles: derived.missingRoles,
       derivedExtraHashes: derived.extraHashes,
       exposureStateRecorded: exposure.recorded,
+      signerInventoryComplete: signerInventory.derivation.completeForTerminalChain,
       signerInventoryHash: coreHash(inventory),
       trustPolicyHash: this.requireTrustPolicyRef().coreHash,
       timestampCheckpointHash: coreHash(checkpoint),
@@ -2760,42 +2805,64 @@ export class RunWorkspace {
   }
 
   /**
-   * The signed artifacts this terminal chain covers, excluding the public
-   * terminal types the bundle already carries.
+   * The signed artifacts this terminal chain covers, derived from the retained
+   * evidence (ADR-ERL2-030 §4).
    *
-   * `excludeSchemas` is the branch's own exclusion set: the pre-environment
+   * `excludeSchemas` is the branch's own acyclic boundary: the pre-environment
    * inventory excludes one public terminal type, the environment inventory
    * excludes two (the attestation *and* the selection verification receipt), and
-   * `buildEnvironmentSignerInventory` refuses an entry for either. Both branches
-   * always exclude the inventory itself — an inventory vouching for itself
-   * vouches for nothing.
+   * both builders refuse an entry for any of them. Both branches always exclude
+   * the inventory itself — an inventory vouching for itself vouches for nothing,
+   * and an entry naming its own core hash has no fixpoint anyway.
+   *
+   * This replaced a loop over `artifact.value["signature"]` across the *whole
+   * run root*. That loop omitted every member whose authority field is named
+   * something else — measured on a real environment terminal, 2 of 63 applicable
+   * members, being the mirrored trust root (`root_signature`) and the beacon
+   * association wrapper (`wrapper_signature`) — while the inventory it fed
+   * asserted `complete_for_terminal_chain: true`.
    */
-  signerInventoryEntries(
+  deriveSignerInventory(
     checkpoint: TrustedTimestampCheckpointV1,
     excludeSchemas: readonly string[] = ["pre-environment-final-lab-attestation/v1"],
-  ): readonly SignerInventoryEntryInput[] {
-    const excluded = new Set([...excludeSchemas, "signer-inventory/v2"]);
-    const entries: SignerInventoryEntryInput[] = [];
+  ): {
+    readonly derivation: SignerInventoryDerivation;
+    readonly entries: readonly SignerInventoryEntryInput[];
+  } {
+    const derivation = deriveSignedMembers({
+      retained: this.retainedArtifacts(),
+      excludedPublicTerminalTypes: excludeSchemas,
+    });
     const at = (checkpoint.entries[0] as { security_timestamp: string }).security_timestamp;
-    for (const artifact of [...this.index().values()].sort((a, b) =>
-      a.coreHash.localeCompare(b.coreHash),
-    )) {
-      const signature = artifact.value["signature"] as
-        | { key_id: string; signed_hash: Hash }
-        | undefined;
-      if (signature === undefined) continue;
-      if (excluded.has(artifact.schemaVersion)) continue;
-      entries.push({
-        artifactSchemaVersion: artifact.schemaVersion,
-        artifactCoreHash: artifact.coreHash,
-        signerKeyId: signature.key_id,
-        signatureSha256: signature.signed_hash,
+    return {
+      derivation,
+      entries: signerInventoryEntriesFrom(derivation, {
         securityTimestamp: at as Instant,
         timestampLogId: checkpoint.log_id,
         timestampSequence: checkpoint.first_sequence,
-      });
-    }
-    return entries;
+      }),
+    };
+  }
+
+  /**
+   * Re-derives the applicable set **after** the inventory has been frozen and
+   * requires the frozen entries to still be exactly it.
+   *
+   * The comparison itself lives in `signerInventoryDerivation.ts` so it can be
+   * exercised as a pure function; here it is only handed the tree as it stands
+   * after the freeze.
+   */
+  assertSignerInventoryStillComplete(
+    entries: readonly SignerInventoryEntryInput[],
+    excludeSchemas: readonly string[] = ["pre-environment-final-lab-attestation/v1"],
+  ): void {
+    assertInventoryCoversDerivation(
+      entries,
+      deriveSignedMembers({
+        retained: this.retainedArtifacts(),
+        excludedPublicTerminalTypes: excludeSchemas,
+      }),
+    );
   }
 
   /** The retained run trust policy, mirrored into the run at preregistration. */
@@ -2869,11 +2936,57 @@ export class RunWorkspace {
   }
 
   visibleStepRef(step: SubjectVisibleJourneyStepV1): ArtifactRef {
-    return this.store.freezeJson(
+    return this.freezeMountedFile(
       `subject-visible/steps/${step.step_id}.json`,
       step,
-      "PUBLIC",
+      `visible-step:${step.step_id}`,
     );
+  }
+
+  /**
+   * Publishes Lab-authored bytes into the adapter-visible tree, scanning the
+   * exact bytes the mount will expose.
+   *
+   * This is the `mounted_file` surface, and the ordering is the whole point.
+   *
+   * 1. The canonical bytes are built **in memory** and scanned there, so a
+   *    refusal happens before the file exists. An adapter cannot read what was
+   *    never written, and the refusal therefore writes no evidence.
+   * 2. Only then are those same bytes frozen.
+   * 3. The freeze is verified against the reference it just issued, which
+   *    re-reads the published file and compares its length and digest with the
+   *    bytes that were scanned. That binding is what closes the gap between
+   *    *what was inspected* and *what is exposed*: a concurrent replacement
+   *    between the two is a typed refusal, not a silent substitution.
+   *
+   * `ArtifactStore.freeze` supplies the rest of the fail-closed behaviour for
+   * free — a path resolving through a symlink or a hard link is refused before
+   * any write (`resolveConfined`), and a path already frozen with *different*
+   * bytes is `ARTIFACT_ALREADY_FROZEN` rather than an overwrite, so a resumed
+   * run cannot publish a mount its first attempt did not scan.
+   *
+   * The predecessor of this method scanned `JSON.stringify(entry)` — a
+   * descriptor carrying an id, a state and two hashes. A canary in the mounted
+   * *content* could not appear there, so that scan could never fire on the leak
+   * it was named for (review P2: "`mounted_file` is scanned with metadata that
+   * cannot contain the mounted content").
+   */
+  freezeMountedFile(logicalPath: string, value: unknown, label: string): ArtifactRef {
+    const bytes = Buffer.concat([jcsBytes(value), Buffer.from("\n", "utf8")]);
+    // Buffer, not string: matching is byte-wise and never assumes the payload is
+    // valid UTF-8.
+    assertNoCanaryLeak(
+      [{ surface: "mounted_file" as const, label, bytes }],
+      this.knownCanaryIds(),
+    );
+    const ref = this.store.freeze({
+      logicalPath,
+      bytes,
+      mediaType: "application/json",
+      classification: "PUBLIC",
+    });
+    this.store.verify(ref);
+    return ref;
   }
 
   /**

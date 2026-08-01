@@ -159,7 +159,7 @@
         },
         "profile": "local-developer",
         "node_version": "v26.4.0",
-        "registered_contracts": 153,
+        "registered_contracts": 155,
         "lifecycle_states": 63,
         "separation_domains": 21,
         "threshold_vrf": "THRESHOLD_VRF_NOT_ACTIVATED",
@@ -205,7 +205,7 @@
       "run_id": "019f1af9-b400-7111-9111-111111111111",
       "state": "generic_finalized",
       "data": {
-        "lifecycle_head_hash": "sha256:d549ea27caf57d9c9bdb129e4384007765dd805e6dce3b45d55b0fbb1ebf93fb"
+        "lifecycle_head_hash": "sha256:abd1506d1e5173769e6468d2010c9544f6686809a470e6e4d593865253823988"
       }
     },
     "stderr": ""
@@ -234,7 +234,7 @@
       "findings": [],
       "errors": [],
       "run_id": "019f1af9-b400-7111-9111-111111111111",
-      "record_hash": "sha256:8744f499022698f30973a52ef9d153ccbbbdcc173b9bfe71ff63aaf893c6034e",
+      "record_hash": "sha256:0ddefbf1c7dfb2c4c45116fd213116b5709890d84dbcf8b998ddf46e953f02d9",
       "data": {
         "verdict": "valid",
         "trust_head_hash": "sha256:6c528ab0e034c3a774d7d19f65eb6c0be74a6edbce9427c22582d920a1d14afb",
@@ -246,7 +246,7 @@
           "run_id": "019f1af9-b400-7111-9111-111111111111",
           "derived_terminal_phase": "verify_package",
           "derived_terminal_variant": "pre_environment",
-          "lifecycle_head_hash": "sha256:d549ea27caf57d9c9bdb129e4384007765dd805e6dce3b45d55b0fbb1ebf93fb",
+          "lifecycle_head_hash": "sha256:abd1506d1e5173769e6468d2010c9544f6686809a470e6e4d593865253823988",
           "verified_trust_head_hash": "sha256:6c528ab0e034c3a774d7d19f65eb6c0be74a6edbce9427c22582d920a1d14afb",
           "required_hashes_by_role": [
             {
@@ -301,7 +301,7 @@
             {
               "role": "precleanup-result-join",
               "ordered_hashes": [
-                "sha256:6dc413ab73c606be067228d4bde0871a47a6b174d30de641adc8692aa99d45db"
+                "sha256:55975969e145a7237d61133062b4b1569160033683403ea02a7697bc5708cfed"
               ]
             },
             {
@@ -319,25 +319,25 @@
             {
               "role": "generic-evaluation-index",
               "ordered_hashes": [
-                "sha256:d98ba0f61585aa5ae6ac7dde6792c434456eefb3fe59a52416123308341926a1"
+                "sha256:83d0bacd19c5432f269205752dc5b42b22c28f311caa9809f5f8c0dc4cb1fd70"
               ]
             },
             {
               "role": "run-record",
               "ordered_hashes": [
-                "sha256:409b3499c28552d27f2be522375e4ad284e28bfd6db66d437a537e6d23d2b9f6"
+                "sha256:e09c3bf6ce10077ef6ef684e7982b781e6f7079390013b1012b779b968596a66"
               ]
             },
             {
               "role": "final-attestation",
               "ordered_hashes": [
-                "sha256:8744f499022698f30973a52ef9d153ccbbbdcc173b9bfe71ff63aaf893c6034e"
+                "sha256:0ddefbf1c7dfb2c4c45116fd213116b5709890d84dbcf8b998ddf46e953f02d9"
               ]
             },
             {
               "role": "signer-inventory",
               "ordered_hashes": [
-                "sha256:4738168b0dba30233fd4a52a11f37529aef94b6f69499f9245a0e2f4fc212960"
+                "sha256:e8a5459b4e0444afc9e5134fb4149cbcd38aac5a8e171de41f9c4fa9064906f3"
               ]
             },
             {
@@ -350,9 +350,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-29T13:39:34Z",
+          "verified_at": "2026-07-31T00:40:48Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:31861dc38e41c38f68e54eefab0a264adc74ac7476bf23bafaf848daba0a9590"
+          "core_hash": "sha256:8b179a867899bc8702b6ca397324f2e48882dd0cdb5dcc36334d4a4540908861"
         }
       }
     },
@@ -421,15 +421,15 @@
           "derived_terminal_phase": {
             "cancelled_during": "pre_environment",
             "kind": "cancellation",
-            "lifecycle_event_hash": "sha256:a1f9c05a271876cda7848715be625d845a565600902053187a6e606e0992ed77"
+            "lifecycle_event_hash": "sha256:e9ff3fbcbee6b04db5a059f5f0526c6382a085b85a253380c95c825e5a6b2cae"
           },
           "derived_terminal_variant": "invalid",
-          "lifecycle_head_hash": "sha256:df1c9d7e7f01c740d70b6611b34a129d2d35a9a490c42cbda58adb1892855be3",
+          "lifecycle_head_hash": "sha256:ed705d11017ec7aa5f4c8b565d502b7b945214cb2991601b86329592f2ae8f10",
           "required_hashes_by_role": [
             {
               "role": "invalid-run-record",
               "ordered_hashes": [
-                "sha256:5c2cf0aacf93e39b73f7f5fbb3b7dc9846476226613b2fd46442414f2151951f"
+                "sha256:207f4b32d9b3ddf1c84b3187885dfa2e31cb297db4e0f996c4d7de25bec97045"
               ]
             },
             {
@@ -447,9 +447,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-29T13:39:34Z",
+          "verified_at": "2026-07-31T00:40:49Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:46be927e134bd6f0a00dd043a0ee0bba15e8fe51b818c0beb59cf808f7b7150a"
+          "core_hash": "sha256:fe62ccfd6c16252501b6cb15f978e8361d8c579bdc22f12419205b77a0d723fc"
         }
       }
     },
@@ -487,16 +487,16 @@
           "run_id": "019f1af9-b400-7333-b333-333333333333",
           "derived_terminal_phase": {
             "kind": "lifecycle_phase",
-            "lifecycle_event_hash": "sha256:ecb3be729acc69ee69eea93a8b703a06005bd3ec104526967ba506b930bcfd96",
+            "lifecycle_event_hash": "sha256:f9b45964abe5cba21f6d46dd2488f60ad10708034a03250e9daed1daaf706ddd",
             "phase": "acquisition"
           },
           "derived_terminal_variant": "invalid",
-          "lifecycle_head_hash": "sha256:7a9d6bc99eb72950dc07799455f318a4956dc2f21450312776e37ec6ddfb1d55",
+          "lifecycle_head_hash": "sha256:ddd949be81e7a41f540c53f2337c97392dc9afad62245d3af19b49f3fdda73dc",
           "required_hashes_by_role": [
             {
               "role": "invalid-run-record",
               "ordered_hashes": [
-                "sha256:9a8c2a27f52ac24298a376b11bcba4bd5ae40b4e3fe7e0d2ccdc66524b1f3b6c"
+                "sha256:d58d8be4b815b665051932111fd01ac3deb3d625c3fd61bccec0ef5befa68ef2"
               ]
             },
             {
@@ -515,9 +515,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-29T13:39:35Z",
+          "verified_at": "2026-07-31T00:40:49Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:895e72884e55aee78a9495d32f341caf22a25b8921d06afa68980d46ab75b126"
+          "core_hash": "sha256:eb37f5e0ed077beb2f4c316cdf3669c940f1be59eefa11034f0f7f002dce34f8"
         }
       }
     },
@@ -555,16 +555,16 @@
           "run_id": "019f1af9-b400-7444-8444-444444444444",
           "derived_terminal_phase": {
             "kind": "lifecycle_phase",
-            "lifecycle_event_hash": "sha256:3dbb2d7e2ca1f7909e12b48acc62768c96c7ae3dd374144c3f9f9a0a63349d6a",
+            "lifecycle_event_hash": "sha256:b8e0916dabf1c15c9d497c5a69441a452e8ed32a653555b4f15b80dbe72adc2b",
             "phase": "environment_restoration"
           },
           "derived_terminal_variant": "invalid",
-          "lifecycle_head_hash": "sha256:aee88d0ecae7e3f27547f7cd5bcba0976c6a9866a19ed6bcb6405e1f667326ae",
+          "lifecycle_head_hash": "sha256:ae570fb0bea6db6521b739a56e173b8f3ea9ebc9bc687de7fa7c32ceeaf05dba",
           "required_hashes_by_role": [
             {
               "role": "invalid-run-record",
               "ordered_hashes": [
-                "sha256:d712f02328e37d951f6ad7307f5ec684e4324773e86cbeb773309bffe5379a42"
+                "sha256:c5578f1a50b0e8abce09ef5aae112ef282ee823c32104aa2937f8ae69fbe203b"
               ]
             },
             {
@@ -572,35 +572,38 @@
               "ordered_hashes": [
                 "sha256:a84d3ebf6acffcafd06d2b740f59a9ab39c24315ff156f87d92b0e60866f7cb6",
                 "sha256:fa57383df86cc9071d64f8bf365328cadf0abeab833b2a032ca3ef1d0a6c1c34",
+                "sha256:d9a0737d2feb34c5a047175339707b82da9344417c6f8b07588ccbaade672920",
                 "sha256:28861263c9e825955a3cf8094911b3db32bf75b38d7e03bf8df7963397201c57",
-                "sha256:19f90a2a249e4d7242b1b7718f712a43025cc2eff7fd60728a84def7adc8abfd",
-                "sha256:b0465771b39e93a57e3a8462138ea2e6b4c4ab46a6a5f4e5edf4943279172edd",
-                "sha256:2ac0ce8ecd19eefa77c9027c42c0b69bc3b566593ca4a58a0f062b29f4716340",
-                "sha256:a711077d5912f8244e21aad1b59229c0bdf77eea700b0ef06f38beb7ad20ea78",
-                "sha256:fcf0a0b1c838835560ba05399f51dcced25f3e1b4f5fa230e41699c8309dfe85",
-                "sha256:13610c5f190296e6b09549e90f6ee71b87318105cbcf55e88713a16386d91c28",
-                "sha256:e4c696b13d1d621f5c7e1c50fc3aed221a1d43f9af35f5cead0c805c22294012",
-                "sha256:eaa6e4490e52a0d9cd68648115185fb24e0cc77b7bedfbae6d3de201bfa53441",
-                "sha256:5cb348abf0d4bc5527c1e4759e04b0b51fe3b0d9509c816bb10f7e04f2069bcd",
-                "sha256:7604ab057423bae394045abf612a6ae016553f85478d56b25899b2fdd03e0f70"
+                "sha256:73aea8867200ce25795bd28ffa06a53c81f1a278dbf80e5d3c227bf249485c84",
+                "sha256:e0b4547ef4409a5eae2b71aa6116b1df2cf2f3635b7718e5e5da519c0271ff11",
+                "sha256:a9d5462ecd31d7b9e027496a12b680b5ca67657d2fdc249791b8073a5b593e7d",
+                "sha256:9f8ed6e17da05dcec3e00f49207aa0ae87348c5efdffa712a847301ffd7fed19",
+                "sha256:731573d0157d3207607a9bd515b48cf41771d73ce1a38d326c8ffee33199b71f",
+                "sha256:446d2fcc074291ca64623d671eb64dc1e7b7055d5eb533641d9f0ffddba72517",
+                "sha256:f757275dc5656da102a7977f7223bfd770b8a551e03ebbfbc0c29b2f6e21755a",
+                "sha256:91a6d8d47d8fd3c8611777f501b773e43b1875b8316168df1ae4d32955292c16",
+                "sha256:b4be54e9c3ef740ae0ce0c16cbfb43f3dc223a36a8bb067c368553ea6414c291",
+                "sha256:99eddd2b60a6af0b46817ddb39df6f7d117bc2517be48c70e64fca59f7137b2b",
+                "sha256:1ad30a7e58861968c43d56cd58f458a805a7ab76b4c6f912f9961750070ac632",
+                "sha256:0077f02ebf910ea23f41c8e65ac99d6e4a60b20f49f952f2b21ebe5c748825fa"
               ]
             },
             {
               "role": "cleanup-attempt",
               "ordered_hashes": [
-                "sha256:e4c696b13d1d621f5c7e1c50fc3aed221a1d43f9af35f5cead0c805c22294012",
-                "sha256:eaa6e4490e52a0d9cd68648115185fb24e0cc77b7bedfbae6d3de201bfa53441",
-                "sha256:5cb348abf0d4bc5527c1e4759e04b0b51fe3b0d9509c816bb10f7e04f2069bcd",
-                "sha256:7604ab057423bae394045abf612a6ae016553f85478d56b25899b2fdd03e0f70"
+                "sha256:b4be54e9c3ef740ae0ce0c16cbfb43f3dc223a36a8bb067c368553ea6414c291",
+                "sha256:99eddd2b60a6af0b46817ddb39df6f7d117bc2517be48c70e64fca59f7137b2b",
+                "sha256:1ad30a7e58861968c43d56cd58f458a805a7ab76b4c6f912f9961750070ac632",
+                "sha256:0077f02ebf910ea23f41c8e65ac99d6e4a60b20f49f952f2b21ebe5c748825fa"
               ]
             }
           ],
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-29T13:39:35Z",
+          "verified_at": "2026-07-31T00:40:50Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:0c6ac6d0169e8fbc36770224c8c948fa0bc6948af07850f49c5c14bdf0702be3"
+          "core_hash": "sha256:780f26bff9015720f639c7079198569c35a83504ed698b6cca7fbaad912adada"
         }
       }
     },
@@ -644,7 +647,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "development",
       "--run",
@@ -695,7 +698,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "development",
       "--run",
@@ -734,7 +737,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "development",
       "--run",
@@ -765,7 +768,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "development",
       "--run",
@@ -802,7 +805,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "development",
       "--run",
@@ -840,7 +843,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "development",
       "--run",
@@ -891,7 +894,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "development",
       "--run",
@@ -930,7 +933,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "development",
       "--run",
@@ -961,7 +964,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "development",
       "--run",
@@ -999,7 +1002,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "development",
       "--run",
@@ -1031,7 +1034,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/failed-acquisition",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "development",
       "--run",
@@ -1082,7 +1085,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/failed-acquisition",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "development",
       "--run",
@@ -1125,7 +1128,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/held-out-refused",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-yfqLPM",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
       "--tier",
       "held_out",
       "--acquisition-source",
@@ -1173,7 +1176,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-A7D8lI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1226,7 +1229,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-A7D8lI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1267,7 +1270,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-A7D8lI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1300,7 +1303,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-A7D8lI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1340,7 +1343,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-A7D8lI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1374,7 +1377,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-A7D8lI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1427,7 +1430,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-A7D8lI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1467,7 +1470,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-A7D8lI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1500,7 +1503,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-A7D8lI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1537,7 +1540,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-A7D8lI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1577,7 +1580,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-A7D8lI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1630,7 +1633,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-A7D8lI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1727,9 +1730,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-29T13:40:16Z",
+          "verified_at": "2026-07-31T00:41:31Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:38d1907faaac30f11ea4101260c4ddf60a29e68912693d6a59ca175f169f7e82"
+          "core_hash": "sha256:fcd72187c932ac656790dd4faf100c50e2c01646ebe0ce0e9c55952b4ea0cf21"
         }
       }
     },
@@ -1742,7 +1745,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-sBImHK",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
       "--tier",
       "development",
       "--run",
@@ -1793,7 +1796,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-sBImHK",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
       "--tier",
       "development",
       "--run",
@@ -1832,7 +1835,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-sBImHK",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
       "--tier",
       "development",
       "--run",
@@ -1863,7 +1866,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-sBImHK",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
       "--tier",
       "development",
       "--run",
@@ -1900,7 +1903,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-sBImHK",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
       "--tier",
       "development",
       "--run",
@@ -1938,13 +1941,13 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-sBImHK",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000007",
       "--vault",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-eqS4lA"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-B6Vurj"
     ],
     "exit_code": 0,
     "stdout": {
@@ -1974,7 +1977,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-sBImHK",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
       "--tier",
       "development",
       "--run",
@@ -2077,7 +2080,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-sBImHK",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
       "--tier",
       "development",
       "--run",
@@ -2102,9 +2105,9 @@
         "validity_result_hash": "sha256:c6c2a12b1159d6a0e27060360fb63cc5077ed49a722b2db5d20a4a8c3c0dbbba",
         "validity_status": "valid",
         "generic_evaluation_index_hash": "sha256:6dd4de84dd15ba21cf889823f428a31e8a0343ef69151d4c0c6b9a5514035ba0",
-        "final_attestation_hash": "sha256:271d9e9c4f389ead87fae0a3318c40b686d602c8d7b36b360e67fa568ccf877f",
+        "final_attestation_hash": "sha256:77c3b2d8f415714668369083bfbb2fa40bf182750e3bae8eaf5e10442c5b2725",
         "claim_scope": "T1",
-        "public_bundle_hash": "sha256:1edb93b6d5baeaedf58736f26a8f0b9a71839f3d635c8d8723ca4731e5849251",
+        "public_bundle_hash": "sha256:331800e0d79bae7b650accf94505134d0d68d2ed46159eff386e0285c01ab4a9",
         "public_bundle_path": "retained/public-bundle.json"
       }
     },
@@ -2134,7 +2137,7 @@
       "findings": [],
       "errors": [],
       "run_id": "00000000-0000-7000-8000-000000000007",
-      "record_hash": "sha256:271d9e9c4f389ead87fae0a3318c40b686d602c8d7b36b360e67fa568ccf877f",
+      "record_hash": "sha256:77c3b2d8f415714668369083bfbb2fa40bf182750e3bae8eaf5e10442c5b2725",
       "data": {
         "verdict": "valid",
         "trust_head_hash": "sha256:6c528ab0e034c3a774d7d19f65eb6c0be74a6edbce9427c22582d920a1d14afb",
@@ -2146,7 +2149,7 @@
           "run_id": "00000000-0000-7000-8000-000000000007",
           "derived_terminal_phase": "verify_package",
           "derived_terminal_variant": "pre_environment",
-          "lifecycle_head_hash": "sha256:5b73c9acf88febb91ceafd995b57799608bd83dfb42266a6d3ae8cf0a128c943",
+          "lifecycle_head_hash": "sha256:b5aca0bfb36e1e3e90df799737c08fc19c4642f177294eb403db22039c826396",
           "verified_trust_head_hash": "sha256:6c528ab0e034c3a774d7d19f65eb6c0be74a6edbce9427c22582d920a1d14afb",
           "required_hashes_by_role": [
             {
@@ -2231,13 +2234,13 @@
             {
               "role": "final-attestation",
               "ordered_hashes": [
-                "sha256:271d9e9c4f389ead87fae0a3318c40b686d602c8d7b36b360e67fa568ccf877f"
+                "sha256:77c3b2d8f415714668369083bfbb2fa40bf182750e3bae8eaf5e10442c5b2725"
               ]
             },
             {
               "role": "signer-inventory",
               "ordered_hashes": [
-                "sha256:78a3a067e07bc1b513df59077628e463f6fafe8118918443b5bf1822dfc99aa2"
+                "sha256:e0088028ea1b73008754cbce6d130cdb09753fd80fc308d8bc06aa13ea920d3d"
               ]
             },
             {
@@ -2270,9 +2273,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-29T13:40:19Z",
+          "verified_at": "2026-07-31T00:41:34Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:ed489b5b52dfaba54669cdf8eb0758651c0b5af71baede01ecb0e19f9077110c"
+          "core_hash": "sha256:403e31611267a156a45aec390dd3f9baeb41eafab7abf08e44dbf321abfea607"
         }
       }
     },
@@ -2316,7 +2319,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-gajsu7",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
       "--tier",
       "development",
       "--run",
@@ -2367,7 +2370,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-gajsu7",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
       "--tier",
       "development",
       "--run",
@@ -2406,7 +2409,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-gajsu7",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
       "--tier",
       "development",
       "--run",
@@ -2437,7 +2440,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-gajsu7",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
       "--tier",
       "development",
       "--run",
@@ -2474,7 +2477,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-gajsu7",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
       "--tier",
       "development",
       "--run",
@@ -2512,13 +2515,13 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-gajsu7",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000008",
       "--vault",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-XNKLyJ"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-Cr5ATf"
     ],
     "exit_code": 0,
     "stdout": {
@@ -2548,7 +2551,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-gajsu7",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
       "--tier",
       "development",
       "--run",
@@ -2651,7 +2654,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-gajsu7",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
       "--tier",
       "development",
       "--run",
@@ -2676,9 +2679,9 @@
         "validity_result_hash": "sha256:39b29331f8bd168717f3436dfcfad1ef1d3eed7684bd1c7a3eb6c11517cbe95f",
         "validity_status": "valid",
         "generic_evaluation_index_hash": "sha256:eee1809eda381c8dc3b474a018af2490c52564c8d001bd7423e5f4a2f5330aa4",
-        "final_attestation_hash": "sha256:b742fcf1dc2fc4af689cb79654b376996a52503cb59f662c51929bd7bebd75e8",
+        "final_attestation_hash": "sha256:9e0f113749c4c0c02be1d6c15cb7e4387ff59c2aa7c40645e5fd0c0e2ed02ac2",
         "claim_scope": "T1",
-        "public_bundle_hash": "sha256:602ec974553797407c1a8b8381ee749100d4552a8a5fbff2b5b2055cb099d552",
+        "public_bundle_hash": "sha256:2bd05df51b505e48d3bafdb4ea049a87af8be85d635393246c3bfc412b225869",
         "public_bundle_path": "retained/public-bundle.json"
       }
     },
@@ -2708,7 +2711,7 @@
       "findings": [],
       "errors": [],
       "run_id": "00000000-0000-7000-8000-000000000008",
-      "record_hash": "sha256:b742fcf1dc2fc4af689cb79654b376996a52503cb59f662c51929bd7bebd75e8",
+      "record_hash": "sha256:9e0f113749c4c0c02be1d6c15cb7e4387ff59c2aa7c40645e5fd0c0e2ed02ac2",
       "data": {
         "verdict": "valid",
         "trust_head_hash": "sha256:6c528ab0e034c3a774d7d19f65eb6c0be74a6edbce9427c22582d920a1d14afb",
@@ -2720,7 +2723,7 @@
           "run_id": "00000000-0000-7000-8000-000000000008",
           "derived_terminal_phase": "verify_package",
           "derived_terminal_variant": "pre_environment",
-          "lifecycle_head_hash": "sha256:96a37ff5048600e3844d2fdb51fdd3fc50e252622791ae0b7d80f292c6af1224",
+          "lifecycle_head_hash": "sha256:42d865bdd41c47ebdc25c0acf84cc54ba82fd7134401fea2a444b6f55e8eca8e",
           "verified_trust_head_hash": "sha256:6c528ab0e034c3a774d7d19f65eb6c0be74a6edbce9427c22582d920a1d14afb",
           "required_hashes_by_role": [
             {
@@ -2805,13 +2808,13 @@
             {
               "role": "final-attestation",
               "ordered_hashes": [
-                "sha256:b742fcf1dc2fc4af689cb79654b376996a52503cb59f662c51929bd7bebd75e8"
+                "sha256:9e0f113749c4c0c02be1d6c15cb7e4387ff59c2aa7c40645e5fd0c0e2ed02ac2"
               ]
             },
             {
               "role": "signer-inventory",
               "ordered_hashes": [
-                "sha256:47f115e52be4eadd91f86779fb3762a0f52f4c17fecc8e61c2f4f19923a0ad45"
+                "sha256:82633ed097c6dcd117cfb9db6d6b6bc45380025daf89ae873bfbd0187d90cc76"
               ]
             },
             {
@@ -2844,9 +2847,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-29T13:40:22Z",
+          "verified_at": "2026-07-31T00:41:38Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:b99fd247c3c0f9d190d9d0515c9cfb7dfa0eb4b941da7c04346c29566272a6e1"
+          "core_hash": "sha256:96aec4f80e42b7942fa832f0651c5ac4ea157af366173b8fe831e031fa42092e"
         }
       }
     },
@@ -2890,7 +2893,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ZPGei0",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
       "--tier",
       "development",
       "--run",
@@ -2941,7 +2944,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ZPGei0",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
       "--tier",
       "development",
       "--run",
@@ -2980,7 +2983,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ZPGei0",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
       "--tier",
       "development",
       "--run",
@@ -3011,7 +3014,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ZPGei0",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
       "--tier",
       "development",
       "--run",
@@ -3048,7 +3051,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ZPGei0",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
       "--tier",
       "development",
       "--run",
@@ -3086,13 +3089,13 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ZPGei0",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000009",
       "--vault",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-tGWHYJ"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-sKuV9F"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3122,7 +3125,7 @@
       "--run-root",
       "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-ZPGei0",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
       "--tier",
       "development",
       "--run",
@@ -3152,9 +3155,9 @@
       "erl2",
       "preregister-acquisition",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
@@ -3203,9 +3206,9 @@
       "erl2",
       "acquire",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
@@ -3242,9 +3245,9 @@
       "erl2",
       "freeze-package",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
@@ -3273,9 +3276,9 @@
       "erl2",
       "verify-package",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
@@ -3311,9 +3314,9 @@
       "erl2",
       "preregister-challenge",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
@@ -3356,15 +3359,15 @@
       "erl2",
       "select",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--source-trust-config",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/source-trust.json",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/source-trust.json",
       "--expires",
       "2026-12-31T00:00:00Z"
     ],
@@ -3382,8 +3385,8 @@
       "data": {
         "steps_run": 14,
         "selection_complete": true,
-        "selected_binding_hash": "sha256:05f7050122e437cc4a454add75020e80c1b1c3b5d7b025ed1e3ef149d6f95e2b",
-        "selection_receipt_hash": "sha256:ea5a17f90b6efd1672040b3c63f49e2d46f5f58525a56e12fab54ad032b23570"
+        "selected_binding_hash": "sha256:d803d25fea69b0ae3d0ae0055c280dd6e3a57f8368239a762277d273b47a5b10",
+        "selection_receipt_hash": "sha256:bd917c2e7ffa61efad0c5ad87dec6bd8c375bd20c7d35a933e671d6ae771e09d"
       }
     },
     "stderr": ""
@@ -3393,17 +3396,17 @@
       "erl2",
       "provision",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations",
       "--archetype",
       "sha256:935991a0505ace1e49c02242c4ce7208b4cd09f7878a5fea736b7d1ac4518c61"
     ],
@@ -3431,17 +3434,17 @@
       "erl2",
       "baseline",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3469,17 +3472,17 @@
       "erl2",
       "plan",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3493,9 +3496,9 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "execution_plan_frozen",
       "data": {
-        "execution_plan_hash": "sha256:c9108f55b95003a069e35afbd87dafdc576843972ca9a649dc8b5ca3563315a2",
-        "actor_script_hash": "sha256:b0dc6f3f8e4e4dccdbf59d4fbee5f0519bb9bc41a18fb421badca71e309496d8",
-        "journey_hash": "sha256:ab9b55784e359d3975b4659294a9cee47c5297b842f88720beb0de93a80a6121"
+        "execution_plan_hash": "sha256:85974504bd4aab358c7d5757365373e8d8897b130fea43c99c058099f032b137",
+        "actor_script_hash": "sha256:f24b7976e4d7a9ca9c040117d4e3ae5af073cd36e9a3515078f06f9bab2a4e3f",
+        "journey_hash": "sha256:3ee71400cf36537a0683e2a3ff7ba3bdfe1d2f7c763b92774f58ee558ced80b2"
       }
     },
     "stderr": ""
@@ -3505,17 +3508,17 @@
       "erl2",
       "install",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3529,10 +3532,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "b-install",
+        "step_id": "c-install",
         "intent": "install",
         "status": "succeeded",
-        "step_outcome_hash": "sha256:f01ec1fe926ba2d5bff91a6283e1c1544556117187913ffb384bf55eb4027c9e",
+        "step_outcome_hash": "sha256:4ec5dd05b9e9f64aae61eb37b44622734635d6cc8e5c50d3e4bf6aac910ee420",
         "unsupported_inputs": 0,
         "next_intent": "configure"
       }
@@ -3544,17 +3547,17 @@
       "erl2",
       "configure",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3568,10 +3571,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "b-configure",
+        "step_id": "c-configure",
         "intent": "configure",
         "status": "succeeded",
-        "step_outcome_hash": "sha256:1154f52fafe8e6a6ccb463baac9af9bb0ac1d3b5b75bee584832b3061bd95211",
+        "step_outcome_hash": "sha256:6072c9aaeb442d3cef0f89a576d060fecc53f5175985c1e704465bddb937a093",
         "unsupported_inputs": 0,
         "next_intent": "authenticate"
       }
@@ -3583,17 +3586,17 @@
       "erl2",
       "authenticate",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3607,10 +3610,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "b-authenticate",
+        "step_id": "c-authenticate",
         "intent": "authenticate",
         "status": "unsupported",
-        "step_outcome_hash": "sha256:1c9b71830e7cd99be4d299b775013c637e1d533c1cce3cbfcf81c4db0eb186d4",
+        "step_outcome_hash": "sha256:8338f706283ef66b908258d659567cb0267c01cdef780fcd210ff1642797ae53",
         "unsupported_inputs": 0,
         "next_intent": "connect"
       }
@@ -3622,17 +3625,17 @@
       "erl2",
       "connect",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3646,10 +3649,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "b-connect",
+        "step_id": "c-connect",
         "intent": "connect",
         "status": "succeeded",
-        "step_outcome_hash": "sha256:052ffb33a1095773452467c96974a2ff655f6e51b7040ad91a40818f6ce93d33",
+        "step_outcome_hash": "sha256:b9d6b223a6c6bad40c6c07e413db3b0f86a4aead647a1977359371a996d7e6fe",
         "unsupported_inputs": 0,
         "next_intent": "discover"
       }
@@ -3661,17 +3664,17 @@
       "erl2",
       "execute-subject",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3685,10 +3688,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "b-discover",
+        "step_id": "c-discover",
         "intent": "discover",
         "status": "unsupported",
-        "step_outcome_hash": "sha256:68c8a5dd7d7bf99ea12bd5a98f2792a2277e8a5c7066dcc65ad65a89e98a69e1",
+        "step_outcome_hash": "sha256:ad34aff10a4f74d261a82d6a50980793b1bac054d7605ad4cc2309c67396bf4b",
         "unsupported_inputs": 0,
         "next_intent": "exercise"
       }
@@ -3700,17 +3703,17 @@
       "erl2",
       "activate",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3724,8 +3727,8 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "challenge_activated",
       "data": {
-        "mutation_receipt_hash": "sha256:328170d2c332e4e2636b282b2074eaa302a0d1cc5475ec9873b3bfd3df11ecd0",
-        "activation_receipt_hash": "sha256:0a535003e0e999d67c476de197c7575467bacc68d4d8be98222ffe654f99028b"
+        "mutation_receipt_hash": "sha256:2bade9fcf0654950293adc64c5b00ec0b7f5d438284bca77a6b0e759ba4ff7f4",
+        "activation_receipt_hash": "sha256:e8fd422c75b49c69ee1b76c22198e62796050aaaf87b27de451aedb7bac2bc55"
       }
     },
     "stderr": ""
@@ -3735,17 +3738,17 @@
       "erl2",
       "journey",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations",
       "--comparison-policy",
       "sha256:9f03b638499d058b16338cc31b02f6590e1ed212b4b549236d8286a711d232aa",
       "--cutoff-policy",
@@ -3763,7 +3766,7 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "traffic_or_journey_started",
       "data": {
-        "runtime_milestone_hash": "sha256:f23122093f3b48f4fe6ccfae487f2ff63aa7389d0236e642bc446becf03ff053"
+        "runtime_milestone_hash": "sha256:550469d76bd9181055c7b7260605f9dca361e5fe22d4925fb0f0911dadb301f8"
       }
     },
     "stderr": ""
@@ -3773,17 +3776,17 @@
       "erl2",
       "observe",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3797,7 +3800,7 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "evidence_cutoff_realized",
       "data": {
-        "cutoff_instant": "2026-07-01T00:00:24Z",
+        "cutoff_instant": "2026-07-01T00:00:25Z",
         "source_snapshot_count": 3,
         "source_states": [
           {
@@ -3822,17 +3825,17 @@
       "erl2",
       "freeze-observation",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3846,10 +3849,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "adapter_translation_frozen",
       "data": {
-        "observation_bundle_hash": "sha256:f51c4e4bcdecfcfe7140d0bf96cc67b6ad31016102358d3f77e2313f7296542a",
-        "canonical_evidence_envelope_hash": "sha256:9622b83cc99e08dbb81ecb25a455a76f18672e333c6f6f00615815d5b78e148d",
+        "observation_bundle_hash": "sha256:7bb028bfac1a4c7e444ff0fe238c1eb1112373daf7ea0d01784006aba59edd72",
+        "canonical_evidence_envelope_hash": "sha256:aab829f51d36bce423de5365117f93aa5c7057c2074adfb372bb90d624f9c3f8",
         "envelope_entry_count": 3,
-        "adapter_translation_receipt_hash": "sha256:06cea7f068a0ea0203e394aa70c02688c35119680bdb97a0258a467b3b6c2759"
+        "adapter_translation_receipt_hash": "sha256:81d116ad6c56cc79fb1f7630f5e5192859d89d774cd0d6dd8f3d0dacb4e63602"
       }
     },
     "stderr": ""
@@ -3859,17 +3862,17 @@
       "erl2",
       "execute-subject",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3883,10 +3886,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "b-exercise",
+        "step_id": "c-exercise",
         "intent": "exercise",
         "status": "succeeded",
-        "step_outcome_hash": "sha256:16b5b46137ff19dba6e2faf03809f022708cc5c52299266f73644ebea9894a58",
+        "step_outcome_hash": "sha256:849f2869856bace28233f8fc229274f0961c51e45b95f216ec571a4ff7f1168a",
         "unsupported_inputs": 0,
         "next_intent": "observe"
       }
@@ -3898,17 +3901,17 @@
       "erl2",
       "execute-subject",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3922,10 +3925,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "b-observe",
+        "step_id": "c-observe",
         "intent": "observe",
         "status": "unsupported",
-        "step_outcome_hash": "sha256:a9f90c752cc3b249590ff1f304059998c28c1ce90d09a507bed8767801b11275",
+        "step_outcome_hash": "sha256:83cab7a7a322204d49d93a32fc4a96c7d99f98855b2d563a454fdd81844732d2",
         "unsupported_inputs": 0,
         "next_intent": "remove"
       }
@@ -3937,17 +3940,17 @@
       "erl2",
       "remove",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3961,10 +3964,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "b-remove",
+        "step_id": "c-remove",
         "intent": "remove",
         "status": "succeeded",
-        "step_outcome_hash": "sha256:89b3c6cb8d521423a093fa345b57a82cd57e4be6ab190c4b8ae5639bf67dfcd8",
+        "step_outcome_hash": "sha256:392f695af9cc0f075ec59a826951b6ccfdb4aea9b2bfadd9244551cf9d6d215d",
         "unsupported_inputs": 0,
         "journey_complete": true
       }
@@ -3976,17 +3979,17 @@
       "erl2",
       "freeze-output",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -4000,26 +4003,26 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "subject_output_frozen",
       "data": {
-        "subject_output_hash": "sha256:30af3c08e271b2ff97f7b21760e27aca7f96503fbb0a525da7bfae4ab8ec46f5",
+        "subject_output_hash": "sha256:28dc8f33d10e1e29aefa33ca91b196ecd0367fee103690a19405bed868e15bc6",
         "terminal_stage": "remove",
         "step_outcome_hashes": [
           "sha256:165fcd1a54cdb8877259a4a01b06b6cdf3b1480aed8c8ce5cc41c39dd455bae3",
           "sha256:7e31d60342a15d2e92ed871f535f544650edfbd10348b4b1f9cfbcfb04f13b76",
-          "sha256:f01ec1fe926ba2d5bff91a6283e1c1544556117187913ffb384bf55eb4027c9e",
-          "sha256:1154f52fafe8e6a6ccb463baac9af9bb0ac1d3b5b75bee584832b3061bd95211",
-          "sha256:1c9b71830e7cd99be4d299b775013c637e1d533c1cce3cbfcf81c4db0eb186d4",
-          "sha256:052ffb33a1095773452467c96974a2ff655f6e51b7040ad91a40818f6ce93d33",
-          "sha256:68c8a5dd7d7bf99ea12bd5a98f2792a2277e8a5c7066dcc65ad65a89e98a69e1",
-          "sha256:16b5b46137ff19dba6e2faf03809f022708cc5c52299266f73644ebea9894a58",
-          "sha256:a9f90c752cc3b249590ff1f304059998c28c1ce90d09a507bed8767801b11275",
-          "sha256:89b3c6cb8d521423a093fa345b57a82cd57e4be6ab190c4b8ae5639bf67dfcd8"
+          "sha256:4ec5dd05b9e9f64aae61eb37b44622734635d6cc8e5c50d3e4bf6aac910ee420",
+          "sha256:6072c9aaeb442d3cef0f89a576d060fecc53f5175985c1e704465bddb937a093",
+          "sha256:8338f706283ef66b908258d659567cb0267c01cdef780fcd210ff1642797ae53",
+          "sha256:b9d6b223a6c6bad40c6c07e413db3b0f86a4aead647a1977359371a996d7e6fe",
+          "sha256:ad34aff10a4f74d261a82d6a50980793b1bac054d7605ad4cc2309c67396bf4b",
+          "sha256:849f2869856bace28233f8fc229274f0961c51e45b95f216ec571a4ff7f1168a",
+          "sha256:83cab7a7a322204d49d93a32fc4a96c7d99f98855b2d563a454fdd81844732d2",
+          "sha256:392f695af9cc0f075ec59a826951b6ccfdb4aea9b2bfadd9244551cf9d6d215d"
         ],
         "unsupported_inputs": [
-          "authenticate:b-authenticate",
-          "discover:b-discover",
-          "observe:b-observe"
+          "authenticate:c-authenticate",
+          "discover:c-discover",
+          "observe:c-observe"
         ],
-        "tree_hash": "sha256:8103d031c59976fb8f553c8578d233bd9cca17ca9993794dd3cf91b1ddfc2b55"
+        "tree_hash": "sha256:812b314fa6a93e66cb610a7e75ec54ff03a16b1195c9c1e40ebfe63bbc87709e"
       }
     },
     "stderr": ""
@@ -4029,19 +4032,19 @@
       "erl2",
       "reveal",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations",
       "--vault",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-3B7KBG"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-E3opA0"
     ],
     "exit_code": 0,
     "stdout": {
@@ -4055,14 +4058,14 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "judge_journey_expectation_revealed",
       "data": {
-        "reveal_record_hash": "sha256:4a5e7eeb34e9579ac348f5cedc33cc192f95c218ba353ce57962f18ecaf69c77",
+        "reveal_record_hash": "sha256:67cba0c32147de570be89f7ae1b12eecd3c89f4f19c48a68f1daf5717f9ac06d",
         "revealed_expectation_hashes": [
-          "sha256:5c593630026dc1fdd19081258e756a1fda9e97e1a550d0dd03dff3eafd05e26e",
-          "sha256:0bc25fb53ae3d4022376e4e7e1990ee8f9bad4b4a8c1a2a5ac4d14119c14f27f",
-          "sha256:a3393ba0b4c33231db1c7a37e09ac1112ae75a1bfd6f5ff746805b77a92e6ce9"
+          "sha256:cede78dd839deb4b64479479690dd60cac48a7219d486800130c97f7e5d5655d",
+          "sha256:cfcef02d646d694d44152728612243028e7aabc7232ca73036d028609fdb9a74",
+          "sha256:3018c2b29e6cfac3f28c4b877b5125a0dd8ac5681060deef7c8bb24235892bee"
         ],
         "revealed_count": 3,
-        "exposure_event_hash": "sha256:5c599983b7f86bce083a884650e704e6070424a4d0002f5ae8b4e5e7a3352a22"
+        "exposure_event_hash": "sha256:a5610420187fea4c41463f5e15569196a94467fe1a759876e22cb3c888adf2d3"
       }
     },
     "stderr": ""
@@ -4072,17 +4075,17 @@
       "erl2",
       "evaluate",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -4096,22 +4099,22 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "generic_precleanup_results_complete",
       "data": {
-        "journey_result_hash": "sha256:6b0f468b5038b0ad47f3413b9b339f4a79b436172fbd68f4af8b23bd225dadcb",
+        "journey_result_hash": "sha256:25cdf1d89eb1bf31d60b019d88a927a974fc2657731afe522cedae70b5226f81",
         "journey_status": "evaluated",
-        "domain_result_hash": "sha256:968923a651cfa39cbf54943c9476a73f8ac6e84eb39a802c948cab40151f9b17",
+        "domain_result_hash": "sha256:16888bbfd9ca7b128b902115a2f7b1d8112541a58f552b546f5f4dbb352897cc",
         "domain_status": "not_applicable",
         "domain_not_applicable_reason": "functional_evidence_unavailable",
-        "precleanup_result_join_hash": "sha256:8a719fdbecf00c36fb5f24bb9a0f5d808547228181a374b9cd365f4290bd83b6",
+        "precleanup_result_join_hash": "sha256:09cae4165220c0cdc6524ad29cc5c1a636f7af34ee23737654ec8dc9ee0d557f",
         "metric_result_hashes": [
-          "sha256:57b7ba03bd086a189a441b7b590d1e0ee06817e77b39de2015dd3c92fe53c701",
-          "sha256:cb053c3f9d2b7d9b1eb8ec13be52f390a5c0033870b48f18ecbda2de0f03c08d",
-          "sha256:d69e35fc3626a06e2246396f917fafac6473286bc1b03a2b472cb3e05a5c05d3",
-          "sha256:cbde9aad65ec343fa21823c52b61a1ca4979c7587ea37e24af90df12e0cdbb53",
-          "sha256:decfef72092e517218d868c055ef869c609fcf8f868028db0c7ccf4cd639786e",
-          "sha256:1887f49eb53579b12260c39417bbf46c3fde8d294b82a8d3928e56b44201b1e3",
-          "sha256:8a5fb294aa1087c590a7716376d5ac48a0ad948cf2c3a333beb2896bae4b2323",
-          "sha256:49dd3416f60ca46b5a0e98dad4e2b41492a3143b95be8508c30c160e799703fd",
-          "sha256:0d4cbfd44b88382dceb1acd020c5193efaaa4a5e1bd4e708ee7df21da35a067d"
+          "sha256:11f4c54ee1a2617178cbc2dd1b344033b23e3361b1a31767f8d0952d14d1f321",
+          "sha256:17f004d5e33582c91c827da0ee4bb34fe2589e73a290a81c03459dc2ee5600e9",
+          "sha256:a39d2df009ceea3554ca885a3e55e223ddaf43fe347310b0404fa6377372215d",
+          "sha256:93463700465bd27386ea80829d471777e83a74d0366f3062825cf354241304c3",
+          "sha256:748126620dbc4dfbd4fb4ecc6d45c72032a90c5f71598d5240c81f390a8d3e51",
+          "sha256:a569d9a9ac8eef720a7621002f475e204cbabfd694cf282ecc5f33e8ba3bba8a",
+          "sha256:a9af49bbb77634b9574ef75d8d28d1066f192b04c9b39b19ec2d7d58fa649ab7",
+          "sha256:a79e8b704d69957034ebbfaa8718162551cffe9b2cf3dfa53f2bb437dec03f71",
+          "sha256:242fb5c3b30c576f682c436a930219ba1b70bb8e174d20361fe0f821eb70eed6"
         ]
       }
     },
@@ -4122,17 +4125,17 @@
       "erl2",
       "restore",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -4146,7 +4149,7 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "environment_restored",
       "data": {
-        "environment_restoration_hash": "sha256:41ba30ab24a15f81433d9e5f5ca5c5974581b7a0e2dc83fc67545cbf0fb325ab",
+        "environment_restoration_hash": "sha256:fe9b3f5ab47cb26fb6528e47b0e2b8638d0f718af7ad19aac2bf4ca8f311cd6c",
         "passed": true,
         "residual_resources": 0
       }
@@ -4158,17 +4161,17 @@
       "erl2",
       "destroy",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -4182,7 +4185,7 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "teardown_verified",
       "data": {
-        "teardown_hash": "sha256:3c2e3ccaf9c306c143cf9dcf634270e0ca520fbacd35b2092c94308887bad1f5",
+        "teardown_hash": "sha256:08310841778703f512e72bcdc71c17914f460dc6b514dd586fb332b53f32204f",
         "passed": true,
         "residue_after_teardown": 0,
         "checks": 5
@@ -4195,17 +4198,17 @@
       "erl2",
       "finalize-generic",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-xBR7el",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/substrate",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/reservations",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations",
       "--claim-scope",
       "T1"
     ],
@@ -4221,15 +4224,15 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "generic_finalized",
       "data": {
-        "validity_result_hash": "sha256:cb4faba944eea2a1a37556ab551bba015bf85aa6582d2a479da1ccd8550f2022",
+        "validity_result_hash": "sha256:07149a04a9cb438a37be26b681abb9c92224f77ac12223680042783a278af3f2",
         "validity_status": "valid",
-        "generic_evaluation_index_hash": "sha256:a1c3b7ab77f24f5745c82cb7252f6c783e66f5454647fadfcda897a0f8157149",
-        "run_record_hash": "sha256:77cbfb7fafc0e091ab162170e578ff4a546f7c1aff931c481bc5d61de3275f1e",
+        "generic_evaluation_index_hash": "sha256:5777102516d5905590ed2537535bb8a944fbb556b40e666a2d8e84ac7c2c0cdc",
+        "run_record_hash": "sha256:49b7b8cb7c74668fcecf2636afe942e7d6a3ced7f71f3c1202b2a86cf4d2396b",
         "terminal_stage": "remove",
-        "final_attestation_hash": "sha256:3e467e8c926488399a1cd309ebaa4e1d699092f5f9885044bb178b63e74db645",
+        "final_attestation_hash": "sha256:63cd27bfa37399979755f367e25da630c9afcbf55ffa2c7fd9ccd766e7a3b025",
         "claim_scope": "T1",
-        "signer_inventory_hash": "sha256:d74760c6ee7365225a36d56c7d00854ca46608664cc8889367ec41e8dbd55cc0",
-        "public_bundle_hash": "sha256:97ca1e3b2fe27963c2729186d9d18d8ce7c20ddf823cd50866c3e0651ef219c7",
+        "signer_inventory_hash": "sha256:56f9998c7a2193dfb8297a2a320c703f7a755a9a73f5819c475daaefa464d8d7",
+        "public_bundle_hash": "sha256:343b08a3b0fdced43ee013b97e4af16060e7ea32e6f828a6dbb533cebb9fd07c",
         "public_bundle_path": "retained/public-bundle.json",
         "derived_missing_roles": [],
         "derived_extra_hashes": []
@@ -4242,13 +4245,13 @@
       "erl2",
       "verify",
       "--public-bundle",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run/retained/public-bundle.json",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run/retained/public-bundle.json",
       "--root-config",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/root-config.json",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/root-config.json",
       "--artifact-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--lifecycle",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/lifecycle.json",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/lifecycle.json",
       "--offline"
     ],
     "exit_code": 0,
@@ -4261,7 +4264,7 @@
       "findings": [],
       "errors": [],
       "run_id": "00000000-0000-7000-8000-000000000010",
-      "record_hash": "sha256:3e467e8c926488399a1cd309ebaa4e1d699092f5f9885044bb178b63e74db645",
+      "record_hash": "sha256:63cd27bfa37399979755f367e25da630c9afcbf55ffa2c7fd9ccd766e7a3b025",
       "data": {
         "verdict": "valid",
         "trust_head_hash": "sha256:6c528ab0e034c3a774d7d19f65eb6c0be74a6edbce9427c22582d920a1d14afb",
@@ -4273,7 +4276,7 @@
           "run_id": "00000000-0000-7000-8000-000000000010",
           "derived_terminal_phase": "remove",
           "derived_terminal_variant": "environment",
-          "lifecycle_head_hash": "sha256:f5da94fd37564ab0cd0a28f0dd9652be2382602716ed0bab5b5915337a89244e",
+          "lifecycle_head_hash": "sha256:a617da0c6386aff42d9334465e8d655ad45718a09bc54dd4aeccb22fc6e8856c",
           "verified_trust_head_hash": "sha256:6c528ab0e034c3a774d7d19f65eb6c0be74a6edbce9427c22582d920a1d14afb",
           "required_hashes_by_role": [
             {
@@ -4315,37 +4318,37 @@
             {
               "role": "eligibility-pool-manifest",
               "ordered_hashes": [
-                "sha256:b735bc2bf23e133f8dd33bc3bcac47b5c08cbd3fb9982c2169192e225bcb44fa"
+                "sha256:182d887a6629b93dc50e6b2634f8310134b124032dce847231fb3329f82bb1f6"
               ]
             },
             {
               "role": "selection-commitment",
               "ordered_hashes": [
-                "sha256:e5d7b6263b06aba5b3e734a3895ddd107fe8b467ed52f3df457ed6a6b9e5dd55"
+                "sha256:0d31b45b218c49132a7ff6d52fd35d682898ad962ac5d82ce9aeeadb68a2f3aa"
               ]
             },
             {
               "role": "selected-challenge-journey-binding",
               "ordered_hashes": [
-                "sha256:05f7050122e437cc4a454add75020e80c1b1c3b5d7b025ed1e3ef149d6f95e2b"
+                "sha256:d803d25fea69b0ae3d0ae0055c280dd6e3a57f8368239a762277d273b47a5b10"
               ]
             },
             {
               "role": "selection-proof",
               "ordered_hashes": [
-                "sha256:41d196ca6787d06abf5acdd16fb61c7c32d0f5cc823c43130fd894d371f0ed52"
+                "sha256:5e8ccbb2ccb229d5c85de3a5a4673f7695def9e6aaa44b7ede9322f2e069d878"
               ]
             },
             {
               "role": "selection-verification-receipt",
               "ordered_hashes": [
-                "sha256:ea5a17f90b6efd1672040b3c63f49e2d46f5f58525a56e12fab54ad032b23570"
+                "sha256:bd917c2e7ffa61efad0c5ad87dec6bd8c375bd20c7d35a933e671d6ae771e09d"
               ]
             },
             {
               "role": "substrate-binding",
               "ordered_hashes": [
-                "sha256:7969d6e30f20e5124592a7a3e73309a166d7c4fe409cb18f112cc4eef98626b8"
+                "sha256:fe12c7465ac943bde5c050b64785e0abe231c680ee959312fe4a89554c5bf9c7"
               ]
             },
             {
@@ -4372,7 +4375,7 @@
             {
               "role": "execution-plan",
               "ordered_hashes": [
-                "sha256:c9108f55b95003a069e35afbd87dafdc576843972ca9a649dc8b5ca3563315a2"
+                "sha256:85974504bd4aab358c7d5757365373e8d8897b130fea43c99c058099f032b137"
               ]
             },
             {
@@ -4380,166 +4383,172 @@
               "ordered_hashes": [
                 "sha256:165fcd1a54cdb8877259a4a01b06b6cdf3b1480aed8c8ce5cc41c39dd455bae3",
                 "sha256:7e31d60342a15d2e92ed871f535f544650edfbd10348b4b1f9cfbcfb04f13b76",
-                "sha256:f01ec1fe926ba2d5bff91a6283e1c1544556117187913ffb384bf55eb4027c9e",
-                "sha256:1154f52fafe8e6a6ccb463baac9af9bb0ac1d3b5b75bee584832b3061bd95211",
-                "sha256:1c9b71830e7cd99be4d299b775013c637e1d533c1cce3cbfcf81c4db0eb186d4",
-                "sha256:052ffb33a1095773452467c96974a2ff655f6e51b7040ad91a40818f6ce93d33",
-                "sha256:68c8a5dd7d7bf99ea12bd5a98f2792a2277e8a5c7066dcc65ad65a89e98a69e1",
-                "sha256:16b5b46137ff19dba6e2faf03809f022708cc5c52299266f73644ebea9894a58",
-                "sha256:a9f90c752cc3b249590ff1f304059998c28c1ce90d09a507bed8767801b11275",
-                "sha256:89b3c6cb8d521423a093fa345b57a82cd57e4be6ab190c4b8ae5639bf67dfcd8"
+                "sha256:4ec5dd05b9e9f64aae61eb37b44622734635d6cc8e5c50d3e4bf6aac910ee420",
+                "sha256:6072c9aaeb442d3cef0f89a576d060fecc53f5175985c1e704465bddb937a093",
+                "sha256:8338f706283ef66b908258d659567cb0267c01cdef780fcd210ff1642797ae53",
+                "sha256:b9d6b223a6c6bad40c6c07e413db3b0f86a4aead647a1977359371a996d7e6fe",
+                "sha256:ad34aff10a4f74d261a82d6a50980793b1bac054d7605ad4cc2309c67396bf4b",
+                "sha256:849f2869856bace28233f8fc229274f0961c51e45b95f216ec571a4ff7f1168a",
+                "sha256:83cab7a7a322204d49d93a32fc4a96c7d99f98855b2d563a454fdd81844732d2",
+                "sha256:392f695af9cc0f075ec59a826951b6ccfdb4aea9b2bfadd9244551cf9d6d215d"
               ]
             },
             {
               "role": "subject-output-manifest",
               "ordered_hashes": [
-                "sha256:30af3c08e271b2ff97f7b21760e27aca7f96503fbb0a525da7bfae4ab8ec46f5"
+                "sha256:28dc8f33d10e1e29aefa33ca91b196ecd0367fee103690a19405bed868e15bc6"
               ]
             },
             {
               "role": "journey-result",
               "ordered_hashes": [
-                "sha256:6b0f468b5038b0ad47f3413b9b339f4a79b436172fbd68f4af8b23bd225dadcb"
+                "sha256:25cdf1d89eb1bf31d60b019d88a927a974fc2657731afe522cedae70b5226f81"
               ]
             },
             {
               "role": "domain-result",
               "ordered_hashes": [
-                "sha256:968923a651cfa39cbf54943c9476a73f8ac6e84eb39a802c948cab40151f9b17"
+                "sha256:16888bbfd9ca7b128b902115a2f7b1d8112541a58f552b546f5f4dbb352897cc"
               ]
             },
             {
               "role": "precleanup-result-join",
               "ordered_hashes": [
-                "sha256:8a719fdbecf00c36fb5f24bb9a0f5d808547228181a374b9cd365f4290bd83b6"
+                "sha256:09cae4165220c0cdc6524ad29cc5c1a636f7af34ee23737654ec8dc9ee0d557f"
               ]
             },
             {
               "role": "environment-restoration",
               "ordered_hashes": [
-                "sha256:41ba30ab24a15f81433d9e5f5ca5c5974581b7a0e2dc83fc67545cbf0fb325ab"
+                "sha256:fe9b3f5ab47cb26fb6528e47b0e2b8638d0f718af7ad19aac2bf4ca8f311cd6c"
               ]
             },
             {
               "role": "restoration-probe",
               "ordered_hashes": [
-                "sha256:87375c37f987935bbd801b37f3fa11fa368e7c220bae4cf5b54b784ce92f1c20"
+                "sha256:8ed44024598a76cf6b060c28da1b01ff5d226e9a2ea6c1b41c1e42da438e5140"
               ]
             },
             {
               "role": "teardown-verification",
               "ordered_hashes": [
-                "sha256:3c2e3ccaf9c306c143cf9dcf634270e0ca520fbacd35b2092c94308887bad1f5"
+                "sha256:08310841778703f512e72bcdc71c17914f460dc6b514dd586fb332b53f32204f"
               ]
             },
             {
               "role": "validity-result",
               "ordered_hashes": [
-                "sha256:cb4faba944eea2a1a37556ab551bba015bf85aa6582d2a479da1ccd8550f2022"
+                "sha256:07149a04a9cb438a37be26b681abb9c92224f77ac12223680042783a278af3f2"
               ]
             },
             {
               "role": "generic-evaluation-index",
               "ordered_hashes": [
-                "sha256:a1c3b7ab77f24f5745c82cb7252f6c783e66f5454647fadfcda897a0f8157149"
+                "sha256:5777102516d5905590ed2537535bb8a944fbb556b40e666a2d8e84ac7c2c0cdc"
               ]
             },
             {
               "role": "run-record",
               "ordered_hashes": [
-                "sha256:77cbfb7fafc0e091ab162170e578ff4a546f7c1aff931c481bc5d61de3275f1e"
+                "sha256:49b7b8cb7c74668fcecf2636afe942e7d6a3ced7f71f3c1202b2a86cf4d2396b"
               ]
             },
             {
               "role": "final-attestation",
               "ordered_hashes": [
-                "sha256:3e467e8c926488399a1cd309ebaa4e1d699092f5f9885044bb178b63e74db645"
+                "sha256:63cd27bfa37399979755f367e25da630c9afcbf55ffa2c7fd9ccd766e7a3b025"
               ]
             },
             {
               "role": "signer-inventory",
               "ordered_hashes": [
-                "sha256:d74760c6ee7365225a36d56c7d00854ca46608664cc8889367ec41e8dbd55cc0"
+                "sha256:56f9998c7a2193dfb8297a2a320c703f7a755a9a73f5819c475daaefa464d8d7"
               ]
             },
             {
               "role": "metric-result",
               "ordered_hashes": [
-                "sha256:57b7ba03bd086a189a441b7b590d1e0ee06817e77b39de2015dd3c92fe53c701",
-                "sha256:cb053c3f9d2b7d9b1eb8ec13be52f390a5c0033870b48f18ecbda2de0f03c08d",
-                "sha256:d69e35fc3626a06e2246396f917fafac6473286bc1b03a2b472cb3e05a5c05d3",
-                "sha256:cbde9aad65ec343fa21823c52b61a1ca4979c7587ea37e24af90df12e0cdbb53",
-                "sha256:decfef72092e517218d868c055ef869c609fcf8f868028db0c7ccf4cd639786e",
-                "sha256:1887f49eb53579b12260c39417bbf46c3fde8d294b82a8d3928e56b44201b1e3",
-                "sha256:8a5fb294aa1087c590a7716376d5ac48a0ad948cf2c3a333beb2896bae4b2323",
-                "sha256:49dd3416f60ca46b5a0e98dad4e2b41492a3143b95be8508c30c160e799703fd",
-                "sha256:0d4cbfd44b88382dceb1acd020c5193efaaa4a5e1bd4e708ee7df21da35a067d"
+                "sha256:11f4c54ee1a2617178cbc2dd1b344033b23e3361b1a31767f8d0952d14d1f321",
+                "sha256:17f004d5e33582c91c827da0ee4bb34fe2589e73a290a81c03459dc2ee5600e9",
+                "sha256:a39d2df009ceea3554ca885a3e55e223ddaf43fe347310b0404fa6377372215d",
+                "sha256:93463700465bd27386ea80829d471777e83a74d0366f3062825cf354241304c3",
+                "sha256:748126620dbc4dfbd4fb4ecc6d45c72032a90c5f71598d5240c81f390a8d3e51",
+                "sha256:a569d9a9ac8eef720a7621002f475e204cbabfd694cf282ecc5f33e8ba3bba8a",
+                "sha256:a9af49bbb77634b9574ef75d8d28d1066f192b04c9b39b19ec2d7d58fa649ab7",
+                "sha256:a79e8b704d69957034ebbfaa8718162551cffe9b2cf3dfa53f2bb437dec03f71",
+                "sha256:242fb5c3b30c576f682c436a930219ba1b70bb8e174d20361fe0f821eb70eed6"
               ]
             },
             {
               "role": "judge-expectation-reveal",
               "ordered_hashes": [
-                "sha256:4a5e7eeb34e9579ac348f5cedc33cc192f95c218ba353ce57962f18ecaf69c77"
+                "sha256:67cba0c32147de570be89f7ae1b12eecd3c89f4f19c48a68f1daf5717f9ac06d"
               ]
             },
             {
               "role": "observation-bundle",
               "ordered_hashes": [
-                "sha256:f51c4e4bcdecfcfe7140d0bf96cc67b6ad31016102358d3f77e2313f7296542a"
+                "sha256:7bb028bfac1a4c7e444ff0fe238c1eb1112373daf7ea0d01784006aba59edd72"
               ]
             },
             {
               "role": "canonical-evidence-envelope",
               "ordered_hashes": [
-                "sha256:9622b83cc99e08dbb81ecb25a455a76f18672e333c6f6f00615815d5b78e148d"
+                "sha256:aab829f51d36bce423de5365117f93aa5c7057c2074adfb372bb90d624f9c3f8"
               ]
             },
             {
               "role": "adapter-translation-receipt",
               "ordered_hashes": [
-                "sha256:06cea7f068a0ea0203e394aa70c02688c35119680bdb97a0258a467b3b6c2759"
+                "sha256:81d116ad6c56cc79fb1f7630f5e5192859d89d774cd0d6dd8f3d0dacb4e63602"
               ]
             },
             {
               "role": "source-snapshot",
               "ordered_hashes": [
-                "sha256:fb9b955da97db632e2119606619cbd1239dd654682d915b29c8415b6682a113e",
-                "sha256:dfcc93aa3d1652e4f01a16877bff31d929f08502287906ff506c78f6831eea92",
-                "sha256:f9e1da7a4ffda8e68d98966fd7815bae9db025a660a788c568b8e718967ab000"
+                "sha256:27f111fa250f10e7c694f1e381ea553e711f41f2a22b427ec97cea48717a9004",
+                "sha256:0b85dac8aee76b4b801a3dc2520d59786e924d6b94c7a07e236120a2b92e68e6",
+                "sha256:930b5978517101a73172804cd6debfcb98c07fd50a56f052575218f128962e29"
               ]
             },
             {
               "role": "environment-operation-receipt",
               "ordered_hashes": [
                 "sha256:0757d9a533c3ec3be5f4521e614680bb9311e24e1d46525fea952fa08ad27427",
-                "sha256:58a181929ea39156022ad81df306692caf90240c79126501f89295d291afe235"
+                "sha256:b76a1dc6f4600ad3a91278202e7b68aecf479fe152e040b52fae6907c88451f3"
               ]
             },
             {
               "role": "mutation-receipt",
               "ordered_hashes": [
-                "sha256:328170d2c332e4e2636b282b2074eaa302a0d1cc5475ec9873b3bfd3df11ecd0"
+                "sha256:2bade9fcf0654950293adc64c5b00ec0b7f5d438284bca77a6b0e759ba4ff7f4"
               ]
             },
             {
               "role": "compensation-receipt",
               "ordered_hashes": [
-                "sha256:8442d54bd5235ba1d5ffddc7454cc77dd64770e0ca4a3c5b56cb6470c6477563"
+                "sha256:2d78e69b7b187a915ef1340fb41275d83c1067cf6802a94bd1ab7752dca30789"
               ]
             },
             {
               "role": "challenge-activation-receipt",
               "ordered_hashes": [
-                "sha256:0a535003e0e999d67c476de197c7575467bacc68d4d8be98222ffe654f99028b"
+                "sha256:e8fd422c75b49c69ee1b76c22198e62796050aaaf87b27de451aedb7bac2bc55"
+              ]
+            },
+            {
+              "role": "evidence-window-commitment",
+              "ordered_hashes": [
+                "sha256:7a860a04359ccb69b7b6a546894899b7858edfd654a0169332c303a5112ca3ba"
               ]
             }
           ],
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-29T13:40:38Z",
+          "verified_at": "2026-07-31T00:41:55Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:f0f0354f1f2ba22e7bec3b088244d505b228aec9b52262c14a289fd00cdd6aa6"
+          "core_hash": "sha256:e8f7618c592258547de24fc1ad94b69afc06cb0c2fd4e013c03827895010a505"
         }
       }
     },
@@ -4550,13 +4559,13 @@
       "erl2",
       "verify",
       "--public-bundle",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run/retained/public-bundle.json",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run/retained/public-bundle.json",
       "--root-config",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/root-config-unpinned.json",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/root-config-unpinned.json",
       "--artifact-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/run",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
       "--lifecycle",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-nfHGat/lifecycle.json",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/lifecycle.json",
       "--offline"
     ],
     "exit_code": 3,

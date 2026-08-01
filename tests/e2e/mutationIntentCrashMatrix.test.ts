@@ -260,6 +260,10 @@ function open(cli: CliRun): Process {
       controller: developmentKey("controller"),
       trafficSupervisor: developmentKey("traffic-supervisor"),
       runtimeAttestor: developmentKey("runtime-attestor"),
+      // ADR-ERL2-031: the evidence-window commitment's signer. The same key the
+      // shipped CLI uses, so this fixture measures the composition rather than a
+      // convenient variant of it.
+      policyAuthor: developmentKey("policy-author"),
       vaultAuthorizer: developmentKey("vault-authorizer"),
       timestampAuthority: developmentKey("timestamp"),
       finalizer: developmentKey("finalizer"),

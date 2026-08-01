@@ -922,6 +922,117 @@
         }
       }
     },
+    "ObservedResourceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "$comment": "One resource as the substrate reported it at a single moment: the driver's own resource id and the identity hash that derives from its run-scoped name. Both are retained because the two answer different questions — the id keys the derived actions, the identity hash keys the residue accounting.",
+      "required": [
+        "resource_id",
+        "identity_hash"
+      ],
+      "properties": {
+        "resource_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "identity_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
+    "CleanupResidueProbeV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "$comment": "Lab evidence that the substrate was independently re-observed after the last cleanup dispatch (ADR-ERL2-027 §4.3). Additive contract ERL2-C-158; no existing schema changed shape or meaning. It exists because `EmergencyCleanupVerificationV1.remaining_resources` is derived by the producer from the producer's own action outcomes — so a cleanup that marked every action `succeeded` produced an empty residue that nothing offline could contradict, and a resource that vanished with no authorized action was undetectable (review P1-1, and §1.6). `observed_before` restates the pre-action frontier so a probe built over a post-destruction inventory is refused; `observed_after` is the observation nothing retained before; `authorized_targets` is the derived safe-action target set. `outcome` is derived from those three and is never supplied. Unsigned: an invalid terminal emits no attestation and no public bundle, so there is no external reader a signature would serve.",
+      "required": [
+        "schema_version",
+        "probe_id",
+        "run_id",
+        "substrate_binding_hash",
+        "environment_instance_hash",
+        "resource_frontier_hash",
+        "observed_before",
+        "observed_after",
+        "authorized_targets",
+        "undeclared_destroyed_resources",
+        "residual_resources",
+        "probe_status",
+        "outcome",
+        "probed_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "cleanup-residue-probe/v1"
+        },
+        "probe_id": {
+          "$ref": "erl2:common#/$defs/Id"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "substrate_binding_hash": {
+          "$comment": "The binding of ADR-ERL2-024 §4.2. A probe naming another run's substrate observed another environment.",
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "environment_instance_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "resource_frontier_hash": {
+          "$comment": "The pre-action frontier this probe closes over. The expectation must come from the frontier frozen before the first dispatch, never from an inventory reconstructed after one.",
+          "$ref": "erl2:common#/$defs/Hash"
+        },
+        "observed_before": {
+          "$comment": "The substrate as the frontier observed it, before any cleanup dispatch. Restated here so the probe stands alone and so a probe assembled over a later observation disagrees with the frontier it names.",
+          "type": "array",
+          "maxItems": 1024,
+          "items": {
+            "$ref": "erl2:environment#/$defs/ObservedResourceIdentity"
+          }
+        },
+        "observed_after": {
+          "$comment": "The substrate re-observed after the last cleanup dispatch. This is the observation the verdict comes from, and the one that did not exist before this contract.",
+          "type": "array",
+          "maxItems": 1024,
+          "items": {
+            "$ref": "erl2:environment#/$defs/ObservedResourceIdentity"
+          }
+        },
+        "authorized_targets": {
+          "$comment": "Resource ids the derived safe actions authorized a dispatch against. Anything absent afterwards that is not in this set disappeared without the Lab authorizing it.",
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "undeclared_destroyed_resources": {
+          "$comment": "Resources present before, absent after, and never authorized. Non-empty is a Lab-integrity failure regardless of cause: the Lab cannot account for an effect it did not authorize.",
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "residual_resources": {
+          "$comment": "Frontier members still observed afterwards. This is what `EmergencyCleanupVerificationV1.remaining_resources` must agree with, and the reason it is now checkable.",
+          "$ref": "erl2:common#/$defs/IdArray"
+        },
+        "probe_status": {
+          "$comment": "`unavailable` when the substrate could not be re-observed. Fail-closed, not a pass: a cleanup that cannot be observed cannot be claimed complete.",
+          "enum": [
+            "observed",
+            "unavailable"
+          ]
+        },
+        "outcome": {
+          "$comment": "Derived from the sets above, never supplied. `clean` is the only one that supports a complete cleanup; `undeclared_destruction` is the offline-detectable form of destroy-first-classify-afterwards.",
+          "enum": [
+            "clean",
+            "residual",
+            "undeclared_destruction",
+            "unobservable"
+          ]
+        },
+        "probed_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      }
+    },
     "ExpectedRevertedMutation": {
       "type": "object",
       "additionalProperties": false,
