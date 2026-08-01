@@ -1283,6 +1283,10 @@ export const CONTROLS = [
     replace: "    void label;",
     tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
     mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFailCases: [
+      "EB-MOUNT: a canary in the mounted file's bytes refuses before the adapter is dispatched",
+      "EB-MOUNT: the run cannot step past a refused mount by retrying it",
+    ],
     expect: "fail",
   },
   {
@@ -1295,6 +1299,11 @@ export const CONTROLS = [
     replace: "  void scanTargets;\n  void knownCanaryIds;",
     tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
     mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFailCases: [
+      "EB-TELEMETRY: a canary in the telemetry bytes refuses before the telemetry is retained",
+      "EB-TELEMETRY: a refused capture cannot be stepped past by retrying observe",
+      "EB-TELEMETRY: the run still reaches exactly one invalid terminal that verifies offline",
+    ],
     expect: "fail",
   },
   {
@@ -1313,6 +1322,9 @@ export const CONTROLS = [
     replace: "",
     tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
     mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFailCases: [
+      "EB-OUTPUT: a secret canary in the subject's output bytes refuses before the freeze",
+    ],
     expect: "fail",
   },
   {
@@ -1331,6 +1343,9 @@ export const CONTROLS = [
     replace: "",
     tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
     mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFailCases: [
+      "EB-OUTPUT: a forbidden identifier in the subject's output bytes refuses before the freeze",
+    ],
     expect: "fail",
   },
   {
@@ -1344,6 +1359,9 @@ export const CONTROLS = [
     replace: '  if (String(1) === "2") {\n    void total;\n    void declaredOutputBytes;',
     tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
     mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFailCases: [
+      "EB-SIZE: one byte over the declared ceiling refuses before the manifest freezes",
+    ],
     expect: "fail",
   },
   {
@@ -1358,6 +1376,9 @@ export const CONTROLS = [
     replace: "    total += payload.path.length;",
     tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
     mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFailCases: [
+      "EB-SIZE: one byte over the declared ceiling refuses before the manifest freezes",
+    ],
     expect: "fail",
   },
 
@@ -1378,10 +1399,12 @@ export const CONTROLS = [
 export const CONTROL_RESULT = Object.freeze({
   NAMED_TESTS_FAILED: "named_tests_failed",
   UNRELATED_TESTS_FAILED: "unrelated_tests_failed",
+  DECLARED_CASES_NOT_FAILED: "declared_cases_not_failed",
   TESTS_PASSED_UNEXPECTEDLY: "tests_passed_unexpectedly",
   NO_KILL_AS_DECLARED: "no_kill_as_declared",
   BUILD_FAILED: "build_failure",
   RUNNER_FAILED: "test_runner_failed",
+  STAGE_TIMED_OUT: "stage_timed_out",
   RESTORATION_FAILED: "restoration_failure",
   RESIDUE_FAILED: "residue_failure",
 });
@@ -1399,6 +1422,25 @@ export function isHarnessError(result) {
 }
 
 /**
+ * Every failing case the spec reporter named, as `{ file, name }` pairs.
+ *
+ * The reporter's trailing `failing tests:` section prints two lines per failure:
+ *
+ *     test at tests/dist/e2e/environmentEvidenceBoundaries.test.js:287:1
+ *     ✖ EB-OUTPUT: a secret canary in the subject's output bytes refuses … (12.3ms)
+ *
+ * The file line alone is what the harness used to read, and a file is coarser
+ * than an invariant: six controls name the same twelve-case suite, so "1 of 12
+ * failed" was scored as a kill without the harness ever confirming *which* one.
+ * The name is right there on the next line; this reads it.
+ */
+export function parseFailingCases(stdout) {
+  return [
+    ...stdout.matchAll(/^test at (.+?):\d+:\d+\r?\n\s*✖ (.+?)(?: \([\d.]+ms\))?[ \t]*$/gm),
+  ].map((m) => ({ file: m[1].replace(/^\.\//, ""), name: m[2] }));
+}
+
+/**
  * Parse one `node --test` run and decide what it says about the control.
  *
  * The spec reporter names the file of every failing test in its trailing
@@ -1406,8 +1448,15 @@ export function isHarnessError(result) {
  * did not name" expressible at all. `mustFail`, when a control declares it,
  * narrows the expectation further: the listed files are run, and the failures
  * must fall inside the declared subset.
+ *
+ * `mustFailCases` narrows it to the granularity of the invariant. A control that
+ * declares it is not satisfied by *a* failure in the right file; every declared
+ * case must be among the cases that actually failed. A mutation that trips some
+ * unrelated case in the same suite is then not an agreed kill — it is invalid
+ * evidence, and it is reported as a harness error rather than as a result,
+ * because what the campaign measured is not what the control declared.
  */
-export function classifyTestRun({ stdout, expect, tests, mustFail }) {
+export function classifyTestRun({ stdout, expect, tests, mustFail, mustFailCases }) {
   const tests_ = Number(/^ℹ tests (\d+)$/m.exec(stdout)?.[1] ?? "-1");
   const pass = Number(/^ℹ pass (\d+)$/m.exec(stdout)?.[1] ?? "-1");
   const fail = Number(/^ℹ fail (\d+)$/m.exec(stdout)?.[1] ?? "-1");
@@ -1458,13 +1507,52 @@ export function classifyTestRun({ stdout, expect, tests, mustFail }) {
 
   const permitted = (mustFail ?? tests).map((t) => t.replace(/^\.\//, ""));
   const stray = failingFiles.filter((file) => !permitted.some((t) => file.endsWith(t) || t.endsWith(file)));
+  if (stray.length > 0) {
+    return {
+      result: CONTROL_RESULT.UNRELATED_TESTS_FAILED,
+      pass,
+      fail,
+      tests: tests_,
+      failingFiles,
+      strayFiles: stray,
+    };
+  }
+
+  // The right file failed. When the control named the case, that is not yet the
+  // measurement it declared.
+  if (mustFailCases !== undefined) {
+    const failingCases = parseFailingCases(stdout);
+    const names = failingCases.map((c) => c.name);
+    // Substring, because a declared case is an excerpt of a long descriptive
+    // name and the harness must not turn a prose edit into a campaign failure.
+    const missingCases = mustFailCases.filter((declared) => !names.some((n) => n.includes(declared)));
+    if (missingCases.length > 0) {
+      return {
+        result: CONTROL_RESULT.DECLARED_CASES_NOT_FAILED,
+        pass,
+        fail,
+        tests: tests_,
+        failingFiles,
+        missingCases,
+        failingCases: names,
+      };
+    }
+    return {
+      result: CONTROL_RESULT.NAMED_TESTS_FAILED,
+      pass,
+      fail,
+      tests: tests_,
+      failingFiles,
+      failingCases: names,
+    };
+  }
+
   return {
-    result: stray.length > 0 ? CONTROL_RESULT.UNRELATED_TESTS_FAILED : CONTROL_RESULT.NAMED_TESTS_FAILED,
+    result: CONTROL_RESULT.NAMED_TESTS_FAILED,
     pass,
     fail,
     tests: tests_,
     failingFiles,
-    ...(stray.length > 0 ? { strayFiles: stray } : {}),
   };
 }
 
@@ -1508,8 +1596,108 @@ export function validateControlDeclarations(controls) {
       const outside = control.mustFail.filter((t) => !control.tests.includes(t));
       if (outside.length > 0) problems.push(`${where}: \`mustFail\` names suites it does not run: ${outside.join(", ")}`);
     }
+    if (control.mustFailCases !== undefined) {
+      // A declared case can only be checked against a run that produced
+      // failures, so it is meaningless on a control that expects none.
+      if (!Array.isArray(control.mustFailCases) || control.mustFailCases.length === 0) {
+        problems.push(`${where}: \`mustFailCases\` must be a non-empty array of test-name excerpts`);
+      } else {
+        const bad = control.mustFailCases.filter((c) => typeof c !== "string" || c.trim() === "");
+        if (bad.length > 0) problems.push(`${where}: \`mustFailCases\` has empty or non-string entries`);
+        const duplicates = control.mustFailCases.filter((c, i) => control.mustFailCases.indexOf(c) !== i);
+        if (duplicates.length > 0) {
+          problems.push(`${where}: \`mustFailCases\` repeats ${[...new Set(duplicates)].join(", ")}`);
+        }
+        if (control.expect !== "fail") {
+          problems.push(`${where}: \`mustFailCases\` needs \`expect: "fail"\`; a control that expects no failure cannot name one`);
+        }
+      }
+    }
   }
   return problems;
+}
+
+// -- bounded subprocess stages -----------------------------------------------
+
+/**
+ * How long each campaign stage may run before it is a hang rather than progress.
+ *
+ * Measured on this checkout, then multiplied:
+ *
+ *   - `npm run build` — **11.5 s** (`time npm run build`, warm worktree).
+ *   - `tests/dist/e2e/environmentEvidenceBoundaries.test.js` — **152.6 s** for
+ *     12 cases. It is the reference point the review named: two of its cases
+ *     move 64 MiB each, and it is the slowest suite any control designates.
+ *     For scale, the *entire* 922-test gate is ~1,754 s, so no single suite can
+ *     plausibly approach the bound below.
+ *
+ * The two stages are bounded separately because their needs differ by an order
+ * of magnitude; one number generous enough for the suite would leave the build
+ * effectively unbounded.
+ *
+ * The margins are deliberately wide — roughly 26x the observed build and 8x the
+ * observed suite. The bound is not a performance budget: a regression that made
+ * a suite three times slower should surface as a slow campaign a human looks
+ * into, not as a control the harness scored as a hang. What it exists to catch
+ * is the *unbounded* case — a disabled guard that turns a refusal into a wait —
+ * because every suite here runs under `--test-timeout=0`, so nothing else in
+ * the stack would ever stop it.
+ */
+export const STAGE_TIMEOUT_MS = Object.freeze({
+  build: 5 * 60_000,
+  suite: 20 * 60_000,
+});
+
+/**
+ * The default 1 MiB `maxBuffer` truncates a chatty suite's stdout, which loses
+ * the trailing `ℹ pass/fail` summary and downgrades a real measurement to a
+ * harness error. Bounded rather than removed: unbounded output is its own way
+ * for a runaway control to take the campaign down.
+ */
+export const STAGE_MAX_OUTPUT_BYTES = 32 * 1024 * 1024;
+
+/**
+ * Run one campaign stage under an explicit bound, and say plainly how it ended.
+ *
+ * `spawnSync` reports a timeout, a spawn failure and a clean non-zero exit in
+ * three different shapes, and the two failure shapes both leave `stdout` null.
+ * Reading `run.stdout` directly — which is what the harness did — collapses all
+ * three into "the summary did not parse".
+ */
+export function runStage({ command, args, cwd, timeoutMs, stage }) {
+  const startedAt = Date.now();
+  // `NODE_TEST_CONTEXT` is set by `node --test` in the processes it spawns, and a
+  // nested runner that sees it declines to run any files at all — it assumes it
+  // is a test file being re-entered. The campaign is normally a top-level
+  // process, so this never bit it; it bites the moment anything runs a stage
+  // from inside a test, which is exactly what this harness's own tests do.
+  const env = { ...process.env };
+  delete env["NODE_TEST_CONTEXT"];
+  const run = spawnSync(command, args, {
+    cwd,
+    env,
+    encoding: "utf8",
+    timeout: timeoutMs,
+    // The child is killed outright: a stage that ignored SIGTERM is exactly the
+    // hang this bound exists for.
+    killSignal: "SIGKILL",
+    maxBuffer: STAGE_MAX_OUTPUT_BYTES,
+  });
+  const elapsedMs = Date.now() - startedAt;
+  const code = run.error?.code;
+  return {
+    stage,
+    status: run.status,
+    // `spawnSync` has already waited for and reaped the child by the time it
+    // returns — including the one it SIGKILLed — so this pid is reportable and,
+    // for the timeout tests, checkable.
+    pid: run.pid,
+    stdout: run.stdout ?? "",
+    stderr: run.stderr ?? "",
+    elapsedMs,
+    timedOut: code === "ETIMEDOUT",
+    spawnError: run.error === undefined || code === "ETIMEDOUT" ? undefined : `${String(code)}: ${run.error.message}`,
+  };
 }
 // -- the campaign ------------------------------------------------------------
 
@@ -1647,7 +1835,33 @@ async function main() {
         continue;
       }
 
-      const build = spawnSync("npm", ["run", "build"], { cwd: worktree, encoding: "utf8" });
+      const build = runStage({
+        command: "npm",
+        args: ["run", "build"],
+        cwd: worktree,
+        timeoutMs: STAGE_TIMEOUT_MS.build,
+        stage: "build",
+      });
+      if (build.timedOut) {
+        // A hang is not a slow result, and it is not safe to keep going: the
+        // killed stage may still have descendants writing into the worktree the
+        // next control is about to patch. The campaign stops and says where.
+        results.push({
+          id: control.id,
+          what: control.what,
+          expected: control.expect,
+          result: CONTROL_RESULT.STAGE_TIMED_OUT,
+          harnessError: true,
+          agreed: false,
+          stage: "build",
+          elapsedMs: build.elapsedMs,
+          detail: `build exceeded ${String(STAGE_TIMEOUT_MS.build)} ms and was SIGKILLed`,
+        });
+        console.log(`  ✖ ${control.id}: the build stage timed out after ${String(build.elapsedMs)} ms`);
+        aborted = { id: control.id, residual: undefined, timedOut: "build" };
+        disposable.restore();
+        break;
+      }
       if (build.status !== 0) {
         // Not a behavioural kill. The patched tree does not compile, which is a
         // fact about the patch and says nothing about whether the guard is
@@ -1670,12 +1884,45 @@ async function main() {
         continue;
       }
 
-      const run = spawnSync("node", ["--test", ...control.tests], { cwd: worktree, encoding: "utf8" });
+      const run = runStage({
+        command: "node",
+        // The reporter is named rather than defaulted: `classifyTestRun` parses
+        // the spec reporter's summary lines and its `failing tests:` section, so
+        // the format the classifier depends on is the format the stage asks for.
+        args: ["--test", "--test-reporter=spec", ...control.tests],
+        cwd: worktree,
+        timeoutMs: STAGE_TIMEOUT_MS.suite,
+        stage: "suite",
+      });
+      if (run.timedOut) {
+        // The case the bound exists for: a disabled guard that turns a refusal
+        // into a wait. Under `--test-timeout=0` nothing else would ever stop it,
+        // and in a multi-hour campaign a hang and slow progress look identical.
+        results.push({
+          id: control.id,
+          what: control.what,
+          expected: control.expect,
+          result: CONTROL_RESULT.STAGE_TIMED_OUT,
+          harnessError: true,
+          agreed: false,
+          stage: "suite",
+          elapsedMs: run.elapsedMs,
+          detail: `the designated suite exceeded ${String(STAGE_TIMEOUT_MS.suite)} ms and was SIGKILLed`,
+        });
+        console.log(`  ✖ ${control.id}: the suite stage timed out after ${String(run.elapsedMs)} ms`);
+        aborted = { id: control.id, residual: undefined, timedOut: "suite" };
+        disposable.restore();
+        break;
+      }
       const classified = classifyTestRun({
+        // `runStage` normalises the null stdout that a spawn failure produces, so
+        // an unspawnable runner reaches the classifier as an unparseable run —
+        // a harness error — rather than as a crash inside the classifier.
         stdout: run.stdout,
         expect: control.expect,
         tests: control.tests,
         ...(control.mustFail === undefined ? {} : { mustFail: control.mustFail }),
+        ...(control.mustFailCases === undefined ? {} : { mustFailCases: control.mustFailCases }),
       });
       const agreed = agreesWithExpectation(classified.result, control.expect);
       results.push({
@@ -1689,9 +1936,21 @@ async function main() {
         pass: classified.pass,
         fail: classified.fail,
         agreed,
+        buildMs: build.elapsedMs,
+        suiteMs: run.elapsedMs,
+        ...(run.spawnError === undefined ? {} : { spawnError: run.spawnError }),
         ...(classified.strayFiles === undefined ? {} : { strayFiles: classified.strayFiles }),
+        ...(control.mustFailCases === undefined ? {} : { mustFailCases: [...control.mustFailCases] }),
+        ...(classified.failingCases === undefined ? {} : { failingCases: classified.failingCases }),
+        ...(classified.missingCases === undefined ? {} : { missingCases: classified.missingCases }),
         ...(control.note === undefined ? {} : { note: control.note }),
       });
+      if (classified.missingCases !== undefined) {
+        console.log(
+          `    declared case(s) that did not fail: ${classified.missingCases.join(" | ")}\n` +
+            `    cases that did fail: ${(classified.failingCases ?? []).join(" | ") || "(none named)"}`,
+        );
+      }
       console.log(
         `  ${agreed ? "✔" : "✖"} ${control.id}: ${String(classified.pass)} pass / ${String(classified.fail)} fail ` +
           `(expected ${control.expect}, ${classified.result})${control.note === undefined ? "" : ` — ${control.note}`}`,
@@ -1750,6 +2009,15 @@ async function main() {
     process.exit(1);
   }
 
+  if (aborted !== undefined && aborted.timedOut !== undefined) {
+    console.error(
+      `\nnegative-control FAILED: the ${aborted.timedOut} stage of ${aborted.id} timed out and was SIGKILLed.\n` +
+        "A timeout is a harness error, never a kill and never an agreement: the campaign\n" +
+        "learned nothing about that guard. It stopped there rather than patch a worktree a\n" +
+        "killed stage may still have descendants inside.",
+    );
+    process.exit(1);
+  }
   if (aborted !== undefined) {
     console.error(
       `\nnegative-control FAILED: the worktree could not be restored after ${aborted.id}.\n` +

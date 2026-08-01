@@ -60,6 +60,8 @@ interface HarnessModule {
     readonly expectedMatches?: number;
     readonly anchor?: string;
     readonly tests: readonly string[];
+    readonly mustFail?: readonly string[];
+    readonly mustFailCases?: readonly string[];
     readonly expect: string;
   }[];
   readonly CONTROL_RESULT: Record<string, string>;
@@ -68,10 +70,31 @@ interface HarnessModule {
     readonly pass: number;
     readonly fail: number;
     readonly strayFiles?: readonly string[];
+    readonly failingCases?: readonly string[];
+    readonly missingCases?: readonly string[];
   };
+  readonly parseFailingCases: (stdout: string) => readonly { readonly file: string; readonly name: string }[];
   readonly agreesWithExpectation: (result: string, expect: string) => boolean;
   readonly isHarnessError: (result: string) => boolean;
   readonly validateControlDeclarations: (controls: readonly unknown[]) => string[];
+  readonly STAGE_TIMEOUT_MS: { readonly build: number; readonly suite: number };
+  readonly STAGE_MAX_OUTPUT_BYTES: number;
+  readonly runStage: (input: {
+    readonly command: string;
+    readonly args: readonly string[];
+    readonly cwd: string;
+    readonly timeoutMs: number;
+    readonly stage: string;
+  }) => {
+    readonly stage: string;
+    readonly status: number | null;
+    readonly stdout: string;
+    readonly stderr: string;
+    readonly elapsedMs: number;
+    readonly timedOut: boolean;
+    readonly pid?: number;
+    readonly spawnError?: string;
+  };
 }
 
 interface WorktreeModule {
@@ -553,6 +576,303 @@ test("NC-RESTORE: SIGINT releases the worktree before exiting", async () => {
 
 test("NC-RESTORE: SIGTERM releases the worktree before exiting", async () => {
   await releasesOnSignal("SIGTERM");
+});
+
+// -- case-level kill granularity (review R-05) -------------------------------
+//
+// A control's kill used to be measured at *file* granularity: `fail > 0` and
+// every failing file inside `mustFail` scored a kill without the harness ever
+// checking which case failed. All six Step 6B controls name the same twelve-case
+// suite, so "1 of 12 failed" was read as proof of the invariant by a human
+// comparing counts in a ledger — review, not measurement.
+
+/** Reporter output for a run whose failing cases are exactly `cases`. */
+const FAILING = (
+  pass: number,
+  cases: readonly (readonly [file: string, name: string])[],
+): string =>
+  `${SUMMARY(pass, cases.length)}\n✖ failing tests:\n\n` +
+  cases.map(([file, name]) => `test at ${file}:12:1\n✖ ${name} (1.5ms)\n  AssertionError\n`).join("\n");
+
+const SUITE = "tests/dist/e2e/environmentEvidenceBoundaries.test.js";
+
+test("NC-CASES: the reporter's failing-case names are parsed from a real `node --test` run", async () => {
+  // The parser's whole risk is that it agrees with a hand-written fixture and
+  // disagrees with the reporter. So this one case runs the real runner over a
+  // real fixture and parses the real bytes; every case below can then use
+  // synthetic output honestly.
+  const dir = mkdtempSync(path.join(tmpdir(), "erl2-reporter-fixture-"));
+  writeFileSync(
+    path.join(dir, "fixture.test.mjs"),
+    [
+      'import { test } from "node:test";',
+      'import assert from "node:assert";',
+      'test("ALPHA: the intended case", () => { assert.equal(1, 2); });',
+      'test("BETA: an unrelated case", () => { assert.equal(1, 1); });',
+      'test("GAMMA: another intended case", () => { assert.equal(3, 4); });',
+      "",
+    ].join("\n"),
+  );
+  try {
+    const run = harness.runStage({
+      command: process.execPath,
+      args: ["--test", "--test-reporter=spec", "fixture.test.mjs"],
+      cwd: dir,
+      timeoutMs: 60_000,
+      stage: "suite",
+    });
+    const parsed = harness.parseFailingCases(run.stdout);
+    assert.deepEqual(
+      parsed.map((c) => c.name).sort(),
+      ["ALPHA: the intended case", "GAMMA: another intended case"],
+      `the reporter format moved; parsed ${JSON.stringify(parsed)}`,
+    );
+    assert.equal(parsed.every((c) => c.file.endsWith("fixture.test.mjs")), true);
+
+    // …and the classifier reaches the same verdict over those real bytes.
+    const killed = harness.classifyTestRun({
+      stdout: run.stdout,
+      expect: "fail",
+      tests: ["fixture.test.mjs"],
+      mustFailCases: ["ALPHA: the intended case"],
+    });
+    assert.equal(killed.result, harness.CONTROL_RESULT["NAMED_TESTS_FAILED"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("NC-CASES: the intended named case failing is the control's kill", () => {
+  const classified = harness.classifyTestRun({
+    stdout: FAILING(11, [[SUITE, "EB-OUTPUT: a secret canary in the subject's output bytes refuses before the freeze"]]),
+    expect: "fail",
+    tests: [SUITE],
+    mustFail: [SUITE],
+    mustFailCases: ["EB-OUTPUT: a secret canary in the subject's output bytes refuses before the freeze"],
+  });
+  assert.equal(classified.result, harness.CONTROL_RESULT["NAMED_TESTS_FAILED"]);
+  assert.equal(harness.isHarnessError(classified.result), false);
+  assert.equal(harness.agreesWithExpectation(classified.result, "fail"), true);
+});
+
+test("NC-CASES: only an unrelated case in the same file failing is not an agreed kill", () => {
+  // The defect in one line. The file is the declared file, the count is 1 of 12,
+  // and the invariant the control names was never exercised.
+  const classified = harness.classifyTestRun({
+    stdout: FAILING(11, [[SUITE, "EB-OUTPUT: clean binary output freezes and the run finalizes"]]),
+    expect: "fail",
+    tests: [SUITE],
+    mustFail: [SUITE],
+    mustFailCases: ["EB-OUTPUT: a secret canary in the subject's output bytes refuses before the freeze"],
+  });
+  assert.equal(classified.result, harness.CONTROL_RESULT["DECLARED_CASES_NOT_FAILED"]);
+  assert.equal(harness.isHarnessError(classified.result), true, "invalid evidence, not a result about the guard");
+  assert.equal(harness.agreesWithExpectation(classified.result, "fail"), false);
+  assert.equal(harness.agreesWithExpectation(classified.result, "pass"), false);
+  // The diagnostic a campaign operator needs is in the result, not in a rerun.
+  assert.deepEqual(classified.missingCases, [
+    "EB-OUTPUT: a secret canary in the subject's output bytes refuses before the freeze",
+  ]);
+  assert.deepEqual(classified.failingCases, ["EB-OUTPUT: clean binary output freezes and the run finalizes"]);
+});
+
+test("NC-CASES: a declared case absent from the reporter output is not an agreed kill", () => {
+  // The summary says a test failed and the failing-tests section names no case —
+  // a truncated stream, a reporter change. Silence must not read as agreement.
+  const classified = harness.classifyTestRun({
+    stdout: `${SUMMARY(11, 1)}\n✖ failing tests:\n\ntest at ${SUITE}:12:1\n`,
+    expect: "fail",
+    tests: [SUITE],
+    mustFail: [SUITE],
+    mustFailCases: ["EB-SIZE: one byte over the declared ceiling refuses before the manifest freezes"],
+  });
+  assert.equal(classified.result, harness.CONTROL_RESULT["DECLARED_CASES_NOT_FAILED"]);
+  assert.deepEqual(classified.failingCases, []);
+});
+
+test("NC-CASES: every declared case must fail, not merely one of them", () => {
+  const declared = [
+    "EB-TELEMETRY: a canary in the telemetry bytes refuses before the telemetry is retained",
+    "EB-TELEMETRY: a refused capture cannot be stepped past by retrying observe",
+    "EB-TELEMETRY: the run still reaches exactly one invalid terminal that verifies offline",
+  ];
+  const all = harness.classifyTestRun({
+    stdout: FAILING(9, declared.map((name) => [SUITE, name] as const)),
+    expect: "fail",
+    tests: [SUITE],
+    mustFail: [SUITE],
+    mustFailCases: declared,
+  });
+  assert.equal(all.result, harness.CONTROL_RESULT["NAMED_TESTS_FAILED"]);
+  assert.equal(harness.agreesWithExpectation(all.result, "fail"), true);
+
+  const partial = harness.classifyTestRun({
+    stdout: FAILING(10, [[SUITE, declared[0] as string], [SUITE, declared[1] as string]]),
+    expect: "fail",
+    tests: [SUITE],
+    mustFail: [SUITE],
+    mustFailCases: declared,
+  });
+  assert.equal(partial.result, harness.CONTROL_RESULT["DECLARED_CASES_NOT_FAILED"]);
+  assert.deepEqual(partial.missingCases, [declared[2]]);
+});
+
+test("NC-CASES: a control that declares no cases keeps exactly its old behaviour", () => {
+  // The legacy shape: file-level `mustFail` and nothing more. It must still be a
+  // kill, and it must still carry no case-level fields to reason about.
+  const classified = harness.classifyTestRun({
+    stdout: FAILING(11, [[SUITE, "EB-OUTPUT: clean binary output freezes and the run finalizes"]]),
+    expect: "fail",
+    tests: [SUITE],
+    mustFail: [SUITE],
+  });
+  assert.equal(classified.result, harness.CONTROL_RESULT["NAMED_TESTS_FAILED"]);
+  assert.equal(harness.agreesWithExpectation(classified.result, "fail"), true);
+  assert.equal(classified.missingCases, undefined);
+  assert.equal(classified.failingCases, undefined);
+
+  // …and a stray file still outranks the case check, because a failure outside
+  // the declared suite is not this control's kill whatever it is named.
+  const stray = harness.classifyTestRun({
+    stdout: FAILING(2, [["tests/dist/e2e/somethingElse.test.js", "EB-OUTPUT: a secret canary"]]),
+    expect: "fail",
+    tests: [SUITE],
+    mustFail: [SUITE],
+    mustFailCases: ["EB-OUTPUT: a secret canary"],
+  });
+  assert.equal(stray.result, harness.CONTROL_RESULT["UNRELATED_TESTS_FAILED"]);
+});
+
+test("NC-DECLARE: `mustFailCases` is rejected when it is empty, duplicated or malformed", () => {
+  const base = { what: "w", file: "a.ts", find: "x", replace: "y", tests: ["t.js"], expect: "fail" };
+  const problems = harness.validateControlDeclarations([
+    { ...base, id: "empty-array", mustFailCases: [] },
+    { ...base, id: "empty-entry", mustFailCases: ["ok", "  "] },
+    { ...base, id: "non-string", mustFailCases: [7] },
+    { ...base, id: "duplicated", mustFailCases: ["same", "same"] },
+    { ...base, id: "expects-pass", expect: "pass", mustFailCases: ["case"] },
+  ]);
+  assert.ok(problems.some((p) => p.startsWith("empty-array:") && p.includes("non-empty array")));
+  assert.ok(problems.some((p) => p.startsWith("empty-entry:") && p.includes("empty or non-string")));
+  assert.ok(problems.some((p) => p.startsWith("non-string:") && p.includes("empty or non-string")));
+  assert.ok(problems.some((p) => p.startsWith("duplicated:") && p.includes("repeats same")));
+  assert.ok(problems.some((p) => p.startsWith("expects-pass:") && p.includes('`expect: "fail"`')));
+});
+
+test("NC-DECLARE: the six Step 6B evidence-boundary controls each name their load-bearing case", () => {
+  // The controls this finding was written about. Each names the twelve-case
+  // producer-boundary suite, so without a case-level declaration each one's kill
+  // is "something in that file failed".
+  const expected: Record<string, readonly string[]> = {
+    "mounted-file-byte-scan": ["EB-MOUNT: a canary in the mounted file's bytes refuses before the adapter is dispatched"],
+    "lab-telemetry-oracle-scan": ["EB-TELEMETRY: a canary in the telemetry bytes refuses before the telemetry is retained"],
+    "subject-output-secret-canary-scan": ["EB-OUTPUT: a secret canary in the subject's output bytes refuses before the freeze"],
+    "subject-output-forbidden-identifier-scan": ["EB-OUTPUT: a forbidden identifier in the subject's output bytes refuses before the freeze"],
+    "subject-output-declared-byte-ceiling": ["EB-SIZE: one byte over the declared ceiling refuses before the manifest freezes"],
+    "subject-output-byte-total-counts-payloads": ["EB-SIZE: one byte over the declared ceiling refuses before the manifest freezes"],
+  };
+  for (const [id, required] of Object.entries(expected)) {
+    const control = harness.CONTROLS.find((c) => c.id === id);
+    assert.ok(control !== undefined, `${id} must still be a shipped control`);
+    const declared = control.mustFailCases ?? [];
+    assert.ok(declared.length > 0, `${id} must declare the case its invariant owns`);
+    for (const name of required) {
+      assert.ok(declared.includes(name), `${id} must name ${name}; it names ${JSON.stringify(declared)}`);
+    }
+    // Every declared name must exist in the suite it runs, or the campaign would
+    // report a missing case for a control that is measuring correctly.
+    const suiteSource = readFileSync(
+      path.join(repoRoot, (control.tests[0] as string).replace("tests/dist/", "tests/").replace(/\.js$/, ".ts")),
+      "utf8",
+    );
+    for (const name of declared) {
+      assert.ok(suiteSource.includes(name), `${id} declares a case the suite does not define: ${name}`);
+    }
+  }
+});
+
+// -- bounded subprocess stages (review R-06) ---------------------------------
+
+test("NC-TIMEOUT: a hanging stage is killed at the bound and reported as a timeout", () => {
+  // Injected command and a 400 ms bound: the classification is what is under
+  // test, not the production constants, so this costs well under a second.
+  const started = Date.now();
+  const run = harness.runStage({
+    command: process.execPath,
+    args: ["-e", "setInterval(() => {}, 1000)"],
+    cwd: repoRoot,
+    timeoutMs: 400,
+    stage: "suite",
+  });
+  const wall = Date.now() - started;
+
+  assert.equal(run.timedOut, true, "a stage that never returns must be reported as a timeout");
+  assert.equal(run.stage, "suite");
+  assert.ok(wall < 30_000, `the bound must actually stop it; took ${String(wall)} ms`);
+  assert.equal(typeof run.elapsedMs, "number");
+  // Null output on a killed child must reach the classifier as an unparseable
+  // run — a harness error — and never as "nothing failed".
+  assert.equal(typeof run.stdout, "string");
+  const classified = harness.classifyTestRun({ stdout: run.stdout, expect: "fail", tests: ["x.test.js"] });
+  assert.equal(classified.result, harness.CONTROL_RESULT["RUNNER_FAILED"]);
+});
+
+test("NC-TIMEOUT: a timeout is a harness error, never a kill and never an agreement", () => {
+  const timedOut = harness.CONTROL_RESULT["STAGE_TIMED_OUT"] as string;
+  assert.equal(harness.isHarnessError(timedOut), true);
+  assert.equal(harness.agreesWithExpectation(timedOut, "fail"), false);
+  assert.equal(harness.agreesWithExpectation(timedOut, "pass"), false);
+});
+
+test("NC-TIMEOUT: the killed child leaves no surviving process", () => {
+  // `spawnSync` waits for and reaps the child it killed before returning, so by
+  // the time `runStage` hands back a timeout there is nothing left to reap and
+  // nothing left running. That is the property the abort path relies on when it
+  // declines to patch the worktree again after a timeout.
+  const run = harness.runStage({
+    command: process.execPath,
+    args: ["-e", "setInterval(() => {}, 1000)"],
+    cwd: repoRoot,
+    timeoutMs: 400,
+    stage: "suite",
+  });
+  assert.equal(run.timedOut, true);
+  const pid = run.pid;
+  assert.equal(typeof pid, "number", "the stage must report the process it bounded");
+  let alive: boolean;
+  try {
+    process.kill(pid as number, 0);
+    alive = true;
+  } catch {
+    alive = false;
+  }
+  assert.equal(alive, false, "a SIGKILLed stage must not survive its bound");
+});
+
+test("NC-TIMEOUT: a stage that cannot be spawned is reported, not silently empty", () => {
+  const run = harness.runStage({
+    command: path.join(repoRoot, "no-such-command-erl2"),
+    args: [],
+    cwd: repoRoot,
+    timeoutMs: 5_000,
+    stage: "build",
+  });
+  assert.equal(run.timedOut, false);
+  assert.ok((run.spawnError ?? "").length > 0, "a spawn failure must be named");
+  assert.equal(run.stdout, "", "null stdout is normalised, so no caller reads a property of null");
+});
+
+test("NC-TIMEOUT: the stage bounds are distinct, positive and above the slowest observed suite", () => {
+  const { build, suite } = harness.STAGE_TIMEOUT_MS;
+  assert.ok(build > 0 && suite > 0);
+  assert.notEqual(build, suite, "the two stages differ by an order of magnitude; one number would unbound the build");
+  // Measured on this checkout: build 11.5 s, the slowest designated suite
+  // (`environmentEvidenceBoundaries`) 152.6 s. The bounds must stay generous
+  // margins above those, and the suite bound must stay under the whole gate.
+  assert.ok(build >= 60_000, "the build bound must leave room for a cold worktree");
+  assert.ok(suite >= 10 * 60_000, "the suite bound must be a wide margin over 152.6 s, not a performance budget");
+  assert.ok(suite <= 60 * 60_000, "a bound longer than a full campaign stage would not catch a hang");
+  assert.ok(harness.STAGE_MAX_OUTPUT_BYTES >= 8 * 1024 * 1024, "1 MiB truncates a chatty suite's summary away");
 });
 
 // -- the standing check on the shipped controls ------------------------------
