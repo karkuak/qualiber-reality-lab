@@ -69,8 +69,35 @@ Four things that will look like omissions and are not.
 
 ## 4. Verified
 
-See §11 of this file for the exact gate totals and §6.1 of the ledger for the
-per-control campaign table.
+**Baseline** at `eaeec8c`, before any change: 883 tests / 0 fail, purity 37/37,
+787 pinned / 7 excluded, 3/3 invalid goldens verified offline, 26 m 28 s. It
+reproduces the Step 6A handoff exactly.
+
+**Final gate**, from a `git clone` checked out at the candidate commit `1619fe0`
+— not from the working tree:
+
+| gate | result |
+|---|---|
+| `npm run clean && npm install && npm run build` | ok |
+| `npm run typecheck` | ok |
+| `npm run verify:generated` | generated types are current |
+| `npm test` | **922 tests, 922 pass, 0 fail, 0 cancelled, 0 skipped** |
+| `npm run purity` | **37 / 37** |
+| `npm run evidence:verify` | **787 pinned, 7 excluded**, byte-for-byte; **3 / 3** invalid goldens verify at exit 0 / `valid` in a fresh process |
+| `git status --short` / `git diff --check` | empty / clean |
+
+23 m 15 s. 883 → 922 is exactly the 39 cases this package adds.
+
+**Negative controls**, against `473b402`, 3 h 26 m: **92 of 92 scored, 92 agreed,
+0 disagreed, 0 harness errors** — 89 behavioural kills and the 3 inherited,
+honestly recorded `expect: "pass"` rows. All six new controls kill. The tree was
+byte-identical afterwards, with no worktree, no temp directory and no surviving
+process. Per-control table: §6.1 of the ledger.
+
+**Pins.** No pinned golden byte changed, and that is a checkable claim rather
+than a hope: `freezeMountedFile` composes exactly the bytes `freezeJson` wrote
+before, and `EB-MOUNT-BIND: the scanned bytes are the exact published bytes`
+asserts that equality directly. The exclusion manifest is unchanged at 7.
 
 ## 5. Verify it yourself
 
