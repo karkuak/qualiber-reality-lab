@@ -1622,30 +1622,37 @@ export function validateControlDeclarations(controls) {
 /**
  * How long each campaign stage may run before it is a hang rather than progress.
  *
- * Measured on this checkout, then multiplied:
+ * Measured across a full 92-control campaign — every stage of it, recorded as
+ * `buildMs`/`suiteMs` in `docs/ledger/negative-controls.json` — then multiplied:
  *
- *   - `npm run build` — **11.5 s** (`time npm run build`, warm worktree).
- *   - `tests/dist/e2e/environmentEvidenceBoundaries.test.js` — **152.6 s** for
- *     12 cases. It is the reference point the review named: two of its cases
- *     move 64 MiB each, and it is the slowest suite any control designates.
- *     For scale, the *entire* 922-test gate is ~1,754 s, so no single suite can
- *     plausibly approach the bound below.
+ *   - **build**: median 10.0 s, max **24.1 s** (`payload-directory-enumeration`).
+ *   - **suite**: median 81.8 s, max **858.7 s** (`environment-bundle-verifier`,
+ *     which designates `environmentRun.test.js` *and*
+ *     `environmentTerminalMutations.test.js` and so runs two heavy e2e files in
+ *     one stage).
  *
- * The two stages are bounded separately because their needs differ by an order
- * of magnitude; one number generous enough for the suite would leave the build
- * effectively unbounded.
+ * The reference point the review named — `environmentEvidenceBoundaries`, at
+ * 126 s in the campaign — is not the slowest suite, and picking the bound from
+ * it would have set a number the real worst case sails past. This is why the
+ * constants are taken from a measured campaign rather than from one timed file.
  *
- * The margins are deliberately wide — roughly 26x the observed build and 8x the
- * observed suite. The bound is not a performance budget: a regression that made
- * a suite three times slower should surface as a slow campaign a human looks
+ * The two stages are bounded separately because their needs differ by more than
+ * an order of magnitude; one number generous enough for the suite would leave
+ * the build effectively unbounded.
+ *
+ * The margins are ~12x the observed build and ~4x the observed suite, which is
+ * wide enough to absorb a CI runner several times slower than the machine these
+ * numbers came from. The bound is not a performance budget: a regression that
+ * doubled a suite's runtime should surface as a slow campaign a human looks
  * into, not as a control the harness scored as a hang. What it exists to catch
  * is the *unbounded* case — a disabled guard that turns a refusal into a wait —
  * because every suite here runs under `--test-timeout=0`, so nothing else in
- * the stack would ever stop it.
+ * the stack would ever stop it. A hang therefore costs at most one hour before
+ * the campaign says so and stops.
  */
 export const STAGE_TIMEOUT_MS = Object.freeze({
   build: 5 * 60_000,
-  suite: 20 * 60_000,
+  suite: 60 * 60_000,
 });
 
 /**

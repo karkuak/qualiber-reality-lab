@@ -866,12 +866,14 @@ test("NC-TIMEOUT: the stage bounds are distinct, positive and above the slowest 
   const { build, suite } = harness.STAGE_TIMEOUT_MS;
   assert.ok(build > 0 && suite > 0);
   assert.notEqual(build, suite, "the two stages differ by an order of magnitude; one number would unbound the build");
-  // Measured on this checkout: build 11.5 s, the slowest designated suite
-  // (`environmentEvidenceBoundaries`) 152.6 s. The bounds must stay generous
-  // margins above those, and the suite bound must stay under the whole gate.
-  assert.ok(build >= 60_000, "the build bound must leave room for a cold worktree");
-  assert.ok(suite >= 10 * 60_000, "the suite bound must be a wide margin over 152.6 s, not a performance budget");
-  assert.ok(suite <= 60 * 60_000, "a bound longer than a full campaign stage would not catch a hang");
+  // Measured across a full campaign: build max 24.1 s, suite max 858.7 s
+  // (`environment-bundle-verifier`, two heavy e2e files in one stage). The
+  // bounds must stay generous margins above those — a bound a slower CI runner
+  // trips turns a healthy campaign into an abort — and must stay small enough
+  // that a hang is still bounded in hours rather than days.
+  assert.ok(build >= 2 * 60_000, "the build bound must be a wide margin over 24.1 s");
+  assert.ok(suite >= 30 * 60_000, "the suite bound must be a wide margin over 858.7 s, not a performance budget");
+  assert.ok(suite <= 90 * 60_000, "a bound this long stops catching a hang in useful time");
   assert.ok(harness.STAGE_MAX_OUTPUT_BYTES >= 8 * 1024 * 1024, "1 MiB truncates a chatty suite's summary away");
 });
 
