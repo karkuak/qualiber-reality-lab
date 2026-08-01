@@ -59,34 +59,37 @@ function removeOwned(): void {
   }
 }
 
-let installed = false;
-function install(): void {
-  if (installed) return;
-  installed = true;
-
-  // The deterministic point: a root `after` hook, which `node --test` runs once
-  // the file's cases are all finished.
-  //
-  // `node:test` is required lazily and only when this process *is* a test-runner
-  // child, because importing it has a side effect — it arms the root test, which
-  // then prints a runner summary at exit. A support module that did that
-  // unconditionally would make every non-test importer of this layer emit a
-  // phantom `ℹ tests 0` report. `NODE_TEST_CONTEXT` is what `node --test` sets in
-  // the processes it spawns, so inside the runner the module is already loaded
-  // and requiring it costs nothing.
-  if (process.env["NODE_TEST_CONTEXT"] !== undefined) {
-    try {
-      const { after } = createRequire(import.meta.url)("node:test") as { after: (fn: () => void) => void };
-      after(removeOwned);
-    } catch {
-      // No root suite to hang a hook on; the `exit` fallback still covers it.
-    }
+// Both removal points are installed at module load, and that timing is
+// load-bearing rather than incidental.
+//
+// `node:test`'s `after` attaches to whatever test is *currently running*. This
+// module is imported at the top of the support layer, which is imported at the
+// top of a test file, so at this point nothing is running and the hook attaches
+// to the root — where it belongs. Registering it lazily on first use instead
+// looks equivalent and is not: several suites build one expensive fixture inside
+// their first case and copy it in every later case, so a hook installed then
+// binds to that first case and deletes the shared fixture the rest of the file
+// depends on. That is a broken suite, not a cleanup.
+//
+// `node:test` is required rather than imported, and only when this process *is*
+// a test-runner child, because loading it has a side effect: it arms the root
+// test, which then prints a runner summary at exit. A support module that did
+// that unconditionally would make every non-test importer of this layer emit a
+// phantom `ℹ tests 0` report. `NODE_TEST_CONTEXT` is what `node --test` sets in
+// the processes it spawns, so inside the runner the module is already loaded and
+// requiring it costs nothing.
+if (process.env["NODE_TEST_CONTEXT"] !== undefined) {
+  try {
+    const { after } = createRequire(import.meta.url)("node:test") as { after: (fn: () => void) => void };
+    after(removeOwned);
+  } catch {
+    // No root suite to hang a hook on; the `exit` fallback still covers it.
   }
-
-  // The fallback, for a process that never reaches a normal end of run — a test
-  // file executed directly, or one that exits before the hook.
-  process.on("exit", removeOwned);
 }
+
+// The fallback, for a process that never reaches a normal end of run — a test
+// file executed directly, or one that exits before the hook.
+process.on("exit", removeOwned);
 
 /**
  * A temporary directory owned by this test process and removed when it ends.
@@ -95,7 +98,6 @@ function install(): void {
  * directories remain identifiable while they exist.
  */
 export function ownedTempDir(prefix: string): string {
-  install();
   const dir = mkdtempSync(path.join(tmpdir(), prefix));
   owned.push(dir);
   return dir;
