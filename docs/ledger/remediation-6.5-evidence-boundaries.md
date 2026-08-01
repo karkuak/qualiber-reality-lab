@@ -298,7 +298,61 @@ narrowing the code around it.
 
 ### 6.1 Campaign results
 
-*(filled in below from the full inherited-plus-new run)*
+Run against the committed candidate `473b402`, 16:42 → 20:08 (3 h 26 m).
+**92 of 92 scored, 92 agreed, 0 disagreed, 0 harness errors.**
+
+| | total | patch applied | load-bearing | disagreed |
+|---|---|---|---|---|
+| inherited | 86 | 86 | 83 + 3 recorded `expect: "pass"` | 0 |
+| new (this package) | 6 | 6 | **6** | 0 |
+
+By classification: 89 `named_tests_failed`, 3 `no_kill_as_declared`, and **zero**
+of every harness-error class — no ambiguous target, no patch that failed to
+apply, no missing or misplaced postimage, no build failure, no runner failure, no
+stray-suite failure, no restoration failure. Every patch was proven to land on
+its declared target before its suite ran.
+
+The three `no_kill_as_declared` rows are the inherited ones and are unchanged:
+`baseline-repeatability`, `case-selected-comparisons` and
+`window-verifier-capture-window`. None is claimed as proof.
+
+The six new controls:
+
+| Control | Result |
+|---|---|
+| `mounted-file-byte-scan` | 10 pass / **2 fail** |
+| `lab-telemetry-oracle-scan` | 9 pass / **3 fail** |
+| `subject-output-secret-canary-scan` | 11 pass / **1 fail** |
+| `subject-output-forbidden-identifier-scan` | 11 pass / **1 fail** |
+| `subject-output-declared-byte-ceiling` | 11 pass / **1 fail** |
+| `subject-output-byte-total-counts-payloads` | 11 pass / **1 fail** |
+
+Three rows are worth reading twice.
+
+**`lab-telemetry-oracle-scan` kills 3 of 12**, not 1. Disabling the single shared
+scanner takes down all three telemetry cases at once — the refusal itself, the
+replay case, and the invalid-terminal case that depends on it. That is the
+measurement that the two call sites are one rule: had they been two copies, this
+patch would have killed at most one of them.
+
+**`subject-output-byte-total-counts-payloads` kills.** It does not delete a
+check; it leaves the ceiling running and hands it path lengths instead of payload
+bytes. A guard that computes over the wrong quantity is exactly the defect class
+the review found on this surface, and it is now measured rather than argued.
+
+**`subject-output-canary-scan` still kills 1 of 12.** That is the row this
+package could most easily have destroyed. Adding a judge-canary branch to the new
+content scan would have left this control with nothing to measure while every
+test stayed green — the most expensive possible way to be wrong, because that
+reading invites deleting the older scan. It did not happen, and
+[ADR-ERL2-032 §5](../adr/ADR-ERL2-032.md) records why not.
+
+### 6.2 Residue
+
+The working tree is byte-identical to how the campaign started. Afterwards:
+`git worktree list` shows only the repository, no `erl2-negative-control-*` temp
+directory remains, no `node --test` or harness process survives, `git status
+--short` is empty and `git diff --check` is clean.
 
 ---
 
