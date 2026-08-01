@@ -1047,6 +1047,25 @@ if (process.argv.includes("--verify")) {
   // Fixtures are ENUMERATED from the directory, never hard-coded: a new invalid
   // golden is covered the day it lands and cannot be added outside the gate. The
   // count is asserted too, so one cannot silently leave.
+  /**
+   * One pinned fixture, verified by the shipped binary in its own process.
+   *
+   * Shared by both halves of the gate so the acceptance condition cannot drift
+   * between them: exit 0 *and* a `valid` verdict, read from wherever the
+   * subcommand puts its verdict. Exit code alone would pass a verifier that
+   * stopped forming a verdict at all.
+   */
+  const verifyPinnedGolden = ({ argv, verdictAt }) => {
+    const run = runCli(argv);
+    const verdict = verdictAt(run.stdout) ?? null;
+    return {
+      ok: run.exit_code === 0 && verdict === "valid",
+      exit: run.exit_code,
+      verdict,
+      code: run.stdout?.errors?.[0]?.code ?? null,
+    };
+  };
+
   const EXPECTED_INVALID_GOLDENS = 3;
   const invalidGoldens = readdirSync(pinned)
     .filter((name) => name.startsWith("invalid-run-"))
@@ -1058,25 +1077,26 @@ if (process.argv.includes("--verify")) {
   for (const name of invalidGoldens) {
     const dir = path.join(pinned, name);
     // A fresh process, the real offline verifier, the pinned fixture's own bytes.
-    const run = runCli([
-      "verify-record",
-      "--record", path.join(dir, "invalid-record.json"),
-      "--lifecycle", path.join(dir, "lifecycle.json"),
-      "--artifact-root", path.join(dir, "artifacts"),
-      "--root-config", path.join(dir, "root-config.json"),
-      "--offline",
-    ]);
+    //
     // `verify-record` returns the independently derived closure report, so the
     // verdict read here is the *closure's* — the thing the verifier concluded —
     // not a status word the CLI chose.
-    const verdict = run.stdout?.data?.closure?.verdict ?? null;
-    const code = run.stdout?.errors?.[0]?.code ?? null;
+    //
     // A correctly constructed invalid terminal *verifies*: the record is valid
-    // evidence of an invalid run. Exit 0 and verdict `valid` are both required —
-    // exit code alone would pass a verifier that stopped forming a verdict.
-    const ok = run.exit_code === 0 && verdict === "valid";
-    console.log(`  ${ok ? "ok  " : "FAIL"} ${name} — exit ${String(run.exit_code)}, verdict ${String(verdict)}${code ? `, ${code}` : ""}`);
-    if (!ok) invalidFailures.push({ name, exit: run.exit_code, verdict, code });
+    // evidence of an invalid run.
+    const { ok, exit, verdict, code } = verifyPinnedGolden({
+      argv: [
+        "verify-record",
+        "--record", path.join(dir, "invalid-record.json"),
+        "--lifecycle", path.join(dir, "lifecycle.json"),
+        "--artifact-root", path.join(dir, "artifacts"),
+        "--root-config", path.join(dir, "root-config.json"),
+        "--offline",
+      ],
+      verdictAt: (body) => body?.data?.closure?.verdict,
+    });
+    console.log(`  ${ok ? "ok  " : "FAIL"} ${name} — exit ${String(exit)}, verdict ${String(verdict)}${code ? `, ${code}` : ""}`);
+    if (!ok) invalidFailures.push({ name, exit, verdict, code });
 
     // An invalid terminal carries no attestation and no public bundle. If one is
     // present the fixture is not the thing the gate believes it is verifying.
@@ -1108,6 +1128,87 @@ if (process.argv.includes("--verify")) {
   }
   console.log(
     `evidence:verify OK — all ${String(invalidGoldens.length)} invalid goldens verify at exit 0 / valid ` +
+      `in a fresh process`,
+  );
+
+  // -------------------------------------------------------------------------
+  // The valid-golden verification gate (review R-02).
+  // -------------------------------------------------------------------------
+  //
+  // ADR-ERL2-029 §7's argument is not about invalidity; it is about *where the
+  // result is recorded*. The generator's `erl2 verify --offline` over
+  // `valid-pre-environment-run` pushes its outcome into `transcript`, and
+  // `cli-transcript.json` is the one file excluded from the byte pin. So a
+  // verifier regression that started rejecting historically-pinned *valid*
+  // bundles — a contract tightening, a new required role, a stricter closure —
+  // changed no producer bytes and left this gate green, exactly as the invalid
+  // half did before it was closed.
+  //
+  // Same shape as the invalid half, and deliberately so: enumerate from the
+  // directory, assert the count, obtain the verdict from a fresh process over
+  // the pinned bytes, and consult the transcript for nothing.
+  const EXPECTED_VALID_GOLDENS = 1;
+  // A valid public bundle is what makes a fixture a member here — not a name
+  // prefix. `**/artifacts/retained/public-bundle.json` belongs to a run's own
+  // artifact tree and is not a fixture root, so enumeration is one level deep.
+  const validGoldens = readdirSync(pinned, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .filter((name) => existsSync(path.join(pinned, name, "public-bundle.json")))
+    .sort();
+
+  console.log(`\nevidence:verify — directly verifying ${String(validGoldens.length)} valid golden(s):`);
+  const validFailures = [];
+  for (const name of validGoldens) {
+    const dir = path.join(pinned, name);
+    // A fixture missing an input is malformed, not absent: without this it would
+    // reach the verifier as a usage error and be indistinguishable from a real
+    // rejection.
+    const required = ["public-bundle.json", "root-config.json", "lifecycle.json", "artifacts"];
+    const absent = required.filter((f) => !existsSync(path.join(dir, f)));
+    if (absent.length > 0) {
+      console.log(`  FAIL ${name} — malformed fixture, missing ${absent.join(", ")}`);
+      validFailures.push({ name, exit: null, verdict: null, code: `missing ${absent.join(", ")}` });
+      continue;
+    }
+    // `verify` reports the bundle verdict at `data.verdict`; the closure it
+    // derived hangs beside it. This is the decision an external consumer gets.
+    const { ok, exit, verdict, code } = verifyPinnedGolden({
+      argv: [
+        "verify",
+        "--public-bundle", path.join(dir, "public-bundle.json"),
+        "--root-config", path.join(dir, "root-config.json"),
+        "--artifact-root", path.join(dir, "artifacts"),
+        "--lifecycle", path.join(dir, "lifecycle.json"),
+        "--offline",
+      ],
+      verdictAt: (body) => body?.data?.verdict,
+    });
+    console.log(`  ${ok ? "ok  " : "FAIL"} ${name} — exit ${String(exit)}, verdict ${String(verdict)}${code ? `, ${code}` : ""}`);
+    if (!ok) validFailures.push({ name, exit, verdict, code });
+  }
+
+  if (validFailures.length > 0) {
+    console.error("\nevidence:verify FAILED: a valid golden did not verify.");
+    for (const f of validFailures) {
+      console.error(`  ${f.name}: exit ${String(f.exit)}, verdict ${String(f.verdict)}, ${String(f.code)}`);
+    }
+    console.error(
+      "\nA verifier regression against a historically valid bundle changes no producer bytes —\n" +
+        "which is exactly why this gate reads verification results and not bytes.",
+    );
+    process.exit(1);
+  }
+  if (validGoldens.length !== EXPECTED_VALID_GOLDENS) {
+    console.error(
+      `\nevidence:verify FAILED: coverage moved — ${String(validGoldens.length)} valid golden(s), ` +
+        `expected ${String(EXPECTED_VALID_GOLDENS)}.\n` +
+        `If this change is intended, update EXPECTED_VALID_GOLDENS in the same commit.`,
+    );
+    process.exit(1);
+  }
+  console.log(
+    `evidence:verify OK — all ${String(validGoldens.length)} valid goldens verify at exit 0 / valid ` +
       `in a fresh process`,
   );
 }
