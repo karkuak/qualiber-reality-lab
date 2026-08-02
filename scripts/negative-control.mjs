@@ -48,8 +48,9 @@
  *   npm run negative-control -- substrate # controls whose id matches
  */
 
-import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -1283,6 +1284,10 @@ export const CONTROLS = [
     replace: "    void label;",
     tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
     mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFailCases: [
+      "EB-MOUNT: a canary in the mounted file's bytes refuses before the adapter is dispatched",
+      "EB-MOUNT: the run cannot step past a refused mount by retrying it",
+    ],
     expect: "fail",
   },
   {
@@ -1295,6 +1300,11 @@ export const CONTROLS = [
     replace: "  void scanTargets;\n  void knownCanaryIds;",
     tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
     mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFailCases: [
+      "EB-TELEMETRY: a canary in the telemetry bytes refuses before the telemetry is retained",
+      "EB-TELEMETRY: a refused capture cannot be stepped past by retrying observe",
+      "EB-TELEMETRY: the run still reaches exactly one invalid terminal that verifies offline",
+    ],
     expect: "fail",
   },
   {
@@ -1313,6 +1323,9 @@ export const CONTROLS = [
     replace: "",
     tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
     mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFailCases: [
+      "EB-OUTPUT: a secret canary in the subject's output bytes refuses before the freeze",
+    ],
     expect: "fail",
   },
   {
@@ -1331,6 +1344,9 @@ export const CONTROLS = [
     replace: "",
     tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
     mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFailCases: [
+      "EB-OUTPUT: a forbidden identifier in the subject's output bytes refuses before the freeze",
+    ],
     expect: "fail",
   },
   {
@@ -1344,6 +1360,9 @@ export const CONTROLS = [
     replace: '  if (String(1) === "2") {\n    void total;\n    void declaredOutputBytes;',
     tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
     mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFailCases: [
+      "EB-SIZE: one byte over the declared ceiling refuses before the manifest freezes",
+    ],
     expect: "fail",
   },
   {
@@ -1358,6 +1377,47 @@ export const CONTROLS = [
     replace: "    total += payload.path.length;",
     tests: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
     mustFail: ["tests/dist/e2e/environmentEvidenceBoundaries.test.js"],
+    mustFailCases: [
+      "EB-SIZE: one byte over the declared ceiling refuses before the manifest freezes",
+    ],
+    expect: "fail",
+  },
+
+  // -- stabilization: the pre-environment bundle's run binding ---------------
+  //
+  // Found by the R-02 sabotage work rather than by design review: mutating the
+  // valid golden's top-level `run_id` and recomputing `bundle.core_hash` gave a
+  // self-consistent document the verifier accepted at exit 0 / `valid`. The
+  // environment branch had always refused it; the pre-environment branch had
+  // not.
+  {
+    id: "pre-environment-bundle-run-binding",
+    what: "a pre-environment bundle must name the run its signed attestation names",
+    file: "packages/public-verifier/src/library/verify.ts",
+    // The identical comparison now exists on both branches, so the preimage
+    // carries the following comment line to name *this* one. Without it the
+    // targeting layer would refuse the control as ambiguous — which is the
+    // behaviour that exists to stop a control silently measuring the wrong
+    // occurrence.
+    find: [
+      "  if (attestation.run_id !== bundle.run_id) {",
+      "    throw new Erl2Error(",
+      "      CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,",
+      '      "the bundle and the attestation name different runs",',
+      "    );",
+      "  }",
+      "",
+      "  // Signer inventory: recomputed, never trusted.",
+    ].join("\n"),
+    // `bundle` stays referenced so the patched tree still typechecks under
+    // `noUnusedLocals`; a build failure would measure nothing.
+    replace: "  void bundle.run_id;\n\n  // Signer inventory: recomputed, never trusted.",
+    uniquePostimage: true,
+    tests: ["tests/dist/adversarial/preEnvironmentBundleRunBinding.test.js"],
+    mustFail: ["tests/dist/adversarial/preEnvironmentBundleRunBinding.test.js"],
+    mustFailCases: [
+      "RUNBIND: a self-consistent bundle naming a different run than its attestation is refused",
+    ],
     expect: "fail",
   },
 
@@ -1378,10 +1438,13 @@ export const CONTROLS = [
 export const CONTROL_RESULT = Object.freeze({
   NAMED_TESTS_FAILED: "named_tests_failed",
   UNRELATED_TESTS_FAILED: "unrelated_tests_failed",
+  DECLARED_CASES_NOT_FAILED: "declared_cases_not_failed",
   TESTS_PASSED_UNEXPECTEDLY: "tests_passed_unexpectedly",
   NO_KILL_AS_DECLARED: "no_kill_as_declared",
   BUILD_FAILED: "build_failure",
   RUNNER_FAILED: "test_runner_failed",
+  STAGE_TIMED_OUT: "stage_timed_out",
+  TREE_TERMINATION_FAILED: "stage_tree_termination_failed",
   RESTORATION_FAILED: "restoration_failure",
   RESIDUE_FAILED: "residue_failure",
 });
@@ -1399,6 +1462,25 @@ export function isHarnessError(result) {
 }
 
 /**
+ * Every failing case the spec reporter named, as `{ file, name }` pairs.
+ *
+ * The reporter's trailing `failing tests:` section prints two lines per failure:
+ *
+ *     test at tests/dist/e2e/environmentEvidenceBoundaries.test.js:287:1
+ *     ✖ EB-OUTPUT: a secret canary in the subject's output bytes refuses … (12.3ms)
+ *
+ * The file line alone is what the harness used to read, and a file is coarser
+ * than an invariant: six controls name the same twelve-case suite, so "1 of 12
+ * failed" was scored as a kill without the harness ever confirming *which* one.
+ * The name is right there on the next line; this reads it.
+ */
+export function parseFailingCases(stdout) {
+  return [
+    ...stdout.matchAll(/^test at (.+?):\d+:\d+\r?\n\s*✖ (.+?)(?: \([\d.]+ms\))?[ \t]*$/gm),
+  ].map((m) => ({ file: m[1].replace(/^\.\//, ""), name: m[2] }));
+}
+
+/**
  * Parse one `node --test` run and decide what it says about the control.
  *
  * The spec reporter names the file of every failing test in its trailing
@@ -1406,8 +1488,15 @@ export function isHarnessError(result) {
  * did not name" expressible at all. `mustFail`, when a control declares it,
  * narrows the expectation further: the listed files are run, and the failures
  * must fall inside the declared subset.
+ *
+ * `mustFailCases` narrows it to the granularity of the invariant. A control that
+ * declares it is not satisfied by *a* failure in the right file; every declared
+ * case must be among the cases that actually failed. A mutation that trips some
+ * unrelated case in the same suite is then not an agreed kill — it is invalid
+ * evidence, and it is reported as a harness error rather than as a result,
+ * because what the campaign measured is not what the control declared.
  */
-export function classifyTestRun({ stdout, expect, tests, mustFail }) {
+export function classifyTestRun({ stdout, expect, tests, mustFail, mustFailCases }) {
   const tests_ = Number(/^ℹ tests (\d+)$/m.exec(stdout)?.[1] ?? "-1");
   const pass = Number(/^ℹ pass (\d+)$/m.exec(stdout)?.[1] ?? "-1");
   const fail = Number(/^ℹ fail (\d+)$/m.exec(stdout)?.[1] ?? "-1");
@@ -1458,13 +1547,52 @@ export function classifyTestRun({ stdout, expect, tests, mustFail }) {
 
   const permitted = (mustFail ?? tests).map((t) => t.replace(/^\.\//, ""));
   const stray = failingFiles.filter((file) => !permitted.some((t) => file.endsWith(t) || t.endsWith(file)));
+  if (stray.length > 0) {
+    return {
+      result: CONTROL_RESULT.UNRELATED_TESTS_FAILED,
+      pass,
+      fail,
+      tests: tests_,
+      failingFiles,
+      strayFiles: stray,
+    };
+  }
+
+  // The right file failed. When the control named the case, that is not yet the
+  // measurement it declared.
+  if (mustFailCases !== undefined) {
+    const failingCases = parseFailingCases(stdout);
+    const names = failingCases.map((c) => c.name);
+    // Substring, because a declared case is an excerpt of a long descriptive
+    // name and the harness must not turn a prose edit into a campaign failure.
+    const missingCases = mustFailCases.filter((declared) => !names.some((n) => n.includes(declared)));
+    if (missingCases.length > 0) {
+      return {
+        result: CONTROL_RESULT.DECLARED_CASES_NOT_FAILED,
+        pass,
+        fail,
+        tests: tests_,
+        failingFiles,
+        missingCases,
+        failingCases: names,
+      };
+    }
+    return {
+      result: CONTROL_RESULT.NAMED_TESTS_FAILED,
+      pass,
+      fail,
+      tests: tests_,
+      failingFiles,
+      failingCases: names,
+    };
+  }
+
   return {
-    result: stray.length > 0 ? CONTROL_RESULT.UNRELATED_TESTS_FAILED : CONTROL_RESULT.NAMED_TESTS_FAILED,
+    result: CONTROL_RESULT.NAMED_TESTS_FAILED,
     pass,
     fail,
     tests: tests_,
     failingFiles,
-    ...(stray.length > 0 ? { strayFiles: stray } : {}),
   };
 }
 
@@ -1508,8 +1636,281 @@ export function validateControlDeclarations(controls) {
       const outside = control.mustFail.filter((t) => !control.tests.includes(t));
       if (outside.length > 0) problems.push(`${where}: \`mustFail\` names suites it does not run: ${outside.join(", ")}`);
     }
+    if (control.mustFailCases !== undefined) {
+      // A declared case can only be checked against a run that produced
+      // failures, so it is meaningless on a control that expects none.
+      if (!Array.isArray(control.mustFailCases) || control.mustFailCases.length === 0) {
+        problems.push(`${where}: \`mustFailCases\` must be a non-empty array of test-name excerpts`);
+      } else {
+        const bad = control.mustFailCases.filter((c) => typeof c !== "string" || c.trim() === "");
+        if (bad.length > 0) problems.push(`${where}: \`mustFailCases\` has empty or non-string entries`);
+        const duplicates = control.mustFailCases.filter((c, i) => control.mustFailCases.indexOf(c) !== i);
+        if (duplicates.length > 0) {
+          problems.push(`${where}: \`mustFailCases\` repeats ${[...new Set(duplicates)].join(", ")}`);
+        }
+        if (control.expect !== "fail") {
+          problems.push(`${where}: \`mustFailCases\` needs \`expect: "fail"\`; a control that expects no failure cannot name one`);
+        }
+      }
+    }
   }
   return problems;
+}
+
+// -- bounded subprocess stages -----------------------------------------------
+
+/**
+ * How long each campaign stage may run before it is a hang rather than progress.
+ *
+ * Measured across two full 92-control campaigns — every stage of both, recorded
+ * as `buildMs`/`suiteMs` in `docs/ledger/negative-controls.json` — then
+ * multiplied:
+ *
+ *   |        | median      | worst observed                              |
+ *   |--------|-------------|---------------------------------------------|
+ *   | build  | 10.0–11.4 s | **50.5 s**                                  |
+ *   | suite  | 81.8–89.0 s | **1,280.1 s** (`environment-bundle-verifier`)|
+ *
+ * `environment-bundle-verifier` designates `environmentRun.test.js` *and*
+ * `environmentTerminalMutations.test.js`, so one stage runs two heavy e2e files.
+ * The reference point the review named — `environmentEvidenceBoundaries`, 126 s
+ * in campaign — is nowhere near the slowest, and a bound picked from it would
+ * have been passed by the real worst case ten times over.
+ *
+ * The same stage measured 858.7 s in the first campaign and 1,280.1 s in the
+ * second, on the same machine and the same tree: **1.5x run-to-run variance is
+ * normal here**, which is the argument for a wide margin rather than a tight
+ * one. A 20-minute suite bound looked like an 8x margin against a single timed
+ * file and would have aborted the second campaign outright.
+ *
+ * The two stages are bounded separately because their needs differ by more than
+ * an order of magnitude; one number generous enough for the suite would leave
+ * the build effectively unbounded.
+ *
+ * The margins are ~5.9x the worst observed build and ~2.8x the worst observed
+ * suite. The bound is not a performance budget: a regression that doubled a
+ * suite's runtime should surface as a slow campaign a human looks into, not as
+ * a control the harness scored as a hang. What it exists to catch is the
+ * *unbounded* case — a disabled guard that turns a refusal into a wait —
+ * because every suite here runs under `--test-timeout=0`, so nothing else in
+ * the stack would ever stop it. A hang therefore costs at most one hour before
+ * the campaign says so and stops.
+ */
+export const STAGE_TIMEOUT_MS = Object.freeze({
+  build: 5 * 60_000,
+  suite: 60 * 60_000,
+});
+
+/**
+ * The default 1 MiB `maxBuffer` truncates a chatty suite's stdout, which loses
+ * the trailing `ℹ pass/fail` summary and downgrades a real measurement to a
+ * harness error. Bounded rather than removed: unbounded output is its own way
+ * for a runaway control to take the campaign down.
+ */
+export const STAGE_MAX_OUTPUT_BYTES = 32 * 1024 * 1024;
+
+/**
+ * Run one campaign stage under an explicit bound, and say plainly how it ended.
+ *
+ * `spawnSync` reports a timeout, a spawn failure and a clean non-zero exit in
+ * three different shapes, and the two failure shapes both leave `stdout` null.
+ * Reading `run.stdout` directly — which is what the harness did — collapses all
+ * three into "the summary did not parse".
+ */
+export const STAGE_TREE_KILL_GRACE_MS = 5_000;
+
+/** How often the reconciliation loop re-checks that the group is gone. */
+const TREE_POLL_MS = 100;
+
+const delay = (ms) => new Promise((resolve) => { setTimeout(resolve, ms).unref?.(); });
+
+/**
+ * SIGKILL an owned process *group*, falling back to the direct child.
+ *
+ * The same discipline `packages/core/src/adapter/sandboxLauncher.ts` uses for
+ * adapter deadlines — reimplemented rather than imported, because the harness
+ * must not depend on the tree it measures.
+ *
+ * `process.kill(-pid, …)` is a process-group signal and only exists where
+ * process groups do. Windows has none, and a negative pid there is not "the
+ * group", it is a different pid or an error — so it gets `taskkill /T /F`,
+ * which is the platform's own tree kill.
+ */
+function killStageTree(pid) {
+  if (process.platform === "win32") {
+    const out = spawnSync("taskkill", ["/pid", String(pid), "/T", "/F"], { encoding: "utf8" });
+    if (out.status === 0) return true;
+    try {
+      process.kill(pid, "SIGKILL");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  try {
+    process.kill(-pid, "SIGKILL");
+    return true;
+  } catch {
+    // The group may already be gone, or the child may never have become a group
+    // leader. Either way the direct child is still worth a signal.
+    try {
+      process.kill(pid, "SIGKILL");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+/** Whether anything in the owned group is still alive. Signal 0 tests, it does not kill. */
+function stageTreeAlive(pid) {
+  try {
+    process.kill(process.platform === "win32" ? pid : -pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Run one campaign stage under an explicit bound, owning its whole process tree.
+ *
+ * The previous implementation used `spawnSync(… timeout, killSignal: "SIGKILL")`.
+ * That bound is real but it reaches exactly one process: `npm run build` spawns
+ * node, and `node --test` spawns one child per test file, so the descendants of
+ * a killed stage survived it. The old test proved only that `run.pid` was dead —
+ * which was true, and not the property that matters.
+ *
+ * So the stage is now `detached`, which makes it a process-group leader on
+ * macOS and Linux, and the bound kills the *group*. After the direct child
+ * closes, the group is reconciled: if anything in it is still alive it is killed
+ * again, boundedly, and a group that outlives `STAGE_TREE_KILL_GRACE_MS` is a
+ * `stage_tree_termination_failed` harness error rather than a result.
+ *
+ * Each stage also gets its own `TMPDIR`, so whatever the stage's processes
+ * scatter is scattered somewhere the harness owns. It is removed **after** the
+ * tree is proven dead and never before — deleting a directory a surviving
+ * descendant is still writing to is how a cleanup becomes a corruption.
+ *
+ * No shell: `command` and `args` are passed through, so nothing is word-split
+ * and there is no intermediate `sh` to lose the signal.
+ */
+export async function runStage({ command, args, cwd, timeoutMs, stage }) {
+  const startedAt = Date.now();
+  // `NODE_TEST_CONTEXT` is set by `node --test` in the processes it spawns, and a
+  // nested runner that sees it declines to run any files at all — it assumes it
+  // is a test file being re-entered. The campaign is normally a top-level
+  // process, so this never bit it; it bites the moment anything runs a stage
+  // from inside a test, which is exactly what this harness's own tests do.
+  const env = { ...process.env };
+  delete env["NODE_TEST_CONTEXT"];
+  const stageTmp = mkdtempSync(path.join(tmpdir(), `erl2-nc-stage-${stage}-`));
+  env["TMPDIR"] = stageTmp;
+  env["TMP"] = stageTmp;
+  env["TEMP"] = stageTmp;
+
+  const child = spawn(command, args, {
+    cwd,
+    env,
+    shell: false,
+    // Its own process group, so the bound below reaches the whole tree.
+    detached: process.platform !== "win32",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const pid = child.pid;
+
+  // Bounded collection, replacing `spawnSync`'s `maxBuffer`. The window is a
+  // *tail*: everything the classifier reads — the `ℹ pass/fail` summary and the
+  // `failing tests:` section — is at the end of the stream, so discarding the
+  // head keeps a run classifiable where discarding the tail would downgrade a
+  // real measurement to a harness error.
+  const collect = () => {
+    const chunks = [];
+    let total = 0;
+    let truncated = false;
+    return {
+      push(chunk) {
+        chunks.push(chunk);
+        total += chunk.byteLength;
+        while (total > STAGE_MAX_OUTPUT_BYTES && chunks.length > 1) {
+          total -= chunks.shift().byteLength;
+          truncated = true;
+        }
+      },
+      text() {
+        return Buffer.concat(chunks).subarray(-STAGE_MAX_OUTPUT_BYTES).toString("utf8");
+      },
+      get truncated() {
+        return truncated;
+      },
+    };
+  };
+  const out = collect();
+  const err = collect();
+  child.stdout.on("data", (chunk) => { out.push(chunk); });
+  child.stderr.on("data", (chunk) => { err.push(chunk); });
+
+  let timedOut = false;
+  let spawnError;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    if (pid !== undefined) killStageTree(pid);
+  }, timeoutMs);
+  timer.unref?.();
+
+  const status = await new Promise((resolve) => {
+    child.on("error", (error) => {
+      spawnError = `${String(error.code ?? error.name)}: ${error.message}`;
+      resolve(null);
+    });
+    // `close` rather than `exit`: the stdio streams are drained first, so the
+    // output a stage produced just before dying is not lost.
+    child.on("close", (code) => { resolve(code); });
+  });
+  clearTimeout(timer);
+
+  // Reconciliation, on every path and not only on timeout: a stage that
+  // returned cleanly while leaking a descendant is the same residue problem
+  // wearing a green tick. `stageTreeAlive` is a no-op when nothing survived.
+  let treeTerminationFailed = false;
+  if (pid !== undefined && spawnError === undefined) {
+    const deadline = Date.now() + STAGE_TREE_KILL_GRACE_MS;
+    while (stageTreeAlive(pid)) {
+      if (Date.now() >= deadline) {
+        treeTerminationFailed = true;
+        break;
+      }
+      killStageTree(pid);
+      await delay(TREE_POLL_MS);
+    }
+  }
+
+  // Only now, and only if nothing of ours is still running.
+  let stageTmpRemoved = false;
+  if (!treeTerminationFailed) {
+    try {
+      rmSync(stageTmp, { recursive: true, force: true, maxRetries: 3 });
+    } catch {
+      // Reported through `stageTmpRemoved`, never thrown: a temporary directory
+      // that will not delete must not become this stage's result.
+    }
+    stageTmpRemoved = !existsSync(stageTmp);
+  }
+
+  return {
+    stage,
+    status,
+    pid,
+    stdout: out.text(),
+    stderr: err.text(),
+    truncated: out.truncated || err.truncated,
+    elapsedMs: Date.now() - startedAt,
+    timedOut,
+    treeTerminationFailed,
+    stageTmp,
+    stageTmpRemoved,
+    spawnError,
+  };
 }
 // -- the campaign ------------------------------------------------------------
 
@@ -1647,7 +2048,46 @@ async function main() {
         continue;
       }
 
-      const build = spawnSync("npm", ["run", "build"], { cwd: worktree, encoding: "utf8" });
+      const build = await runStage({
+        command: "npm",
+        args: ["run", "build"],
+        cwd: worktree,
+        timeoutMs: STAGE_TIMEOUT_MS.build,
+        stage: "build",
+      });
+      if (build.timedOut || build.treeTerminationFailed) {
+        // A hang is not a slow result, and neither is a stage whose process tree
+        // outlived its kill. Both stop the campaign: a surviving descendant may
+        // still be writing into the worktree the next control is about to patch,
+        // and measuring a control against a contended tree produces a number
+        // that means nothing.
+        const failure = build.treeTerminationFailed
+          ? CONTROL_RESULT.TREE_TERMINATION_FAILED
+          : CONTROL_RESULT.STAGE_TIMED_OUT;
+        results.push({
+          id: control.id,
+          what: control.what,
+          expected: control.expect,
+          result: failure,
+          harnessError: true,
+          agreed: false,
+          stage: "build",
+          elapsedMs: build.elapsedMs,
+          stageTmp: build.stageTmp,
+          stageTmpRemoved: build.stageTmpRemoved,
+          detail: build.treeTerminationFailed
+            ? `the build process group outlived ${String(STAGE_TREE_KILL_GRACE_MS)} ms of SIGKILL; ` +
+              `its temporary root ${build.stageTmp} was left in place rather than deleted under a live process`
+            : `build exceeded ${String(STAGE_TIMEOUT_MS.build)} ms and its process group was SIGKILLed`,
+        });
+        console.log(
+          `  ✖ ${control.id}: the build stage ${build.treeTerminationFailed ? "could not be fully terminated" : "timed out"} ` +
+            `after ${String(build.elapsedMs)} ms`,
+        );
+        aborted = { id: control.id, residual: undefined, timedOut: "build" };
+        disposable.restore();
+        break;
+      }
       if (build.status !== 0) {
         // Not a behavioural kill. The patched tree does not compile, which is a
         // fact about the patch and says nothing about whether the guard is
@@ -1670,12 +2110,58 @@ async function main() {
         continue;
       }
 
-      const run = spawnSync("node", ["--test", ...control.tests], { cwd: worktree, encoding: "utf8" });
+      const run = await runStage({
+        command: "node",
+        // The reporter is named rather than defaulted: `classifyTestRun` parses
+        // the spec reporter's summary lines and its `failing tests:` section, so
+        // the format the classifier depends on is the format the stage asks for.
+        args: ["--test", "--test-reporter=spec", ...control.tests],
+        cwd: worktree,
+        timeoutMs: STAGE_TIMEOUT_MS.suite,
+        stage: "suite",
+      });
+      if (run.timedOut || run.treeTerminationFailed) {
+        // The case the bound exists for: a disabled guard that turns a refusal
+        // into a wait. Under `--test-timeout=0` nothing else would ever stop it,
+        // and in a multi-hour campaign a hang and slow progress look identical.
+        // `node --test` spawns one process per test file, so the kill has to
+        // reach the group; a group that survives it is its own harness error.
+        const failure = run.treeTerminationFailed
+          ? CONTROL_RESULT.TREE_TERMINATION_FAILED
+          : CONTROL_RESULT.STAGE_TIMED_OUT;
+        results.push({
+          id: control.id,
+          what: control.what,
+          expected: control.expect,
+          result: failure,
+          harnessError: true,
+          agreed: false,
+          stage: "suite",
+          elapsedMs: run.elapsedMs,
+          stageTmp: run.stageTmp,
+          stageTmpRemoved: run.stageTmpRemoved,
+          detail: run.treeTerminationFailed
+            ? `the suite process group outlived ${String(STAGE_TREE_KILL_GRACE_MS)} ms of SIGKILL; ` +
+              `its temporary root ${run.stageTmp} was left in place rather than deleted under a live process`
+            : `the designated suite exceeded ${String(STAGE_TIMEOUT_MS.suite)} ms and its process group was SIGKILLed`,
+        });
+        console.log(
+          `  ✖ ${control.id}: the suite stage ${run.treeTerminationFailed ? "could not be fully terminated" : "timed out"} ` +
+            `after ${String(run.elapsedMs)} ms`,
+        );
+        aborted = { id: control.id, residual: undefined, timedOut: "suite" };
+        disposable.restore();
+        break;
+      }
       const classified = classifyTestRun({
+        // `runStage` normalises the null stdout that a spawn failure produces, so
+        // an unspawnable runner reaches the classifier as an unparseable run —
+        // a harness error — rather than as a crash inside the classifier.
         stdout: run.stdout,
         expect: control.expect,
         tests: control.tests,
         ...(control.mustFail === undefined ? {} : { mustFail: control.mustFail }),
+        ...(control.mustFailCases === undefined ? {} : { mustFailCases: control.mustFailCases }),
       });
       const agreed = agreesWithExpectation(classified.result, control.expect);
       results.push({
@@ -1689,9 +2175,23 @@ async function main() {
         pass: classified.pass,
         fail: classified.fail,
         agreed,
+        buildMs: build.elapsedMs,
+        suiteMs: run.elapsedMs,
+        stageTmpRemoved: build.stageTmpRemoved && run.stageTmpRemoved,
+        ...(run.truncated || build.truncated ? { outputTruncated: true } : {}),
+        ...(run.spawnError === undefined ? {} : { spawnError: run.spawnError }),
         ...(classified.strayFiles === undefined ? {} : { strayFiles: classified.strayFiles }),
+        ...(control.mustFailCases === undefined ? {} : { mustFailCases: [...control.mustFailCases] }),
+        ...(classified.failingCases === undefined ? {} : { failingCases: classified.failingCases }),
+        ...(classified.missingCases === undefined ? {} : { missingCases: classified.missingCases }),
         ...(control.note === undefined ? {} : { note: control.note }),
       });
+      if (classified.missingCases !== undefined) {
+        console.log(
+          `    declared case(s) that did not fail: ${classified.missingCases.join(" | ")}\n` +
+            `    cases that did fail: ${(classified.failingCases ?? []).join(" | ") || "(none named)"}`,
+        );
+      }
       console.log(
         `  ${agreed ? "✔" : "✖"} ${control.id}: ${String(classified.pass)} pass / ${String(classified.fail)} fail ` +
           `(expected ${control.expect}, ${classified.result})${control.note === undefined ? "" : ` — ${control.note}`}`,
@@ -1750,6 +2250,15 @@ async function main() {
     process.exit(1);
   }
 
+  if (aborted !== undefined && aborted.timedOut !== undefined) {
+    console.error(
+      `\nnegative-control FAILED: the ${aborted.timedOut} stage of ${aborted.id} was stopped by its bound.\n` +
+        "A timeout is a harness error, never a kill and never an agreement: the campaign\n" +
+        "learned nothing about that guard. It stopped there rather than patch a worktree a\n" +
+        "killed stage may still have descendants inside.",
+    );
+    process.exit(1);
+  }
   if (aborted !== undefined) {
     console.error(
       `\nnegative-control FAILED: the worktree could not be restored after ${aborted.id}.\n` +

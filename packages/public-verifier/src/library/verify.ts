@@ -177,6 +177,23 @@ function verifyPreEnvironmentBundle(options: VerifyBundleOptions): BundleVerific
   if (!["T1", "T2", "T3"].includes(attestation.claim_scope)) {
     throw new Erl2Error(CODES.BUNDLE_VARIANT_MISMATCH, "base attestations may only claim T1-T3");
   }
+  // The binding the environment branch has always had, and this one did not.
+  //
+  // `bundle.run_id` is an unsigned scalar in an unsigned envelope: a reader can
+  // edit it and recompute `bundle.core_hash`, and the result is internally
+  // self-consistent. Nothing downstream reads it — every derivation here takes
+  // its run identity from `attestation.run_id`, which is signed — so the
+  // mismatch produced no wrong verdict, but it did let a bundle *present itself*
+  // as a different run than the one it attests, which is exactly the shape a
+  // reader would rely on when filing evidence by run.
+  //
+  // The signed side is authoritative; the scalar is required to agree with it.
+  if (attestation.run_id !== bundle.run_id) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
+      "the bundle and the attestation name different runs",
+    );
+  }
 
   // Signer inventory: recomputed, never trusted.
   const inventory = index.typed<PreEnvironmentSignerInventoryV2>(

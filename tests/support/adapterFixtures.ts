@@ -7,8 +7,6 @@
  * host against SDK-shaped adapters would only prove the SDK works.
  */
 
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -20,6 +18,7 @@ import {
 } from "@erl2/contracts";
 import { ArtifactStore, coreHash, developmentKey, sealSigned } from "@erl2/integrity";
 import { AdapterHost, SteppingClock, type AdapterHostOptions, type AdapterMount } from "@erl2/core";
+import { ownedTempDir } from "./tempDirs.js";
 
 export const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -132,8 +131,8 @@ export function newHost(
   entryPath: string,
   overrides: Partial<AdapterHostOptions> = {},
 ): HostFixture {
-  const workspaceRoot = mkdtempSync(path.join(tmpdir(), "erl2-adapter-ws-"));
-  const storeRoot = mkdtempSync(path.join(tmpdir(), "erl2-adapter-store-"));
+  const workspaceRoot = ownedTempDir("erl2-adapter-ws-");
+  const storeRoot = ownedTempDir("erl2-adapter-store-");
   const host = new AdapterHost({
     runId: RUN_ID,
     adapterManifest: manifest,
