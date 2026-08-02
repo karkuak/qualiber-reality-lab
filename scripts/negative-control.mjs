@@ -337,12 +337,12 @@ export const CONTROLS = [
   {
     id: "per-action-emergency-cleanup",
     what: "emergency cleanup attempts each safe action separately (review P1-1/P1-5)",
-    file: "packages/core/src/run/environmentRun.ts",
+    file: "packages/core/src/run/environmentCleanup.ts",
     // Forces the whole-environment fallback even though the driver offers
     // per-resource destruction — the pre-remediation behaviour exactly.
-    find: "    if (this.driver.destroyResource !== undefined) {",
+    find: "  if (ctx.driver.destroyResource !== undefined) {",
     replace:
-      '    if (this.driver.destroyResource !== undefined && this.driver.manifest.driver_id === "no-such-driver") {',
+      '  if (ctx.driver.destroyResource !== undefined && ctx.driver.manifest.driver_id === "no-such-driver") {',
     tests: ["tests/dist/adversarial/emergencyCleanupAdversarial.test.js"],
     expect: "fail",
   },
@@ -483,7 +483,7 @@ export const CONTROLS = [
   {
     id: "unconditional-bounded-destroy",
     what: "the bounded invalid route derives its cleanup instead of destroying the environment (review P1-1/P1-5)",
-    file: "packages/core/src/run/environmentRun.ts",
+    file: "packages/core/src/run/environmentCleanup.ts",
     // Restores `boundedEnvironmentCleanup` in the one respect that matters: the
     // non-emergency route swings a whole-environment `driver.destroy()` before
     // it reads the frontier it just froze. The per-action executor still runs
@@ -491,10 +491,10 @@ export const CONTROLS = [
     // that an unauthorized aggregate dispatch happens first — which is the
     // defect, and which the frontier-unsafe survivor and the residue probe both
     // see.
-    find: "    const safe = safeActions(frontier);\n    const attemptHashes: Hash[] = [];",
+    find: "  const safe = safeActions(frontier);\n  const attemptHashes: Hash[] = [];",
     replace:
-      "    if (!emergency) this.driver.destroy({ runId: this.runId, operationId: \"op-invalid-destroy\" });\n" +
-      "    const safe = safeActions(frontier);\n    const attemptHashes: Hash[] = [];",
+      "  if (!emergency) ctx.driver.destroy({ runId: ctx.runId, operationId: \"op-invalid-destroy\" });\n" +
+      "  const safe = safeActions(frontier);\n  const attemptHashes: Hash[] = [];",
     tests: ["tests/dist/adversarial/invalidCleanupDiscipline.test.js"],
     expect: "fail",
   },
