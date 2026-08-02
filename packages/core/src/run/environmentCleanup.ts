@@ -12,7 +12,7 @@
  *
  * ## The dependency boundary
  *
- * The executor takes a `FrontierCleanupContext`: ten explicitly typed
+ * The executor takes a `FrontierCleanupContext`: an explicitly typed set of
  * capabilities and nothing else. It never receives the `EnvironmentRun`
  * instance, the `RunWorkspace`, the artifact store or the intent journal — the
  * point of the extraction is that this code cannot reach for run state it was
@@ -49,17 +49,6 @@ import { safeActions } from "../environment/frontier.js";
 import { buildResidueProbe } from "../environment/residueProbe.js";
 import { buildEmergencyCleanup } from "../cleanup/cleanup.js";
 
-/**
- * The retained subtree the environment branch writes into.
- *
- * Deliberately a local constant rather than an import from `environmentRun.ts`:
- * importing it back would be the reverse dependency this extraction exists to
- * avoid. It is a path literal, not logic, and the two files' agreement is
- * covered by the golden evidence pin — a divergence moves retained paths and
- * `evidence:verify` fails.
- */
-const RETAINED = "retained/environment";
-
 /** Which failure the cleanup is cleaning up after. Unchanged from the method's parameter. */
 export type CleanupTrigger =
   | "restoration_failure"
@@ -84,6 +73,15 @@ export interface FrontierCleanupOutcome {
  */
 export interface FrontierCleanupContext {
   readonly runId: string;
+  /**
+   * The retained subtree the environment branch writes into.
+   *
+   * Supplied rather than redeclared. `environmentRun.ts` owns this path and
+   * always has; importing it back would be the reverse dependency this
+   * extraction exists to avoid, and copying it would let the two definitions
+   * drift apart silently.
+   */
+  readonly retainedRoot: string;
   /** The untrusted infrastructure this cleanup dispatches to. */
   readonly driver: EnvironmentDriver;
   /** The run's clock read, in the order the original made it. */
@@ -186,7 +184,7 @@ export function executeFrontierDerivedCleanup(
   }[] = [];
 
   const record = (receipt: EnvironmentOperationReceiptV1, label: string): Hash => {
-    ctx.freezeJson(`${RETAINED}/emergency-receipt-${label}.json`, receipt, "INTERNAL");
+    ctx.freezeJson(`${ctx.retainedRoot}/emergency-receipt-${label}.json`, receipt, "INTERNAL");
     if (!attemptHashes.includes(receipt.core_hash)) {
       attemptHashes.push(receipt.core_hash);
       produced.push({
@@ -272,7 +270,8 @@ export function executeFrontierDerivedCleanup(
           actionId: action.action_id,
           succeeded: false,
           attemptReceiptHash: record(
-            failedActionReceipt(ctx, 
+            failedActionReceipt(
+              ctx,
               action.target_resource_id,
               action.action_id,
               new Erl2Error(
@@ -350,7 +349,7 @@ export function executeFrontierDerivedCleanup(
     probeStatus: "observed",
     probedAt: ctx.now(),
   });
-  ctx.freezeJson(`${RETAINED}/cleanup-residue-probe.json`, probe, "INTERNAL");
+  ctx.freezeJson(`${ctx.retainedRoot}/cleanup-residue-probe.json`, probe, "INTERNAL");
 
   const stillPresent = new Set(observedAfter.map((r) => r.resourceId));
   // Every resource whose action was skipped or failed must appear here with an
@@ -502,4 +501,3 @@ function failedActionReceipt(
     core_hash: coreHash(base),
   });
 }
-

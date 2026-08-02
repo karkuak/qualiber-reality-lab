@@ -3710,6 +3710,8 @@ export class EnvironmentRun {
     return executeFrontierDerivedCleanup(
       {
         runId: this.runId,
+        // The retained layout stays owned here; the executor is handed it.
+        retainedRoot: RETAINED,
         driver: this.driver,
         now: () => this.now(),
         appendLifecycle: (event) => {
