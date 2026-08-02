@@ -48,8 +48,9 @@
  *   npm run negative-control -- substrate # controls whose id matches
  */
 
-import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -1382,6 +1383,44 @@ export const CONTROLS = [
     expect: "fail",
   },
 
+  // -- stabilization: the pre-environment bundle's run binding ---------------
+  //
+  // Found by the R-02 sabotage work rather than by design review: mutating the
+  // valid golden's top-level `run_id` and recomputing `bundle.core_hash` gave a
+  // self-consistent document the verifier accepted at exit 0 / `valid`. The
+  // environment branch had always refused it; the pre-environment branch had
+  // not.
+  {
+    id: "pre-environment-bundle-run-binding",
+    what: "a pre-environment bundle must name the run its signed attestation names",
+    file: "packages/public-verifier/src/library/verify.ts",
+    // The identical comparison now exists on both branches, so the preimage
+    // carries the following comment line to name *this* one. Without it the
+    // targeting layer would refuse the control as ambiguous — which is the
+    // behaviour that exists to stop a control silently measuring the wrong
+    // occurrence.
+    find: [
+      "  if (attestation.run_id !== bundle.run_id) {",
+      "    throw new Erl2Error(",
+      "      CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,",
+      '      "the bundle and the attestation name different runs",',
+      "    );",
+      "  }",
+      "",
+      "  // Signer inventory: recomputed, never trusted.",
+    ].join("\n"),
+    // `bundle` stays referenced so the patched tree still typechecks under
+    // `noUnusedLocals`; a build failure would measure nothing.
+    replace: "  void bundle.run_id;\n\n  // Signer inventory: recomputed, never trusted.",
+    uniquePostimage: true,
+    tests: ["tests/dist/adversarial/preEnvironmentBundleRunBinding.test.js"],
+    mustFail: ["tests/dist/adversarial/preEnvironmentBundleRunBinding.test.js"],
+    mustFailCases: [
+      "RUNBIND: a self-consistent bundle naming a different run than its attestation is refused",
+    ],
+    expect: "fail",
+  },
+
 ];
 
 // -- result classification ---------------------------------------------------
@@ -1405,6 +1444,7 @@ export const CONTROL_RESULT = Object.freeze({
   BUILD_FAILED: "build_failure",
   RUNNER_FAILED: "test_runner_failed",
   STAGE_TIMED_OUT: "stage_timed_out",
+  TREE_TERMINATION_FAILED: "stage_tree_termination_failed",
   RESTORATION_FAILED: "restoration_failure",
   RESIDUE_FAILED: "residue_failure",
 });
@@ -1677,7 +1717,85 @@ export const STAGE_MAX_OUTPUT_BYTES = 32 * 1024 * 1024;
  * Reading `run.stdout` directly — which is what the harness did — collapses all
  * three into "the summary did not parse".
  */
-export function runStage({ command, args, cwd, timeoutMs, stage }) {
+export const STAGE_TREE_KILL_GRACE_MS = 5_000;
+
+/** How often the reconciliation loop re-checks that the group is gone. */
+const TREE_POLL_MS = 100;
+
+const delay = (ms) => new Promise((resolve) => { setTimeout(resolve, ms).unref?.(); });
+
+/**
+ * SIGKILL an owned process *group*, falling back to the direct child.
+ *
+ * The same discipline `packages/core/src/adapter/sandboxLauncher.ts` uses for
+ * adapter deadlines — reimplemented rather than imported, because the harness
+ * must not depend on the tree it measures.
+ *
+ * `process.kill(-pid, …)` is a process-group signal and only exists where
+ * process groups do. Windows has none, and a negative pid there is not "the
+ * group", it is a different pid or an error — so it gets `taskkill /T /F`,
+ * which is the platform's own tree kill.
+ */
+function killStageTree(pid) {
+  if (process.platform === "win32") {
+    const out = spawnSync("taskkill", ["/pid", String(pid), "/T", "/F"], { encoding: "utf8" });
+    if (out.status === 0) return true;
+    try {
+      process.kill(pid, "SIGKILL");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  try {
+    process.kill(-pid, "SIGKILL");
+    return true;
+  } catch {
+    // The group may already be gone, or the child may never have become a group
+    // leader. Either way the direct child is still worth a signal.
+    try {
+      process.kill(pid, "SIGKILL");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+/** Whether anything in the owned group is still alive. Signal 0 tests, it does not kill. */
+function stageTreeAlive(pid) {
+  try {
+    process.kill(process.platform === "win32" ? pid : -pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Run one campaign stage under an explicit bound, owning its whole process tree.
+ *
+ * The previous implementation used `spawnSync(… timeout, killSignal: "SIGKILL")`.
+ * That bound is real but it reaches exactly one process: `npm run build` spawns
+ * node, and `node --test` spawns one child per test file, so the descendants of
+ * a killed stage survived it. The old test proved only that `run.pid` was dead —
+ * which was true, and not the property that matters.
+ *
+ * So the stage is now `detached`, which makes it a process-group leader on
+ * macOS and Linux, and the bound kills the *group*. After the direct child
+ * closes, the group is reconciled: if anything in it is still alive it is killed
+ * again, boundedly, and a group that outlives `STAGE_TREE_KILL_GRACE_MS` is a
+ * `stage_tree_termination_failed` harness error rather than a result.
+ *
+ * Each stage also gets its own `TMPDIR`, so whatever the stage's processes
+ * scatter is scattered somewhere the harness owns. It is removed **after** the
+ * tree is proven dead and never before — deleting a directory a surviving
+ * descendant is still writing to is how a cleanup becomes a corruption.
+ *
+ * No shell: `command` and `args` are passed through, so nothing is word-split
+ * and there is no intermediate `sh` to lose the signal.
+ */
+export async function runStage({ command, args, cwd, timeoutMs, stage }) {
   const startedAt = Date.now();
   // `NODE_TEST_CONTEXT` is set by `node --test` in the processes it spawns, and a
   // nested runner that sees it declines to run any files at all — it assumes it
@@ -1686,30 +1804,112 @@ export function runStage({ command, args, cwd, timeoutMs, stage }) {
   // from inside a test, which is exactly what this harness's own tests do.
   const env = { ...process.env };
   delete env["NODE_TEST_CONTEXT"];
-  const run = spawnSync(command, args, {
+  const stageTmp = mkdtempSync(path.join(tmpdir(), `erl2-nc-stage-${stage}-`));
+  env["TMPDIR"] = stageTmp;
+  env["TMP"] = stageTmp;
+  env["TEMP"] = stageTmp;
+
+  const child = spawn(command, args, {
     cwd,
     env,
-    encoding: "utf8",
-    timeout: timeoutMs,
-    // The child is killed outright: a stage that ignored SIGTERM is exactly the
-    // hang this bound exists for.
-    killSignal: "SIGKILL",
-    maxBuffer: STAGE_MAX_OUTPUT_BYTES,
+    shell: false,
+    // Its own process group, so the bound below reaches the whole tree.
+    detached: process.platform !== "win32",
+    stdio: ["ignore", "pipe", "pipe"],
   });
-  const elapsedMs = Date.now() - startedAt;
-  const code = run.error?.code;
+  const pid = child.pid;
+
+  // Bounded collection, replacing `spawnSync`'s `maxBuffer`. The window is a
+  // *tail*: everything the classifier reads — the `ℹ pass/fail` summary and the
+  // `failing tests:` section — is at the end of the stream, so discarding the
+  // head keeps a run classifiable where discarding the tail would downgrade a
+  // real measurement to a harness error.
+  const collect = () => {
+    const chunks = [];
+    let total = 0;
+    let truncated = false;
+    return {
+      push(chunk) {
+        chunks.push(chunk);
+        total += chunk.byteLength;
+        while (total > STAGE_MAX_OUTPUT_BYTES && chunks.length > 1) {
+          total -= chunks.shift().byteLength;
+          truncated = true;
+        }
+      },
+      text() {
+        return Buffer.concat(chunks).subarray(-STAGE_MAX_OUTPUT_BYTES).toString("utf8");
+      },
+      get truncated() {
+        return truncated;
+      },
+    };
+  };
+  const out = collect();
+  const err = collect();
+  child.stdout.on("data", (chunk) => { out.push(chunk); });
+  child.stderr.on("data", (chunk) => { err.push(chunk); });
+
+  let timedOut = false;
+  let spawnError;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    if (pid !== undefined) killStageTree(pid);
+  }, timeoutMs);
+  timer.unref?.();
+
+  const status = await new Promise((resolve) => {
+    child.on("error", (error) => {
+      spawnError = `${String(error.code ?? error.name)}: ${error.message}`;
+      resolve(null);
+    });
+    // `close` rather than `exit`: the stdio streams are drained first, so the
+    // output a stage produced just before dying is not lost.
+    child.on("close", (code) => { resolve(code); });
+  });
+  clearTimeout(timer);
+
+  // Reconciliation, on every path and not only on timeout: a stage that
+  // returned cleanly while leaking a descendant is the same residue problem
+  // wearing a green tick. `stageTreeAlive` is a no-op when nothing survived.
+  let treeTerminationFailed = false;
+  if (pid !== undefined && spawnError === undefined) {
+    const deadline = Date.now() + STAGE_TREE_KILL_GRACE_MS;
+    while (stageTreeAlive(pid)) {
+      if (Date.now() >= deadline) {
+        treeTerminationFailed = true;
+        break;
+      }
+      killStageTree(pid);
+      await delay(TREE_POLL_MS);
+    }
+  }
+
+  // Only now, and only if nothing of ours is still running.
+  let stageTmpRemoved = false;
+  if (!treeTerminationFailed) {
+    try {
+      rmSync(stageTmp, { recursive: true, force: true, maxRetries: 3 });
+    } catch {
+      // Reported through `stageTmpRemoved`, never thrown: a temporary directory
+      // that will not delete must not become this stage's result.
+    }
+    stageTmpRemoved = !existsSync(stageTmp);
+  }
+
   return {
     stage,
-    status: run.status,
-    // `spawnSync` has already waited for and reaped the child by the time it
-    // returns — including the one it SIGKILLed — so this pid is reportable and,
-    // for the timeout tests, checkable.
-    pid: run.pid,
-    stdout: run.stdout ?? "",
-    stderr: run.stderr ?? "",
-    elapsedMs,
-    timedOut: code === "ETIMEDOUT",
-    spawnError: run.error === undefined || code === "ETIMEDOUT" ? undefined : `${String(code)}: ${run.error.message}`,
+    status,
+    pid,
+    stdout: out.text(),
+    stderr: err.text(),
+    truncated: out.truncated || err.truncated,
+    elapsedMs: Date.now() - startedAt,
+    timedOut,
+    treeTerminationFailed,
+    stageTmp,
+    stageTmpRemoved,
+    spawnError,
   };
 }
 // -- the campaign ------------------------------------------------------------
@@ -1848,29 +2048,42 @@ async function main() {
         continue;
       }
 
-      const build = runStage({
+      const build = await runStage({
         command: "npm",
         args: ["run", "build"],
         cwd: worktree,
         timeoutMs: STAGE_TIMEOUT_MS.build,
         stage: "build",
       });
-      if (build.timedOut) {
-        // A hang is not a slow result, and it is not safe to keep going: the
-        // killed stage may still have descendants writing into the worktree the
-        // next control is about to patch. The campaign stops and says where.
+      if (build.timedOut || build.treeTerminationFailed) {
+        // A hang is not a slow result, and neither is a stage whose process tree
+        // outlived its kill. Both stop the campaign: a surviving descendant may
+        // still be writing into the worktree the next control is about to patch,
+        // and measuring a control against a contended tree produces a number
+        // that means nothing.
+        const failure = build.treeTerminationFailed
+          ? CONTROL_RESULT.TREE_TERMINATION_FAILED
+          : CONTROL_RESULT.STAGE_TIMED_OUT;
         results.push({
           id: control.id,
           what: control.what,
           expected: control.expect,
-          result: CONTROL_RESULT.STAGE_TIMED_OUT,
+          result: failure,
           harnessError: true,
           agreed: false,
           stage: "build",
           elapsedMs: build.elapsedMs,
-          detail: `build exceeded ${String(STAGE_TIMEOUT_MS.build)} ms and was SIGKILLed`,
+          stageTmp: build.stageTmp,
+          stageTmpRemoved: build.stageTmpRemoved,
+          detail: build.treeTerminationFailed
+            ? `the build process group outlived ${String(STAGE_TREE_KILL_GRACE_MS)} ms of SIGKILL; ` +
+              `its temporary root ${build.stageTmp} was left in place rather than deleted under a live process`
+            : `build exceeded ${String(STAGE_TIMEOUT_MS.build)} ms and its process group was SIGKILLed`,
         });
-        console.log(`  ✖ ${control.id}: the build stage timed out after ${String(build.elapsedMs)} ms`);
+        console.log(
+          `  ✖ ${control.id}: the build stage ${build.treeTerminationFailed ? "could not be fully terminated" : "timed out"} ` +
+            `after ${String(build.elapsedMs)} ms`,
+        );
         aborted = { id: control.id, residual: undefined, timedOut: "build" };
         disposable.restore();
         break;
@@ -1897,7 +2110,7 @@ async function main() {
         continue;
       }
 
-      const run = runStage({
+      const run = await runStage({
         command: "node",
         // The reporter is named rather than defaulted: `classifyTestRun` parses
         // the spec reporter's summary lines and its `failing tests:` section, so
@@ -1907,22 +2120,35 @@ async function main() {
         timeoutMs: STAGE_TIMEOUT_MS.suite,
         stage: "suite",
       });
-      if (run.timedOut) {
+      if (run.timedOut || run.treeTerminationFailed) {
         // The case the bound exists for: a disabled guard that turns a refusal
         // into a wait. Under `--test-timeout=0` nothing else would ever stop it,
         // and in a multi-hour campaign a hang and slow progress look identical.
+        // `node --test` spawns one process per test file, so the kill has to
+        // reach the group; a group that survives it is its own harness error.
+        const failure = run.treeTerminationFailed
+          ? CONTROL_RESULT.TREE_TERMINATION_FAILED
+          : CONTROL_RESULT.STAGE_TIMED_OUT;
         results.push({
           id: control.id,
           what: control.what,
           expected: control.expect,
-          result: CONTROL_RESULT.STAGE_TIMED_OUT,
+          result: failure,
           harnessError: true,
           agreed: false,
           stage: "suite",
           elapsedMs: run.elapsedMs,
-          detail: `the designated suite exceeded ${String(STAGE_TIMEOUT_MS.suite)} ms and was SIGKILLed`,
+          stageTmp: run.stageTmp,
+          stageTmpRemoved: run.stageTmpRemoved,
+          detail: run.treeTerminationFailed
+            ? `the suite process group outlived ${String(STAGE_TREE_KILL_GRACE_MS)} ms of SIGKILL; ` +
+              `its temporary root ${run.stageTmp} was left in place rather than deleted under a live process`
+            : `the designated suite exceeded ${String(STAGE_TIMEOUT_MS.suite)} ms and its process group was SIGKILLed`,
         });
-        console.log(`  ✖ ${control.id}: the suite stage timed out after ${String(run.elapsedMs)} ms`);
+        console.log(
+          `  ✖ ${control.id}: the suite stage ${run.treeTerminationFailed ? "could not be fully terminated" : "timed out"} ` +
+            `after ${String(run.elapsedMs)} ms`,
+        );
         aborted = { id: control.id, residual: undefined, timedOut: "suite" };
         disposable.restore();
         break;
@@ -1951,6 +2177,8 @@ async function main() {
         agreed,
         buildMs: build.elapsedMs,
         suiteMs: run.elapsedMs,
+        stageTmpRemoved: build.stageTmpRemoved && run.stageTmpRemoved,
+        ...(run.truncated || build.truncated ? { outputTruncated: true } : {}),
         ...(run.spawnError === undefined ? {} : { spawnError: run.spawnError }),
         ...(classified.strayFiles === undefined ? {} : { strayFiles: classified.strayFiles }),
         ...(control.mustFailCases === undefined ? {} : { mustFailCases: [...control.mustFailCases] }),
@@ -2024,7 +2252,7 @@ async function main() {
 
   if (aborted !== undefined && aborted.timedOut !== undefined) {
     console.error(
-      `\nnegative-control FAILED: the ${aborted.timedOut} stage of ${aborted.id} timed out and was SIGKILLed.\n` +
+      `\nnegative-control FAILED: the ${aborted.timedOut} stage of ${aborted.id} was stopped by its bound.\n` +
         "A timeout is a harness error, never a kill and never an agreement: the campaign\n" +
         "learned nothing about that guard. It stopped there rather than patch a worktree a\n" +
         "killed stage may still have descendants inside.",

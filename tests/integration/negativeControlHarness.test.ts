@@ -79,22 +79,27 @@ interface HarnessModule {
   readonly validateControlDeclarations: (controls: readonly unknown[]) => string[];
   readonly STAGE_TIMEOUT_MS: { readonly build: number; readonly suite: number };
   readonly STAGE_MAX_OUTPUT_BYTES: number;
+  readonly STAGE_TREE_KILL_GRACE_MS: number;
   readonly runStage: (input: {
     readonly command: string;
     readonly args: readonly string[];
     readonly cwd: string;
     readonly timeoutMs: number;
     readonly stage: string;
-  }) => {
+  }) => Promise<{
     readonly stage: string;
     readonly status: number | null;
     readonly stdout: string;
     readonly stderr: string;
+    readonly truncated: boolean;
     readonly elapsedMs: number;
     readonly timedOut: boolean;
+    readonly treeTerminationFailed: boolean;
+    readonly stageTmp: string;
+    readonly stageTmpRemoved: boolean;
     readonly pid?: number;
     readonly spawnError?: string;
-  };
+  }>;
 }
 
 interface WorktreeModule {
@@ -614,7 +619,7 @@ test("NC-CASES: the reporter's failing-case names are parsed from a real `node -
     ].join("\n"),
   );
   try {
-    const run = harness.runStage({
+    const run = await harness.runStage({
       command: process.execPath,
       args: ["--test", "--test-reporter=spec", "fixture.test.mjs"],
       cwd: dir,
@@ -793,11 +798,11 @@ test("NC-DECLARE: the six Step 6B evidence-boundary controls each name their loa
 
 // -- bounded subprocess stages (review R-06) ---------------------------------
 
-test("NC-TIMEOUT: a hanging stage is killed at the bound and reported as a timeout", () => {
+test("NC-TIMEOUT: a hanging stage is killed at the bound and reported as a timeout", async () => {
   // Injected command and a 400 ms bound: the classification is what is under
   // test, not the production constants, so this costs well under a second.
   const started = Date.now();
-  const run = harness.runStage({
+  const run = await harness.runStage({
     command: process.execPath,
     args: ["-e", "setInterval(() => {}, 1000)"],
     cwd: repoRoot,
@@ -807,6 +812,7 @@ test("NC-TIMEOUT: a hanging stage is killed at the bound and reported as a timeo
   const wall = Date.now() - started;
 
   assert.equal(run.timedOut, true, "a stage that never returns must be reported as a timeout");
+  assert.equal(run.treeTerminationFailed, false, "a single hanging process must terminate cleanly");
   assert.equal(run.stage, "suite");
   assert.ok(wall < 30_000, `the bound must actually stop it; took ${String(wall)} ms`);
   assert.equal(typeof run.elapsedMs, "number");
@@ -818,39 +824,99 @@ test("NC-TIMEOUT: a hanging stage is killed at the bound and reported as a timeo
 });
 
 test("NC-TIMEOUT: a timeout is a harness error, never a kill and never an agreement", () => {
-  const timedOut = harness.CONTROL_RESULT["STAGE_TIMED_OUT"] as string;
-  assert.equal(harness.isHarnessError(timedOut), true);
-  assert.equal(harness.agreesWithExpectation(timedOut, "fail"), false);
-  assert.equal(harness.agreesWithExpectation(timedOut, "pass"), false);
-});
-
-test("NC-TIMEOUT: the killed child leaves no surviving process", () => {
-  // `spawnSync` waits for and reaps the child it killed before returning, so by
-  // the time `runStage` hands back a timeout there is nothing left to reap and
-  // nothing left running. That is the property the abort path relies on when it
-  // declines to patch the worktree again after a timeout.
-  const run = harness.runStage({
-    command: process.execPath,
-    args: ["-e", "setInterval(() => {}, 1000)"],
-    cwd: repoRoot,
-    timeoutMs: 400,
-    stage: "suite",
-  });
-  assert.equal(run.timedOut, true);
-  const pid = run.pid;
-  assert.equal(typeof pid, "number", "the stage must report the process it bounded");
-  let alive: boolean;
-  try {
-    process.kill(pid as number, 0);
-    alive = true;
-  } catch {
-    alive = false;
+  for (const key of ["STAGE_TIMED_OUT", "TREE_TERMINATION_FAILED"]) {
+    const result = harness.CONTROL_RESULT[key] as string;
+    assert.equal(harness.isHarnessError(result), true, `${key} must be a harness error`);
+    assert.equal(harness.agreesWithExpectation(result, "fail"), false);
+    assert.equal(harness.agreesWithExpectation(result, "pass"), false);
   }
-  assert.equal(alive, false, "a SIGKILLed stage must not survive its bound");
 });
 
-test("NC-TIMEOUT: a stage that cannot be spawned is reported, not silently empty", () => {
-  const run = harness.runStage({
+test("NC-PROCTREE: a timed-out stage kills its grandchild, not only its direct child", async () => {
+  // The property the previous test did *not* have. `spawnSync(… killSignal)`
+  // kills and reaps exactly one process, and both real stages spawn
+  // descendants: `npm run build` spawns node, and `node --test` spawns one
+  // process per test file. Asserting `run.pid` is dead was true and beside the
+  // point.
+  //
+  // Both pids are written to disk *before* the parent starts waiting, so the
+  // proof survives the SIGKILL that removes every chance to report them.
+  const probe = mkdtempSync(path.join(tmpdir(), "erl2-tree-probe-"));
+  const pidFile = path.join(probe, "pids.json");
+  const parentSource = [
+    'import { spawn } from "node:child_process";',
+    'import { writeFileSync } from "node:fs";',
+    'const grandchild = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });',
+    `writeFileSync(${JSON.stringify(pidFile)}, JSON.stringify({ parent: process.pid, grandchild: grandchild.pid }));`,
+    "setInterval(() => {}, 1000);",
+  ].join("\n");
+
+  let pids: { parent: number; grandchild: number } | undefined;
+  try {
+    const run = await harness.runStage({
+      command: process.execPath,
+      args: ["--input-type=module", "-e", parentSource],
+      cwd: probe,
+      timeoutMs: 1_500,
+      stage: "suite",
+    });
+    assert.equal(run.timedOut, true);
+    assert.equal(run.treeTerminationFailed, false, "the group must be terminable inside its grace window");
+
+    pids = JSON.parse(readFileSync(pidFile, "utf8")) as { parent: number; grandchild: number };
+    assert.equal(typeof pids.grandchild, "number", "the probe must have recorded a grandchild");
+    assert.notEqual(pids.grandchild, pids.parent);
+    assert.equal(pids.parent, run.pid, "the stage's own pid must be the parent it spawned");
+
+    const alive = (pid: number): boolean => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    assert.equal(alive(pids.parent), false, "the direct child must be dead");
+    assert.equal(alive(pids.grandchild), false, "the grandchild must be dead too — this is the whole finding");
+
+    // The stage owns its own TMPDIR and removes it once the tree is proven
+    // dead, so a timed-out stage leaves nothing behind either.
+    assert.equal(run.stageTmpRemoved, true, "the stage-owned temporary root must be gone");
+    assert.equal(existsSync(run.stageTmp as string), false, `${String(run.stageTmp)} must not exist`);
+  } finally {
+    // Bounded on every failure path: if an assertion above threw, anything the
+    // probe left running is killed here rather than inherited by the suite.
+    if (pids !== undefined) {
+      for (const pid of [pids.grandchild, pids.parent]) {
+        try {
+          process.kill(pid, "SIGKILL");
+        } catch {
+          // Already gone, which is the expected case.
+        }
+      }
+    }
+    rmSync(probe, { recursive: true, force: true });
+  }
+});
+
+test("NC-PROCTREE: a stage that completes normally still leaves no descendant and no temporary root", async () => {
+  const run = await harness.runStage({
+    command: process.execPath,
+    args: ["-e", "process.stdout.write('done')"],
+    cwd: repoRoot,
+    timeoutMs: 30_000,
+    stage: "build",
+  });
+  assert.equal(run.timedOut, false);
+  assert.equal(run.treeTerminationFailed, false);
+  assert.equal(run.status, 0);
+  assert.equal(run.stdout, "done");
+  assert.equal(run.stageTmpRemoved, true);
+  assert.equal(existsSync(run.stageTmp as string), false);
+});
+
+test("NC-TIMEOUT: a stage that cannot be spawned is reported, not silently empty", async () => {
+  const run = await harness.runStage({
     command: path.join(repoRoot, "no-such-command-erl2"),
     args: [],
     cwd: repoRoot,
@@ -860,21 +926,23 @@ test("NC-TIMEOUT: a stage that cannot be spawned is reported, not silently empty
   assert.equal(run.timedOut, false);
   assert.ok((run.spawnError ?? "").length > 0, "a spawn failure must be named");
   assert.equal(run.stdout, "", "null stdout is normalised, so no caller reads a property of null");
+  assert.equal(run.stageTmpRemoved, true, "a stage that never ran still cleans its temporary root");
 });
 
 test("NC-TIMEOUT: the stage bounds are distinct, positive and above the slowest observed suite", () => {
   const { build, suite } = harness.STAGE_TIMEOUT_MS;
   assert.ok(build > 0 && suite > 0);
   assert.notEqual(build, suite, "the two stages differ by an order of magnitude; one number would unbound the build");
-  // Measured across a full campaign: build max 24.1 s, suite max 858.7 s
+  // Measured across two full campaigns: build max 50.5 s, suite max 1,280.1 s
   // (`environment-bundle-verifier`, two heavy e2e files in one stage). The
   // bounds must stay generous margins above those — a bound a slower CI runner
   // trips turns a healthy campaign into an abort — and must stay small enough
   // that a hang is still bounded in hours rather than days.
-  assert.ok(build >= 2 * 60_000, "the build bound must be a wide margin over 24.1 s");
-  assert.ok(suite >= 30 * 60_000, "the suite bound must be a wide margin over 858.7 s, not a performance budget");
+  assert.ok(build >= 2 * 60_000, "the build bound must be a wide margin over 50.5 s");
+  assert.ok(suite >= 30 * 60_000, "the suite bound must be a wide margin over 1,280.1 s, not a performance budget");
   assert.ok(suite <= 90 * 60_000, "a bound this long stops catching a hang in useful time");
   assert.ok(harness.STAGE_MAX_OUTPUT_BYTES >= 8 * 1024 * 1024, "1 MiB truncates a chatty suite's summary away");
+  assert.ok(harness.STAGE_TREE_KILL_GRACE_MS > 0, "the group reconciliation must be bounded");
 });
 
 // -- the standing check on the shipped controls ------------------------------
