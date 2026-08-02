@@ -1622,30 +1622,36 @@ export function validateControlDeclarations(controls) {
 /**
  * How long each campaign stage may run before it is a hang rather than progress.
  *
- * Measured across a full 92-control campaign — every stage of it, recorded as
- * `buildMs`/`suiteMs` in `docs/ledger/negative-controls.json` — then multiplied:
+ * Measured across two full 92-control campaigns — every stage of both, recorded
+ * as `buildMs`/`suiteMs` in `docs/ledger/negative-controls.json` — then
+ * multiplied:
  *
- *   - **build**: median 10.0 s, max **24.1 s** (`payload-directory-enumeration`).
- *   - **suite**: median 81.8 s, max **858.7 s** (`environment-bundle-verifier`,
- *     which designates `environmentRun.test.js` *and*
- *     `environmentTerminalMutations.test.js` and so runs two heavy e2e files in
- *     one stage).
+ *   |        | median      | worst observed                              |
+ *   |--------|-------------|---------------------------------------------|
+ *   | build  | 10.0–11.4 s | **50.5 s**                                  |
+ *   | suite  | 81.8–89.0 s | **1,280.1 s** (`environment-bundle-verifier`)|
  *
- * The reference point the review named — `environmentEvidenceBoundaries`, at
- * 126 s in the campaign — is not the slowest suite, and picking the bound from
- * it would have set a number the real worst case sails past. This is why the
- * constants are taken from a measured campaign rather than from one timed file.
+ * `environment-bundle-verifier` designates `environmentRun.test.js` *and*
+ * `environmentTerminalMutations.test.js`, so one stage runs two heavy e2e files.
+ * The reference point the review named — `environmentEvidenceBoundaries`, 126 s
+ * in campaign — is nowhere near the slowest, and a bound picked from it would
+ * have been passed by the real worst case ten times over.
+ *
+ * The same stage measured 858.7 s in the first campaign and 1,280.1 s in the
+ * second, on the same machine and the same tree: **1.5x run-to-run variance is
+ * normal here**, which is the argument for a wide margin rather than a tight
+ * one. A 20-minute suite bound looked like an 8x margin against a single timed
+ * file and would have aborted the second campaign outright.
  *
  * The two stages are bounded separately because their needs differ by more than
  * an order of magnitude; one number generous enough for the suite would leave
  * the build effectively unbounded.
  *
- * The margins are ~12x the observed build and ~4x the observed suite, which is
- * wide enough to absorb a CI runner several times slower than the machine these
- * numbers came from. The bound is not a performance budget: a regression that
- * doubled a suite's runtime should surface as a slow campaign a human looks
- * into, not as a control the harness scored as a hang. What it exists to catch
- * is the *unbounded* case — a disabled guard that turns a refusal into a wait —
+ * The margins are ~5.9x the worst observed build and ~2.8x the worst observed
+ * suite. The bound is not a performance budget: a regression that doubled a
+ * suite's runtime should surface as a slow campaign a human looks into, not as
+ * a control the harness scored as a hang. What it exists to catch is the
+ * *unbounded* case — a disabled guard that turns a refusal into a wait —
  * because every suite here runs under `--test-timeout=0`, so nothing else in
  * the stack would ever stop it. A hang therefore costs at most one hour before
  * the campaign says so and stops.
