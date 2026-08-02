@@ -43,20 +43,43 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-/** Every directory this process owns, in creation order. */
-const owned: string[] = [];
+/**
+ * One ownership set: a directory, plus the exact sibling paths a production
+ * default derives from it.
+ *
+ * `companions` is always a list of **exact absolute paths registered at creation
+ * time**. There is no globbing and no prefix rule anywhere in this module: a
+ * cleanup that removed `${root}*` would, the first time a fixture named a root
+ * that is a prefix of another, delete a directory it does not own.
+ */
+interface Ownership {
+  readonly root: string;
+  readonly companions: readonly string[];
+}
+
+/** Every ownership set this process holds, in creation order. */
+const owned: Ownership[] = [];
+
+function removePath(target: string): void {
+  try {
+    rmSync(target, { recursive: true, force: true, maxRetries: 3 });
+  } catch {
+    // Cleanup never speaks over the result of the test that owned it.
+  }
+}
+
+function removeOwnership(entry: Ownership): void {
+  // Companions first, root last. A companion is allowed not to exist — a run
+  // that never reached the environment branch derives no substrate — and `force`
+  // makes its absence a no-op rather than an error.
+  for (const companion of entry.companions) removePath(companion);
+  removePath(entry.root);
+}
 
 function removeOwned(): void {
   // Drained rather than iterated, so the `exit` fallback after a completed
   // `after` hook is a no-op instead of a second removal pass.
-  while (owned.length > 0) {
-    const dir = owned.pop() as string;
-    try {
-      rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
-    } catch {
-      // Cleanup never speaks over the result of the test that owned it.
-    }
-  }
+  while (owned.length > 0) removeOwnership(owned.pop() as Ownership);
 }
 
 // Both removal points are installed at module load, and that timing is
@@ -99,27 +122,71 @@ process.on("exit", removeOwned);
  */
 export function ownedTempDir(prefix: string): string {
   const dir = mkdtempSync(path.join(tmpdir(), prefix));
-  owned.push(dir);
+  owned.push({ root: dir, companions: [] });
   return dir;
+}
+
+/**
+ * The exact sibling paths `resolveLocators` derives from a run root when the
+ * caller supplies neither `--substrate-root` nor `--reservation-root`.
+ *
+ * Mirrored from `packages/cli/src/environmentCommands.ts:330-331`:
+ *
+ *     substrateRoot   = suppliedSubstrate   ?? `${runRoot}.substrate`
+ *     reservationRoot = suppliedReservation ?? `${runRoot}.reservations`
+ *
+ * Duplicated deliberately rather than imported: the alternative was to pass
+ * explicit substrate and reservation roots *inside* the run root at every
+ * support call site, which would have stopped the suites exercising the
+ * production **default** locator path — the thing several of them exist to
+ * test. The companions are documented and pinned by
+ * `TMP-RUNROOT: the companion names still match the production defaults`, so a
+ * change to either side fails a test rather than resuming the leak.
+ */
+export function runRootCompanions(runRoot: string): readonly string[] {
+  return [`${runRoot}.substrate`, `${runRoot}.reservations`];
+}
+
+/**
+ * A temporary directory that will be handed to the CLI as `--run-root`.
+ *
+ * Identical to `ownedTempDir` except that the ownership set also carries the two
+ * companions above. Removing the run root cannot remove them — they are
+ * siblings, not children — which is why a package that owned only the root left
+ * 387 of them behind across one gate run.
+ *
+ * Use this **only** where the root really is passed to the CLI as `--run-root`.
+ * An adapter workspace, an artifact store, a governor registry and a selection
+ * fixture root are not run roots, derive no companions, and stay ordinary
+ * `ownedTempDir` values.
+ */
+export function ownedRunRoot(prefix: string): string {
+  const root = mkdtempSync(path.join(tmpdir(), prefix));
+  owned.push({ root, companions: runRootCompanions(root) });
+  return root;
 }
 
 /**
  * Remove one owned directory now, ahead of the end of the file.
  *
- * For a fixture that knows it is finished — a certification host whose run has
- * returned — and only for one it created here.
+ * Removes the **whole ownership set** — the root and every companion registered
+ * with it — so an early release and the end-of-file sweep cannot disagree about
+ * what "this directory" meant.
+ *
+ * For a fixture that knows it is finished, and only for a root created here.
  */
 export function releaseTempDir(dir: string): void {
-  const at = owned.indexOf(dir);
-  if (at >= 0) owned.splice(at, 1);
-  try {
-    rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
-  } catch {
-    // Same discipline as the bulk path.
+  const at = owned.findIndex((entry) => entry.root === dir);
+  if (at < 0) {
+    // Not ours. Removing it anyway would make this helper a general-purpose
+    // delete, which is exactly the blast radius the module is meant not to have.
+    return;
   }
+  const [entry] = owned.splice(at, 1);
+  removeOwnership(entry as Ownership);
 }
 
-/** How many directories this process still owns. Exposed for the cleanup tests. */
+/** How many ownership sets this process still holds. Exposed for the cleanup tests. */
 export function ownedTempDirCount(): number {
   return owned.length;
 }

@@ -25,11 +25,17 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ownedTempDir, ownedTempDirCount, releaseTempDir } from "../support/tempDirs.js";
+import {
+  ownedRunRoot,
+  ownedTempDir,
+  ownedTempDirCount,
+  releaseTempDir,
+  runRootCompanions,
+} from "../support/tempDirs.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
@@ -252,6 +258,108 @@ test("TMP-CERT: a certification that throws removes them, and the throw is what 
     assert.equal(child.status, 0, child.out);
     assert.match(child.out, /"code":"ADAPTER_SELF_CERTIFICATION_REFUSED"/, child.out);
     assert.deepEqual(residue(tmp), [], `a throwing certification left ${residue(tmp).join(", ")}`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+// -- run roots and their CLI-derived companions ------------------------------
+//
+// The first version of this package owned the run root and nothing else, and a
+// full gate still left 387 directories behind. `resolveLocators` derives
+// `${runRoot}.substrate` and `${runRoot}.reservations` when the caller supplies
+// neither flag, and those are *siblings*: removing the root cannot remove them.
+
+test("TMP-RUNROOT: the companion names still match the production defaults", () => {
+  // The companion list is duplicated from the CLI rather than imported, so that
+  // the suites exercising the production *default* locator path keep doing so.
+  // Duplication is only safe if a change on either side fails here.
+  const source = readFileSync(
+    path.join(repoRoot, "packages", "cli", "src", "environmentCommands.ts"),
+    "utf8",
+  );
+  assert.match(source, /suppliedSubstrate \?\? `\$\{runRoot\}\.substrate`/);
+  assert.match(source, /suppliedReservation \?\? `\$\{runRoot\}\.reservations`/);
+  assert.deepEqual(runRootCompanions("/tmp/erl2-example"), [
+    "/tmp/erl2-example.substrate",
+    "/tmp/erl2-example.reservations",
+  ]);
+});
+
+test("TMP-RUNROOT: releasing a run root removes the whole ownership set", () => {
+  const before = ownedTempDirCount();
+  const root = ownedRunRoot("erl2-runroot-probe-");
+  const [substrate, reservations] = runRootCompanions(root) as [string, string];
+  // Companions are created by the CLI, not by the helper; the helper's job is to
+  // own paths that may or may not come to exist.
+  mkdirSync(substrate, { recursive: true });
+  writeFileSync(path.join(substrate, "marker"), "x");
+  assert.equal(ownedTempDirCount(), before + 1, "a run root is one ownership set, not three");
+
+  releaseTempDir(root);
+  assert.equal(existsSync(root), false, "the run root must be gone");
+  assert.equal(existsSync(substrate), false, "the substrate companion must be gone");
+  // The reservations companion was never created. Its absence must be a no-op,
+  // not an error.
+  assert.equal(existsSync(reservations), false);
+  assert.equal(ownedTempDirCount(), before);
+});
+
+test("TMP-RUNROOT: a real environment CLI run leaves no root and no companion", () => {
+  // The end-to-end proof, driven through the shipped binary rather than through
+  // a hand-made directory: `provision` is the first command that resolves the
+  // locators, and it is reached only after freeze-package, verify-package,
+  // preregister-challenge and select. The driver asserts both companions exist
+  // *before* it exits, so an empty listing afterwards means "removed", not
+  // "never created".
+  const tmp = isolatedTmp("runroot");
+  try {
+    const driver = [
+      `const { runToAcquired, erl2 } = await import(${JSON.stringify(path.join(repoRoot, "tests", "dist", "support", "cliRun.js"))});`,
+      'const fs = await import("node:fs");',
+      'const nodePath = await import("node:path");',
+      "const run = runToAcquired();",
+      'const base = ["--run-root", run.runRoot, "--registry", run.registry.root, "--tier", "development", "--run", run.runId];',
+      'const sourceTrust = nodePath.join(run.runRoot, "source-trust.json");',
+      "fs.writeFileSync(sourceTrust, JSON.stringify({ sourceTrustPolicyHash: run.registry.sourceTrustPolicyHash, randomnessRegistryHeadHash: run.registry.sourceTrustPolicyHash }));",
+      "const plan = [",
+      '  ["freeze-package", ["freeze-package", ...base]],',
+      '  ["verify-package", ["verify-package", ...base, "--fake-verify-package", "succeeded", "--subject-id", "s", "--subject-version", "0.1.0"]],',
+      '  ["preregister-challenge", ["preregister-challenge", ...base, "--journey-selection-policy", run.registry.journeySelectionPolicyHash, "--randomness-policy", run.registry.randomnessPolicyHash, ...run.registry.challengeCandidates.flatMap((c) => ["--challenge", c.challengeManifestHash])]],',
+      '  ["select", ["select", ...base, "--source-trust-config", sourceTrust, "--expires", "2026-12-31T00:00:00Z"]],',
+      '  ["provision", ["provision", ...base, "--archetype", run.registry.archetypeHash]],',
+      "];",
+      "for (const [name, argv] of plan) {",
+      "  const result = erl2(argv);",
+      "  if (result.exitCode !== 0) throw new Error(name + ': ' + JSON.stringify(result.body.errors));",
+      "}",
+      'const substrate = run.runRoot + ".substrate";',
+      'const reservations = run.runRoot + ".reservations";',
+      "if (!fs.existsSync(substrate)) throw new Error('the substrate companion was never created');",
+      "if (!fs.existsSync(reservations)) throw new Error('the reservations companion was never created');",
+      "console.log(JSON.stringify({ runRoot: run.runRoot, substrate, reservations }));",
+    ].join("\n");
+    const child = runChild(driver, tmp);
+    assert.equal(child.status, 0, child.out);
+    const created = JSON.parse(child.out.trim().split("\n").pop() as string) as {
+      runRoot: string;
+      substrate: string;
+      reservations: string;
+    };
+
+    // The owning process has finished. Nothing it owned may survive it.
+    assert.equal(existsSync(created.runRoot), false, "the run root must be gone");
+    assert.equal(existsSync(created.substrate), false, "the `.substrate` companion must be gone");
+    assert.equal(existsSync(created.reservations), false, "the `.reservations` companion must be gone");
+
+    const left = residue(tmp);
+    const OWNED_PREFIXES = [
+      "erl2-mut-", "erl2-mid-", "erl2-prereg-", "erl2-registry-", "erl2-vault-",
+      "erl2-adapter-ws-", "erl2-adapter-store-", "erl2-selection-", "erl2-cert-", "erl2-cert-store-",
+    ];
+    const stillOwned = left.filter((entry) => OWNED_PREFIXES.some((p) => entry.startsWith(p)));
+    assert.deepEqual(stillOwned, [], `support-owned roots or companions remain: ${stillOwned.join(", ")}`);
+    assert.deepEqual(left, [], `the isolated TMPDIR must be empty; it holds ${left.join(", ")}`);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
