@@ -26,6 +26,7 @@ import {
 import { coreHash, developmentKey, sealSigned } from "@erl2/integrity";
 import {
   assertNarrowSelector,
+  assertOwnedByRun,
   ComposeEnvironmentDriver,
   composeProjectName,
   fileSha256,
@@ -669,6 +670,42 @@ test("COMPOSE-ADV: an expected container MISSING an ownership label is refused",
   const quote = f.world.containers.get(`${PROJECT}-quote`) as StubContainer;
   delete quote.labels["com.erl2.driver_id"];
   assertRefusedAsNotOurs(f, "com.erl2.driver_id_mismatch");
+});
+
+test("COMPOSE-ADV: two unproven containers are two inventory entries, not one", () => {
+  // Every container name in a project shares the same leading characters, so an
+  // identifier keyed on a prefix of the name collapses both of this run's
+  // containers into one entry — and an inventory with two objects under one id is
+  // one an operator cannot act on. Both are substituted here so the ids have to be
+  // distinct rather than merely well-formed.
+  const f = provisioned();
+  substituteEndpointImage(f.world);
+  (f.world.containers.get(`${PROJECT}-otel-collector`) as StubContainer).labels["com.erl2.driver_id"] =
+    "someone-else";
+
+  const unverified = f.driver
+    .inspect(RUN_ID)
+    .resources.filter((r) => r.resource_id.startsWith("unverified-"));
+  assert.equal(unverified.length, 2, "both unproven containers must be inventoried");
+  assert.equal(
+    new Set(unverified.map((r) => r.resource_id)).size,
+    2,
+    `two unproven containers collided on one resource id: ${unverified.map((r) => r.resource_id).join(", ")}`,
+  );
+  assert.equal(
+    new Set(unverified.map((r) => r.identity_hash)).size,
+    2,
+    "two unproven containers collided on one identity hash",
+  );
+  // And neither is mistakable for an owned resource.
+  for (const resource of unverified) {
+    assert.equal(
+      codeOf(() => {
+        assertOwnedByRun(RUN_ID, resource);
+      }),
+      "ENV_FOREIGN_RESOURCE_REJECTED",
+    );
+  }
 });
 
 test("COMPOSE-ADV: the baseline observation records what Docker said, not what the lock says", () => {

@@ -791,14 +791,21 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
    * `resourceIdentityHash`, so `assertOwnedByRun` refuses it on every destructive
    * path even if some future caller reaches it without going through
    * `assertVerifiedOwnership` first.
+   *
+   * `slug` discriminates it from this run's *other* expected objects. It is the
+   * service id rather than a prefix of the container name, because every container
+   * name in a project shares the same leading characters — two unverified
+   * containers keyed on that prefix would collide on one `resource_id`, and an
+   * inventory with two entries under one id is one an operator cannot act on.
    */
   private unverifiedResource(
     kind: string,
     name: string,
+    slug: string,
     violations: readonly string[],
   ): EnvironmentResourceV1 {
     return {
-      resource_id: `unverified-${kind}-${shortId(name)}`,
+      resource_id: `unverified-${kind}-${slug.replace(/[^a-z0-9-]/g, "-")}-${shortId(this.runId)}`,
       kind,
       run_scoped_name: name,
       identity_hash: domainHash(HASH_DOMAINS.RESOURCE_IDENTITY, {
@@ -857,7 +864,12 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
               entry.observed.name,
               `container-${entry.service.serviceId.replace(/[^a-z0-9-]/g, "-")}-${shortId(this.runId)}`,
             )
-          : this.unverifiedResource("container", entry.observed.name, entry.violations),
+          : this.unverifiedResource(
+              "container",
+              entry.observed.name,
+              entry.service.serviceId,
+              entry.violations,
+            ),
       );
     }
     const expectedContainerNames = new Set(OTEL_DEMO_SERVICES.map((s) => this.containerName(s)));
