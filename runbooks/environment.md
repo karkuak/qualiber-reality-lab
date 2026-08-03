@@ -209,12 +209,38 @@ external call, so the count survives the process. Both are refused on the releas
 surface with `CFG_DEVELOPMENT_FLAG_UNAVAILABLE`, and an unknown boundary name is
 `CFG_MISSING_REQUIRED` rather than being ignored.
 
-## Enabling Compose (ERL2-OQ-005)
+## Running Compose (ERL2-OQ-005)
 
-Follow `environments/otel-demo/README.md`. In short: capture the archive digest,
-per-platform image digests for both `linux/amd64` and `darwin/arm64`, the SBOM,
-provenance and config hashes; set `qualification_status: "qualified"`; re-sign;
-then re-run the clean-control suite twice and confirm identical fingerprints.
+The OpenTelemetry Demo substrate is qualified. `erl2 doctor` derives the state
+from the retained lock on every call — read `compose_substrate` there rather than
+trusting this paragraph.
 
-There is no flag that skips this. `composeDriverManifestBody` derives `enabled`
-from the lock, so an unqualified lock always produces a disabled driver.
+```bash
+node scripts/qualify-otel-demo.mjs --fetch-only     # the pinned archive is an input
+erl2 provision --run <id> --run-root <root> --registry <reg> --tier development \
+  --archetype <hash> --environment-driver compose
+```
+
+`--environment-driver` defaults to `fake`, and a run binds its driver **once**: a
+later command naming the other one is refused with
+`ENV_SUBSTRATE_LOCATOR_CONFLICT`, and every later command with no flag reaches the
+substrate the run bound. `--substrate-lock` and `--otel-demo-archive` override the
+shipped paths; both are re-verified, so overriding them cannot weaken admission.
+
+What the qualified subset is, what is pinned, and what it does **not** prove is in
+`environments/otel-demo/README.md`. In short: two services (`quote` and
+`otel-collector`) out of the upstream demo's twenty-two, digest-pinned for
+`linux/amd64` and `linux/arm64`, with the lock signed by the repository's own
+*development* environment-governor key — a self-qualification, never an
+independent one.
+
+`darwin/arm64` is not a required platform and never was an image-manifest
+platform: Docker Desktop on macOS runs Linux containers, so the images a macOS
+host executes are `linux/arm64`. `REQUIRED_PLATFORMS` is `linux/amd64` +
+`linux/arm64`.
+
+There is no flag that skips qualification. `composeDriverManifestBody` derives
+`enabled` from the lock, so an unqualified lock always produces a disabled driver,
+and `assertObservedMatchesLock` re-observes the archive, the five applied
+configuration files and both platforms' image digests at `provision` — before a
+single container exists.

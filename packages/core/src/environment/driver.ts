@@ -7,10 +7,10 @@
  * infrastructure and returns receipts.
  *
  * The fake driver and the Compose driver satisfy the same suite — that is the
- * design's "every abstraction has two uses" rule made executable.  The Compose
- * driver is disabled until its substrate lock qualifies (ERL2-OQ-005), so the
- * second use is currently proven by the contract suite rather than by a live
- * substrate.
+ * design's "every abstraction has two uses" rule made executable.  Both uses are
+ * real: `ComposeEnvironmentDriver` runs the qualified OQ-005 substrate and is
+ * proven against a live daemon by `tests/integration/composeDriverContract.test.ts`,
+ * which refuses rather than skips when a caller asked for the live claim.
  */
 
 import {
@@ -190,9 +190,11 @@ export interface EnvironmentDriver {
 }
 
 /**
- * A driver is usable only when its manifest says so.  This is where the
- * OQ-005 fail-closed state bites: the Compose manifest is signed with
- * `enabled: false`, so any attempt to drive it refuses before provisioning.
+ * A driver is usable only when its manifest says so.  This is where the OQ-005
+ * fail-closed state bites: `composeDriverManifestBody` derives `enabled` from
+ * the substrate lock, so a Compose manifest built from an unqualified lock is
+ * signed `enabled: false` and any attempt to drive it refuses before
+ * provisioning.
  */
 export function assertDriverEnabled(manifest: EnvironmentDriverManifestV1): void {
   if (!manifest.enabled) {

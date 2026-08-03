@@ -165,10 +165,49 @@ export {
   assertSubstrateQualified,
   assertObservedMatchesLock,
   composeDriverManifestBody,
+  verifySubstrateLockSignature,
   REQUIRED_PLATFORMS,
   type ObservedSubstrate,
+  type PinnedSubstrateAuthority,
+  type SubstrateLockSignatureVerification,
   type Platform,
 } from "./environment/substrateLock.js";
+export {
+  dockerAvailable,
+  SpawnDockerCli,
+  type DockerCli,
+  type DockerInvocation,
+  type DockerResult,
+} from "./environment/dockerCli.js";
+export {
+  fileSha256,
+  materializeUpstream,
+  observeComposeSubstrate,
+  observeExecutingPlatform,
+  lockedDigest,
+  pinnedImageReference,
+  OTEL_DEMO_ENDPOINT_PATH,
+  OTEL_DEMO_ENDPOINT_SERVICE_ID,
+  OTEL_DEMO_RELEASE_TAG,
+  OTEL_DEMO_SERVICES,
+  OTEL_DEMO_SUBSTRATE_ID,
+  UPSTREAM_APPLIED_CONFIG_PATHS,
+  type ComposeServiceSpec,
+  type MaterializedUpstream,
+  type RepositoryConfigPaths,
+} from "./environment/composeSubstrate.js";
+export {
+  ComposeEnvironmentDriver,
+  composeEndpointDirectory,
+  composeProjectName,
+  readComposeEndpoint,
+  substrateInstanceHash,
+  COMPOSE_DRIVER_ID,
+  COMPOSE_SUBSTRATE_KIND,
+  ERL2_DRIVER_LABEL,
+  ERL2_RUN_LABEL,
+  type ComposeDriverOptions,
+} from "./environment/composeDriver.js";
 export {
   commitJourneyStep,
   assertVisibleStepMatchesCommitment,
@@ -265,6 +304,7 @@ export {
 export {
   decideEgress,
   denyByDefaultEgressPolicy,
+  loopbackEgressPolicy,
   type EgressDecisionOptions,
 } from "./adapter/egress.js";
 export {

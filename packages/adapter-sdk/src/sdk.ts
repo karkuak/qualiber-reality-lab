@@ -96,7 +96,19 @@ export interface AdapterOperationContext {
   attemptEgress(draft: EgressAttemptDraft): void;
 }
 
-export type AdapterHandler = (context: AdapterOperationContext) => AdapterOperationOutcome;
+/**
+ * One operation.
+ *
+ * A handler may be synchronous or return a promise. The asynchronous form exists
+ * because a subject that interacts with a *real* environment has to perform real
+ * I/O, and every I/O primitive Node offers is asynchronous — a sync-only handler
+ * type would have forced such an adapter to spawn a child process, which is
+ * precisely the privileged reach a subject must not have. The wire protocol is
+ * unchanged: the response frame is still written once, after the handler settles.
+ */
+export type AdapterHandler = (
+  context: AdapterOperationContext,
+) => AdapterOperationOutcome | Promise<AdapterOperationOutcome>;
 
 export interface AdapterDefinition {
   readonly adapterId: string;
@@ -326,15 +338,15 @@ export async function runAdapter(
         });
         continue;
       }
-      write(dispatch(definition, message));
+      write(await dispatch(definition, message));
     }
   }
 }
 
-function dispatch(
+async function dispatch(
   definition: AdapterDefinition,
   message: HostOperationMessage,
-): AdapterResponseMessage {
+): Promise<AdapterResponseMessage> {
   let context: OperationContext | undefined;
   try {
     // The adapter checks its own request before touching it: an ancestry or
@@ -356,7 +368,7 @@ function dispatch(
         },
       });
     }
-    return buildResponse(context, handler(context));
+    return buildResponse(context, await handler(context));
   } catch (cause) {
     const code = cause instanceof Erl2Error ? cause.code : CODES.ADAPTER_EXECUTION_FAULT;
     const safeMessage =

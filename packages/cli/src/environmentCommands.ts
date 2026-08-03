@@ -25,7 +25,8 @@
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { parseStrictJson } from "@erl2/contracts";
+import { fileURLToPath } from "node:url";
+import { assertContract, parseStrictJson, type SubstrateLockV1 } from "@erl2/contracts";
 import { CODES, Erl2Error, type Hash } from "./contractsFacade.js";
 import type {
   ChallengeManifestV1,
@@ -37,13 +38,20 @@ import type {
   SelectedChallengeJourneyBindingV1,
 } from "@erl2/contracts";
 import {
+  assertSubstrateQualified,
   CRASH_BOUNDARIES,
+  ComposeEnvironmentDriver,
+  composeEndpointDirectory,
   EnvironmentRun,
   FakeEnvironmentDriver,
   FileSubstrateStore,
+  materializeUpstream,
+  OTEL_DEMO_RELEASE_TAG,
+  readComposeEndpoint,
   ReservationAllocator,
   RunWorkspace,
   isCrashBoundary,
+  verifySubstrateLockSignature,
   type CrashBarrier,
   type EnvironmentDriver,
   type EnvironmentKeyring,
@@ -56,12 +64,13 @@ import {
   deriveEnvironmentPreFinalizationClosure,
   VERIFIER_RELEASE_HASH,
 } from "@erl2/public-verifier";
-import { developmentAgeIdentity, developmentKey } from "@erl2/integrity";
+import { coreHash, developmentAgeIdentity, developmentKey } from "@erl2/integrity";
 import { parseFlags, requireString, type FlagSpec, type ParsedFlags } from "./args.js";
 import {
   COMMON_FLAGS,
   openWorkspace,
   resolveClaimScope,
+  type EnvironmentAccess,
   type JourneyCommandOutput,
 } from "./journeyCommands.js";
 
@@ -76,7 +85,40 @@ const ENVIRONMENT_FLAGS: readonly FlagSpec[] = [
   { name: "fake-driver-fault", kind: "string" },
   { name: "crash-at", kind: "string" },
   { name: "invocation-log", kind: "string" },
+  // ERL2-OQ-005. The narrowest possible selection: one name, two values, and a
+  // default that is the behaviour every existing run already has.
+  { name: "environment-driver", kind: "string" },
+  { name: "substrate-lock", kind: "string" },
+  { name: "otel-demo-archive", kind: "string" },
 ];
+
+/** The two drivers that exist. There is no registry and no third value. */
+const DRIVER_KINDS = ["fake", "compose"] as const;
+type DriverKind = (typeof DRIVER_KINDS)[number];
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const DEFAULT_SUBSTRATE_LOCK = path.join(repoRoot, "environments", "otel-demo", "substrate-lock.json");
+const DEFAULT_COMPOSE_OVERLAY = path.join(
+  repoRoot,
+  "environments",
+  "otel-demo",
+  "compose",
+  "erl2-overlay.yaml",
+);
+const DEFAULT_COLLECTOR_EXTRAS = path.join(
+  repoRoot,
+  "environments",
+  "otel-demo",
+  "compose",
+  "erl2-otelcol-extras.yaml",
+);
+const DEFAULT_OTEL_ARCHIVE = path.join(
+  repoRoot,
+  "environments",
+  "otel-demo",
+  "upstream",
+  `opentelemetry-demo-${OTEL_DEMO_RELEASE_TAG}.tar.gz`,
+);
 
 /**
  * Where this process must die, and where every external invocation is recorded
@@ -257,6 +299,20 @@ interface SubstrateLocatorRecord {
   readonly run_id: string;
   readonly substrate_root: string;
   readonly reservation_root: string;
+  /**
+   * Which driver this run bound (ERL2-OQ-005).
+   *
+   * A run selects its driver once, at `provision`, and every later process reads
+   * it from here rather than from a flag — so `restore` and `destroy` reach the
+   * same Compose substrate even when nobody passes `--environment-driver` again,
+   * and a flag naming the other driver is refused rather than honoured. This is
+   * the *convenience* half of the guarantee; the authoritative half is the signed
+   * substrate binding, which records the driver id and manifest hash and refuses
+   * a mismatch even if this file were edited.
+   */
+  readonly driver_kind?: DriverKind;
+  /** The lock a Compose run was licensed by, so a later process cannot swap it. */
+  readonly substrate_lock_hash?: Hash;
 }
 
 function locatorPath(runRoot: string): string {
@@ -360,6 +416,71 @@ function resolveLocators(flags: ParsedFlags, runId: string): {
   // The run's own record wins over any default: a later command that omits the
   // flags must still reach the substrate the run bound, not `<run-root>.substrate`.
   return { substrateRoot: bound.substrate_root, reservationRoot: bound.reservation_root };
+}
+
+/**
+ * Which driver this command drives (ERL2-OQ-005).
+ *
+ * Bound once and then owned, on exactly the terms the substrate locator is:
+ * before the run has a record the flag decides, and afterwards the record
+ * decides and a flag naming anything else is refused. A run cannot start on the
+ * fake driver and finish on Compose, or the reverse — the second half of that
+ * substitution is what would let a teardown be reported against a substrate
+ * nobody looked at.
+ */
+function resolveDriverKind(flags: ParsedFlags, runRoot: string): DriverKind {
+  const supplied = flags["environment-driver"] as string | undefined;
+  if (supplied !== undefined && !(DRIVER_KINDS as readonly string[]).includes(supplied)) {
+    throw new Erl2Error(
+      CODES.CFG_MISSING_REQUIRED,
+      `--environment-driver must be one of ${DRIVER_KINDS.join(", ")}`,
+    );
+  }
+  const bound = readLocator(runRoot)?.driver_kind;
+  if (bound === undefined) return (supplied as DriverKind | undefined) ?? "fake";
+  if (supplied !== undefined && supplied !== bound) {
+    throw new Erl2Error(
+      CODES.ENV_SUBSTRATE_LOCATOR_CONFLICT,
+      `--environment-driver names ${supplied}, but this run is bound to the ${bound} driver; ` +
+        "a driver may be bound once, never substituted",
+    );
+  }
+  return bound;
+}
+
+/**
+ * Loads the substrate lock a Compose run is licensed by, and refuses it unless
+ * it is both cryptographically sound and qualified.
+ *
+ * Both checks happen here, before the driver exists — so a run against an
+ * unqualified or tampered lock never reaches a substrate at all, rather than
+ * reaching one and being refused at provision. `assertObservedMatchesLock` runs
+ * again inside `provision` against what was actually fetched; this is the
+ * admission of the lock itself, that one is the admission of the bytes.
+ */
+function loadQualifiedLock(flags: ParsedFlags): { readonly lock: SubstrateLockV1; readonly lockHash: Hash } {
+  const file = path.resolve((flags["substrate-lock"] as string | undefined) ?? DEFAULT_SUBSTRATE_LOCK);
+  if (!existsSync(file)) {
+    throw new Erl2Error(
+      CODES.ENV_SUBSTRATE_LOCK_UNQUALIFIED,
+      "no substrate lock is present; a Compose run is licensed by a qualified lock and by nothing else",
+    );
+  }
+  const lock = assertContract<SubstrateLockV1>(
+    "SubstrateLockV1",
+    parseStrictJson(readFileSync(file, "utf8")),
+  );
+  const signature = verifySubstrateLockSignature(lock);
+  if (!signature.signatureValid) {
+    throw new Erl2Error(
+      CODES.ENV_SUBSTRATE_LOCK_SIGNATURE_INVALID,
+      `the substrate lock's signature did not verify: ${signature.reason ?? "unknown"}`,
+      { owner: "lab" },
+    );
+  }
+  // Throws ENV_SUBSTRATE_LOCK_UNQUALIFIED, which is the OQ-005 fail-closed state.
+  assertSubstrateQualified(lock);
+  return { lock, lockHash: coreHash(lock) };
 }
 
 function hashFlag(flags: ParsedFlags, name: string): Hash | undefined {
@@ -493,7 +614,7 @@ function countingSubjectPort(
  * adopt-instead-of-redispatch look like a second call.
  */
 function countingDriver(
-  driver: FakeEnvironmentDriver,
+  driver: EnvironmentDriver,
   record: (entry: Record<string, unknown>) => void,
 ): EnvironmentDriver {
   const counted = <T>(operationId: string, kind: string, call: () => T): T => {
@@ -511,13 +632,19 @@ function countingDriver(
     mutate: (r) => counted(r.operationId, "mutate", () => driver.mutate(r)),
     restore: (r) => counted(r.operationId, "restore", () => driver.restore(r)),
     destroy: (r) => counted(r.operationId, "destroy", () => driver.destroy(r)),
-    destroyResource: (r) =>
-      counted(r.operationId, "destroy_resource", () => driver.destroyResource(r)),
+    ...(driver.destroyResource === undefined
+      ? {}
+      : {
+          destroyResource: (r: Parameters<NonNullable<EnvironmentDriver["destroyResource"]>>[0]) =>
+            counted(r.operationId, "destroy_resource", () =>
+              (driver.destroyResource as NonNullable<EnvironmentDriver["destroyResource"]>)(r),
+            ),
+        }),
     inspect: (runId) => driver.inspect(runId),
     substrateInstance: () => driver.substrateInstance(),
     establishSubstrateInstance: (runId) => driver.establishSubstrateInstance(runId),
-    completedOperation: (runId, operationId) => driver.completedOperation(runId, operationId),
-    observedMutations: (runId) => driver.observedMutations(runId),
+    completedOperation: (runId, operationId) => driver.completedOperation?.(runId, operationId),
+    observedMutations: (runId) => driver.observedMutations?.(runId) ?? [],
   };
 }
 
@@ -550,14 +677,32 @@ export function openEnvironment(argv: readonly string[], extra: readonly FlagSpe
   // contradicts the run's binding refuses before any directory is created —
   // including the substrate and reservation roots themselves.
   const locators = resolveLocators(flags, runId);
+  // Bound before the workspace opens, for the same reason the locators are: a
+  // command that names the wrong driver must refuse before any directory exists.
+  const driverKind = resolveDriverKind(flags, runRoot);
   // The crash seam and the invocation log, both development-gated. With neither
   // flag supplied `record` is a no-op, `barrier` is undefined, and the driver and
   // subject port below are the unwrapped production ones.
   const record = invocationRecorder(developmentOnlyFlag(flags, "invocation-log"));
   const barrier = crashBarrier(flags);
   const counting = developmentOnlyFlag(flags, "invocation-log") !== undefined;
+  // How the subject reaches the real environment, when there is one. Read from
+  // the run's own substrate rather than from a flag, and absent until the run has
+  // provisioned — the published port does not exist before that.
+  const endpoint =
+    driverKind === "compose" ? readComposeEndpoint(locators.substrateRoot, runId) : undefined;
   const workspace = openWorkspace(flags, runId, {
     ...(counting ? { wrapSubjectPort: (port) => countingSubjectPort(port, record) } : {}),
+    ...(endpoint === undefined
+      ? {}
+      : {
+          environmentAccess: {
+            mountId: "environment-endpoint",
+            mountRoot: composeEndpointDirectory(locators.substrateRoot, runId),
+            host: endpoint.host,
+            port: endpoint.port,
+          } satisfies EnvironmentAccess,
+        }),
   });
   const clock = workspace.productionClock();
 
@@ -592,18 +737,56 @@ export function openEnvironment(argv: readonly string[], extra: readonly FlagSpe
       label: "cutoff policy",
     });
 
-  const fakeDriver = new FakeEnvironmentDriver({
-    clock,
-    // The driver manifest is the environment governor's, and the development
-    // policy grants that role to the challenge-governor key (ADR-ERL2-020 §4).
-    signingKey: developmentKey("challenge-governor"),
-    archetypeHash: archetype.core_hash,
-    resourceKinds: archetype.topology.map((node) => node.node_id),
-    evidenceSourceIds: archetype.evidence_sources.map((source) => source.source_id),
-    substrate: new FileSubstrateStore(locators.substrateRoot),
-    faults: driverFaults(flags, runId),
-  });
-  const driver: EnvironmentDriver = counting ? countingDriver(fakeDriver, record) : fakeDriver;
+  // The driver manifest is the environment governor's, and the development
+  // policy grants that role to the challenge-governor key (ADR-ERL2-020 §4).
+  const signingKey = developmentKey("challenge-governor");
+  let lockHash: Hash | undefined;
+  const selected: EnvironmentDriver = ((): EnvironmentDriver => {
+    if (driverKind === "fake") {
+      return new FakeEnvironmentDriver({
+        clock,
+        signingKey,
+        archetypeHash: archetype.core_hash,
+        resourceKinds: archetype.topology.map((node) => node.node_id),
+        evidenceSourceIds: archetype.evidence_sources.map((source) => source.source_id),
+        substrate: new FileSubstrateStore(locators.substrateRoot),
+        faults: driverFaults(flags, runId),
+      });
+    }
+    // The scripted failpoints steer the *fake* driver's own branches. There is
+    // nothing for them to steer here, and accepting them would let a real run
+    // present a scripted failure as an observed one.
+    if (flags["fake-driver-fault"] !== undefined) {
+      throw new Erl2Error(
+        CODES.CFG_MISSING_REQUIRED,
+        "--fake-driver-fault scripts the fake driver's failpoints; it cannot steer the Compose driver",
+      );
+    }
+    const qualified = loadQualifiedLock(flags);
+    lockHash = qualified.lockHash;
+    return new ComposeEnvironmentDriver({
+      runId,
+      clock,
+      signingKey,
+      archetypeHash: archetype.core_hash,
+      lock: qualified.lock,
+      lockHash: qualified.lockHash,
+      substrateRoot: locators.substrateRoot,
+      upstream: materializeUpstream({
+        archivePath: path.resolve(
+          (flags["otel-demo-archive"] as string | undefined) ?? DEFAULT_OTEL_ARCHIVE,
+        ),
+        expectedArchiveSha256: qualified.lock.source_archive.archive_sha256,
+        workRoot: locators.substrateRoot,
+      }),
+      repositoryConfig: {
+        overlayPath: DEFAULT_COMPOSE_OVERLAY,
+        extrasPath: DEFAULT_COLLECTOR_EXTRAS,
+      },
+      evidenceSourceIds: archetype.evidence_sources.map((source) => source.source_id),
+    });
+  })();
+  const driver: EnvironmentDriver = counting ? countingDriver(selected, record) : selected;
 
   const run = new EnvironmentRun({
     workspace,
@@ -627,6 +810,8 @@ export function openEnvironment(argv: readonly string[], extra: readonly FlagSpe
         run_id: runId,
         substrate_root: locators.substrateRoot,
         reservation_root: locators.reservationRoot,
+        driver_kind: driverKind,
+        ...(lockHash === undefined ? {} : { substrate_lock_hash: lockHash }),
       }),
   };
 }

@@ -410,8 +410,11 @@ The one claim this slice earns, stated at exactly its width:
   is qualified. Selection runs non-blind at `development` tier only.
 - **No architectural-independence claim.** ERL2-OQ-003 is unresolved and no
   reference, OSS or opaque subject has been run through the core.
-- **No robustness or brownfield claim.** Only the fake environment driver
-  exists (ERL2-OQ-005).
+- **No robustness or brownfield claim.** Two drivers exist — the fake one and the
+  Compose one qualified under ERL2-OQ-005 — but one archetype
+  (clean-greenfield), one two-service substrate and one journey shape are not
+  robustness evidence, and no brownfield or constrained archetype exists
+  (ERL2-OQ-002).
 - **No subject-quality claim of any kind.** The only subjects are the two
   reference adapters, which exist to exercise the platform. Certification
   permits an adapter version and digest; it says nothing about the quality of
@@ -440,11 +443,15 @@ The one claim this slice earns, stated at exactly its width:
   encode T4; a contextual T4 statement requires a separately verified
   `CustomerVerificationBundleV1` that does not exist.
 - **No T2 and no T3.** Not as a matter of restraint but of derivation
-  (ADR-ERL2-025 §5). T2 needs a real, enabled driver on a qualified substrate
-  lock, and ERL2-OQ-005 keeps the only non-fake driver signed `enabled: false`.
-  T3 needs historical-reproduction evidence whose contracts belong to slice 12
-  and do not exist. Requesting either is a typed refusal in the producer and in
-  the offline verifier.
+  (ADR-ERL2-025 §5). A Compose run on the qualified OQ-005 substrate does raise
+  the *environment-realism* component to T2 — that component is what "a real,
+  enabled driver on a qualified substrate lock" means, and it is now satisfiable.
+  The **ceiling is the weakest applicable component**, and two others still cap
+  at T1 on every run this repository can produce: the selected case is drawn at
+  `development` tier and selection is non-blind, both pending ERL2-OQ-007. T3
+  additionally needs historical-reproduction evidence whose contracts belong to
+  slice 12 and do not exist. Requesting either is a typed refusal in the producer
+  and in the offline verifier.
 - **No "bias-free", "collusion-proof" or "universal" language.** Design v2 §6
   forbids it unconditionally. Blind reports, when they eventually exist, must
   carry the literal residual-collusion limitation, which
@@ -459,11 +466,15 @@ The one claim this slice earns, stated at exactly its width:
   development tier, fake driver, trusted reference subject, non-blind selection.
   It is evidence that the *mechanism* closes, not that any environment, subject or
   ecosystem was measured.
-- **No real-ecosystem claim.** The environment is the deterministic fake driver.
-  Its resources, probes and evidence sources are fixtures; no substrate was
-  provisioned, no service ran, and the three "evidence sources" the observation
-  captures produce zero records by construction. The Compose driver stays disabled
-  (ERL2-OQ-005).
+- **No real-ecosystem claim.** The default environment is the deterministic fake
+  driver, whose resources, probes and evidence sources are fixtures. The Compose
+  driver (ERL2-OQ-005) does provision a real substrate — two containers of
+  OpenTelemetry Demo `3.0.0`, real OTLP telemetry observed at a real collector —
+  and that is still not an ecosystem: two services out of twenty-two, one
+  archetype, one endpoint, one request. It is evidence that the *driver* reaches
+  a real substrate, never that any ecosystem was measured. The substrate lock is
+  signed by the repository's own development governor key, so no independent
+  qualification may be claimed from it either.
 - **No robustness claim from the environment branch.** One archetype
   (clean-greenfield), one driver, one journey shape. Failure paths are reached by
   scripted driver faults, not by an environment that failed on its own.

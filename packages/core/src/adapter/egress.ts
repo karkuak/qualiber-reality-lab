@@ -63,6 +63,37 @@ export function denyByDefaultEgressPolicy(policyId: string): EgressAllowlistPoli
   });
 }
 
+/**
+ * An allowlist for exactly one loopback endpoint (ERL2-OQ-005).
+ *
+ * The Compose environment publishes the subset's endpoint on an ephemeral
+ * loopback port, so a subject that is supposed to interact with the real
+ * environment has to be allowed to reach it — and only it. Everything the
+ * default policy denies is still denied: one scheme, one host, one port, no
+ * redirects, link-local and metadata services refused outright. `allow_loopback_hosts`
+ * names the single address rather than lifting the loopback rule.
+ */
+export function loopbackEgressPolicy(policyId: string, host: string, port: number): EgressAllowlistPolicyV1 {
+  const base = {
+    schema_version: "egress-allowlist-policy/v1" as const,
+    policy_id: policyId,
+    default_action: "deny" as const,
+    allowed_schemes: ["http"] as ("https" | "http")[],
+    allowed_hosts: [host],
+    allowed_ports: [port],
+    max_redirects: 0,
+    revalidate_redirect_targets: true as const,
+    allow_loopback_hosts: [host],
+    deny_link_local: true as const,
+    deny_metadata_service: true as const,
+    deny_proxy_bypass: true as const,
+  };
+  return assertContract<EgressAllowlistPolicyV1>("EgressAllowlistPolicyV1", {
+    ...base,
+    core_hash: coreHash(base),
+  });
+}
+
 function isLinkLocalOrPrivate(address: string): boolean {
   if (address.startsWith("169.254.") || address.startsWith("fe80:")) return true;
   if (address.startsWith("10.") || address.startsWith("192.168.")) return true;

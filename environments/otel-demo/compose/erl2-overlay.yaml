@@ -1,0 +1,34 @@
+# ERL2 Compose overlay for the qualified OpenTelemetry Demo subset (ERL2-OQ-005).
+#
+# Layered over the upstream release's own `compose.yaml` with a second `-f`.
+# It changes four things and nothing else:
+#
+#   1. the network name and both container names become run-scoped, so two runs
+#      never collide and every object name embeds the run's UUID;
+#   2. both images are pinned to the digest the substrate lock records for the
+#      platform this daemon executes, so no tag is resolved at runtime;
+#   3. each container carries the run's exact labels, which is what makes exact
+#      label-value discovery possible without a prefix or a wildcard;
+#   4. nothing else. Upstream's ports, healthchecks, memory limits, restart
+#      policy and dependency edges are used as published.
+#
+# Every run-varying value arrives through a Compose interpolation variable, so
+# this file is static and its SHA-256 is stable enough to pin in the lock.
+networks:
+  default:
+    name: ${ERL2_NETWORK_NAME}
+
+services:
+  otel-collector:
+    image: ${ERL2_IMAGE_OTEL_COLLECTOR}
+    container_name: ${ERL2_CONTAINER_OTEL_COLLECTOR}
+    labels:
+      com.erl2.run_id: ${ERL2_RUN_ID}
+      com.erl2.driver_id: compose-driver
+
+  quote:
+    image: ${ERL2_IMAGE_QUOTE}
+    container_name: ${ERL2_CONTAINER_QUOTE}
+    labels:
+      com.erl2.run_id: ${ERL2_RUN_ID}
+      com.erl2.driver_id: compose-driver

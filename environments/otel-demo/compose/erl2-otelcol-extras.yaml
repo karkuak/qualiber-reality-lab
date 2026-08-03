@@ -1,0 +1,41 @@
+# ERL2 collector overlay for the qualified OpenTelemetry Demo subset.
+#
+# This is upstream's own documented extras seam: `otelcol-config-extras.yml` is
+# always loaded last, and the collector REPLACES arrays rather than appending to
+# them. Redefining the pipelines here therefore narrows them.
+#
+# Why narrow them: the base configuration's metrics pipeline names receivers for
+# services this subset does not run — `docker_stats`, `host_metrics`,
+# `postgresql`, `redis`, `nginx`, `prometheus/ad`. A collector component that no
+# pipeline references is never instantiated, so removing them from the pipelines
+# is what stops the collector reading the Docker socket and the host filesystem
+# at all. The driver additionally binds both of those mounts to `/dev/null`.
+#
+# What is kept: the OTLP receivers, and the base configuration's `debug`
+# exporter. `debug` is the observable collector path — the subset deliberately
+# does not run Jaeger, Prometheus or OpenSearch, and telemetry that arrived is
+# proven by the collector's own stdout rather than by a backend that would have
+# to be trusted separately. `verbosity: detailed` is what makes a span's
+# attributes visible, so telemetry can be attributed to the run that caused it.
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter]
+      exporters: [debug]
+    profiles:
+      receivers: [otlp]
+      processors: [memory_limiter]
+      exporters: [debug]

@@ -10,7 +10,7 @@ below is executable, not aspirational: the linked check refuses the unsafe path.
 | ERL2-OQ-002 | First three constrained archetype parameter sets | Environment Governor | before slice 10 | Clean preview only; brownfield claims withheld | no archetype fixtures are admitted |
 | ERL2-OQ-003 | Non-Qualiber OSS subject | Governor + independent QE | before slice 9 | Architectural-independence claim withheld | `docs/claims/permitted-claims.md` |
 | ERL2-OQ-004 | Evaluation pack executable format | Evaluation + Security | before slice 6 | **Data-only DSL only.** A pack is a closed `EvaluationPackBodyV1` whose every predicate, input selector, measure, ordering key and finding category is drawn from a closed vocabulary the Lab implements; there is no pack runtime to sandbox | `packages/evaluation-sdk` exposes declarative data and `certifyPack` only; `bindDomainPack` reads a pack solely through the frozen contract; `tests/architecture/evaluationBoundary.test.ts` proves the contract has no code, I/O, clock, randomness, validity or threshold member |
-| ERL2-OQ-005 | OpenTelemetry Demo release and per-platform image digest lock | Environment Governor | before slice 3 | Fake driver only; Compose driver disabled; no attesting Compose run | `assertSubstrateQualified` refuses the retained lock; `composeDriverManifestBody` emits `enabled: false`; `assertDriverEnabled` refuses it; `erl2 doctor` reports `compose_environment_driver: disabled_pending_erl2_oq_005` |
+| ERL2-OQ-005 | OpenTelemetry Demo release and per-platform image digest lock | Environment Governor | before slice 3 | **Qualified, development-signed.** A two-service subset of release `3.0.0` is pinned by archive digest, source commit, per-platform image digests (`linux/amd64` + `linux/arm64`), five config hashes, SBOM and provenance, and the Compose driver is enabled by it. The lock is signed by the repo-derivable **development** governor key, so this is a self-qualification: no independent-qualification claim may be derived, and the claim ceiling is unaffected (tier and blindness still cap at T1) | `assertSubstrateQualified` accepts the retained lock; `verifySubstrateLockSignature` classifies the signer `signerIsDevelopmentKey`; `composeDriverManifestBody` emits `enabled: true`; `assertObservedMatchesLock` re-observes archive, config and both platforms' digests at `provision`; `erl2 doctor` derives `compose_substrate` from the lock on every call |
 | ERL2-OQ-006 | Seven-year retention legal approval | Privacy/Legal | before slice 11 | No held-out production release | no held-out release path exists |
 | ERL2-OQ-008 | Container or disposable-VM substrate for opaque subjects | Security + Core | before slice 7 execution of an opaque package | **Controls locally observed but unauthenticated; profile still disabled.** The twenty controls were `observed` against a digest-pinned container substrate, but the substrate lock is signed by the repo-derivable **development** governor key — not a pinned qualification authority — so the evidence is self-reported: `erl2 doctor` reports `locally_observed_unauthenticated`, **never** the producer-assertable `authenticated`/`qualified`. And no launcher can start an adapter inside the substrate, so `local-process` remains the only usable profile and every opaque-private or third-party subject is still refused (ADR-ERL2-017, review P2-1/6R-E) | `verifyIsolationLockSignature` verifies the lock's Ed25519 signature and classifies the signer; `deriveIsolationAuthenticity` returns `locally_observed_unauthenticated` for a valid dev-signed lock and `not_qualified` for a tampered/forged one; `qualifyIsolationProfile` returns `qualified` only as the *content* verdict (twenty *observed* controls) which the authenticity layer then downgrades; `assertQualifiedForExecution` re-derives and refuses on substrate drift; `assertSandboxProfileEnabled` refuses the container profile with `disabled_no_container_adapter_launcher_pending_erl2_oq_008`; `erl2 doctor` reports the lock signature, signer, per-control probe status and the distinguished authenticity outcome under `subject_isolation` |
 | ERL2-OQ-007 | External beacon, locally pinned source registry entry, custodian roster, and any future audited threshold-VRF construction | Security + Environment Governor | before slice 2 selection freeze | **Non-blind `development` selection only.** Threshold VRF always fails with `THRESHOLD_VRF_NOT_ACTIVATED` | `assertDevelopmentTierOnly` refuses a held-out or blind tier against the development beacon; `assertActiveRandomnessVariant` refuses every threshold-VRF policy |
@@ -86,25 +86,57 @@ threshold-VRF golden, by design.
 ## ERL2-OQ-005 in detail
 
 Slice 3 shipped with the Compose driver disabled, exactly as the implementation
-plan's §9.4 rollback specifies. What that means concretely:
+plan's §9.4 rollback specifies. It is now qualified, and the rollback path is
+still the mechanism: nothing about the enablement is hand-edited.
 
-- `environments/otel-demo/substrate-lock.json` carries
-  `qualification_status: "unqualified_pending_erl2_oq_005"` and an explicit
-  reason. `assertSubstrateQualified` refuses it.
-- `composeDriverManifestBody` derives `enabled` from the lock, so the only way
-  to produce an enabled Compose manifest is to supply a lock that qualifies.
-  The disabled state cannot drift through a hand-edited fixture.
-- `assertDriverEnabled` refuses a disabled manifest before provisioning.
-- The fake driver is the only enabled driver and is the one every Slice 3 exit
-  gate is proven against.
-- `assertObservedMatchesLock` is implemented and tested now, so when the lock is
-  qualified a moved tag, a re-pushed image, a changed config, an **extra**
-  observed image or a **missing** locked config invalidates the run before
-  provisioning rather than producing an attesting run against unknown bytes
-  (image comparison is bijective and config comparison is exact set equality;
-  review §11.5). The lock's own Ed25519 signature is verified first, so a
-  tampered lock is refused with `ENV_SUBSTRATE_LOCK_SIGNATURE_INVALID` before any
-  observed byte is trusted against it.
+**What is qualified.** A two-service subset of OpenTelemetry Demo release
+`3.0.0` — `quote` (a real HTTP application with real OpenTelemetry
+auto-instrumentation) and `otel-collector` (which receives its OTLP and exports
+through the base configuration's `debug` exporter). The full demo is **not**
+deployed. `environments/otel-demo/substrate-lock.json` pins the archive SHA-256,
+the source commit read from the archive's own pax header, image digests for
+`linux/amd64` **and** `linux/arm64` for both services, the SHA-256 of all five
+applied configuration files, an SBOM and a provenance record.
+
+**Which platforms are required.** `linux/amd64` and `linux/arm64`. The previous
+requirement named `darwin/arm64`, which is not an image-manifest platform at all:
+Docker Desktop on an arm64 Mac runs Linux containers in a Linux VM, so the images
+a macOS host executes are `linux/arm64`, and no registry publishes a Darwin
+manifest for either repository. That requirement made a qualified lock
+unreachable rather than strict. `darwin/arm64` stays in the `SubstrateLockV1`
+enum because narrowing a shared contract's enum breaks artifacts already written.
+
+**How it stays fail-closed.**
+
+- `composeDriverManifestBody` still derives `enabled` from the lock, so an
+  unqualified lock still produces a disabled driver and the state cannot drift
+  through a hand-edited fixture.
+- The lock's Ed25519 signature is verified before any observed byte is trusted
+  against it; a tampered lock is `ENV_SUBSTRATE_LOCK_SIGNATURE_INVALID`.
+- `assertObservedMatchesLock` runs at `provision`, before a container exists: a
+  moved archive, a re-pushed image, a changed config, an **extra** observed image
+  or a **missing** locked config invalidates the run (image comparison is
+  bijective, config comparison is exact set equality; review §11.5).
+- `--environment-driver` defaults to `fake`, and a run binds its driver once.
+
+**What this is not.** The lock is signed by
+`erl2-dev-challenge-governor-ed25519-1`, a repo-derivable development key.
+`verifySubstrateLockSignature` classifies it `signerIsDevelopmentKey: true`,
+`signerIsPinnedAuthority: false`, and `erl2 doctor` reports
+`independently_qualified: false`. No third party attested the release, the
+images, the SBOM or the lock; the archive was fetched over TLS and hashed, with
+no detached signature, cosign attestation or transparency-log proof checked
+(`syft` and `cosign` are not installed on the qualifying host). Qualification
+resolved both required platforms; the live acceptance run executed
+`linux/arm64` only.
+
+**What it does not unlock.** T2 is still unreachable. A real substrate raises the
+*environment-realism* claim component to T2, and the claim ceiling is the weakest
+applicable component — the run remains `development` tier with non-blind
+selection under ERL2-OQ-007. ERL2-OQ-008 is untouched: the subject that exercises
+this environment is a trusted, repository-owned reference adapter under the
+`local-process` profile, and no opaque, private or third-party subject claim
+follows from any of it.
 
 The qualification procedure is in `environments/otel-demo/README.md`.
 

@@ -26,6 +26,7 @@ const BUILD_ORDER = [
   "adapters/reference-limited",
   "adapters/reference-misleading",
   "adapters/reference-inconclusive",
+  "adapters/reference-otel-demo",
   "packs/operations",
   "tests",
 ];

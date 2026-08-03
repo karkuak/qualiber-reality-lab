@@ -10,3 +10,7 @@ docs/ledger/negative-controls.json
 
 # Word lock files, which are session state and not documents.
 ~$*
+
+# ERL2-OQ-005: the pinned OTel Demo archive is fetched, hashed and re-verified
+# against the substrate lock; it is an input, not a document.
+environments/otel-demo/upstream/

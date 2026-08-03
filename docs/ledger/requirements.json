@@ -1136,8 +1136,9 @@
       "decision": "OpenTelemetry Demo release and image digest lock",
       "owner": "environment governor",
       "deadline": "before slice 3",
-      "fail_closed": "fake driver only; Compose disabled",
-      "status": "open"
+      "fail_closed": "an unqualified lock still yields a disabled Compose driver; the fake driver remains the default and is never displaced",
+      "status": "qualified_development_signed",
+      "note": "A two-service subset of OpenTelemetry Demo 3.0.0 (quote + otel-collector) is pinned by archive SHA-256, source commit, per-platform image digests for linux/amd64 and linux/arm64, five applied config hashes, an SBOM and a provenance record; the Compose driver is enabled by it and proven against a live daemon. The lock is signed by the repo-derivable development environment-governor key, so this is a self-qualification: no independent-qualification claim follows, and the claim ceiling is unchanged (development tier and non-blind selection still cap at T1 under ERL2-OQ-007). REQUIRED_PLATFORMS was corrected from linux/amd64 + darwin/arm64 to linux/amd64 + linux/arm64; darwin/arm64 is not an image manifest platform."
     },
     {
       "id": "ERL2-OQ-006",

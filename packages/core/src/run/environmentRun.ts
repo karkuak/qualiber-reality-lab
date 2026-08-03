@@ -662,6 +662,14 @@ export class EnvironmentRun {
       substrateKind: substrate.kind,
       substrateInstanceHash: substrate.instanceHash,
       reservationNamespaceHash: reservationNamespaceHash(this.allocator.namespaceLocator),
+      // The lock the driver's own signed manifest names, carried into the
+      // binding so an offline reader can see *which* qualification licensed this
+      // environment without holding the driver. A driver whose substrate no lock
+      // governs — the fake one — has none, and the field stays absent, so this
+      // changes no existing byte (ERL2-OQ-005).
+      ...(this.driver.manifest.substrate_lock_hash === undefined
+        ? {}
+        : { substrateLockHash: this.driver.manifest.substrate_lock_hash }),
       boundAt: this.now(),
       signingKey: this.keys.environmentGovernor,
     });

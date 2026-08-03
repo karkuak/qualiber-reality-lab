@@ -26,7 +26,11 @@ import {
 } from "@erl2/integrity";
 import { commitJourneyStep, DEVELOPMENT_BEACON_SOURCE_ID, type CommittedStep } from "@erl2/core";
 import { developmentKeyring, developmentTrustPolicy, type DevelopmentKeyring } from "./keys.js";
-import { REFERENCE_CORRECT_MANIFEST, REFERENCE_LIMITED_MANIFEST } from "./adapterFixtures.js";
+import {
+  REFERENCE_CORRECT_MANIFEST,
+  REFERENCE_LIMITED_MANIFEST,
+  REFERENCE_OTEL_DEMO_MANIFEST,
+} from "./adapterFixtures.js";
 import { ownedTempDir } from "./tempDirs.js";
 
 export interface GovernorRegistry {
@@ -39,6 +43,7 @@ export interface GovernorRegistry {
   /** Certified reference adapters, admitted alongside the fake-port manifest. */
   readonly referenceCorrectAdapterHash: Hash;
   readonly referenceLimitedAdapterHash: Hash;
+  readonly referenceOtelDemoAdapterHash: Hash;
   readonly genericRunPolicyHash: Hash;
   readonly runTrustPolicyHash: Hash;
   readonly limitsHash: Hash;
@@ -233,6 +238,10 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
   const referenceLimitedAdapterHash = admit(
     "adapter-manifest-reference-limited",
     REFERENCE_LIMITED_MANIFEST(),
+  );
+  const referenceOtelDemoAdapterHash = admit(
+    "adapter-manifest-reference-otel-demo",
+    REFERENCE_OTEL_DEMO_MANIFEST(),
   );
 
   const runPolicy = sealSigned(
@@ -571,6 +580,7 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
     adapterManifestHash,
     referenceCorrectAdapterHash,
     referenceLimitedAdapterHash,
+    referenceOtelDemoAdapterHash,
     genericRunPolicyHash,
     runTrustPolicyHash,
     limitsHash: h("limits"),

@@ -1,22 +1,70 @@
 {
   "schema_version": "substrate-lock/v1",
-  "lock_id": "otel-demo-candidate",
+  "lock_id": "otel-demo-minimal-subset",
   "substrate_id": "opentelemetry-demo",
-  "qualification_status": "unqualified_pending_erl2_oq_005",
-  "unqualified_reason_code": "OTEL_DEMO_NOT_RE_ADMITTED: no archive digest, per-platform image digests, SBOM, provenance or config hashes captured since the July 2026 upstream changes recorded in design v2 \u00a71.4. See environments/otel-demo/README.md. Gate: ERL2-OQ-005.",
+  "qualification_status": "qualified",
   "source_archive": {
-    "release_tag": "UNQUALIFIED-CANDIDATE",
-    "source_commit": "UNQUALIFIED-CANDIDATE",
-    "archive_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    "release_tag": "3.0.0",
+    "source_commit": "1755859a9de82c2e5e225be68abc401a5ebf2b4f",
+    "archive_sha256": "sha256:1bf3ef8fbaffc049919b497a9174637dbee74ec1797ce5ff85d3d12dc86c051c"
   },
-  "images": [],
-  "config_hashes": [],
-  "recorded_at": "2026-07-23T00:00:00Z",
-  "core_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "images": [
+    {
+      "service_id": "otel-collector",
+      "platform": "linux/amd64",
+      "digest": "sha256:4eb842091c796156d4d3c994eb22ba793590f5723719dbf6b8436cb4dfc17f48"
+    },
+    {
+      "service_id": "otel-collector",
+      "platform": "linux/arm64",
+      "digest": "sha256:1fef9f07f04eb6775b4076ea4f817d6b7b9050e23e52941f0756ba08df798ea6"
+    },
+    {
+      "service_id": "quote",
+      "platform": "linux/amd64",
+      "digest": "sha256:87201885ff95bd4524fffe31b84cef90dabda0707a7f57d356a4932a461fd153"
+    },
+    {
+      "service_id": "quote",
+      "platform": "linux/arm64",
+      "digest": "sha256:370d920d330a145a5e6769eab82dd256a11c8186c78d7afd7927119f402d2438"
+    }
+  ],
+  "sbom": {
+    "path": "environments/otel-demo/qualification/sbom.json",
+    "media_type": "application/json",
+    "byte_length": 1812,
+    "file_sha256": "sha256:17f79bd9788d614cfc5dcd1f243076b2acce1fd8aeec2dc42be6d5b6d4bc0d61",
+    "classification": "PUBLIC"
+  },
+  "provenance": {
+    "producer": "erl2 scripts/qualify-otel-demo.mjs (docker scout, docker buildx imagetools)",
+    "producer_version": "0.1.0",
+    "source_uri": "https://codeload.github.com/open-telemetry/opentelemetry-demo/tar.gz/refs/tags/3.0.0",
+    "source_commit": "1755859a9de82c2e5e225be68abc401a5ebf2b4f",
+    "transformations": [
+      "fetch release archive over TLS and record its SHA-256",
+      "read the source commit from the archive pax global header",
+      "resolve linux/amd64 and linux/arm64 manifest digests from the release-pinned tags",
+      "hash the five applied configuration files",
+      "generate SPDX SBOMs with docker scout",
+      "record build attestation presence with docker buildx imagetools",
+      "sign with the repository development environment governor (NOT an independent authority)"
+    ]
+  },
+  "config_hashes": [
+    "sha256:a23520301cd8dc6b4af4315628ca19b694ebdac0ca0dc1d29a4ad43d205bbc84",
+    "sha256:517055b93534de0b38e6d4e9a0fff8cfaa3145083d8089e1bb503beedd2d3c99",
+    "sha256:6eddab9bd51a2aaea0b98af04c4233a18a9795cf4314ee32a3def9344f3611ff",
+    "sha256:dc23af64efd5e92033868541167b3b604d7a64fef4cb49d2d241e21506707f6e",
+    "sha256:230f0829ff6b5cd4e38b9bad1ce3c2396d696d8a37317612ddfc2024cc38326d"
+  ],
+  "recorded_at": "2026-08-03T17:38:26Z",
+  "core_hash": "sha256:c23a209fcc22cfaf82b24a34f910601270dce2adca39e2599f98986f58f690ee",
   "signature": {
     "algorithm": "Ed25519",
-    "key_id": "erl2-dev-environment-governor-ed25519-1",
-    "signed_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-    "signature_base64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+    "key_id": "erl2-dev-challenge-governor-ed25519-1",
+    "signed_hash": "sha256:c23a209fcc22cfaf82b24a34f910601270dce2adca39e2599f98986f58f690ee",
+    "signature_base64": "IzIj8cD1yRDqUQbTPYieO62puzyyj1ayf7SvaZ3kuBjq4dGzsNkTaCuop3ROA3aoUra61ysfKV3CF5+tozsYCg=="
   }
 }
