@@ -1343,9 +1343,10 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
    *
    * Closing that gap means retaining and gating on attributable telemetry, which
    * is a change to what evidence a run keeps rather than a change to this
-   * derivation. It belongs to the first Qualiber integration package and is
-   * recorded as that package's obligation in `docs/decisions/open-questions.md`
-   * (ERL2-OQ-005) and `docs/ledger/requirements.json`. Until then the claim
+   * derivation. It belongs to the next integration package and is recorded as that
+   * package's obligation in `docs/decisions/open-questions.md` (ERL2-OQ-005) and
+   * `docs/ledger/requirements.json` — which name it, as core deliberately does
+   * not: no module here may name a subject (`CORE-PURITY`). Until then the claim
    * boundary says only what the bundle can support.
    */
   private evidenceSourceState(
@@ -1419,8 +1420,8 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
    * retained into a run's evidence, so an offline bundle carries no attestation
    * that telemetry was received — `evidenceSourceState` explains what the bundle
    * does say, and the claim boundary is written to that and not to this. Retaining
-   * and gating on this observation is the first Qualiber integration package's
-   * obligation, recorded under ERL2-OQ-005.
+   * and gating on this observation is the next integration package's obligation,
+   * recorded under ERL2-OQ-005.
    */
   observeTelemetry(marker: string): {
     readonly traceBatches: number;
