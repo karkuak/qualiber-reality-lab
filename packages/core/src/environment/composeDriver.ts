@@ -28,9 +28,13 @@
  * alone. Each operation declares what its effect looks like in Docker, and a
  * stored receipt is offered only while the substrate still shows that effect:
  *
- *   - `op-provision` — the run's containers and network exist, labelled;
- *   - `op-activate`  — the endpoint container is observed on the challenge network;
- *   - `op-restore`   — it is not, and the challenge network no longer exists;
+ *   - `op-provision` — the run's whole verified graph is observed: both containers
+ *     proven this run's by label and proven to be running the locked images, plus
+ *     the network and the published port;
+ *   - `op-activate`  — the *verified* endpoint container is observed on the
+ *     challenge network;
+ *   - `op-restore`   — it is verified, it is not attached, and the challenge
+ *     network no longer exists;
  *   - `op-destroy`   — nothing carrying the run's exact project label exists.
  *
  * A log that claims an operation the substrate contradicts answers `undefined`,
@@ -47,9 +51,36 @@
  * whole-environment teardown is `docker compose down` scoped to this run's own
  * project name; the per-resource path deletes exactly one named object after
  * `assertOwnedByRun` and `assertNarrowSelector` have both passed for it.
+ *
+ * ## An expected name is not ownership
+ *
+ * Reaching a container by the name this run would have given it proves only that
+ * *something* answers to that name. Before any expected-name container is treated
+ * as this run's, Docker has to prove two independent things about the live object
+ * (`observeExpectedContainers`):
+ *
+ *   - **whose it is** — all three ownership labels carry this run's exact values:
+ *     `com.erl2.run_id=<this run>`, `com.erl2.driver_id=compose-driver`,
+ *     `com.docker.compose.project=<this run's project>`. A missing label is a
+ *     mismatch, because `""` is not the expected value;
+ *   - **what it is running** — the container's own image, resolved through the
+ *     daemon, publishes the exact repository digest the lock pins for that
+ *     service on the executing platform, *and* the daemon resolves that pinned
+ *     reference to the same image id the container reports. Both legs are read
+ *     back out of live Docker state; neither is the lock's own expected digest
+ *     copied into an observation, which would have agreed with the lock by
+ *     construction. When Docker cannot answer either leg, the verdict is "not
+ *     proven", never "assumed".
+ *
+ * A container that fails either check is still *reported* — cleanup has to know
+ * it exists — but under an identity that deliberately does not derive from
+ * `resourceIdentityHash`, so `assertOwnedByRun` refuses it on every destructive
+ * path. It also fails its baseline probe, counts as preexisting residue, and
+ * withholds the endpoint record; and because provision adoption is gated on the
+ * same verified graph, a receipt cannot carry a substituted container forward.
  */
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
   assertContract,
@@ -69,7 +100,6 @@ import { coreHash, domainHash, HASH_DOMAINS, sealSigned, type SigningKey } from 
 import type { Clock } from "../runtime/seams.js";
 import { buildBaselineFingerprint, type EvidenceSourceState } from "./cleanControl.js";
 import {
-  lockedDigest,
   observeExecutingPlatform,
   OTEL_DEMO_ENDPOINT_SERVICE_ID,
   OTEL_DEMO_SERVICES,
@@ -107,6 +137,15 @@ const COMPOSE_PROJECT_LABEL = "com.docker.compose.project";
 
 export const COMPOSE_DRIVER_ID = "compose-driver";
 export const COMPOSE_SUBSTRATE_KIND = "compose-project";
+
+/**
+ * The only host the endpoint record may name, and the only one the egress policy
+ * will accept.
+ *
+ * Written here and re-required at every read, so the two ends of the record agree
+ * on one exact literal rather than on "something loopback-ish".
+ */
+export const LOOPBACK_HOST = "127.0.0.1";
 
 /** The resource kinds this driver creates and is accountable for. */
 const RESOURCE_KINDS = ["project", "network", "container", "port", "volume"] as const;
@@ -285,6 +324,11 @@ class ComposeRunStore {
   writeEndpoint(record: unknown): void {
     this.write(path.join(this.endpointDirectory(), "endpoint.json"), record);
   }
+
+  /** Deletes the endpoint record. Absent is success: the point is that it is gone. */
+  removeEndpoint(): void {
+    rmSync(path.join(this.endpointDirectory(), "endpoint.json"), { force: true });
+  }
 }
 
 // -- what Docker says exists --------------------------------------------------
@@ -296,8 +340,14 @@ interface ObservedContainer {
   readonly paused: boolean;
   readonly health: string;
   readonly restartCount: number;
-  readonly imageDigest: string;
+  /**
+   * The image *id* Docker reports for the bytes this container runs — `.Image`,
+   * which is a content id and not a repository digest. The mapping from it to a
+   * locked digest is what `observeImageIdentity` has to establish.
+   */
+  readonly imageId: string;
   readonly runLabel: string;
+  readonly driverLabel: string;
   readonly projectLabel: string;
   readonly hostPort?: number;
 }
@@ -306,6 +356,50 @@ interface ObservedObject {
   readonly name: string;
   readonly runLabel: string;
 }
+
+/**
+ * What Docker says about the image a container is actually running, and whether
+ * that resolves to the digest the qualified lock pins.
+ *
+ * Every field except `lockedReference` is read back out of the daemon. The
+ * verdict needs both legs to agree, so neither a re-tagged image that happens to
+ * publish the right digest nor a matching content id under a foreign repository
+ * passes on its own.
+ */
+interface ObservedImageIdentity {
+  /** `repository@digest` from the lock — the only expected value here, and never the verdict. */
+  readonly lockedReference: string;
+  /** `.Image` of the live container. */
+  readonly containerImageId: string;
+  /** `.RepoDigests` of the image that id names, asked of the daemon. */
+  readonly observedRepoDigests: readonly string[];
+  /** The id the daemon resolves `lockedReference` to in its own store. */
+  readonly lockedImageId: string;
+  readonly matchesLockedDigest: boolean;
+}
+
+/**
+ * One expected container, and the verdict on whether Docker proves it is this
+ * run's and running the locked bytes.
+ *
+ * `violations` empty is the *only* state in which the container may be treated as
+ * owned. Everything else — absent, mislabelled, or running an image the lock does
+ * not pin — is a reason it may not be.
+ */
+interface VerifiedContainer {
+  readonly service: ComposeServiceSpec;
+  readonly name: string;
+  readonly observed: ObservedContainer | undefined;
+  readonly image: ObservedImageIdentity | undefined;
+  readonly violations: readonly string[];
+}
+
+/** Violation reasons. Stable strings: they are hashed into the baseline observation. */
+const VIOLATION_ABSENT = "container_absent";
+const VIOLATION_RUN_LABEL = `${ERL2_RUN_LABEL}_mismatch`;
+const VIOLATION_DRIVER_LABEL = `${ERL2_DRIVER_LABEL}_mismatch`;
+const VIOLATION_PROJECT_LABEL = `${COMPOSE_PROJECT_LABEL}_mismatch`;
+const VIOLATION_IMAGE = "image_not_locked_digest";
 
 export class ComposeEnvironmentDriver implements EnvironmentDriver {
   readonly manifest: EnvironmentDriverManifestV1;
@@ -321,6 +415,17 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
   private readonly archetypeHash: Hash;
   private readonly sourceIds: readonly string[];
   private platformCache: Platform | undefined;
+  /**
+   * Image ids and repository digests already resolved by this daemon.
+   *
+   * Sound to memoize because both are content-addressed: the id a digest
+   * reference resolves to, and the repository digests an id publishes, cannot
+   * change for a fixed input without the input naming different bytes. Only
+   * successful lookups are cached, so a transient daemon failure stays a failure
+   * that can be retried rather than a permanent "not proven".
+   */
+  private readonly lockedImageIds = new Map<string, string>();
+  private readonly repoDigests = new Map<string, readonly string[]>();
 
   constructor(options: ComposeDriverOptions) {
     this.runId = options.runId;
@@ -471,11 +576,136 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
       paused: raw.State?.Paused === true,
       health: raw.State?.Health?.Status ?? "none",
       restartCount: raw.RestartCount ?? 0,
-      imageDigest: raw.Image ?? "",
+      imageId: raw.Image ?? "",
       runLabel: labels[ERL2_RUN_LABEL] ?? "",
+      driverLabel: labels[ERL2_DRIVER_LABEL] ?? "",
       projectLabel: labels[COMPOSE_PROJECT_LABEL] ?? "",
       ...(hostPort === undefined ? {} : { hostPort }),
     };
+  }
+
+  // -- is this container ours, and is it running the locked bytes? -------------
+
+  /** The id this daemon resolves a `repository@digest` reference to, or `""`. */
+  private imageIdOf(reference: string): string {
+    const cached = this.lockedImageIds.get(reference);
+    if (cached !== undefined) return cached;
+    const result = this.docker.run({
+      args: ["image", "inspect", reference, "--format", "{{.Id}}"],
+      timeoutMs: 60_000,
+    });
+    if (result.status !== 0) return "";
+    const id = result.stdout.trim();
+    if (id !== "") this.lockedImageIds.set(reference, id);
+    return id;
+  }
+
+  /** The repository digests this daemon publishes for an image id. */
+  private repoDigestsOf(imageId: string): readonly string[] {
+    const cached = this.repoDigests.get(imageId);
+    if (cached !== undefined) return cached;
+    const result = this.docker.run({
+      args: ["image", "inspect", imageId, "--format", "{{json .RepoDigests}}"],
+      timeoutMs: 60_000,
+    });
+    if (result.status !== 0) return [];
+    let parsed: unknown;
+    try {
+      parsed = parseStrictJson(result.stdout.trim());
+    } catch {
+      return [];
+    }
+    if (!Array.isArray(parsed)) return [];
+    const digests = parsed.filter((entry): entry is string => typeof entry === "string");
+    this.repoDigests.set(imageId, digests);
+    return digests;
+  }
+
+  /**
+   * Whether the bytes this container runs are the bytes the lock pins.
+   *
+   * Two independent legs, both derived from live Docker state, both required:
+   * the running image publishes the locked repository digest, and the locked
+   * reference resolves to the running image's id. A daemon that cannot answer
+   * either leaves `matchesLockedDigest` false — the mapping is unproven, and
+   * unproven is refused.
+   */
+  private observeImageIdentity(
+    service: ComposeServiceSpec,
+    container: ObservedContainer,
+  ): ObservedImageIdentity {
+    const lockedReference = pinnedImageReference(this.lock, service, this.platform());
+    const lockedImageId = this.imageIdOf(lockedReference);
+    const observedRepoDigests =
+      container.imageId === "" ? [] : this.repoDigestsOf(container.imageId);
+    return {
+      lockedReference,
+      containerImageId: container.imageId,
+      observedRepoDigests,
+      lockedImageId,
+      matchesLockedDigest:
+        container.imageId !== "" &&
+        lockedImageId !== "" &&
+        container.imageId === lockedImageId &&
+        observedRepoDigests.includes(lockedReference),
+    };
+  }
+
+  /** Every expected container, with the verdict on whether it may be treated as ours. */
+  private observeExpectedContainers(): readonly VerifiedContainer[] {
+    return OTEL_DEMO_SERVICES.map((service) => {
+      const name = this.containerName(service);
+      const observed = this.observeContainer(name);
+      if (observed === undefined) {
+        return { service, name, observed: undefined, image: undefined, violations: [VIOLATION_ABSENT] };
+      }
+      const image = this.observeImageIdentity(service, observed);
+      const violations: string[] = [];
+      // Exact equality on every ownership label. A label the object does not carry
+      // reads as `""`, which is not this run's value, so "missing" and "wrong" are
+      // the same refusal rather than a gap.
+      if (observed.runLabel !== this.runId) violations.push(VIOLATION_RUN_LABEL);
+      if (observed.driverLabel !== COMPOSE_DRIVER_ID) violations.push(VIOLATION_DRIVER_LABEL);
+      if (observed.projectLabel !== this.project) violations.push(VIOLATION_PROJECT_LABEL);
+      if (!image.matchesLockedDigest) violations.push(VIOLATION_IMAGE);
+      return { service, name, observed, image, violations };
+    });
+  }
+
+  /** The endpoint service's entry, verdict included. */
+  private endpointEntry(): VerifiedContainer {
+    const endpoint = this.endpointService();
+    return this.observeExpectedContainers().find(
+      (entry) => entry.service.serviceId === endpoint.serviceId,
+    ) as VerifiedContainer;
+  }
+
+  /** True only when Docker proves the entry is this run's, running the locked image. */
+  private static verified(entry: VerifiedContainer | undefined): boolean {
+    return entry !== undefined && entry.observed !== undefined && entry.violations.length === 0;
+  }
+
+  /**
+   * Refuses before any destructive or activating action when a live object at one
+   * of this run's expected names is not provably this run's.
+   *
+   * An absent container is not a violation here — there is simply nothing to act
+   * on, and the operations below say so in their own terms. What is refused is a
+   * *present* object the run would otherwise have treated as its own.
+   */
+  private assertVerifiedOwnership(containers: readonly VerifiedContainer[]): void {
+    const unproven = containers.filter(
+      (entry) => entry.observed !== undefined && entry.violations.length > 0,
+    );
+    if (unproven.length === 0) return;
+    throw new Erl2Error(
+      CODES.ENV_FOREIGN_RESOURCE_REJECTED,
+      `Docker does not prove ${unproven
+        .map((entry) => `${entry.name} (${[...entry.violations].sort().join(", ")})`)
+        .join("; ")} belongs to run ${this.runId} and runs the locked image; ` +
+        "an expected container name is not ownership",
+      { owner: "lab" },
+    );
   }
 
   /**
@@ -551,12 +781,49 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     };
   }
 
-  private observedResources(): readonly EnvironmentResourceV1[] {
+  /**
+   * A live object at one of this run's expected names that Docker does not prove
+   * is this run's.
+   *
+   * Reported rather than hidden: cleanup has to know it is there, and a
+   * substituted container that vanished from the inventory would be residue
+   * nobody accounted for. Its identity deliberately does **not** derive from
+   * `resourceIdentityHash`, so `assertOwnedByRun` refuses it on every destructive
+   * path even if some future caller reaches it without going through
+   * `assertVerifiedOwnership` first.
+   */
+  private unverifiedResource(
+    kind: string,
+    name: string,
+    violations: readonly string[],
+  ): EnvironmentResourceV1 {
+    return {
+      resource_id: `unverified-${kind}-${shortId(name)}`,
+      kind,
+      run_scoped_name: name,
+      identity_hash: domainHash(HASH_DOMAINS.RESOURCE_IDENTITY, {
+        run_id: this.runId,
+        kind,
+        run_scoped_name: name,
+        unverified_ownership: [...violations].sort(),
+      }),
+      destroyable: true,
+    };
+  }
+
+  /**
+   * Everything this run's project holds right now, and the per-container
+   * ownership verdicts the rest of the driver gates on.
+   *
+   * Returned together because they come from one sweep of the substrate: a caller
+   * that had to ask twice would be deciding against two different moments.
+   */
+  private observeGraph(): {
+    readonly resources: readonly EnvironmentResourceV1[];
+    readonly containers: readonly VerifiedContainer[];
+  } {
     const resources: EnvironmentResourceV1[] = [];
-    const containers = OTEL_DEMO_SERVICES.map((service) => ({
-      service,
-      observed: this.observeContainer(this.containerName(service)),
-    }));
+    const containers = this.observeExpectedContainers();
     const networks = this.observeLabelled("network");
     const volumes = this.observeLabelled("volume");
     const labelledContainers = this.observeLabelled("container");
@@ -584,11 +851,13 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     for (const entry of containers) {
       if (entry.observed === undefined) continue;
       resources.push(
-        this.resource(
-          "container",
-          entry.observed.name,
-          `container-${entry.service.serviceId.replace(/[^a-z0-9-]/g, "-")}-${shortId(this.runId)}`,
-        ),
+        entry.violations.length === 0
+          ? this.resource(
+              "container",
+              entry.observed.name,
+              `container-${entry.service.serviceId.replace(/[^a-z0-9-]/g, "-")}-${shortId(this.runId)}`,
+            )
+          : this.unverifiedResource("container", entry.observed.name, entry.violations),
       );
     }
     const expectedContainerNames = new Set(OTEL_DEMO_SERVICES.map((s) => this.containerName(s)));
@@ -599,13 +868,19 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     for (const volume of volumes) {
       resources.push(this.foreignResource("volume", volume.name, volume.runLabel));
     }
+    // The published port belongs to this run only if the container publishing it
+    // does. A port reached through an unverified container is not this run's port.
     const endpoint = containers.find((entry) => entry.service.serviceId === OTEL_DEMO_ENDPOINT_SERVICE_ID);
-    if (endpoint?.observed?.hostPort !== undefined) {
+    if (ComposeEnvironmentDriver.verified(endpoint) && endpoint?.observed?.hostPort !== undefined) {
       resources.push(
         this.resource("port", `${this.project}-${OTEL_DEMO_ENDPOINT_SERVICE_ID}-port`, `port-${shortId(this.runId)}`),
       );
     }
-    return resources;
+    return { resources, containers };
+  }
+
+  private observedResources(): readonly EnvironmentResourceV1[] {
+    return this.observeGraph().resources;
   }
 
   private inventoryOf(resources: readonly EnvironmentResourceV1[]): EnvironmentResourceInventoryV1 {
@@ -687,14 +962,25 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     // produce a second one.
     if (receipt.status === "failed") return true;
     switch (receipt.operation) {
-      case "provision":
-        return OTEL_DEMO_SERVICES.every(
-          (service) => this.observeContainer(this.containerName(service)) !== undefined,
-        );
+      case "provision": {
+        // The same verified graph a fresh provision has to reach. Container
+        // presence alone would let a restarted run adopt a provision whose
+        // containers had since been substituted for foreign ones.
+        const graph = this.observeGraph();
+        return this.completeGraph(graph.resources, graph.containers);
+      }
       case "mutate":
         return this.challengeNetworkAttached();
-      case "restore":
-        return !this.challengeNetworkAttached() && this.observeNetworkPresent(this.challengeNetworkName()) === false;
+      case "restore": {
+        // Verified first: "the activation is gone" is not a restoration if the
+        // container it was applied to is no longer provably this run's.
+        const endpoint = this.endpointEntry();
+        return (
+          ComposeEnvironmentDriver.verified(endpoint) &&
+          endpoint.observed?.networks.includes(this.challengeNetworkName()) !== true &&
+          this.observeNetworkPresent(this.challengeNetworkName()) === false
+        );
+      }
       case "destroy":
         return this.observedResources().length === 0;
       default:
@@ -747,12 +1033,12 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     assertOperationSupported(this.manifest, "provision");
     const completed = this.completedOperation(request.runId, request.operationId);
     if (completed !== undefined) {
-      const observed = this.observedResources();
+      const graph = this.observeGraph();
       return {
         receipt: completed,
-        inventory: this.inventoryOf(observed),
+        inventory: this.inventoryOf(graph.resources),
         environmentInstanceHash: this.instanceHash(),
-        partial: !this.completeGraph(observed),
+        partial: !this.completeGraph(graph.resources, graph.containers),
       };
     }
     if (this.observedResources().length > 0) {
@@ -802,9 +1088,12 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
       ],
       (UP_TIMEOUT_SECONDS + 60) * 1000,
     );
-    const observed = this.observedResources();
-    const complete = up.status === 0 && this.completeGraph(observed);
-    if (complete) this.writeEndpointRecord();
+    const graph = this.observeGraph();
+    const observed = graph.resources;
+    const complete = up.status === 0 && this.completeGraph(observed, graph.containers);
+    // The endpoint record is what a later process turns into a mount and an
+    // egress allowlist, so it is written only over a graph Docker proved.
+    if (complete) this.writeEndpointRecord(graph.containers);
 
     return {
       receipt: this.remember(
@@ -825,8 +1114,18 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     };
   }
 
-  /** Every member of the fixed service graph is present, and nothing foreign is. */
-  private completeGraph(resources: readonly EnvironmentResourceV1[]): boolean {
+  /**
+   * Every member of the fixed service graph is present and *verified*, and
+   * nothing foreign is.
+   *
+   * The container clause is the ownership verdict, not the name lookup: a
+   * substituted or mislabelled container answers to the expected name, so a graph
+   * judged on names alone would call it complete.
+   */
+  private completeGraph(
+    resources: readonly EnvironmentResourceV1[],
+    containers: readonly VerifiedContainer[],
+  ): boolean {
     const names = new Set(resources.map((r) => r.run_scoped_name));
     const required = [
       this.project,
@@ -836,7 +1135,8 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     ];
     return (
       required.every((name) => names.has(name)) &&
-      resources.every((resource) => resource.run_scoped_name.includes(this.runId))
+      resources.every((resource) => resource.run_scoped_name.includes(this.runId)) &&
+      containers.every((entry) => ComposeEnvironmentDriver.verified(entry))
     );
   }
 
@@ -848,16 +1148,24 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
    * upstream compose file publishes without a fixed host port, so two runs never
    * collide — which is precisely why a later process cannot guess it and has to
    * be told.
+   *
+   * It is a *hint*, never an authorization. `readComposeEndpoint` validates every
+   * field of it and then re-observes Docker before anything is mounted or
+   * allowlisted, so this record going stale withdraws access rather than
+   * preserving it.
    */
-  private writeEndpointRecord(): void {
-    const endpoint = this.endpointService();
-    const container = this.observeContainer(this.containerName(endpoint));
+  private writeEndpointRecord(containers: readonly VerifiedContainer[]): void {
+    const endpoint = containers.find(
+      (entry) => entry.service.serviceId === OTEL_DEMO_ENDPOINT_SERVICE_ID,
+    );
+    if (!ComposeEnvironmentDriver.verified(endpoint)) return;
+    const container = endpoint?.observed;
     if (container?.hostPort === undefined) return;
     this.store.writeEndpoint({
       run_id: this.runId,
-      host: "127.0.0.1",
+      host: LOOPBACK_HOST,
       port: container.hostPort,
-      service_id: endpoint.serviceId,
+      service_id: OTEL_DEMO_ENDPOINT_SERVICE_ID,
       container: container.name,
       substrate_id: OTEL_DEMO_SUBSTRATE_ID,
     });
@@ -869,8 +1177,14 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     assertDriverEnabled(this.manifest);
     assertOperationSupported(this.manifest, "probe");
     const probes: EnvironmentProbeResultV1[] = [];
-    const observed = this.observedResources();
-    const foreign = observed.filter((r) => !r.run_scoped_name.includes(this.runId));
+    const graph = this.observeGraph();
+    const observed = graph.resources;
+    // Residue is anything in this run's project the run does not own: a foreign
+    // object under a foreign name, and equally a live object under one of *our*
+    // names that Docker will not confirm is ours.
+    const foreign = observed.filter(
+      (r) => !r.run_scoped_name.includes(this.runId) || r.resource_id.startsWith("unverified-"),
+    );
 
     const project = observed.some((r) => r.kind === "project");
     probes.push(
@@ -887,12 +1201,18 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
       }),
     );
 
-    for (const service of OTEL_DEMO_SERVICES) {
-      const container = this.observeContainer(this.containerName(service));
+    for (const entry of graph.containers) {
+      const container = entry.observed;
       // The observation deliberately excludes the container id, the host port and
-      // every timestamp, and deliberately includes the image digest: two clean
-      // provisions of this archetype must fingerprint identically, and they must
-      // stop doing so if the bytes running in them change.
+      // every timestamp, and deliberately includes the *observed* image identity:
+      // two clean provisions of this archetype must fingerprint identically, and
+      // they must stop doing so if the bytes running in them change.
+      //
+      // What it records is what Docker said — the running image's id, the
+      // repository digests that image publishes, and the verdict derived from
+      // them. It deliberately does not record the digest the lock pins, because a
+      // probe that reported its own expectation would agree with the lock however
+      // the container was substituted.
       const healthy =
         container !== undefined &&
         container.state === "running" &&
@@ -902,14 +1222,18 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
       probes.push(
         this.probeResult(
           request,
-          `probe-container-${service.serviceId}`,
+          `probe-container-${entry.service.serviceId}`,
           "health",
-          `container-${service.serviceId}-${shortId(this.runId)}`,
-          healthy,
+          `container-${entry.service.serviceId}-${shortId(this.runId)}`,
+          healthy && entry.violations.length === 0,
           {
             kind: "container",
-            service_id: service.serviceId,
-            image_digest: lockedDigest(this.lock, service.serviceId, this.platform()),
+            service_id: entry.service.serviceId,
+            image_id: entry.image?.containerImageId ?? "absent",
+            observed_image_repo_digests: [...(entry.image?.observedRepoDigests ?? [])].sort(),
+            image_matches_locked_digest: entry.image?.matchesLockedDigest ?? false,
+            ownership_verified: entry.violations.length === 0,
+            ownership_violations: [...entry.violations].sort(),
             state: container?.state ?? "absent",
             paused: container?.paused ?? false,
             health: container?.health ?? "absent",
@@ -919,8 +1243,11 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
       );
     }
 
-    const endpoint = this.observeContainer(this.containerName(this.endpointService()));
-    const published = endpoint?.hostPort !== undefined;
+    const endpointEntry = graph.containers.find(
+      (entry) => entry.service.serviceId === OTEL_DEMO_ENDPOINT_SERVICE_ID,
+    );
+    const published =
+      ComposeEnvironmentDriver.verified(endpointEntry) && endpointEntry?.observed?.hostPort !== undefined;
     probes.push(
       this.probeResult(request, "probe-port-quote", "presence", `port-${shortId(this.runId)}`, published, {
         kind: "port",
@@ -929,12 +1256,15 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
       }),
     );
 
+    // Named for what it observes and nothing more. The collector logging that its
+    // OTLP pipelines came up is *pipeline readiness*; it is not a telemetry record,
+    // and calling this probe `telemetry` invited exactly that conflation.
     const collectorReady = this.observeCollectorPipeline();
     probes.push(
       this.probeResult(
         request,
         "probe-telemetry-pipeline",
-        "telemetry",
+        "telemetry-pipeline-readiness",
         `container-otel-collector-${shortId(this.runId)}`,
         collectorReady,
         { kind: "telemetry-pipeline", signal: "traces", exporter: "debug", started: collectorReady },
@@ -980,6 +1310,32 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     };
   }
 
+  /**
+   * Whether the archetype's declared evidence sources could be served at all.
+   *
+   * ## What `complete` means here, and what it does not
+   *
+   * `SourceState` answers "was this source reachable when the cutoff was
+   * realized", and the snapshot the run then freezes records `records: 0` for
+   * every source in this archetype. So `complete` means *the source was served and
+   * returned nothing*, and no retained artifact in an offline bundle attests that
+   * any deployment log line, service metric or change record was received.
+   *
+   * That distinction is load-bearing for `service-metric` in particular, and it is
+   * why the mapping below is deliberately annotated rather than left to read as
+   * more than it is: what is observed is the collector reporting that its OTLP
+   * pipelines started. Pipeline readiness is **not** the receipt of a service
+   * metric. Telemetry the collector really received — spans, with this run's own
+   * marker on them — is observed by `observeTelemetry`, which the live acceptance
+   * test asserts on and which no run artifact currently retains.
+   *
+   * Closing that gap means retaining and gating on attributable telemetry, which
+   * is a change to what evidence a run keeps rather than a change to this
+   * derivation. It belongs to the first Qualiber integration package and is
+   * recorded as that package's obligation in `docs/decisions/open-questions.md`
+   * (ERL2-OQ-005) and `docs/ledger/requirements.json`. Until then the claim
+   * boundary says only what the bundle can support.
+   */
   private evidenceSourceState(
     sourceId: string,
     probes: readonly EnvironmentProbeResultV1[],
@@ -989,6 +1345,8 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
       case "deployment-log":
         return OTEL_DEMO_SERVICES.every((s) => passed(`probe-container-${s.serviceId}`)) ? "complete" : "unavailable";
       case "service-metric":
+        // Reachability of the metric path, evidenced by the collector's pipelines
+        // having started. Not a metric, and not a claim that one arrived.
         return passed("probe-telemetry-pipeline") ? "complete" : "unavailable";
       case "change-record":
         // The driver's own durable operation record is readable. `state()` throws
@@ -1012,10 +1370,22 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     return logs.includes("Everything is ready") || logs.includes("Starting GRPC server");
   }
 
+  /**
+   * The run's collector's own output, or nothing.
+   *
+   * Verified before it is read, and for the same reason every other expected-name
+   * lookup is: logs read out of a container that is not provably this run's would
+   * be attributed to this run anyway. Both consumers make a claim about this run —
+   * the pipeline-readiness probe and `observeTelemetry` — so neither may read from
+   * a container Docker has not confirmed.
+   */
   private collectorLogs(): string {
-    const collector = OTEL_DEMO_SERVICES.find((s) => s.serviceId === "otel-collector") as ComposeServiceSpec;
+    const collector = this.observeExpectedContainers().find(
+      (entry) => entry.service.serviceId === "otel-collector",
+    );
+    if (!ComposeEnvironmentDriver.verified(collector)) return "";
     const result = this.docker.run({
-      args: ["container", "logs", this.containerName(collector)],
+      args: ["container", "logs", collector?.name as string],
       timeoutMs: 120_000,
     });
     if (result.status !== 0) return "";
@@ -1032,6 +1402,13 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
    * a string the caller arranged to appear in the emitted telemetry — the
    * reference adapter puts the run id in the request's query string, and the PHP
    * auto-instrumentation records it as `url.full`.
+   *
+   * **Its only consumer today is the live acceptance test.** Nothing here is
+   * retained into a run's evidence, so an offline bundle carries no attestation
+   * that telemetry was received — `evidenceSourceState` explains what the bundle
+   * does say, and the claim boundary is written to that and not to this. Retaining
+   * and gating on this observation is the first Qualiber integration package's
+   * obligation, recorded under ERL2-OQ-005.
    */
   observeTelemetry(marker: string): {
     readonly traceBatches: number;
@@ -1055,10 +1432,17 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
 
   // -- mutate and restore ---------------------------------------------------
 
-  /** Whether the run's endpoint container is currently on the challenge network. */
+  /**
+   * Whether the run's endpoint container is currently on the challenge network.
+   *
+   * Verified first: an activation observed on a container Docker will not confirm
+   * is this run's is not this run's activation, and reporting it as one would let
+   * a substituted container satisfy the restoration claim.
+   */
   private challengeNetworkAttached(): boolean {
-    const endpoint = this.observeContainer(this.containerName(this.endpointService()));
-    return endpoint?.networks.includes(this.challengeNetworkName()) === true;
+    const endpoint = this.endpointEntry();
+    if (!ComposeEnvironmentDriver.verified(endpoint)) return false;
+    return endpoint.observed?.networks.includes(this.challengeNetworkName()) === true;
   }
 
   /** Whether a network of this exact name exists. Exact lookup, never a pattern. */
@@ -1095,7 +1479,11 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     const already = this.completedOperation(request.runId, request.operationId);
     if (already !== undefined) return already;
 
-    const resources = this.observedResources();
+    const graph = this.observeGraph();
+    // Before anything is attached: no expected-name container may be present
+    // without Docker proving it is this run's, running the locked image.
+    this.assertVerifiedOwnership(graph.containers);
+    const resources = graph.resources;
     const requested = resources.find((r) => r.resource_id === request.targetResourceId);
     if (requested === undefined) {
       throw new Erl2Error(
@@ -1184,9 +1572,13 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     const startedAt = this.clock.now();
     const container = this.containerName(this.endpointService());
     const network = this.challengeNetworkName();
-    const before = this.observeContainer(container);
+    const graph = this.observeGraph();
+    // A compensation is a write to the substrate, so it is subject to the same
+    // rule as the activation was: an expected name is not ownership.
+    this.assertVerifiedOwnership(graph.containers);
+    const before = graph.containers.find((entry) => entry.name === container)?.observed;
     if (before?.networks.includes(network) === true) {
-      const owned = this.observedResources().find((r) => r.run_scoped_name === container);
+      const owned = graph.resources.find((r) => r.run_scoped_name === container);
       if (owned !== undefined) {
         assertOwnedByRun(request.runId, owned);
         assertNarrowSelector(request.runId, owned.run_scoped_name);
@@ -1220,10 +1612,14 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
   destroy(request: DestroyRequest): DestroyResult {
     assertDriverEnabled(this.manifest);
     assertOperationSupported(this.manifest, "destroy");
-    const before = this.observedResources();
+    const graph = this.observeGraph();
+    const before = graph.resources;
     // Ownership is validated for every observed member before anything is
-    // removed: a foreign object carrying this run's project label must stop the
-    // whole-environment sledgehammer rather than be swept up by it.
+    // removed: a foreign object carrying this run's project label — or a live
+    // object under one of this run's own names that Docker will not confirm is
+    // this run's — must stop the whole-environment sledgehammer rather than be
+    // swept up by it.
+    this.assertVerifiedOwnership(graph.containers);
     for (const resource of before) {
       assertOwnedByRun(request.runId, resource);
       assertNarrowSelector(request.runId, resource.run_scoped_name);
@@ -1240,6 +1636,11 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     // again, and what it still holds is the residue.
     const residue = this.observedResources();
     const clean = residue.length === 0;
+    // The endpoint record describes a substrate that no longer exists, so it goes
+    // with it. This is hygiene, not a control: `readComposeEndpoint` re-observes
+    // Docker on every read, so a record that survived a crashed teardown still
+    // authorizes nothing.
+    if (clean) this.store.removeEndpoint();
     return {
       receipt: this.remember(
         this.receipt({
@@ -1272,7 +1673,12 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     assertOperationSupported(this.manifest, "destroy");
     const already = this.completedOperation(request.runId, request.operationId);
     if (already !== undefined) return already;
-    const resources = this.observedResources();
+    const graph = this.observeGraph();
+    // Single-object removal is narrower than the sledgehammer but it is still a
+    // deletion, and it may not be aimed at an object Docker does not confirm is
+    // this run's.
+    this.assertVerifiedOwnership(graph.containers);
+    const resources = graph.resources;
     const target = resources.find((r) => r.resource_id === request.resourceId);
     if (target === undefined) {
       throw new Erl2Error(
@@ -1371,6 +1777,10 @@ function observedState(container: ObservedContainer | undefined): unknown {
     health: container.health,
     restart_count: container.restartCount,
     networks: [...container.networks],
+    // The receipt's before/after therefore change if the bytes did, so a
+    // substitution mid-operation is visible in the signed record rather than
+    // only in the probe that came before it.
+    image_id: container.imageId,
   };
 }
 
@@ -1382,30 +1792,117 @@ function tail(text: string): string {
   return text.trim().split("\n").slice(-3).join("; ").slice(0, 240);
 }
 
-/** Reads the run-local endpoint record a later process needs to reach the substrate. */
+/** A host port a container may actually publish. */
+export function isValidHostPort(port: unknown): port is number {
+  return typeof port === "number" && Number.isInteger(port) && port >= 1 && port <= 65_535;
+}
+
+export interface ComposeEndpoint {
+  readonly host: string;
+  readonly port: number;
+  readonly container: string;
+}
+
+/**
+ * The endpoint a later process may reach — validated against this run, then
+ * re-observed against Docker.
+ *
+ * ## Why a retained record cannot authorize anything
+ *
+ * This record's only consumer turns it into a read-only mount and a one-host,
+ * one-port egress allowlist for the subject. A JSON file is not evidence that a
+ * substrate exists: it survives teardown, it survives a crash, it can be edited,
+ * and the ephemeral host port it names can be handed to an unrelated process the
+ * moment this run's container stops. So it is treated as a *hint about where to
+ * look*, and the authorization comes from looking.
+ *
+ * Two gates, in this order:
+ *
+ *  1. **The record is this run's, exactly.** Every field is compared against a
+ *    value derived here rather than read from the file: the run id, the substrate
+ *    id, the endpoint service id, the container name this run's project would
+ *    give that service, the one permitted loopback host, and a port that is a
+ *    real port. A record that fails any of these describes something other than
+ *    this run's endpoint, and since nothing but this driver writes it, that is a
+ *    typed refusal rather than an absence.
+ *
+ *  2. **Docker still shows it.** The exact container is inspected by name, its
+ *    three ownership labels must carry this run's exact values, it must be
+ *    running, and it must *currently* publish the port the record names. Failing
+ *    this is not tampering — a destroyed environment fails it, and so does a
+ *    restarted container that Docker gave a different ephemeral port — so it
+ *    yields `undefined`: no endpoint, therefore no mount and no egress
+ *    allowlist. Access is withdrawn, not inherited.
+ *
+ * Together these are what make "the record is stale" and "another process took
+ * the port" unable to grant reachability: the port is only ever accepted because
+ * *this run's own verified container is publishing it right now*.
+ */
 export function readComposeEndpoint(
   substrateRoot: string,
   runId: string,
-): { readonly host: string; readonly port: number; readonly container: string } | undefined {
-  const file = path.join(
-    path.resolve(substrateRoot),
-    `${Buffer.from(runId, "utf8").toString("base64url")}.compose-endpoint`,
-    "endpoint.json",
-  );
+  docker: DockerCli = new SpawnDockerCli(),
+): ComposeEndpoint | undefined {
+  const file = path.join(composeEndpointDirectory(substrateRoot, runId), "endpoint.json");
   if (!existsSync(file)) return undefined;
-  const value = parseStrictJson(readFileSync(file, "utf8")) as {
-    host?: string;
-    port?: number;
-    container?: string;
-  };
-  if (typeof value.host !== "string" || typeof value.port !== "number" || typeof value.container !== "string") {
+  const value = parseStrictJson(readFileSync(file, "utf8")) as Record<string, unknown>;
+  // Explicitly typed so TypeScript treats a call to it as terminating control
+  // flow, which is what lets the checks below read as the guards they are.
+  const refuse: (why: string) => never = (why) => {
     throw new Erl2Error(
       CODES.ENV_SUBSTRATE_UNREADABLE,
-      "the run's Compose endpoint record exists but is not an endpoint record",
+      `the run's Compose endpoint record is not this run's endpoint: ${why}`,
       { owner: "lab" },
     );
+  };
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    refuse("it is not a record");
   }
-  return { host: value.host, port: value.port, container: value.container };
+
+  const expectedContainer = `${composeProjectName(runId)}-${OTEL_DEMO_ENDPOINT_SERVICE_ID}`;
+  if (value["run_id"] !== runId) refuse("it names a different run");
+  if (value["substrate_id"] !== OTEL_DEMO_SUBSTRATE_ID) refuse("it names a different substrate");
+  if (value["service_id"] !== OTEL_DEMO_ENDPOINT_SERVICE_ID) refuse("it names a different service");
+  if (value["container"] !== expectedContainer) refuse("it names a different container");
+  // One exact literal, not a loopback family. `localhost` resolves through the
+  // host's resolver, `0.0.0.0` is every interface, and `::1` is a different
+  // address family — none of them is the address the subset publishes on.
+  if (value["host"] !== LOOPBACK_HOST) refuse(`its host is not ${LOOPBACK_HOST}`);
+  const port: unknown = value["port"];
+  if (!isValidHostPort(port)) refuse("its port is not a host port");
+
+  // -- and now the substrate itself ------------------------------------------
+  const inspected = docker.run({
+    args: ["container", "inspect", expectedContainer, "--format", "{{json .}}"],
+    timeoutMs: 60_000,
+  });
+  if (inspected.status !== 0) return undefined;
+  let raw: {
+    State?: { Status?: string; Running?: boolean };
+    Config?: { Labels?: Record<string, string> };
+    NetworkSettings?: { Ports?: Record<string, { HostPort?: string }[] | null> };
+  };
+  try {
+    raw = parseStrictJson(inspected.stdout.trim()) as typeof raw;
+  } catch {
+    return undefined;
+  }
+  const labels = raw.Config?.Labels ?? {};
+  if (labels[ERL2_RUN_LABEL] !== runId) return undefined;
+  if (labels[ERL2_DRIVER_LABEL] !== COMPOSE_DRIVER_ID) return undefined;
+  if (labels[COMPOSE_PROJECT_LABEL] !== composeProjectName(runId)) return undefined;
+  if (raw.State?.Status !== "running") return undefined;
+
+  const published = new Set<number>();
+  for (const bindings of Object.values(raw.NetworkSettings?.Ports ?? {})) {
+    for (const binding of bindings ?? []) {
+      const parsed = Number.parseInt(binding.HostPort ?? "", 10);
+      if (Number.isInteger(parsed)) published.add(parsed);
+    }
+  }
+  if (!published.has(port)) return undefined;
+
+  return { host: LOOPBACK_HOST, port, container: expectedContainer };
 }
 
 /** The directory holding the endpoint record, for a read-only adapter mount. */

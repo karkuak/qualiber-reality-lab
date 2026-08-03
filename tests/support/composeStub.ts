@@ -32,6 +32,7 @@ export interface StubContainer {
   paused: boolean;
   health: string;
   restartCount: number;
+  /** The image *id* `container inspect` reports for the bytes it runs. */
   image: string;
   networks: string[];
   hostPort?: number;
@@ -52,6 +53,22 @@ export interface StubWorld {
   localImages: Map<string, string>;
   /** What the registry says a digest-pinned manifest describes. */
   registryImages: Map<string, string>;
+  /**
+   * The daemon's image store, keyed by *every* reference that resolves to an
+   * entry: its own id and each `repo@digest` it publishes.
+   *
+   * This is what lets the driver's two-legged image check be modelled honestly.
+   * `docker image inspect` accepts an id or a digest reference and answers with
+   * one image, so the stub answers the same image for both and reports the
+   * `RepoDigests` that image really carries — which is how a container running
+   * bytes the lock does not pin becomes observable rather than assumed.
+   */
+  images: Map<string, StubImage>;
+}
+
+export interface StubImage {
+  id: string;
+  repoDigests: string[];
 }
 
 export interface StubBehaviour {
@@ -74,7 +91,19 @@ export function newStubWorld(options: { readonly platform?: string } = {}): Stub
     volumes: new Map(),
     localImages: new Map(),
     registryImages: new Map(),
+    images: new Map(),
   };
+}
+
+/**
+ * Puts one image in the stub daemon's store, reachable by its id and by every
+ * repository digest it publishes — exactly as a real daemon resolves both.
+ */
+export function putStubImage(world: StubWorld, id: string, repoDigests: readonly string[]): StubImage {
+  const image: StubImage = { id, repoDigests: [...repoDigests] };
+  world.images.set(id, image);
+  for (const reference of repoDigests) world.images.set(reference, image);
+  return image;
 }
 
 export class StubDockerCli implements DockerCli {
@@ -111,7 +140,7 @@ export class StubDockerCli implements DockerCli {
     if (this.behaviour.drop?.(args) === true) {
       return { args, status: 0, stdout: "", stderr: "", timedOut: false };
     }
-    return { args, ...this.dispatch(args) };
+    return { args, ...this.dispatch(args, invocation.env ?? {}) };
   }
 
   private ok(stdout = ""): { status: number; stdout: string; stderr: string; timedOut: boolean } {
@@ -127,7 +156,10 @@ export class StubDockerCli implements DockerCli {
     return { status: 1, stdout: "", stderr, timedOut: false };
   }
 
-  private dispatch(args: readonly string[]): {
+  private dispatch(
+    args: readonly string[],
+    env: Readonly<Record<string, string>>,
+  ): {
     status: number;
     stdout: string;
     stderr: string;
@@ -144,10 +176,7 @@ export class StubDockerCli implements DockerCli {
       this.world.containers.delete(args.at(-1) as string);
       return this.ok();
     }
-    if (head === "image" && second === "inspect") {
-      const platform = this.world.localImages.get(args[2] as string);
-      return platform === undefined ? this.no() : this.ok(`${platform}\n`);
-    }
+    if (head === "image" && second === "inspect") return this.inspectImage(args);
     if (head === "buildx") {
       const platform = this.world.registryImages.get(args[3] as string);
       return platform === undefined ? this.no() : this.ok(`${platform}\n`);
@@ -182,7 +211,7 @@ export class StubDockerCli implements DockerCli {
       this.world.volumes.delete(args[2] as string);
       return this.ok();
     }
-    if (head === "compose") return this.compose(args);
+    if (head === "compose") return this.compose(args, env);
     return this.no(`stub: unhandled command ${args.join(" ")}`);
   }
 
@@ -215,6 +244,35 @@ export class StubDockerCli implements DockerCli {
     );
   }
 
+  /**
+   * `docker image inspect <ref>`, answering the three formats the Lab asks for.
+   *
+   * The platform question is served from `localImages` — the admission path's
+   * world model, keyed by pinned reference. The id and repository-digest
+   * questions are served from `images`, the daemon's own store, which is keyed by
+   * id *and* by every digest that resolves to it. An unknown reference is a
+   * non-zero exit, exactly as Docker gives, so "cannot prove" reaches the driver
+   * as a failure rather than as an empty answer.
+   */
+  private inspectImage(args: readonly string[]): {
+    status: number;
+    stdout: string;
+    stderr: string;
+    timedOut: boolean;
+  } {
+    const reference = args[2] as string;
+    const format = args[args.indexOf("--format") + 1] ?? "";
+    if (format === "{{.Os}}/{{.Architecture}}") {
+      const platform = this.world.localImages.get(reference);
+      return platform === undefined ? this.no() : this.ok(`${platform}\n`);
+    }
+    const image = this.world.images.get(reference);
+    if (image === undefined) return this.no();
+    if (format === "{{.Id}}") return this.ok(`${image.id}\n`);
+    if (format === "{{json .RepoDigests}}") return this.ok(`${JSON.stringify(image.repoDigests)}\n`);
+    return this.no(`stub: unhandled image inspect format ${format}`);
+  }
+
   /** `--filter label=k=v` is honoured as exact equality, which is all the driver uses. */
   private list(
     args: readonly string[],
@@ -232,7 +290,10 @@ export class StubDockerCli implements DockerCli {
     return this.ok(rows.length === 0 ? "" : `${rows.join("\n")}\n`);
   }
 
-  private compose(args: readonly string[]): {
+  private compose(
+    args: readonly string[],
+    env: Readonly<Record<string, string>>,
+  ): {
     status: number;
     stdout: string;
     stderr: string;
@@ -245,6 +306,11 @@ export class StubDockerCli implements DockerCli {
       });
       for (const service of this.plan.services) {
         const name = `${this.plan.project}-${service.serviceId}`;
+        // The container runs whatever image the overlay's interpolation variable
+        // pinned, resolved through the daemon's store — which is what Compose
+        // does, and what makes a substituted image a state the stub can be *put
+        // into* rather than one it has to be told about.
+        const pinned = env[`ERL2_IMAGE_${service.serviceId.toUpperCase().replace(/-/g, "_")}`] ?? "";
         this.world.containers.set(name, {
           labels: {
             "com.erl2.run_id": this.plan.project.replace(/^erl2-/, ""),
@@ -255,7 +321,7 @@ export class StubDockerCli implements DockerCli {
           paused: false,
           health: service.serviceId === "quote" ? "healthy" : "none",
           restartCount: 0,
-          image: "sha256:stub",
+          image: this.world.images.get(pinned)?.id ?? `sha256:unresolved-${service.serviceId}`,
           networks: [`${this.plan.project}-net`],
           ...(service.hostPort === undefined ? {} : { hostPort: service.hostPort }),
           logs: service.serviceId === "otel-collector" ? COLLECTOR_READY_LOG : "",

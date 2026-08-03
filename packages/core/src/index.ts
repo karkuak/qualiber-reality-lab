@@ -200,13 +200,16 @@ export {
   ComposeEnvironmentDriver,
   composeEndpointDirectory,
   composeProjectName,
+  isValidHostPort,
   readComposeEndpoint,
   substrateInstanceHash,
   COMPOSE_DRIVER_ID,
   COMPOSE_SUBSTRATE_KIND,
   ERL2_DRIVER_LABEL,
   ERL2_RUN_LABEL,
+  LOOPBACK_HOST,
   type ComposeDriverOptions,
+  type ComposeEndpoint,
 } from "./environment/composeDriver.js";
 export {
   commitJourneyStep,

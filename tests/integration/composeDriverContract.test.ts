@@ -174,9 +174,78 @@ test("COMPOSE-CONTRACT: provision, probe, mutate, restore, destroy against a rea
       "a probe changed the substrate",
     );
     // The fingerprint excludes run identity and time by construction, and
-    // includes the pinned image digest by design.
+    // includes the *observed* image identity by design.
     assert.ok(first.probes.every((p) => p.passed));
     assert.ok(first.evidence_source_states.every((s) => s.state === "complete"));
+
+    // -- the image observation, against this actual daemon --------------------
+    //
+    // Every container probe passing already means the two-legged image check
+    // succeeded here, because a container whose running bytes cannot be resolved
+    // to the locked digest fails its probe. But "the check passed" is worth
+    // nothing if the check is vacuous against a real Docker, so the same mapping
+    // is re-derived independently, with plain `docker` calls, and compared to the
+    // lock. This is what proves the observation is real rather than tautological
+    // on Docker Desktop's image store.
+    const lock = assertContract<SubstrateLockV1>(
+      "SubstrateLockV1",
+      JSON.parse(readFileSync(LOCK_FILE, "utf8")),
+    );
+    const platform = spawnSync("docker", ["version", "--format", "{{.Server.Os}}/{{.Server.Arch}}"], {
+      encoding: "utf8",
+    }).stdout.trim();
+    for (const [serviceId, repository] of [
+      ["quote", "ghcr.io/open-telemetry/demo"],
+      [
+        "otel-collector",
+        "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib",
+      ],
+    ] as const) {
+      const locked = lock.images.find((i) => i.service_id === serviceId && i.platform === platform);
+      assert.notEqual(locked, undefined, `the lock pins no ${platform} image for ${serviceId}`);
+      const reference = `${repository}@${locked?.digest ?? ""}`;
+
+      const containerImageId = spawnSync(
+        "docker",
+        ["container", "inspect", `${project}-${serviceId}`, "--format", "{{.Image}}"],
+        { encoding: "utf8" },
+      ).stdout.trim();
+      assert.ok(containerImageId.startsWith("sha256:"), `no image id for ${serviceId}: ${containerImageId}`);
+
+      // Leg one: the digest the lock pins resolves, in this daemon's own store, to
+      // the id the running container reports.
+      const lockedImageId = spawnSync("docker", ["image", "inspect", reference, "--format", "{{.Id}}"], {
+        encoding: "utf8",
+      }).stdout.trim();
+      assert.equal(
+        containerImageId,
+        lockedImageId,
+        `${serviceId} is not running the image the lock pins for ${platform}`,
+      );
+
+      // Leg two: the image the container is running publishes that exact
+      // repository digest, asked of the running bytes rather than of the lock.
+      const repoDigests = JSON.parse(
+        spawnSync("docker", ["image", "inspect", containerImageId, "--format", "{{json .RepoDigests}}"], {
+          encoding: "utf8",
+        }).stdout.trim(),
+      ) as string[];
+      assert.ok(
+        repoDigests.includes(reference),
+        `${serviceId}'s running image does not publish ${reference}: ${repoDigests.join(", ")}`,
+      );
+    }
+
+    // And the probe recorded that observation rather than the lock's expectation:
+    // the observation hash must change when the running bytes do, which it cannot
+    // if the probe reported a digest it read out of the lock.
+    const quoteProbe = first.probes.find((p) => p.probe_id === "probe-container-quote");
+    const collectorProbe = first.probes.find((p) => p.probe_id === "probe-container-otel-collector");
+    assert.notEqual(
+      quoteProbe?.observation_hash,
+      collectorProbe?.observation_hash,
+      "two services running different images must not share a container observation",
+    );
 
     // -- mutate --------------------------------------------------------------
     assert.deepEqual(driver.observedMutations(runId), []);

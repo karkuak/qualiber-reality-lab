@@ -30,12 +30,20 @@ import {
   composeProjectName,
   fileSha256,
   OTEL_DEMO_SERVICES,
+  resourceIdentityHash,
   SteppingClock,
   uuidV7From,
   type MaterializedUpstream,
   type RepositoryConfigPaths,
 } from "@erl2/core";
-import { newStubWorld, StubDockerCli, type StubBehaviour, type StubWorld } from "../support/composeStub.js";
+import {
+  newStubWorld,
+  putStubImage,
+  StubDockerCli,
+  type StubBehaviour,
+  type StubContainer,
+  type StubWorld,
+} from "../support/composeStub.js";
 import { ownedTempDir } from "../support/tempDirs.js";
 
 const ARCHETYPE: Hash = coreHash({ archetype: "compose-adversarial" });
@@ -43,6 +51,18 @@ const RUN_ID = uuidV7From(1_785_000_000_000, Buffer.alloc(10, 0x51));
 const PROJECT = composeProjectName(RUN_ID);
 const ARM64: Hash = `sha256:${"a".repeat(64)}`;
 const AMD64: Hash = `sha256:${"b".repeat(64)}`;
+
+/**
+ * The image id the stub daemon resolves one pinned digest to.
+ *
+ * Deliberately *not* equal to the digest: a real daemon's `.Image` is a content
+ * id, and a test whose id happened to be the digest would prove the driver
+ * compares two spellings of the same string rather than that it resolves one
+ * through Docker to reach the other.
+ */
+function imageIdFor(serviceId: string, digest: Hash): string {
+  return `sha256:${coreHash({ image: serviceId, digest }).slice("sha256:".length)}`;
+}
 
 interface Fixture {
   readonly driver: ComposeEnvironmentDriver;
@@ -158,6 +178,11 @@ function fixture(
     world.localImages.set(`${service.imageRepository}@${AMD64}`, "linux/amd64");
     world.registryImages.set(`${service.imageRepository}@${ARM64}`, "linux/arm64");
     world.registryImages.set(`${service.imageRepository}@${AMD64}`, "linux/amd64");
+    // The daemon's image store, as a real one behaves: one image per pinned
+    // digest, reachable by its own id and by the digest that names it.
+    for (const digest of [ARM64, AMD64]) {
+      putStubImage(world, imageIdFor(service.serviceId, digest), [`${service.imageRepository}@${digest}`]);
+    }
   }
   for (const [reference, platform] of Object.entries(options.registryPlatforms ?? {})) {
     world.registryImages.set(reference, platform);
@@ -491,6 +516,214 @@ test("COMPOSE-ADV: a stored receipt is not adopted once the substrate contradict
     undefined,
     "adoption must derive from the substrate, not from the durable log alone",
   );
+});
+
+// -- an expected name is not ownership ---------------------------------------
+//
+// Six ways a live object can answer to one of this run's container names without
+// being this run's container. In every one of them the substrate is *fully*
+// provisioned first, so nothing here is a provisioning failure: the run already
+// held a good graph and the object under the expected name was then replaced. The
+// assertion is always the same four things — the baseline refuses, the inventory
+// stops calling it ours, the stored provision receipt stops being adoptable, and
+// every write to the substrate refuses.
+
+const UNPINNED_IMAGE = `sha256:${"f".repeat(64)}`;
+
+/** Puts the endpoint container under an image the lock does not pin. */
+function substituteEndpointImage(world: StubWorld): void {
+  putStubImage(world, UNPINNED_IMAGE, [`ghcr.io/not-open-telemetry/demo@sha256:${"e".repeat(64)}`]);
+  (world.containers.get(`${PROJECT}-quote`) as StubContainer).image = UNPINNED_IMAGE;
+}
+
+/**
+ * Asserts the four consequences of an unproven expected-name container.
+ *
+ * Written once because the point is that they do **not** vary with *how* the
+ * object failed to be ours: an image the lock does not pin and a driver label
+ * somebody else wrote are the same refusal, reached by the same gate.
+ */
+function assertRefusedAsNotOurs(f: Fixture, expectedViolation: string): void {
+  const baseline = f.driver.probe({ runId: RUN_ID, phase: "baseline", operationId: "op-baseline" });
+  const probe = baseline.probes.find((p) => p.probe_id === "probe-container-quote");
+  assert.equal(probe?.passed, false, "the baseline probe must fail for a container that is not ours");
+  assert.equal(probe?.failure_code, "BASELINE_PROBE_FAILED");
+  assert.equal(baseline.contamination.detected, true, "an object at our name that is not ours is residue");
+  assert.ok(
+    baseline.contamination.finding_codes.includes("PREEXISTING_RESIDUE"),
+    `residue was not reported: ${baseline.contamination.finding_codes.join(", ")}`,
+  );
+
+  // The inventory reports it — cleanup has to know it exists — but not as ours.
+  const inventoried = f.driver.inspect(RUN_ID).resources.find((r) => r.run_scoped_name === `${PROJECT}-quote`);
+  assert.notEqual(inventoried, undefined, "an unproven container must still be inventoried");
+  assert.ok(
+    inventoried?.resource_id.startsWith("unverified-"),
+    `the container is still reported as owned: ${inventoried?.resource_id ?? "absent"}`,
+  );
+  assert.notEqual(
+    inventoried?.identity_hash,
+    resourceIdentityHash(RUN_ID, "container", `${PROJECT}-quote`),
+    "an unproven container must not carry this run's derived resource identity",
+  );
+
+  // The stale receipt: the durable log still holds a successful provision, and a
+  // restarted run must not adopt it over a substituted graph.
+  assert.equal(
+    f.driver.completedOperation(RUN_ID, "op-provision"),
+    undefined,
+    "a provision receipt must not be adopted once the graph is no longer provably ours",
+  );
+  // And re-dispatching is refused rather than silently building a second graph on
+  // top of the one that is already there. Both halves are fail-closed: the receipt
+  // is not adoptable *and* the re-dispatch does not proceed.
+  assert.equal(
+    codeOf(() =>
+      f.driver.provision({
+        runId: RUN_ID,
+        archetypeHash: ARCHETYPE,
+        disorderSeedCommitment: coreHash({ seed: 1 }),
+        operationId: "op-provision",
+      }),
+    ),
+    "ENV_PROVISION_FAILED",
+  );
+
+  // And every write to the substrate refuses, with the violation named.
+  for (const attempt of [
+    () => f.driver.destroy({ runId: RUN_ID, operationId: "op-destroy" }),
+    () => f.driver.restore({ runId: RUN_ID, operationId: "op-restore" }),
+    () =>
+      f.driver.mutate({
+        runId: RUN_ID,
+        targetResourceId: `project-${RUN_ID.replace(/[^a-z0-9]/gi, "").slice(0, 8).toLowerCase()}`,
+        mutationId: "activate-adversarial",
+        operationId: "op-activate",
+      }),
+    () =>
+      f.driver.destroyResource({
+        runId: RUN_ID,
+        resourceId: `container-otel-collector-${RUN_ID.replace(/[^a-z0-9]/gi, "").slice(0, 8).toLowerCase()}`,
+        operationId: "op-destroy-one",
+      }),
+  ]) {
+    assert.equal(codeOf(attempt), "ENV_FOREIGN_RESOURCE_REJECTED");
+  }
+  assert.ok(
+    f.world.containers.has(`${PROJECT}-quote`) && f.world.containers.has(`${PROJECT}-otel-collector`),
+    "a refused operation must not have removed anything",
+  );
+
+  // The refusal says which check failed, so an operator is not left guessing.
+  let message = "";
+  try {
+    f.driver.destroy({ runId: RUN_ID, operationId: "op-destroy-2" });
+  } catch (error) {
+    message = (error as Error).message;
+  }
+  assert.ok(
+    message.includes(expectedViolation),
+    `the refusal did not name ${expectedViolation}: ${message}`,
+  );
+}
+
+test("COMPOSE-ADV: an expected container name running an image the lock does not pin is refused", () => {
+  const f = provisioned();
+  substituteEndpointImage(f.world);
+  assertRefusedAsNotOurs(f, "image_not_locked_digest");
+});
+
+test("COMPOSE-ADV: an expected container name whose image cannot be resolved at all is refused", () => {
+  // The daemon knows the container and reports an image id it cannot then resolve.
+  // "Docker could not prove the mapping" is not "the mapping holds".
+  const f = provisioned();
+  (f.world.containers.get(`${PROJECT}-quote`) as StubContainer).image = `sha256:${"9".repeat(64)}`;
+  assertRefusedAsNotOurs(f, "image_not_locked_digest");
+});
+
+test("COMPOSE-ADV: an expected container carrying another run's run_id label is refused", () => {
+  const f = provisioned();
+  (f.world.containers.get(`${PROJECT}-quote`) as StubContainer).labels["com.erl2.run_id"] =
+    "00000000-0000-4000-8000-0000000f0e19";
+  assertRefusedAsNotOurs(f, "com.erl2.run_id_mismatch");
+});
+
+test("COMPOSE-ADV: an expected container carrying a foreign driver_id label is refused", () => {
+  const f = provisioned();
+  (f.world.containers.get(`${PROJECT}-quote`) as StubContainer).labels["com.erl2.driver_id"] =
+    "kubernetes-driver";
+  assertRefusedAsNotOurs(f, "com.erl2.driver_id_mismatch");
+});
+
+test("COMPOSE-ADV: an expected container carrying a foreign Compose project label is refused", () => {
+  const f = provisioned();
+  (f.world.containers.get(`${PROJECT}-quote`) as StubContainer).labels["com.docker.compose.project"] =
+    "someone-elses-project";
+  assertRefusedAsNotOurs(f, "com.docker.compose.project_mismatch");
+});
+
+test("COMPOSE-ADV: an expected container MISSING an ownership label is refused", () => {
+  // A missing label is not a lenient case. `""` is not this run's driver id, so
+  // "absent" and "wrong" reach the same gate.
+  const f = provisioned();
+  const quote = f.world.containers.get(`${PROJECT}-quote`) as StubContainer;
+  delete quote.labels["com.erl2.driver_id"];
+  assertRefusedAsNotOurs(f, "com.erl2.driver_id_mismatch");
+});
+
+test("COMPOSE-ADV: the baseline observation records what Docker said, not what the lock says", () => {
+  // The regression this pins: the observation used to be populated with the
+  // *locked* digest, so it agreed with the lock however the container had been
+  // substituted, and two provisions running different bytes fingerprinted alike.
+  const clean = provisioned();
+  const before = clean.driver.probe({ runId: RUN_ID, phase: "baseline", operationId: "op-a" });
+  assert.equal(
+    before.probes.find((p) => p.probe_id === "probe-container-quote")?.passed,
+    true,
+  );
+  const identical = clean.driver.probe({ runId: RUN_ID, phase: "baseline", operationId: "op-b" });
+  assert.equal(
+    before.fingerprint_hash,
+    identical.fingerprint_hash,
+    "two probes of one clean environment must still fingerprint identically",
+  );
+
+  substituteEndpointImage(clean.world);
+  const after = clean.driver.probe({ runId: RUN_ID, phase: "baseline", operationId: "op-c" });
+  assert.notEqual(
+    before.probes.find((p) => p.probe_id === "probe-container-quote")?.observation_hash,
+    after.probes.find((p) => p.probe_id === "probe-container-quote")?.observation_hash,
+    "the container observation did not change when the running bytes did",
+  );
+  assert.notEqual(
+    before.fingerprint_hash,
+    after.fingerprint_hash,
+    "the baseline fingerprint did not change when the running bytes did",
+  );
+});
+
+test("COMPOSE-ADV: an activation observed on an unproven container is not this run's mutation", () => {
+  const f = provisioned();
+  const inventory = f.driver.inspect(RUN_ID);
+  const project = inventory.resources.find((r) => r.kind === "project") as { resource_id: string };
+  f.driver.mutate({
+    runId: RUN_ID,
+    targetResourceId: project.resource_id,
+    mutationId: "activate-adversarial",
+    operationId: "op-activate",
+  });
+  assert.deepEqual(f.driver.observedMutations(RUN_ID), ["activate-adversarial"]);
+
+  // The container is then replaced, attachment and all. The activation is still
+  // *visible*, but not on a container Docker will confirm is ours — so it may not
+  // be reported as this run's applied mutation, and the receipt may not be adopted.
+  substituteEndpointImage(f.world);
+  assert.deepEqual(
+    f.driver.observedMutations(RUN_ID),
+    [],
+    "a mutation must not be attributed to a container that is not provably ours",
+  );
+  assert.equal(f.driver.completedOperation(RUN_ID, "op-activate"), undefined);
 });
 
 test("COMPOSE-ADV: the substrate identity changes when the daemon does", () => {
