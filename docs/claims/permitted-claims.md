@@ -469,12 +469,30 @@ The one claim this slice earns, stated at exactly its width:
 - **No real-ecosystem claim.** The default environment is the deterministic fake
   driver, whose resources, probes and evidence sources are fixtures. The Compose
   driver (ERL2-OQ-005) does provision a real substrate — two containers of
-  OpenTelemetry Demo `3.0.0`, real OTLP telemetry observed at a real collector —
-  and that is still not an ecosystem: two services out of twenty-two, one
-  archetype, one endpoint, one request. It is evidence that the *driver* reaches
-  a real substrate, never that any ecosystem was measured. The substrate lock is
-  signed by the repository's own development governor key, so no independent
-  qualification may be claimed from it either.
+  OpenTelemetry Demo `3.0.0` — and that is still not an ecosystem: two services
+  out of twenty-two, one archetype, one endpoint, one request. It is evidence that
+  the *driver* reaches a real substrate, never that any ecosystem was measured.
+  The substrate lock is signed by the repository's own development governor key, so
+  no independent qualification may be claimed from it either.
+- **No retained-telemetry claim, and the two statements are not the same.** Keep
+  these apart in any wording that mentions OTel:
+  - **What the live acceptance test observed.** `tests/e2e/composeEnvironmentRun.test.ts`
+    drives the reference adapter against the real endpoint and then reads the
+    collector's own output, asserting both that spans arrived and that they carry
+    this run's marker. That is a real observation of attributable telemetry, made
+    by a test, on a host with a daemon.
+  - **What an offline bundle attests.** Not that. No retained artifact carries the
+    telemetry observation: the archetype's `service-metric` source is recorded
+    `complete` because the collector reported its OTLP pipelines started, and every
+    source snapshot in this archetype freezes `records: 0`. Pipeline readiness is
+    reachability of the metric path, **not** the receipt of a service metric, and
+    `complete` here means "the source was served and returned nothing".
+  So a permitted statement is "the acceptance test observed attributable telemetry
+  at the collector"; a statement that the retained evidence *attests* received
+  telemetry is not permitted, and neither is describing collector startup as a
+  service metric. Retaining and gating on attributable telemetry is deferred to the
+  first Qualiber integration package (ERL2-OQ-005 detail in
+  `docs/decisions/open-questions.md`); until that lands, nothing above widens.
 - **No robustness claim from the environment branch.** One archetype
   (clean-greenfield), one driver, one journey shape. Failure paths are reached by
   scripted driver faults, not by an environment that failed on its own.

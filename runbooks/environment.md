@@ -244,3 +244,50 @@ There is no flag that skips qualification. `composeDriverManifestBody` derives
 and `assertObservedMatchesLock` re-observes the archive, the five applied
 configuration files and both platforms' image digests at `provision` — before a
 single container exists.
+
+### What is re-derived from Docker on every operation
+
+Admission covers the bytes that are *about* to run. Three things about what is
+*actually* running are re-derived instead of read back from a name or a file:
+
+- **ownership.** A container is treated as this run's only when it carries
+  `com.erl2.run_id=<this run>`, `com.erl2.driver_id=compose-driver` and
+  `com.docker.compose.project=erl2-<this run>` exactly, and only when the image it
+  is running resolves through the daemon to the exact service/platform digest the
+  lock pins — checked in both directions, so an unresolvable image is "not proven"
+  rather than assumed. A container that fails is still inventoried, as
+  `unverified-container-…`, but it fails the baseline probe, counts as preexisting
+  residue, withholds the endpoint record, blocks adoption of the provision receipt,
+  and refuses every write with `ENV_FOREIGN_RESOURCE_REJECTED`. An expected name is
+  not ownership.
+- **the endpoint.** The record `provision` writes under the substrate root is a
+  hint, not a grant. `readComposeEndpoint` checks every field against a value
+  derived from the run id — including `host` exactly `127.0.0.1` — and then
+  re-inspects the container, its labels, its state and the port it publishes *now*.
+  A stale record after teardown, a restarted container with a new ephemeral port,
+  or a port another process took over all yield no endpoint, so the subject gets no
+  mount and no allowlist. The record is deleted on a clean `destroy`; that is
+  hygiene, and the revalidation is the control.
+- **the egress grant.** `loopbackEgressPolicy` refuses any host but `127.0.0.1`
+  (`ADAPTER_EGRESS_HOST_NOT_ALLOWED`) and any port that is not an integer in
+  `1..65535` (`ADAPTER_EGRESS_PORT_NOT_ALLOWED`), independently of the reader.
+
+### Verifying the retained qualification
+
+```bash
+node scripts/qualify-otel-demo.mjs --verify
+```
+
+`--verify` writes nothing under version control: it requires the archive to be
+present rather than fetching it, unpacks its comparison material into a temporary
+directory it removes, and generates no SBOM. It checks the lock's own core hash and
+signature classification, the archive digest and source commit, the exact image
+matrix, the exact five-file configuration hash set, the SBOM index's content and
+hash, the complete two-services × two-platforms document matrix, every referenced
+SPDX document's hash *and* its own package count, and the provenance record's
+binding to the same archive, commit and images. A successful run leaves the tree
+byte-identical.
+
+Regenerating the qualification is the other mode, and it does rewrite tracked
+files — including the signed lock. It also now refuses a partial SBOM matrix: four
+documents or none.

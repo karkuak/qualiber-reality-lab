@@ -109,6 +109,9 @@ but the lock is signed by this repository's own development governor key, so it
 is a self-qualification and `erl2 doctor` reports
 `independently_qualified: false`. The fake driver remains the default; a run
 selects its driver once with `--environment-driver` and may not substitute it.
+The live acceptance test observes attributable telemetry at the collector; an
+offline bundle **does not attest received telemetry**, and retaining that
+observation is deferred to the first Qualiber integration package (ERL2-OQ-005).
 **Held-out and blind execution is refused** because ERL2-OQ-007
 is unresolved, so the journey runs at `development` tier. **Privileged subject
 operations are refused** because ERL2-OQ-001 is unresolved, so the platform

@@ -138,6 +138,63 @@ this environment is a trusted, repository-owned reference adapter under the
 `local-process` profile, and no opaque, private or third-party subject claim
 follows from any of it.
 
+**Where the trust boundary sits at run time.** Three things are re-derived from
+Docker rather than taken from a retained record, because each was a place a name or
+a file used to stand in for an observation:
+
+- **an expected container name is not ownership.** Before any expected-name
+  container is treated as this run's, all three ownership labels must carry this
+  run's exact values (`com.erl2.run_id`, `com.erl2.driver_id`,
+  `com.docker.compose.project`), and the image it is running must resolve — through
+  the daemon, in two independent directions — to the exact service/platform digest
+  the lock pins. A missing label is a mismatch. A daemon that cannot answer is
+  "not proven", which is refused. The baseline probe records the *observed* image
+  identity, not the locked digest, so a probe cannot agree with the lock by
+  construction; and provision adoption is gated on the same verified graph, so a
+  stored receipt cannot carry a substituted container forward.
+- **a retained endpoint record is not an egress grant.** The record `provision`
+  writes is validated field by field against values derived from the run id — run,
+  substrate, service, container, host exactly `127.0.0.1`, a real port — and then
+  Docker is re-observed: the exact container, its ownership labels, a running
+  state, and the port it publishes *right now*. A stale record, a restarted
+  container with a new ephemeral port, and a port some other process picked up all
+  yield no endpoint, therefore no mount and no allowlist. `loopbackEgressPolicy`
+  independently refuses any host but `127.0.0.1` and any port that is not a host
+  port, so the grant is refused even by a caller that skipped the reader.
+- **`--verify` does not write.** `scripts/qualify-otel-demo.mjs --verify`
+  regenerated the tracked SBOM index, the four SPDX documents and the provenance
+  record before deciding whether the lock had drifted, which made drift in them
+  undetectable. It now writes nothing under version control, requires the archive
+  to be present rather than fetching it, unpacks its comparison material into a
+  temporary directory it removes, and checks the whole retained set: the lock's own
+  core hash and signature classification, the archive digest and source commit, the
+  exact image matrix, the exact configuration hash set, the SBOM index's content
+  and hash, the complete two-services × two-platforms document matrix, every
+  referenced SPDX document's hash *and* its own package count, and the provenance
+  record's binding to the same archive, commit and images.
+
+**Telemetry: what was observed and what is attested.** These are different
+statements and the documents now keep them apart.
+
+- The **live acceptance test** drives the reference adapter against the real
+  endpoint and reads the collector's own output, asserting that spans arrived and
+  that they carry this run's marker. That is a real observation of attributable
+  telemetry.
+- An **offline bundle attests no such thing.** The archetype's `service-metric`
+  source is recorded `complete` because the collector reported that its OTLP
+  pipelines started, and every source snapshot in this archetype freezes
+  `records: 0`. Pipeline readiness is reachability of the metric path, not the
+  receipt of a service metric; `complete` means the source was served and returned
+  nothing.
+
+**Deferred obligation — the first Qualiber integration package.** Retaining the
+attributable-telemetry observation into a run's evidence, and gating on it, is that
+package's work and is not in this one. It is a change to what a run keeps, not to
+any derivation here, and no general evidence subsystem was introduced to
+anticipate it. Until it lands, `docs/claims/permitted-claims.md` permits "the
+acceptance test observed attributable telemetry at the collector" and forbids any
+claim that retained evidence attests received telemetry.
+
 The qualification procedure is in `environments/otel-demo/README.md`.
 
 ## ERL2-OQ-008 in detail — stronger subject isolation
