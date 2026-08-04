@@ -686,11 +686,21 @@ export function openEnvironment(argv: readonly string[], extra: readonly FlagSpe
   const record = invocationRecorder(developmentOnlyFlag(flags, "invocation-log"));
   const barrier = crashBarrier(flags);
   const counting = developmentOnlyFlag(flags, "invocation-log") !== undefined;
+  // The lock, admitted before anything else on the Compose path. It was already
+  // needed to build the driver below; it is resolved here instead because the
+  // endpoint revalidation needs the *admitted* lock to know which image digest the
+  // endpoint container must be running, and admitting it twice would be two copies
+  // with one signature check between them.
+  const qualified = driverKind === "compose" ? loadQualifiedLock(flags) : undefined;
   // How the subject reaches the real environment, when there is one. Read from
   // the run's own substrate rather than from a flag, and absent until the run has
-  // provisioned — the published port does not exist before that.
+  // provisioned — the published port does not exist before that. The record is
+  // revalidated against live Docker here, so this is an authorization and not a
+  // file read.
   const endpoint =
-    driverKind === "compose" ? readComposeEndpoint(locators.substrateRoot, runId) : undefined;
+    qualified === undefined
+      ? undefined
+      : readComposeEndpoint(locators.substrateRoot, runId, qualified.lock);
   const workspace = openWorkspace(flags, runId, {
     ...(counting ? { wrapSubjectPort: (port) => countingSubjectPort(port, record) } : {}),
     ...(endpoint === undefined
@@ -762,21 +772,23 @@ export function openEnvironment(argv: readonly string[], extra: readonly FlagSpe
         "--fake-driver-fault scripts the fake driver's failpoints; it cannot steer the Compose driver",
       );
     }
-    const qualified = loadQualifiedLock(flags);
-    lockHash = qualified.lockHash;
+    // Admitted above, once, on this path. `qualified` is defined exactly when
+    // `driverKind === "compose"`, which is the branch this is.
+    const admitted = qualified as NonNullable<typeof qualified>;
+    lockHash = admitted.lockHash;
     return new ComposeEnvironmentDriver({
       runId,
       clock,
       signingKey,
       archetypeHash: archetype.core_hash,
-      lock: qualified.lock,
-      lockHash: qualified.lockHash,
+      lock: admitted.lock,
+      lockHash: admitted.lockHash,
       substrateRoot: locators.substrateRoot,
       upstream: materializeUpstream({
         archivePath: path.resolve(
           (flags["otel-demo-archive"] as string | undefined) ?? DEFAULT_OTEL_ARCHIVE,
         ),
-        expectedArchiveSha256: qualified.lock.source_archive.archive_sha256,
+        expectedArchiveSha256: admitted.lock.source_archive.archive_sha256,
         workRoot: locators.substrateRoot,
       }),
       repositoryConfig: {

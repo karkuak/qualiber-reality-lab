@@ -155,12 +155,30 @@ a file used to stand in for an observation:
 - **a retained endpoint record is not an egress grant.** The record `provision`
   writes is validated field by field against values derived from the run id — run,
   substrate, service, container, host exactly `127.0.0.1`, a real port — and then
-  Docker is re-observed: the exact container, its ownership labels, a running
-  state, and the port it publishes *right now*. A stale record, a restarted
-  container with a new ephemeral port, and a port some other process picked up all
-  yield no endpoint, therefore no mount and no allowlist. `loopbackEgressPolicy`
-  independently refuses any host but `127.0.0.1` and any port that is not a host
-  port, so the grant is refused even by a caller that skipped the reader.
+  Docker is re-observed for *all four* of: the exact container's three ownership
+  labels, a running state, the **image the lock pins** for the endpoint service on
+  the executing platform (the same two-legged rule the driver uses, shared as one
+  function so the two cannot drift), and the binding **`8090/tcp` on `127.0.0.1` at
+  exactly the recorded host port**. A stale record, a restarted container with a new
+  ephemeral port, a port some other process picked up, an exact-name container
+  running substituted bytes, a binding on `0.0.0.0`, and the recorded port published
+  under a different container port all yield no endpoint, therefore no mount and no
+  allowlist. `loopbackEgressPolicy` independently refuses any host but `127.0.0.1`
+  and any port that is not a host port, so the grant is refused even by a caller
+  that skipped the reader — and in a record like `example.com:80` it is the *host*
+  that is inadmissible; `80` is a valid port and is accepted on `127.0.0.1`.
+- **the substrate's published exposure is one loopback port.** The *rendered*
+  Compose configuration — not the overlay's source text — publishes `quote`'s
+  `8090/tcp` as one ephemeral host port bound to `127.0.0.1`, and publishes the
+  collector's `4317`/`4318` not at all. Upstream publishes all three with no
+  `host_ip`, which means `0.0.0.0`, so the earlier loopback-only wording described
+  an intention rather than the substrate. The overlay *replaces* those entries
+  (`!override` for `quote`, `!reset` for the collector) because Compose merges
+  `ports` across files and an added entry would have left upstream's publication
+  standing beside the narrowed one. Asserted against `docker compose config`, so the
+  rendered merge is what is proven. A published OTLP receiver would have been an
+  ingestion point for anything on the host, accepting spans a run then attributed to
+  itself; internal `quote` → collector traffic continues over the Compose network.
 - **`--verify` does not write.** `scripts/qualify-otel-demo.mjs --verify`
   regenerated the tracked SBOM index, the four SPDX documents and the provenance
   record before deciding whether the lock had drifted, which made drift in them

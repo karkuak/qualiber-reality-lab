@@ -349,7 +349,163 @@ interface ObservedContainer {
   readonly runLabel: string;
   readonly driverLabel: string;
   readonly projectLabel: string;
-  readonly hostPort?: number;
+  /** Every host binding Docker reports, kept whole rather than reduced to one port. */
+  readonly bindings: readonly ObservedPortBinding[];
+}
+
+/**
+ * One host binding Docker reports for a container.
+ *
+ * `containerPort` keeps Docker's own spelling (`"8090/tcp"`) and `hostIp` is
+ * retained rather than discarded, because "some port is published" and "*this*
+ * container port is published on loopback" are the two answers that have to stay
+ * apart: the first was what the driver used to compute, and it is satisfied by a
+ * binding on a different container port, or on `0.0.0.0`.
+ */
+interface ObservedPortBinding {
+  readonly containerPort: string;
+  readonly hostIp: string;
+  readonly hostPort: number;
+}
+
+/**
+ * The container port the subset's endpoint answers on, in Docker's own spelling.
+ *
+ * Authorization is bound to this exact key. Accepting the recorded host port under
+ * whatever container port happened to be published would let a second published
+ * port — upstream's, a future overlay's, or one Docker assigned to something
+ * else — stand in for the endpoint.
+ */
+export const OTEL_DEMO_ENDPOINT_CONTAINER_PORT = "8090/tcp";
+
+function observedBindings(
+  ports: Record<string, { HostIp?: string; HostPort?: string }[] | null> | undefined,
+): readonly ObservedPortBinding[] {
+  const bindings: ObservedPortBinding[] = [];
+  for (const [containerPort, list] of Object.entries(ports ?? {})) {
+    for (const binding of list ?? []) {
+      const hostPort = Number.parseInt(binding.HostPort ?? "", 10);
+      if (!isValidHostPort(hostPort)) continue;
+      bindings.push({ containerPort, hostIp: binding.HostIp ?? "", hostPort });
+    }
+  }
+  return bindings;
+}
+
+/**
+ * The loopback host port bound for one exact container port, or `undefined`.
+ *
+ * Three requirements, all of them exact: the container port key matches, the host
+ * IP is the one canonical loopback literal, and the host port is a real port.
+ * `0.0.0.0` and `::` are refused rather than treated as "includes loopback" — a
+ * binding on every interface is reachable from the local network, which is a
+ * different exposure than the one the substrate is qualified for. A missing
+ * `HostIp` reads as `""`, which is not the literal, so absent and wrong are one
+ * refusal.
+ */
+function loopbackHostPort(
+  bindings: readonly ObservedPortBinding[],
+  containerPort: string,
+): number | undefined {
+  const match = bindings.find(
+    (binding) => binding.containerPort === containerPort && binding.hostIp === LOOPBACK_HOST,
+  );
+  return match?.hostPort;
+}
+
+/** Docker's own resolution of a `repository@digest` reference to an image id, or `""`. */
+function dockerImageId(docker: DockerCli, reference: string): string {
+  const result = docker.run({
+    args: ["image", "inspect", reference, "--format", "{{.Id}}"],
+    timeoutMs: 60_000,
+  });
+  return result.status === 0 ? result.stdout.trim() : "";
+}
+
+/** The repository digests Docker publishes for an image id. */
+function dockerRepoDigests(docker: DockerCli, imageId: string): readonly string[] {
+  const result = docker.run({
+    args: ["image", "inspect", imageId, "--format", "{{json .RepoDigests}}"],
+    timeoutMs: 60_000,
+  });
+  if (result.status !== 0) return [];
+  let parsed: unknown;
+  try {
+    parsed = parseStrictJson(result.stdout.trim());
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter((entry): entry is string => typeof entry === "string");
+}
+
+/**
+ * Memoized image resolutions, shared by everything that asks the same daemon.
+ *
+ * Sound because both directions are content-addressed: the id a digest reference
+ * resolves to, and the digests an id publishes, cannot change for a fixed input
+ * without the input naming different bytes.
+ */
+export interface ImageResolutionMemo {
+  readonly ids: Map<string, string>;
+  readonly digests: Map<string, readonly string[]>;
+}
+
+export function newImageResolutionMemo(): ImageResolutionMemo {
+  return { ids: new Map(), digests: new Map() };
+}
+
+/**
+ * **The** two-legged running-image rule. One implementation, every caller.
+ *
+ * Both legs are derived from live Docker state and both are required:
+ *
+ *   1. the daemon resolves the pinned `repository@digest` to the same image id the
+ *      container reports it is running;
+ *   2. the image that id names publishes that exact pinned repository digest.
+ *
+ * Two legs rather than one because either alone is satisfiable by something else:
+ * a re-tagged image can publish the right digest under different bytes, and a
+ * matching content id can sit under a foreign repository. A daemon that cannot
+ * answer either leg leaves `matchesLockedDigest` false — the mapping is unproven,
+ * and unproven is refused, never assumed.
+ *
+ * Only successful lookups are memoized, so a transient daemon failure stays
+ * retryable rather than becoming a permanent "not proven".
+ */
+export function observeRunningImage(options: {
+  readonly docker: DockerCli;
+  readonly lockedReference: string;
+  readonly containerImageId: string;
+  readonly memo?: ImageResolutionMemo;
+}): ObservedImageIdentity {
+  const { docker, lockedReference, containerImageId, memo } = options;
+  let lockedImageId = memo?.ids.get(lockedReference);
+  if (lockedImageId === undefined) {
+    lockedImageId = dockerImageId(docker, lockedReference);
+    if (lockedImageId !== "") memo?.ids.set(lockedReference, lockedImageId);
+  }
+  let observedRepoDigests: readonly string[] = [];
+  if (containerImageId !== "") {
+    const cached = memo?.digests.get(containerImageId);
+    if (cached !== undefined) {
+      observedRepoDigests = cached;
+    } else {
+      observedRepoDigests = dockerRepoDigests(docker, containerImageId);
+      if (observedRepoDigests.length > 0) memo?.digests.set(containerImageId, observedRepoDigests);
+    }
+  }
+  return {
+    lockedReference,
+    containerImageId,
+    observedRepoDigests,
+    lockedImageId,
+    matchesLockedDigest:
+      containerImageId !== "" &&
+      lockedImageId !== "" &&
+      containerImageId === lockedImageId &&
+      observedRepoDigests.includes(lockedReference),
+  };
 }
 
 interface ObservedObject {
@@ -415,17 +571,8 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
   private readonly archetypeHash: Hash;
   private readonly sourceIds: readonly string[];
   private platformCache: Platform | undefined;
-  /**
-   * Image ids and repository digests already resolved by this daemon.
-   *
-   * Sound to memoize because both are content-addressed: the id a digest
-   * reference resolves to, and the repository digests an id publishes, cannot
-   * change for a fixed input without the input naming different bytes. Only
-   * successful lookups are cached, so a transient daemon failure stays a failure
-   * that can be retried rather than a permanent "not proven".
-   */
-  private readonly lockedImageIds = new Map<string, string>();
-  private readonly repoDigests = new Map<string, readonly string[]>();
+  /** Image resolutions already asked of this daemon. See `newImageResolutionMemo`. */
+  private readonly imageMemo = newImageResolutionMemo();
 
   constructor(options: ComposeDriverOptions) {
     this.runId = options.runId;
@@ -560,15 +707,6 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
       };
     };
     const labels = raw.Config?.Labels ?? {};
-    const ports = raw.NetworkSettings?.Ports ?? {};
-    let hostPort: number | undefined;
-    for (const bindings of Object.values(ports)) {
-      const first = bindings?.[0]?.HostPort;
-      if (first !== undefined && first !== "") {
-        hostPort = Number.parseInt(first, 10);
-        break;
-      }
-    }
     return {
       name,
       networks: Object.keys(raw.NetworkSettings?.Networks ?? {}).sort(),
@@ -580,75 +718,30 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
       runLabel: labels[ERL2_RUN_LABEL] ?? "",
       driverLabel: labels[ERL2_DRIVER_LABEL] ?? "",
       projectLabel: labels[COMPOSE_PROJECT_LABEL] ?? "",
-      ...(hostPort === undefined ? {} : { hostPort }),
+      bindings: observedBindings(raw.NetworkSettings?.Ports),
     };
   }
 
   // -- is this container ours, and is it running the locked bytes? -------------
 
-  /** The id this daemon resolves a `repository@digest` reference to, or `""`. */
-  private imageIdOf(reference: string): string {
-    const cached = this.lockedImageIds.get(reference);
-    if (cached !== undefined) return cached;
-    const result = this.docker.run({
-      args: ["image", "inspect", reference, "--format", "{{.Id}}"],
-      timeoutMs: 60_000,
-    });
-    if (result.status !== 0) return "";
-    const id = result.stdout.trim();
-    if (id !== "") this.lockedImageIds.set(reference, id);
-    return id;
-  }
-
-  /** The repository digests this daemon publishes for an image id. */
-  private repoDigestsOf(imageId: string): readonly string[] {
-    const cached = this.repoDigests.get(imageId);
-    if (cached !== undefined) return cached;
-    const result = this.docker.run({
-      args: ["image", "inspect", imageId, "--format", "{{json .RepoDigests}}"],
-      timeoutMs: 60_000,
-    });
-    if (result.status !== 0) return [];
-    let parsed: unknown;
-    try {
-      parsed = parseStrictJson(result.stdout.trim());
-    } catch {
-      return [];
-    }
-    if (!Array.isArray(parsed)) return [];
-    const digests = parsed.filter((entry): entry is string => typeof entry === "string");
-    this.repoDigests.set(imageId, digests);
-    return digests;
-  }
-
   /**
    * Whether the bytes this container runs are the bytes the lock pins.
    *
-   * Two independent legs, both derived from live Docker state, both required:
-   * the running image publishes the locked repository digest, and the locked
-   * reference resolves to the running image's id. A daemon that cannot answer
-   * either leaves `matchesLockedDigest` false — the mapping is unproven, and
-   * unproven is refused.
+   * Thin on purpose: the rule itself is `observeRunningImage`, which the endpoint
+   * reader calls too. There is one two-legged rule in this module and both callers
+   * reach it here, so the two cannot drift into subtly different notions of "runs
+   * the locked image".
    */
   private observeImageIdentity(
     service: ComposeServiceSpec,
     container: ObservedContainer,
   ): ObservedImageIdentity {
-    const lockedReference = pinnedImageReference(this.lock, service, this.platform());
-    const lockedImageId = this.imageIdOf(lockedReference);
-    const observedRepoDigests =
-      container.imageId === "" ? [] : this.repoDigestsOf(container.imageId);
-    return {
-      lockedReference,
+    return observeRunningImage({
+      docker: this.docker,
+      lockedReference: pinnedImageReference(this.lock, service, this.platform()),
       containerImageId: container.imageId,
-      observedRepoDigests,
-      lockedImageId,
-      matchesLockedDigest:
-        container.imageId !== "" &&
-        lockedImageId !== "" &&
-        container.imageId === lockedImageId &&
-        observedRepoDigests.includes(lockedReference),
-    };
+      memo: this.imageMemo,
+    });
   }
 
   /** Every expected container, with the verdict on whether it may be treated as ours. */
@@ -683,6 +776,19 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
   /** True only when Docker proves the entry is this run's, running the locked image. */
   private static verified(entry: VerifiedContainer | undefined): boolean {
     return entry !== undefined && entry.observed !== undefined && entry.violations.length === 0;
+  }
+
+  /**
+   * The loopback host port this entry publishes for its own container port.
+   *
+   * The only host port this driver ever reports. A service with no declared
+   * container port publishes nothing by design, and a binding on another container
+   * port or another interface is not this service's endpoint.
+   */
+  private endpointHostPort(entry: VerifiedContainer | undefined): number | undefined {
+    const containerPort = entry?.service.containerPort;
+    if (entry?.observed === undefined || containerPort === undefined) return undefined;
+    return loopbackHostPort(entry.observed.bindings, `${containerPort}/tcp`);
   }
 
   /**
@@ -881,9 +987,10 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
       resources.push(this.foreignResource("volume", volume.name, volume.runLabel));
     }
     // The published port belongs to this run only if the container publishing it
-    // does. A port reached through an unverified container is not this run's port.
+    // does, and only if it is the endpoint's own container port on loopback. A port
+    // reached through an unverified container is not this run's port.
     const endpoint = containers.find((entry) => entry.service.serviceId === OTEL_DEMO_ENDPOINT_SERVICE_ID);
-    if (ComposeEnvironmentDriver.verified(endpoint) && endpoint?.observed?.hostPort !== undefined) {
+    if (ComposeEnvironmentDriver.verified(endpoint) && this.endpointHostPort(endpoint) !== undefined) {
       resources.push(
         this.resource("port", `${this.project}-${OTEL_DEMO_ENDPOINT_SERVICE_ID}-port`, `port-${shortId(this.runId)}`),
       );
@@ -1157,7 +1264,7 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
    *
    * Written into its own directory so the CLI can mount exactly it, read-only,
    * into the adapter host. The published host port is ephemeral by design — the
-   * upstream compose file publishes without a fixed host port, so two runs never
+   * overlay pins `host_ip` but deliberately omits `published`, so two runs never
    * collide — which is precisely why a later process cannot guess it and has to
    * be told.
    *
@@ -1172,11 +1279,12 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     );
     if (!ComposeEnvironmentDriver.verified(endpoint)) return;
     const container = endpoint?.observed;
-    if (container?.hostPort === undefined) return;
+    const port = this.endpointHostPort(endpoint);
+    if (container === undefined || port === undefined) return;
     this.store.writeEndpoint({
       run_id: this.runId,
       host: LOOPBACK_HOST,
-      port: container.hostPort,
+      port,
       service_id: OTEL_DEMO_ENDPOINT_SERVICE_ID,
       container: container.name,
       substrate_id: OTEL_DEMO_SUBSTRATE_ID,
@@ -1258,12 +1366,16 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     const endpointEntry = graph.containers.find(
       (entry) => entry.service.serviceId === OTEL_DEMO_ENDPOINT_SERVICE_ID,
     );
+    // Published *on loopback, for the endpoint's own container port*. The probe
+    // deliberately records the interface it required rather than the ephemeral host
+    // port, which varies per run and would break fingerprint agreement.
     const published =
-      ComposeEnvironmentDriver.verified(endpointEntry) && endpointEntry?.observed?.hostPort !== undefined;
+      ComposeEnvironmentDriver.verified(endpointEntry) && this.endpointHostPort(endpointEntry) !== undefined;
     probes.push(
       this.probeResult(request, "probe-port-quote", "presence", `port-${shortId(this.runId)}`, published, {
         kind: "port",
         container_port: this.endpointService().containerPort,
+        host_ip: LOOPBACK_HOST,
         published,
       }),
     );
@@ -1839,21 +1951,35 @@ export interface ComposeEndpoint {
  *    this run's endpoint, and since nothing but this driver writes it, that is a
  *    typed refusal rather than an absence.
  *
- *  2. **Docker still shows it.** The exact container is inspected by name, its
- *    three ownership labels must carry this run's exact values, it must be
- *    running, and it must *currently* publish the port the record names. Failing
- *    this is not tampering — a destroyed environment fails it, and so does a
- *    restarted container that Docker gave a different ephemeral port — so it
+ *  2. **Docker still shows it.** The exact container is inspected by name, and all
+ *    four of these must hold in live state:
+ *      - its three ownership labels carry this run's exact values;
+ *      - it is running;
+ *      - it is running the image the lock pins for the endpoint service on the
+ *        platform this daemon executes — the same two-legged rule the driver uses
+ *        (`observeRunningImage`), not a second notion of it;
+ *      - it publishes the record's port on **`8090/tcp` bound to `127.0.0.1`**,
+ *        exactly. Not "some published port equals the recorded number": a binding
+ *        on another container port, or on `0.0.0.0`, is a different exposure than
+ *        the one that was qualified.
+ *    Failing this is not tampering — a destroyed environment fails it, and so does
+ *    a restarted container that Docker gave a different ephemeral port — so it
  *    yields `undefined`: no endpoint, therefore no mount and no egress
  *    allowlist. Access is withdrawn, not inherited.
  *
- * Together these are what make "the record is stale" and "another process took
- * the port" unable to grant reachability: the port is only ever accepted because
- * *this run's own verified container is publishing it right now*.
+ * Together these are what make "the record is stale", "another process took the
+ * port" and "the container was swapped for one running other bytes" unable to
+ * grant reachability: the port is only ever accepted because *this run's own
+ * container, running the locked image, is publishing it on loopback right now*.
+ *
+ * The lock is a parameter rather than a file read here because the caller has
+ * already admitted it — signature verified and qualification asserted — and
+ * re-reading it would be a second, unadmitted copy.
  */
 export function readComposeEndpoint(
   substrateRoot: string,
   runId: string,
+  lock: SubstrateLockV1,
   docker: DockerCli = new SpawnDockerCli(),
 ): ComposeEndpoint | undefined {
   const file = path.join(composeEndpointDirectory(substrateRoot, runId), "endpoint.json");
@@ -1893,7 +2019,8 @@ export function readComposeEndpoint(
   let raw: {
     State?: { Status?: string; Running?: boolean };
     Config?: { Labels?: Record<string, string> };
-    NetworkSettings?: { Ports?: Record<string, { HostPort?: string }[] | null> };
+    Image?: string;
+    NetworkSettings?: { Ports?: Record<string, { HostIp?: string; HostPort?: string }[] | null> };
   };
   try {
     raw = parseStrictJson(inspected.stdout.trim()) as typeof raw;
@@ -1906,14 +2033,30 @@ export function readComposeEndpoint(
   if (labels[COMPOSE_PROJECT_LABEL] !== composeProjectName(runId)) return undefined;
   if (raw.State?.Status !== "running") return undefined;
 
-  const published = new Set<number>();
-  for (const bindings of Object.values(raw.NetworkSettings?.Ports ?? {})) {
-    for (const binding of bindings ?? []) {
-      const parsed = Number.parseInt(binding.HostPort ?? "", 10);
-      if (Number.isInteger(parsed)) published.add(parsed);
-    }
+  // The locked image, by the driver's own rule. The platform is asked of the
+  // daemon; a daemon that cannot say which images it executes cannot prove the
+  // mapping, so that is `undefined` rather than a throw — no endpoint, fail closed.
+  let endpointService: ComposeServiceSpec;
+  let lockedReference: string;
+  try {
+    endpointService = OTEL_DEMO_SERVICES.find(
+      (service) => service.serviceId === OTEL_DEMO_ENDPOINT_SERVICE_ID,
+    ) as ComposeServiceSpec;
+    lockedReference = pinnedImageReference(lock, endpointService, observeExecutingPlatform(docker));
+  } catch {
+    return undefined;
   }
-  if (!published.has(port)) return undefined;
+  const image = observeRunningImage({
+    docker,
+    lockedReference,
+    containerImageId: raw.Image ?? "",
+  });
+  if (!image.matchesLockedDigest) return undefined;
+
+  // The exact binding: this container port, this interface, this host port.
+  if (loopbackHostPort(observedBindings(raw.NetworkSettings?.Ports), OTEL_DEMO_ENDPOINT_CONTAINER_PORT) !== port) {
+    return undefined;
+  }
 
   return { host: LOOPBACK_HOST, port, container: expectedContainer };
 }

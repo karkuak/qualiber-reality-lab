@@ -16,8 +16,10 @@
 
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   assertContract,
   type Hash,
@@ -29,6 +31,7 @@ import {
   assertOwnedByRun,
   ComposeEnvironmentDriver,
   composeProjectName,
+  dockerAvailable,
   fileSha256,
   OTEL_DEMO_SERVICES,
   resourceIdentityHash,
@@ -47,6 +50,7 @@ import {
 } from "../support/composeStub.js";
 import { ownedTempDir } from "../support/tempDirs.js";
 
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const ARCHETYPE: Hash = coreHash({ archetype: "compose-adversarial" });
 const RUN_ID = uuidV7From(1_785_000_000_000, Buffer.alloc(10, 0x51));
 const PROJECT = composeProjectName(RUN_ID);
@@ -394,6 +398,7 @@ test("COMPOSE-ADV: a foreign object wearing this run's project label stops the t
     restartCount: 0,
     image: "sha256:stub",
     networks: [],
+    ports: {},
     logs: "",
   });
   assert.equal(
@@ -761,6 +766,97 @@ test("COMPOSE-ADV: an activation observed on an unproven container is not this r
     "a mutation must not be attributed to a container that is not provably ours",
   );
   assert.equal(f.driver.completedOperation(RUN_ID, "op-activate"), undefined);
+});
+
+// -- the exposure the substrate actually has ---------------------------------
+
+/**
+ * The rendered Compose configuration for the two-service subset.
+ *
+ * Asked of `docker compose config`, which is the merge Compose will actually
+ * perform, because the overlay's source text is not the topology: `ports` merges
+ * across files, so an overlay that *looks* like it publishes one loopback port can
+ * render as two publications, one of them on every interface. Every run-varying
+ * value is supplied exactly as the driver supplies it.
+ */
+function renderedComposeConfig(): Record<string, { ports?: readonly Record<string, unknown>[] }> {
+  const upstreamRoot = path.join(repoRoot, "environments", "otel-demo", "upstream", "extracted-1bf3ef8fbaffc049");
+  const overlay = path.join(repoRoot, "environments", "otel-demo", "compose", "erl2-overlay.yaml");
+  const extras = path.join(repoRoot, "environments", "otel-demo", "compose", "erl2-otelcol-extras.yaml");
+  const result = spawnSync(
+    "docker",
+    [
+      "compose",
+      "--project-name", "erl2-rendered-topology",
+      "--project-directory", upstreamRoot,
+      "--env-file", path.join(upstreamRoot, ".env"),
+      "--file", path.join(upstreamRoot, "compose.yaml"),
+      "--file", overlay,
+      "config", "--format", "json",
+    ],
+    {
+      encoding: "utf8",
+      env: {
+        PATH: process.env["PATH"] ?? "",
+        HOME: process.env["HOME"] ?? "",
+        ERL2_RUN_ID: RUN_ID,
+        ERL2_NETWORK_NAME: `${PROJECT}-net`,
+        ERL2_CONTAINER_QUOTE: `${PROJECT}-quote`,
+        ERL2_CONTAINER_OTEL_COLLECTOR: `${PROJECT}-otel-collector`,
+        ERL2_IMAGE_QUOTE: `ghcr.io/open-telemetry/demo@${ARM64}`,
+        ERL2_IMAGE_OTEL_COLLECTOR: `ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib@${ARM64}`,
+        DOCKER_SOCK: "/dev/null",
+        HOST_FILESYSTEM: "/dev/null",
+        OTEL_COLLECTOR_CONFIG_EXTRAS: extras,
+      },
+      maxBuffer: 64 * 1024 * 1024,
+    },
+  );
+  if (result.status !== 0) throw new Error(`docker compose config failed: ${result.stderr ?? ""}`);
+  return (JSON.parse(result.stdout) as { services: Record<string, { ports?: readonly Record<string, unknown>[] }> })
+    .services;
+}
+
+const RENDER_SKIP: { readonly skip?: string } = dockerAvailable()
+  ? {}
+  : { skip: "RENDERED TOPOLOGY UNPROVEN: docker compose is not available to render the merge" };
+
+test("COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else", RENDER_SKIP, () => {
+  const services = renderedComposeConfig();
+
+  // `quote`: exactly one entry, on 127.0.0.1, for the endpoint's container port,
+  // with no fixed `published` — an ephemeral host port, so two runs cannot collide.
+  const quote = services["quote"]?.ports ?? [];
+  assert.equal(quote.length, 1, `quote renders ${quote.length} port entries: ${JSON.stringify(quote)}`);
+  assert.equal(quote[0]?.["host_ip"], "127.0.0.1", `quote is not bound to loopback: ${JSON.stringify(quote[0])}`);
+  assert.equal(quote[0]?.["target"], 8090);
+  assert.equal(quote[0]?.["protocol"], "tcp");
+  assert.equal(
+    quote[0]?.["published"],
+    undefined,
+    "quote pins a fixed host port; the ephemeral binding is what keeps two runs from colliding",
+  );
+
+  // `otel-collector`: no host publication at all. Upstream published 4317 and 4318,
+  // and a published OTLP receiver is an ingestion point for anything on the host.
+  assert.equal(
+    services["otel-collector"]?.ports,
+    undefined,
+    `the collector still publishes: ${JSON.stringify(services["otel-collector"]?.ports)}`,
+  );
+
+  // And no other host publication anywhere in the selected graph. The rendered
+  // document covers all twenty-two upstream services, but only these two are ever
+  // brought up, so only these two are the substrate's exposure.
+  for (const serviceId of OTEL_DEMO_SERVICES.map((s) => s.serviceId)) {
+    for (const entry of services[serviceId]?.ports ?? []) {
+      assert.equal(
+        entry["host_ip"],
+        "127.0.0.1",
+        `${serviceId} renders a non-loopback publication: ${JSON.stringify(entry)}`,
+      );
+    }
+  }
 });
 
 test("COMPOSE-ADV: the substrate identity changes when the daemon does", () => {

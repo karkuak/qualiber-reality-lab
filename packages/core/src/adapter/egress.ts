@@ -77,22 +77,30 @@ const CANONICAL_LOOPBACK_HOST = "127.0.0.1";
 /**
  * An allowlist for exactly one loopback endpoint (ERL2-OQ-005).
  *
- * The Compose environment publishes the subset's endpoint on an ephemeral
- * loopback port, so a subject that is supposed to interact with the real
- * environment has to be allowed to reach it — and only it. Everything the
- * default policy denies is still denied: one scheme, one host, one port, no
- * redirects, link-local and metadata services refused outright. `allow_loopback_hosts`
- * names the single address rather than lifting the loopback rule.
+ * The Compose environment publishes the subset's endpoint as one ephemeral host
+ * port bound to `127.0.0.1` — and publishes nothing else, the collector's OTLP
+ * receivers included — so a subject that is supposed to interact with the real
+ * environment has to be allowed to reach exactly that. Everything the default
+ * policy denies is still denied: one scheme, one host, one port, no redirects,
+ * link-local and metadata services refused outright. `allow_loopback_hosts` names
+ * the single address rather than lifting the loopback rule.
  *
  * ## It validates its own arguments
  *
  * This function turns two values into a *grant*, so it does not trust them
  * because a caller passed them. It is the second, independent check on the host
  * and port — `readComposeEndpoint` is the first — and it is deliberately
- * independent: a host of `example.com` or a port of `80`, `0`, `-1`, `1.5`, `NaN`
- * or `70000` is refused here even if some future caller reached this function
- * without going through the endpoint reader at all. A policy is not the place to
- * discover that its host was arbitrary.
+ * independent: a host of `example.com`, or a port of `0`, `-1`, `1.5`, `NaN` or
+ * `70000`, is refused here even if some future caller reached this function without
+ * going through the endpoint reader at all. A policy is not the place to discover
+ * that its host was arbitrary.
+ *
+ * The two checks are separate for a reason worth stating, because a record like
+ * `example.com:80` invites conflating them: **the host is what makes that
+ * inadmissible.** `80` is a perfectly valid numeric port and this function accepts
+ * it on `127.0.0.1`. Nothing here treats a port *number* as suspicious — the port
+ * check is a range and integrality check and nothing more — and a reading that had
+ * `80` refused on its own account would be describing a rule that does not exist.
  */
 export function loopbackEgressPolicy(policyId: string, host: string, port: number): EgressAllowlistPolicyV1 {
   if (host !== CANONICAL_LOOPBACK_HOST) {

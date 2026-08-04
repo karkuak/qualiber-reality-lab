@@ -201,6 +201,8 @@ export {
   composeEndpointDirectory,
   composeProjectName,
   isValidHostPort,
+  newImageResolutionMemo,
+  observeRunningImage,
   readComposeEndpoint,
   substrateInstanceHash,
   COMPOSE_DRIVER_ID,
@@ -208,8 +210,10 @@ export {
   ERL2_DRIVER_LABEL,
   ERL2_RUN_LABEL,
   LOOPBACK_HOST,
+  OTEL_DEMO_ENDPOINT_CONTAINER_PORT,
   type ComposeDriverOptions,
   type ComposeEndpoint,
+  type ImageResolutionMemo,
 } from "./environment/composeDriver.js";
 export {
   commitJourneyStep,

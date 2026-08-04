@@ -263,14 +263,36 @@ Admission covers the bytes that are *about* to run. Three things about what is
 - **the endpoint.** The record `provision` writes under the substrate root is a
   hint, not a grant. `readComposeEndpoint` checks every field against a value
   derived from the run id — including `host` exactly `127.0.0.1` — and then
-  re-inspects the container, its labels, its state and the port it publishes *now*.
-  A stale record after teardown, a restarted container with a new ephemeral port,
-  or a port another process took over all yield no endpoint, so the subject gets no
-  mount and no allowlist. The record is deleted on a clean `destroy`; that is
-  hygiene, and the revalidation is the control.
+  re-inspects live Docker for all four of: this run's three ownership labels, a
+  running state, the **locked image** (the same two-legged rule the driver uses, so
+  an exact-name container running other bytes is authorized nothing), and the
+  binding **`8090/tcp` on `127.0.0.1` at exactly the recorded host port**. A stale
+  record after teardown, a restarted container with a new ephemeral port, a port
+  another process took over, a binding on `0.0.0.0`, and the recorded port
+  published under some other container port all yield no endpoint — so the subject
+  gets no mount and no allowlist. The record is deleted on a clean `destroy`; that
+  is hygiene, and the revalidation is the control.
 - **the egress grant.** `loopbackEgressPolicy` refuses any host but `127.0.0.1`
   (`ADAPTER_EGRESS_HOST_NOT_ALLOWED`) and any port that is not an integer in
-  `1..65535` (`ADAPTER_EGRESS_PORT_NOT_ALLOWED`), independently of the reader.
+  `1..65535` (`ADAPTER_EGRESS_PORT_NOT_ALLOWED`), independently of the reader. Note
+  which of the two is doing the work in a record like `example.com:80`: it is the
+  **host**. `80` is a valid port and is accepted on `127.0.0.1`.
+
+### The substrate's host exposure
+
+The rendered configuration — `docker compose config` after the overlay merge, not
+the overlay's source text — publishes exactly one host port:
+
+| Service | Container port | Host publication |
+| --- | --- | --- |
+| `quote` | `8090/tcp` | one ephemeral host port, bound to `127.0.0.1` |
+| `otel-collector` | `4317/tcp`, `4318/tcp` | none; Compose network only |
+
+Upstream publishes all three with no `host_ip`, which is `0.0.0.0`. The overlay
+replaces those entries — `!override` for `quote`, `!reset` for the collector —
+rather than adding to them, because Compose merges `ports` across files and an
+added entry leaves upstream's publication standing. `quote`'s host port stays
+ephemeral so two concurrent runs cannot collide.
 
 ### Verifying the retained qualification
 
@@ -289,5 +311,23 @@ binding to the same archive, commit and images. A successful run leaves the tree
 byte-identical.
 
 Regenerating the qualification is the other mode, and it does rewrite tracked
-files — including the signed lock. It also now refuses a partial SBOM matrix: four
+files — including the signed lock. It also refuses a partial SBOM matrix: four
 documents or none.
+
+Between the two there is a third mode, for the case where a repository-owned
+configuration file changed and nothing else did:
+
+```bash
+node scripts/qualify-otel-demo.mjs --relock-config
+```
+
+`--relock-config` re-signs the lock for a new configuration hash set and writes
+**only** the lock. It re-observes the archive, the source commit and both platforms'
+image digests exactly as `--verify` does; it reuses the retained SBOM index, the
+four SPDX documents and the provenance record byte for byte; and it seals a
+candidate lock and then puts that candidate through the *complete* verifier over
+the whole retained set, writing only if that reports nothing. So it cannot assert a
+qualification — it can only record one the verifier already agrees with — and a
+drift in anything but the configuration hashes is a refusal. Use it instead of a
+full regeneration so a port-binding change does not produce four rewritten SPDX
+documents whose only difference is a fresh timestamp.

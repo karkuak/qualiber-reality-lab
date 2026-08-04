@@ -67,15 +67,45 @@ Five files, each hashed into `config_hashes`:
 | `compose/erl2-otelcol-extras.yaml` | this repository |
 
 The overlay run-scopes the network and both container names, pins both images by
-digest, and adds the run's labels. The collector extras file uses upstream's own
-documented extras seam to reduce the pipelines to the OTLP receivers and the
-`debug` exporter — which is what stops the `docker_stats`, `host_metrics`,
-`postgresql`, `redis`, `nginx` and `prometheus/ad` receivers from being
-instantiated at all. The Docker socket and host filesystem mounts upstream
-declares are additionally bound to `/dev/null`, so the collector reaches neither.
-No container in the subset is privileged and none is granted a capability; the
-collector runs as `user: 0:0` inside its own container, which is upstream's
-configuration and is recorded here rather than glossed.
+digest, adds the run's labels, and reduces the host exposure to one loopback port
+(below). The collector extras file uses upstream's own documented extras seam to
+reduce the pipelines to the OTLP receivers and the `debug` exporter — which is what
+stops the `docker_stats`, `host_metrics`, `postgresql`, `redis`, `nginx` and
+`prometheus/ad` receivers from being instantiated at all. The Docker socket and
+host filesystem mounts upstream declares are additionally bound to `/dev/null`, so
+the collector reaches neither. No container in the subset is privileged and none is
+granted a capability; the collector runs as `user: 0:0` inside its own container,
+which is upstream's configuration and is recorded here rather than glossed.
+
+### Host exposure
+
+This is the *rendered* topology — what `docker compose config` produces after the
+overlay is merged, which is the only thing that describes the substrate's actual
+exposure:
+
+| Service | Container port | Host publication |
+| --- | --- | --- |
+| `quote` | `8090/tcp` | one **ephemeral** host port, bound to **`127.0.0.1`** |
+| `otel-collector` | `4317/tcp`, `4318/tcp` | **none** — Compose network only |
+
+Neither of those is upstream's default. Upstream publishes `quote` `8090` and the
+collector's `4317`/`4318` with no `host_ip`, which means `0.0.0.0`: reachable from
+the local network. The overlay therefore *replaces* those port entries rather than
+adding to them — `!override` for `quote`, `!reset` for the collector — because
+Compose merges `ports` across files, so an added entry would have left upstream's
+publication in place alongside the narrowed one.
+
+`quote` keeps an ephemeral host port on purpose: `host_ip` is pinned and
+`published` is omitted, so two concurrent runs cannot collide on a fixed port. The
+collector needs no publication at all — `quote` reaches it over the Compose network
+by container name, and the Lab reads what arrived from the collector's own stdout
+with `docker logs`. A published OTLP receiver would be an ingestion point for
+anything on the host, accepting spans a run would then attribute to itself.
+
+Both facts are asserted against the rendered configuration by
+`tests/adversarial/composeSubstrate.test.ts`, and the live binding
+(`8090/tcp` → `127.0.0.1:<ephemeral>`) is re-observed before the subject is granted
+any mount or egress allowlist.
 
 ### SBOM and provenance
 

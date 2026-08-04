@@ -18,11 +18,39 @@
 //     record.
 //
 // Usage:
-//   node scripts/qualify-otel-demo.mjs            # fetch, resolve, sign the lock
+//   node scripts/qualify-otel-demo.mjs                  # fetch, resolve, sign the lock
 //   node scripts/qualify-otel-demo.mjs --fetch-only
-//   node scripts/qualify-otel-demo.mjs --verify    # re-observe; write nothing
+//   node scripts/qualify-otel-demo.mjs --verify          # re-observe; write nothing
+//   node scripts/qualify-otel-demo.mjs --relock-config   # re-sign for a changed applied config
 //
 // Exit codes: 0 qualified/verified, 9 drift or refusal, 2 usage.
+//
+// ## `--relock-config`
+//
+// A repository-owned configuration file is one of the five the lock hashes, so
+// editing one — a Compose overlay that narrows a port binding, say — invalidates
+// the lock. The full generating path would fix that, and would also re-run Docker
+// Scout and rewrite four SPDX documents whose only difference is a fresh creation
+// timestamp. That is regeneration noise: it makes a diff that claims the SBOM
+// changed when nothing about the images did, and it puts the burden of noticing
+// on the reviewer.
+//
+// So this mode re-signs the lock for a configuration change and nothing else. It
+// is deliberately not a shortcut around qualification:
+//
+//   - the archive, the source commit and both platforms' image digests are
+//     re-observed exactly as `--verify` observes them;
+//   - the retained SBOM index, the four SPDX documents and the provenance record
+//     are reused *byte for byte* — they are not rewritten, and the lock keeps its
+//     recorded reference to them;
+//   - the candidate lock is sealed and then run through the *complete* verifier,
+//     `qualificationDrift`, over the whole retained set. It is written only if that
+//     reports nothing. A drift in anything other than the configuration hashes —
+//     a moved archive, a re-pushed image, an SBOM that no longer hashes to its
+//     record — is a refusal, not a re-lock.
+//
+// So the only way this mode can succeed is if the configuration hash set is the
+// single thing that moved, and the verifier says so.
 //
 // ## `--verify` is read-only, and that is a property, not an intention
 //
@@ -115,6 +143,7 @@ const SBOM_INDEX_RELATIVE = "environments/otel-demo/qualification/sbom.json";
 
 const fetchOnly = process.argv.includes("--fetch-only");
 const verifyOnly = process.argv.includes("--verify");
+const relockConfig = process.argv.includes("--relock-config");
 
 /** Directories this invocation created under the OS temp root, removed on the way out. */
 const scratchDirs = [];
@@ -154,23 +183,20 @@ function readJson(file) {
   return JSON.parse(readFileSync(file, "utf8"));
 }
 
-try {
-  main();
-} finally {
-  cleanScratch();
-}
-
 function main() {
   // -- 1. the archive -------------------------------------------------------
   //
   // Verify never writes, and fetching is a write. An absent archive is therefore
   // a refusal in verify mode rather than a download, and the message says which
   // command produces it.
-  if (verifyOnly) {
+  // `--relock-config` writes exactly one file, the lock. Like `--verify` it does
+  // not fetch and does not generate, so it takes the same path here.
+  if (verifyOnly || relockConfig) {
     if (!existsSync(ARCHIVE_FILE)) {
       die(
         `the pinned archive is not present at ${path.relative(repoRoot, ARCHIVE_FILE)}; ` +
-          "run `node scripts/qualify-otel-demo.mjs --fetch-only` first — --verify does not write, and fetching is a write",
+          "run `node scripts/qualify-otel-demo.mjs --fetch-only` first — neither --verify nor " +
+          "--relock-config fetches, and fetching is a write",
       );
     }
   } else {
@@ -205,9 +231,10 @@ function main() {
   // verify mode that unpacking is fresh comparison material, so it goes to a
   // task-owned temporary directory the `finally` above removes. In generating mode
   // it stays under the git-ignored `upstream/`, where a repeated run can reuse it.
-  const workRoot = verifyOnly
-    ? scratch("erl2-otel-verify-")
-    : path.join(upstreamDir, `extracted-${archiveSha256.slice(7, 23)}`);
+  const workRoot =
+    verifyOnly || relockConfig
+      ? scratch("erl2-otel-verify-")
+      : path.join(upstreamDir, `extracted-${archiveSha256.slice(7, 23)}`);
   if (!existsSync(path.join(workRoot, "compose.yaml"))) {
     mkdirSync(workRoot, { recursive: true });
     run("tar", [
@@ -265,38 +292,34 @@ function main() {
     }
   }
 
+  const observed = { archiveSha256, sourceCommit, images, configHashes };
+  if (verifyOnly && relockConfig) {
+    die("--verify and --relock-config ask for opposite things; pick one");
+  }
   if (verifyOnly) {
-    verify({ archiveSha256, sourceCommit, images, configHashes });
+    verify(observed);
     return;
   }
-  qualify({ archiveSha256, sourceCommit, images, configHashes });
+  if (relockConfig) {
+    relock(observed);
+    return;
+  }
+  qualify(observed);
 }
 
 // ---------------------------------------------------------------------------
 // verify: read the retained set, compare, write nothing
 // ---------------------------------------------------------------------------
 
-function verify(observed) {
-  const lockFile = path.join(outDir, "substrate-lock.json");
-  if (!existsSync(lockFile)) die("there is no retained substrate lock to verify");
-  const lock = readJson(lockFile);
-
-  // The lock's own core hash is recomputed and its signature verified here rather
-  // than assumed: a lock whose recorded hash is not its own, or whose signature
-  // does not verify, is not a document any observation can be compared against.
-  const signature = verifySubstrateLockSignature(lock);
-  console.log("== retained lock");
-  console.log(`   core_hash      ${lock.core_hash}`);
-  console.log(`   signer         ${signature.signerKeyId}`);
-  console.log(
-    `   signature      ${signature.signatureValid ? "valid" : "INVALID"}` +
-      ` (${signature.reason ?? "no reason recorded"})`,
-  );
-  console.log(
-    `   classification pinned_authority=${signature.signerIsPinnedAuthority} ` +
-      `development_key=${signature.signerIsDevelopmentKey}`,
-  );
-
+/**
+ * Reads the retained qualification outputs off disk, hashed from their bytes.
+ *
+ * Shared by `--verify` and `--relock-config` so both decide against the same
+ * reading of the same files. `--relock-config` reuses these verbatim rather than
+ * regenerating them, which is what keeps a configuration change from producing an
+ * SBOM diff.
+ */
+function readRetained() {
   const sbomIndexFile = path.join(repoRoot, SBOM_INDEX_RELATIVE);
   const sbomIndexPresent = existsSync(sbomIndexFile);
   const sbomIndex = sbomIndexPresent ? readJson(sbomIndexFile) : null;
@@ -323,37 +346,68 @@ function verify(observed) {
   }
 
   const provenanceFile = path.join(qualificationDir, "provenance.json");
-  const provenance = existsSync(provenanceFile) ? readJson(provenanceFile) : null;
+  return {
+    sbomIndex,
+    sbomIndexByteLength: sbomIndexPresent ? statSync(sbomIndexFile).size : -1,
+    sbomIndexSha256: sbomIndexPresent ? sha256File(sbomIndexFile) : "sha256:absent",
+    spdx,
+    provenance: existsSync(provenanceFile) ? readJson(provenanceFile) : null,
+  };
+}
 
+const EXPECTED = {
+  substrateId: SUBSTRATE_ID,
+  releaseTag: RELEASE_TAG,
+  archiveUrl: ARCHIVE_URL,
+  requiredPlatforms: REQUIRED_PLATFORMS,
+  serviceIds: SERVICE_IDS,
+  configFileCount: CONFIG_FILE_COUNT,
+  sbomIndexPath: SBOM_INDEX_RELATIVE,
+};
+
+function reportLock(lock, signature) {
+  console.log("== lock");
+  console.log(`   core_hash      ${lock.core_hash}`);
+  console.log(`   signer         ${signature.signerKeyId}`);
+  console.log(
+    `   signature      ${signature.signatureValid ? "valid" : "INVALID"}` +
+      ` (${signature.reason ?? "no reason recorded"})`,
+  );
+  console.log(
+    `   classification pinned_authority=${signature.signerIsPinnedAuthority} ` +
+      `development_key=${signature.signerIsDevelopmentKey}`,
+  );
+}
+
+function reportRetained(retained) {
+  console.log("== retained qualification");
+  console.log(`   sbom index     ${SBOM_INDEX_RELATIVE}`);
+  for (const [relative, file] of Object.entries(retained.spdx)) {
+    console.log(`   spdx           ${file.present ? file.sha256 : "ABSENT"}  ${relative}`);
+  }
+  console.log(`   provenance     ${retained.provenance === null ? "ABSENT" : "present"}`);
+}
+
+function verify(observed) {
+  const lockFile = path.join(outDir, "substrate-lock.json");
+  if (!existsSync(lockFile)) die("there is no retained substrate lock to verify");
+  const lock = readJson(lockFile);
+
+  // The lock's own core hash is recomputed and its signature verified here rather
+  // than assumed: a lock whose recorded hash is not its own, or whose signature
+  // does not verify, is not a document any observation can be compared against.
+  const signature = verifySubstrateLockSignature(lock);
+  reportLock(lock, signature);
+  const retained = readRetained();
   const drift = qualificationDrift({
     lock,
     lockCoreHash: coreHash(lock),
     signature,
     observed,
-    retained: {
-      sbomIndex,
-      sbomIndexByteLength: sbomIndexPresent ? statSync(sbomIndexFile).size : -1,
-      sbomIndexSha256: sbomIndexPresent ? sha256File(sbomIndexFile) : "sha256:absent",
-      spdx,
-      provenance,
-    },
-    expected: {
-      substrateId: SUBSTRATE_ID,
-      releaseTag: RELEASE_TAG,
-      archiveUrl: ARCHIVE_URL,
-      requiredPlatforms: REQUIRED_PLATFORMS,
-      serviceIds: SERVICE_IDS,
-      configFileCount: CONFIG_FILE_COUNT,
-      sbomIndexPath: SBOM_INDEX_RELATIVE,
-    },
+    retained,
+    expected: EXPECTED,
   });
-
-  console.log("== retained qualification");
-  console.log(`   sbom index     ${SBOM_INDEX_RELATIVE}`);
-  for (const [relative, file] of Object.entries(spdx)) {
-    console.log(`   spdx           ${file.present ? file.sha256 : "ABSENT"}  ${relative}`);
-  }
-  console.log(`   provenance     ${provenance === null ? "ABSENT" : "present"}`);
+  reportRetained(retained);
 
   if (drift.length > 0) {
     console.error(`\nDRIFT: the retained qualification disagrees with what was just observed:`);
@@ -363,6 +417,89 @@ function verify(observed) {
   }
   console.log("\nverified: the retained qualification matches what this host observes.");
   console.log("   nothing under version control was written; comparison material was temporary.");
+}
+
+// ---------------------------------------------------------------------------
+// relock-config: re-sign for a changed applied configuration, and nothing else
+// ---------------------------------------------------------------------------
+
+function relock(observed) {
+  const lockFile = path.join(outDir, "substrate-lock.json");
+  if (!existsSync(lockFile)) die("there is no retained substrate lock to re-lock");
+  const previous = readJson(lockFile);
+
+  // The lock being re-signed has to be sound first. Re-locking from a lock whose
+  // own signature does not verify would launder a tampered document into a
+  // correctly signed one, which is the opposite of the point.
+  const previousSignature = verifySubstrateLockSignature(previous);
+  if (!previousSignature.signatureValid) {
+    die(
+      `the retained lock's signature does not verify (${previousSignature.reason ?? "unknown"}); ` +
+        "re-locking would sign over a document that is already untrustworthy",
+    );
+  }
+  if (previous.core_hash !== coreHash(previous)) {
+    die("the retained lock's recorded core hash is not its own; refusing to re-lock a hand-edited lock");
+  }
+
+  // Written in the order the generating path writes them — the order the five
+  // applied files are hashed in — so a re-lock's diff is the hashes that actually
+  // changed and not a reshuffle. The *decision* compares them as sets, because
+  // that is how `assertObservedMatchesLock` compares them.
+  const after = [...new Set(observed.configHashes)];
+  const beforeSet = [...new Set(previous.config_hashes ?? [])].sort();
+  const afterSet = [...after].sort();
+  if (JSON.stringify(beforeSet) === JSON.stringify(afterSet)) {
+    die("the applied configuration has not changed; there is nothing to re-lock");
+  }
+
+  // Everything except the configuration hashes and the recording instant is
+  // carried across verbatim — including the `sbom` block, so the lock keeps
+  // pointing at the retained index and the four SPDX documents that were never
+  // rewritten, and including the inline `provenance` record.
+  const body = {
+    schema_version: previous.schema_version,
+    lock_id: previous.lock_id,
+    substrate_id: previous.substrate_id,
+    qualification_status: previous.qualification_status,
+    source_archive: { ...previous.source_archive },
+    images: previous.images.map((image) => ({ ...image })),
+    sbom: { ...previous.sbom },
+    provenance: { ...previous.provenance, transformations: [...previous.provenance.transformations] },
+    config_hashes: after,
+    recorded_at: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+  };
+  const candidate = assertContract("SubstrateLockV1", sealSigned(body, developmentKey("challenge-governor")));
+  const signature = verifySubstrateLockSignature(candidate);
+  reportLock(candidate, signature);
+
+  // And now the gate: the candidate goes through the *complete* verifier over the
+  // whole retained set, against what was just observed. Nothing is written unless
+  // that reports nothing — so a re-lock cannot assert qualification, it can only
+  // record one the verifier already agrees with.
+  const retained = readRetained();
+  const drift = qualificationDrift({
+    lock: candidate,
+    lockCoreHash: coreHash(candidate),
+    signature,
+    observed,
+    retained,
+    expected: EXPECTED,
+  });
+  reportRetained(retained);
+  if (drift.length > 0) {
+    console.error("\nREFUSED: the re-locked candidate does not verify; more than the configuration moved:");
+    for (const entry of drift) console.error(`   - ${entry}`);
+    cleanScratch();
+    process.exit(9);
+  }
+
+  writeFileSync(lockFile, `${JSON.stringify(candidate, null, 2)}\n`);
+  console.log("\nre-locked: the applied configuration hash set changed and the lock was re-signed for it.");
+  for (const hash of afterSet.filter((h) => !beforeSet.includes(h))) console.log(`   + ${hash}`);
+  for (const hash of beforeSet.filter((h) => !afterSet.includes(h))) console.log(`   - ${hash}`);
+  console.log("   the SBOM index, its four SPDX documents and the provenance record were not rewritten.");
+  console.log(`   signer ${candidate.signature.key_id} (repository development key; NOT an independent authority)`);
 }
 
 // ---------------------------------------------------------------------------
@@ -536,4 +673,14 @@ function qualify(observed) {
 
 function repositoryOf(serviceId) {
   return SERVICES.find((service) => service.serviceId === serviceId).repository;
+}
+
+// Last, not first: the module-scope `const`s above are in their temporal dead zone
+// until their own declarations are evaluated, so a `main()` call placed before them
+// reaches `EXPECTED` before it exists. Entering here means every declaration this
+// script needs is already initialised.
+try {
+  main();
+} finally {
+  cleanScratch();
 }

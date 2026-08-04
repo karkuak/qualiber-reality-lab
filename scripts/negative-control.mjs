@@ -1508,6 +1508,68 @@ export const CONTROLS = [
     mustFailCases: ["COMPOSE-EGRESS-ADV: loopbackEgressPolicy refuses any host but 127.0.0.1"],
     expect: "fail",
   },
+  {
+    id: "endpoint-locked-image-verification",
+    what: "an endpoint is authorized only for a container running the locked image",
+    file: "packages/core/src/environment/composeDriver.ts",
+    // Removes only the image leg of the endpoint authorization, leaving the label,
+    // state and binding checks intact, so the control measures the image rule alone.
+    find: "  if (!image.matchesLockedDigest) return undefined;",
+    replace: "  void image;",
+    tests: ["tests/dist/adversarial/composeEndpointEgress.test.js"],
+    mustFail: ["tests/dist/adversarial/composeEndpointEgress.test.js"],
+    mustFailCases: [
+      "COMPOSE-EGRESS-ADV: the exact expected container running a substituted image grants nothing",
+      "COMPOSE-EGRESS-ADV: an unresolvable pinned image grants nothing",
+      "COMPOSE-EGRESS-ADV: image id and repository digest disagreeing grants nothing",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "endpoint-exact-port-binding",
+    what: "authorization requires 8090/tcp on 127.0.0.1 at exactly the recorded host port",
+    file: "packages/core/src/environment/composeDriver.ts",
+    // Reverts to the loose rule the defect had: any published host port matching the
+    // recorded number, under any container port, on any interface.
+    find: [
+      "  if (loopbackHostPort(observedBindings(raw.NetworkSettings?.Ports), OTEL_DEMO_ENDPOINT_CONTAINER_PORT) !== port) {",
+      "    return undefined;",
+      "  }",
+    ].join("\n"),
+    replace: [
+      "  const anyPublished = observedBindings(raw.NetworkSettings?.Ports).map((b) => b.hostPort);",
+      "  void OTEL_DEMO_ENDPOINT_CONTAINER_PORT;",
+      "  void loopbackHostPort;",
+      "  if (!anyPublished.includes(port)) {",
+      "    return undefined;",
+      "  }",
+    ].join("\n"),
+    tests: ["tests/dist/adversarial/composeEndpointEgress.test.js"],
+    mustFail: ["tests/dist/adversarial/composeEndpointEgress.test.js"],
+    mustFailCases: [
+      "COMPOSE-EGRESS-ADV: the recorded port published from the WRONG container port grants nothing",
+      "COMPOSE-EGRESS-ADV: a binding on any interface but 127.0.0.1 grants nothing",
+      "COMPOSE-EGRESS-ADV: an unrelated published binding does not stand in for the endpoint's",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "substrate-loopback-only-rendered",
+    what: "the rendered Compose configuration publishes one loopback port and nothing else",
+    file: "environments/otel-demo/compose/erl2-overlay.yaml",
+    // Restores upstream's exposure for the collector: `!reset` removed its
+    // 4317/4318 publication, and without it Compose merges upstream's entries back
+    // in — published on every interface, with no host_ip.
+    find: "    # No host publication at all. Reachable only on the Compose network.\n    ports: !reset []\n",
+    replace: "",
+    tests: ["tests/dist/adversarial/composeSubstrate.test.js"],
+    mustFail: ["tests/dist/adversarial/composeSubstrate.test.js"],
+    mustFailCases: [
+      "COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else",
+    ],
+    expect: "fail",
+    note: "the overlay is a locked configuration file, so this control also moves a config hash; the topology assertion is what it measures",
+  },
 ];
 
 // -- result classification ---------------------------------------------------

@@ -474,6 +474,19 @@ The one claim this slice earns, stated at exactly its width:
   the *driver* reaches a real substrate, never that any ecosystem was measured.
   The substrate lock is signed by the repository's own development governor key, so
   no independent qualification may be claimed from it either.
+- **The loopback-only statement is now true of the rendered configuration, and it
+  is bounded.** The merged Compose configuration publishes exactly one host port —
+  `quote`'s `8090/tcp`, on an ephemeral port bound to `127.0.0.1` — and the
+  collector's `4317`/`4318` are not published at all. Before this correction the
+  rendered configuration published all three with no `host_ip`, meaning `0.0.0.0`,
+  so "loopback-only" was a claim about the overlay's intent and not about the
+  substrate. What may be said is that the *published host exposure* is one loopback
+  port. What may **not** be said is that the container is network-isolated: it
+  shares a Compose network with the collector, and on the `local-process` sandbox
+  profile the host cannot stop a subject from opening a socket at all —
+  `sandboxControlReport` still reports `deny-by-default-egress` as
+  `unsupported_on_this_host`, and the egress control that *is* enforced is
+  adjudication, not a kernel block.
 - **No retained-telemetry claim, and the two statements are not the same.** Keep
   these apart in any wording that mentions OTel:
   - **What the live acceptance test observed.** `tests/e2e/composeEnvironmentRun.test.ts`

@@ -9,7 +9,9 @@
  * one-port egress allowlist from its contents. That makes the file the narrowest
  * and most attractive thing in the run to forge: a record naming
  * `example.com:80` would, on its own, have widened a deny-by-default egress
- * policy to a public host.
+ * policy to a public **host**. The port in that example is incidental — `80` is a
+ * perfectly valid numeric port and is accepted on `127.0.0.1`; it is the host that
+ * makes the record inadmissible.
  *
  * So the record authorizes nothing by existing. It is checked twice, and the two
  * checks are deliberately different in kind:
@@ -37,14 +39,24 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { assertContract, type Hash, type SubstrateLockV1 } from "@erl2/contracts";
+import { developmentKey, sealSigned } from "@erl2/integrity";
 import {
   composeEndpointDirectory,
   composeProjectName,
   loopbackEgressPolicy,
+  OTEL_DEMO_SERVICES,
   readComposeEndpoint,
   uuidV7From,
 } from "@erl2/core";
-import { newStubWorld, StubDockerCli, type StubContainer, type StubWorld } from "../support/composeStub.js";
+import {
+  loopbackBinding,
+  newStubWorld,
+  putStubImage,
+  StubDockerCli,
+  type StubContainer,
+  type StubWorld,
+} from "../support/composeStub.js";
 import { ownedTempDir } from "../support/tempDirs.js";
 
 const RUN_ID = uuidV7From(1_785_000_000_000, Buffer.alloc(10, 0x62));
@@ -52,6 +64,54 @@ const OTHER_RUN_ID = uuidV7From(1_785_000_000_001, Buffer.alloc(10, 0x63));
 const PROJECT = composeProjectName(RUN_ID);
 const ENDPOINT_CONTAINER = `${PROJECT}-quote`;
 const PORT = 18_090;
+
+/**
+ * The digests the lock pins, and the ids this stub daemon resolves them to.
+ *
+ * The id is deliberately not the digest: a real daemon's `.Image` is a content id,
+ * so a fixture whose id equalled the digest would prove the reader compares two
+ * spellings of one string rather than resolving one through Docker to reach the
+ * other. `linux/arm64` is the platform the stub daemon reports.
+ */
+const ARM64: Hash = `sha256:${"a".repeat(64)}`;
+const AMD64: Hash = `sha256:${"b".repeat(64)}`;
+const QUOTE_REPOSITORY = OTEL_DEMO_SERVICES.find((s) => s.serviceId === "quote")?.imageRepository as string;
+const QUOTE_LOCKED_REFERENCE = `${QUOTE_REPOSITORY}@${ARM64}`;
+const QUOTE_IMAGE_ID = `sha256:${"1".repeat(64)}`;
+/** Bytes the lock does not pin, published under a repository it does not name. */
+const FOREIGN_IMAGE_ID = `sha256:${"f".repeat(64)}`;
+const FOREIGN_REFERENCE = `ghcr.io/not-open-telemetry/demo@sha256:${"e".repeat(64)}`;
+
+function lockFixture(): SubstrateLockV1 {
+  const body = {
+    schema_version: "substrate-lock/v1" as const,
+    lock_id: "endpoint-egress-lock",
+    substrate_id: "opentelemetry-demo",
+    qualification_status: "qualified" as const,
+    source_archive: {
+      release_tag: "3.0.0",
+      source_commit: "0".repeat(40),
+      archive_sha256: `sha256:${"c".repeat(64)}` as Hash,
+    },
+    images: OTEL_DEMO_SERVICES.flatMap((service) => [
+      { service_id: service.serviceId, platform: "linux/amd64" as const, digest: AMD64 },
+      { service_id: service.serviceId, platform: "linux/arm64" as const, digest: ARM64 },
+    ]),
+    sbom: {
+      path: "environments/otel-demo/qualification/sbom.json",
+      media_type: "application/json",
+      byte_length: 2,
+      file_sha256: `sha256:${"d".repeat(64)}` as Hash,
+      classification: "PUBLIC" as const,
+    },
+    provenance: { producer: "erl2-test", producer_version: "0.1.0", transformations: [] as string[] },
+    config_hashes: [`sha256:${"9".repeat(64)}` as Hash],
+    recorded_at: "2026-08-03T00:00:00Z",
+  };
+  return assertContract<SubstrateLockV1>("SubstrateLockV1", sealSigned(body, developmentKey("challenge-governor")));
+}
+
+const LOCK = lockFixture();
 
 /** The record `provision` writes over a verified graph. */
 function goodRecord(): Record<string, unknown> {
@@ -65,7 +125,7 @@ function goodRecord(): Record<string, unknown> {
   };
 }
 
-/** The live container `provision` would have left behind. */
+/** The live container `provision` would have left behind: locked image, loopback binding. */
 function liveEndpoint(overrides: Partial<StubContainer> = {}): StubContainer {
   return {
     labels: {
@@ -77,9 +137,9 @@ function liveEndpoint(overrides: Partial<StubContainer> = {}): StubContainer {
     paused: false,
     health: "healthy",
     restartCount: 0,
-    image: `sha256:${"a".repeat(64)}`,
+    image: QUOTE_IMAGE_ID,
     networks: [`${PROJECT}-net`],
-    hostPort: PORT,
+    ports: loopbackBinding(PORT),
     logs: "",
     ...overrides,
   };
@@ -95,6 +155,8 @@ function fixture(
   options: {
     readonly record?: Record<string, unknown> | null;
     readonly container?: StubContainer | null;
+    /** Omit the locked image from the daemon's store, so neither leg can resolve. */
+    readonly withoutLockedImage?: boolean;
   } = {},
 ): Fixture {
   const substrateRoot = ownedTempDir("erl2-compose-endpoint-");
@@ -104,6 +166,12 @@ function fixture(
     writeFileSync(path.join(directory, "endpoint.json"), `${JSON.stringify(options.record ?? goodRecord())}\n`);
   }
   const world = newStubWorld();
+  if (options.withoutLockedImage !== true) {
+    putStubImage(world, QUOTE_IMAGE_ID, [QUOTE_LOCKED_REFERENCE]);
+  }
+  // The substituted image is always in the store; what makes it a substitution is
+  // that it publishes a repository digest the lock does not pin.
+  putStubImage(world, FOREIGN_IMAGE_ID, [FOREIGN_REFERENCE]);
   const container = options.container === undefined ? liveEndpoint() : options.container;
   if (container !== null) world.containers.set(ENDPOINT_CONTAINER, container);
   const docker = new StubDockerCli(world, { project: PROJECT, services: [] });
@@ -111,7 +179,7 @@ function fixture(
 }
 
 function read(f: Fixture): ReturnType<typeof readComposeEndpoint> {
-  return readComposeEndpoint(f.substrateRoot, RUN_ID, f.docker);
+  return readComposeEndpoint(f.substrateRoot, RUN_ID, LOCK, f.docker);
 }
 
 function codeOf(fn: () => unknown): string {
@@ -133,8 +201,21 @@ function codeOf(fn: () => unknown): string {
 test("COMPOSE-EGRESS-ADV: a record naming an arbitrary public host is refused", () => {
   // The reproduced defect, exactly: only the *types* of host, port and container
   // were checked, so this record became a `http://example.com:80` allowlist.
+  //
+  // It is the **host** that makes this record inadmissible. `80` is a perfectly
+  // valid numeric port and would be accepted on `127.0.0.1`; nothing here treats a
+  // port number as suspicious, and a rule that did would be a different rule than
+  // the one being tested.
   const f = fixture({ record: { ...goodRecord(), host: "example.com", port: 80 } });
   assert.equal(codeOf(() => read(f)), "ENV_SUBSTRATE_UNREADABLE");
+
+  // Same port, admissible host: the record passes validation and is then decided
+  // by live Docker, which is where it belongs.
+  const loopback80 = fixture({
+    record: { ...goodRecord(), port: 80 },
+    container: liveEndpoint({ ports: loopbackBinding(80) }),
+  });
+  assert.deepEqual(read(loopback80), { host: "127.0.0.1", port: 80, container: ENDPOINT_CONTAINER });
 });
 
 test("COMPOSE-EGRESS-ADV: a record naming a non-canonical loopback spelling is refused", () => {
@@ -242,14 +323,128 @@ test("COMPOSE-EGRESS-ADV: a container now publishing a different port grants not
   // The container restarted and Docker gave it another ephemeral port. The record
   // still names the old one, and the old one is not this run's endpoint any more —
   // it may well be somebody else's.
-  const f = fixture({ container: liveEndpoint({ hostPort: PORT + 1 }) });
+  const f = fixture({ container: liveEndpoint({ ports: loopbackBinding(PORT + 1) }) });
   assert.equal(read(f), undefined);
 });
 
 test("COMPOSE-EGRESS-ADV: a container publishing nothing grants nothing", () => {
-  const unpublished = liveEndpoint();
-  delete unpublished.hostPort;
-  assert.equal(read(fixture({ container: unpublished })), undefined);
+  assert.equal(read(fixture({ container: liveEndpoint({ ports: {} }) })), undefined);
+});
+
+// -- the exact binding -------------------------------------------------------
+//
+// "The recorded number appears somewhere in this container's published ports" is
+// not the property that was qualified. The qualified exposure is one container
+// port on one interface, and each of these is a live binding that satisfies the
+// loose reading and not the exact one.
+
+test("COMPOSE-EGRESS-ADV: the recorded port published from the WRONG container port grants nothing", () => {
+  // Right host port, right interface, wrong container port. Under the loose rule
+  // this authorized the subject to reach a port that is not the endpoint at all.
+  for (const containerPort of ["4317/tcp", "4318/tcp", "8080/tcp", "8090/udp", "18090/tcp"]) {
+    const wrong = liveEndpoint({
+      ports: { [containerPort]: [{ HostIp: "127.0.0.1", HostPort: String(PORT) }] },
+    });
+    assert.equal(
+      read(fixture({ container: wrong })),
+      undefined,
+      `container port ${containerPort} was accepted as the endpoint`,
+    );
+  }
+});
+
+test("COMPOSE-EGRESS-ADV: a binding on any interface but 127.0.0.1 grants nothing", () => {
+  // `0.0.0.0` and `::` are every interface, which is reachable from the local
+  // network — a different exposure than the loopback-only one that was qualified.
+  // A missing `HostIp` is the shape upstream's own port entry produced, and it is
+  // refused rather than assumed to be loopback.
+  for (const hostIp of ["0.0.0.0", "::", "192.168.1.10", "localhost", ""]) {
+    const wrong = liveEndpoint({ ports: { "8090/tcp": [{ HostIp: hostIp, HostPort: String(PORT) }] } });
+    assert.equal(read(fixture({ container: wrong })), undefined, `HostIp ${JSON.stringify(hostIp)} was accepted`);
+  }
+  const noHostIp = liveEndpoint({ ports: { "8090/tcp": [{ HostPort: String(PORT) }] } });
+  assert.equal(read(fixture({ container: noHostIp })), undefined, "a missing HostIp was accepted");
+});
+
+test("COMPOSE-EGRESS-ADV: an unrelated published binding does not stand in for the endpoint's", () => {
+  // The endpoint's own container port is bound on loopback but to a *different*
+  // host port; the recorded number is published, on loopback, under another
+  // container port. Both halves are present and neither is the endpoint.
+  const decoy = liveEndpoint({
+    ports: {
+      "8090/tcp": [{ HostIp: "127.0.0.1", HostPort: String(PORT + 7) }],
+      "4317/tcp": [{ HostIp: "127.0.0.1", HostPort: String(PORT) }],
+    },
+  });
+  assert.equal(read(fixture({ container: decoy })), undefined);
+});
+
+test("COMPOSE-EGRESS-ADV: the canonical binding — 8090/tcp on 127.0.0.1 at the recorded port — grants it", () => {
+  const f = fixture({
+    container: liveEndpoint({
+      ports: {
+        // Extra bindings on other container ports are irrelevant, not disqualifying:
+        // the rule is that the endpoint's own port is bound on loopback, and it is.
+        "8090/tcp": [{ HostIp: "127.0.0.1", HostPort: String(PORT) }],
+        "9464/tcp": [{ HostIp: "127.0.0.1", HostPort: String(PORT + 3) }],
+      },
+    }),
+  });
+  assert.deepEqual(read(f), { host: "127.0.0.1", port: PORT, container: ENDPOINT_CONTAINER });
+});
+
+// -- and it has to be running the locked image -------------------------------
+//
+// The gap these close: the fixture above used to carry an arbitrary image id, and
+// authorization was granted anyway. Name, labels, state and port were checked;
+// what the container was *running* was not.
+
+test("COMPOSE-EGRESS-ADV: the exact expected container running a substituted image grants nothing", () => {
+  // Exact name, all three ownership labels correct, running, canonical loopback
+  // binding — and bytes the lock does not pin.
+  const substituted = liveEndpoint({ image: FOREIGN_IMAGE_ID });
+  assert.equal(
+    read(fixture({ container: substituted })),
+    undefined,
+    "an exact-name container running an unpinned image was authorized",
+  );
+});
+
+test("COMPOSE-EGRESS-ADV: an unresolvable pinned image grants nothing", () => {
+  // The daemon cannot resolve `repository@digest` at all, so leg one is unproven.
+  // Unproven is refused, not assumed.
+  assert.equal(read(fixture({ withoutLockedImage: true })), undefined);
+});
+
+test("COMPOSE-EGRESS-ADV: image id and repository digest disagreeing grants nothing", () => {
+  // Leg one passes and leg two fails: the container reports the id the locked
+  // reference resolves to, but that image publishes a digest the lock does not
+  // name — the shape a re-tag produces. Both legs are required.
+  const f = fixture({ withoutLockedImage: true });
+  putStubImage(f.world, QUOTE_IMAGE_ID, [FOREIGN_REFERENCE]);
+  f.world.images.set(QUOTE_LOCKED_REFERENCE, { id: QUOTE_IMAGE_ID, repoDigests: [FOREIGN_REFERENCE] });
+  assert.equal(read(f), undefined);
+
+  // And the converse: leg two passes while leg one does not, because the locked
+  // reference resolves to different bytes than the container is running.
+  const g = fixture();
+  g.world.images.set(QUOTE_LOCKED_REFERENCE, {
+    id: `sha256:${"7".repeat(64)}`,
+    repoDigests: [QUOTE_LOCKED_REFERENCE],
+  });
+  assert.equal(read(g), undefined);
+});
+
+test("COMPOSE-EGRESS-ADV: the exact locked image and endpoint mapping succeeds", () => {
+  // The positive case, stated once and completely: the container Docker reports is
+  // this run's by all three labels, running, publishing 8090/tcp on 127.0.0.1 at
+  // the recorded port, and running an image that resolves both ways to the digest
+  // the lock pins for this platform.
+  const f = fixture();
+  const container = f.world.containers.get(ENDPOINT_CONTAINER) as StubContainer;
+  assert.equal(container.image, QUOTE_IMAGE_ID);
+  assert.deepEqual(f.world.images.get(QUOTE_LOCKED_REFERENCE)?.repoDigests, [QUOTE_LOCKED_REFERENCE]);
+  assert.deepEqual(read(f), { host: "127.0.0.1", port: PORT, container: ENDPOINT_CONTAINER });
 });
 
 test("COMPOSE-EGRESS-ADV: a foreign container that took over the port grants nothing", () => {

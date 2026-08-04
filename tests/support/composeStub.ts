@@ -35,8 +35,22 @@ export interface StubContainer {
   /** The image *id* `container inspect` reports for the bytes it runs. */
   image: string;
   networks: string[];
-  hostPort?: number;
+  /**
+   * Host bindings, modelled the way Docker actually reports them: keyed by the
+   * *container* port including its protocol, each with the interface it is bound
+   * to.
+   *
+   * A stub that collapsed this to one number could not express the states the
+   * exposure rules exist to refuse — a binding on `0.0.0.0`, a binding on some
+   * other container port, or two bindings where only one is the endpoint's.
+   */
+  ports: Record<string, { HostIp?: string; HostPort?: string }[]>;
   logs: string;
+}
+
+/** The canonical loopback binding for the endpoint's container port. */
+export function loopbackBinding(hostPort: number): StubContainer["ports"] {
+  return { "8090/tcp": [{ HostIp: "127.0.0.1", HostPort: String(hostPort) }] };
 }
 
 export interface StubObject {
@@ -235,10 +249,7 @@ export class StubDockerCli implements DockerCli {
         Image: container.image,
         NetworkSettings: {
           Networks: Object.fromEntries(container.networks.map((n) => [n, {}])),
-          Ports:
-            container.hostPort === undefined
-              ? {}
-              : { "8090/tcp": [{ HostPort: String(container.hostPort) }] },
+          Ports: container.ports,
         },
       })}\n`,
     );
@@ -323,7 +334,10 @@ export class StubDockerCli implements DockerCli {
           restartCount: 0,
           image: this.world.images.get(pinned)?.id ?? `sha256:unresolved-${service.serviceId}`,
           networks: [`${this.plan.project}-net`],
-          ...(service.hostPort === undefined ? {} : { hostPort: service.hostPort }),
+          // A service the plan gives a host port publishes it the way the overlay
+          // does: the endpoint's own container port, bound to loopback. A service
+          // with no host port publishes nothing, as the collector does not.
+          ports: service.hostPort === undefined ? {} : loopbackBinding(service.hostPort),
           logs: service.serviceId === "otel-collector" ? COLLECTOR_READY_LOG : "",
         });
       }
