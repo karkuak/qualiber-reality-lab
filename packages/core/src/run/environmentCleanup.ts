@@ -315,7 +315,7 @@ export function executeFrontierDerivedCleanup(
         return {
           succeeded: false,
           attemptReceiptHash: record(
-            failedActionReceipt(ctx, action.target_resource_id, action.action_id, cause),
+            failedActionReceipt(ctx, operationId, action.target_resource_id, cause),
             operationId,
           ),
           reasonCode: cause instanceof Erl2Error ? cause.code : "EMERGENCY_ACTION_DRIVER_FAULT",
@@ -386,21 +386,23 @@ export function executeFrontierDerivedCleanup(
     const unauthorized = frontier.derived_actions.filter((a) => !a.independently_safe);
     if (unauthorized.length > 0) {
       for (const action of safe) {
+        // One id, derived once, used for the receipt and for the retained file.
+        const operationId = emergencyOperationId(ctx.runId, action.action_id);
         attempts.push({
           actionId: action.action_id,
           succeeded: false,
           attemptReceiptHash: record(
             failedActionReceipt(
               ctx,
+              operationId,
               action.target_resource_id,
-              action.action_id,
               new Erl2Error(
                 CODES.EMERGENCY_ACTION_UNDECLARED_TARGET,
                 `driver ${ctx.driver.manifest.driver_id} destroys only whole environments, and ` +
                   `${String(unauthorized.length)} observed resource(s) are not authorized targets`,
               ),
             ),
-            emergencyOperationId(ctx.runId, action.action_id),
+            operationId,
           ),
           reasonCode: CODES.EMERGENCY_ACTION_UNDECLARED_TARGET,
         });
@@ -589,11 +591,16 @@ export function executeFrontierDerivedCleanup(
  * failed attempt, marked `failed` with the driver's refusal code, and the
  * before/after state hashes are the Lab's observation rather than the driver's
  * claim.
+ *
+ * It takes the operation id rather than deriving one. A receipt that names a
+ * different operation from the one the intent journal and the driver call used
+ * is not evidence about that dispatch — it is a second, contradictory claim
+ * about a different one.
  */
 function failedActionReceipt(
   ctx: FrontierCleanupContext,
+  operationId: string,
   targetResourceId: string,
-  actionId: string,
   cause: unknown,
 ): EnvironmentOperationReceiptV1 {
   const observed = ctx.driver.inspect(ctx.runId).resources.map((r) => r.identity_hash);
@@ -602,8 +609,21 @@ function failedActionReceipt(
     schema_version: "environment-operation-receipt/v1" as const,
     run_id: ctx.runId,
     operation: "destroy" as const,
-    operation_id: emergencyOperationId(ctx.runId, actionId),
-    idempotency_key: coreHash({ run: ctx.runId, action: actionId }).slice("sha256:".length),
+    // Handed in, never rederived. This receipt stands in for a dispatch the
+    // driver could not receipt itself, so it has to name *that* dispatch: the
+    // operation the durable intent was opened under and the driver was called
+    // with. Deriving it here from the action id alone defaulted to attempt 1,
+    // so a failed second attempt was journaled under the attempt-2 id and
+    // retained a receipt claiming the attempt-1 id — two documents disagreeing
+    // about which operation happened, which is the one thing an audit trail may
+    // not do. It also made two failed attempts at one action byte-identical
+    // whenever the clock had not ticked between them, so they collided on one
+    // `core_hash` and the retained-file accounting refused the bundle.
+    operation_id: operationId,
+    // Keyed on the operation, exactly as every driver keys its own receipts
+    // (`FakeEnvironmentDriver`, `ComposeEnvironmentDriver`: `{run, op}`). Keyed
+    // on the *action* it could not distinguish two attempts at one action.
+    idempotency_key: coreHash({ run: ctx.runId, op: operationId }).slice("sha256:".length),
     driver_manifest_hash: coreHash(ctx.driver.manifest),
     target_identity_hash: domainHash(HASH_DOMAINS.DRIVER_STATE, {
       run_id: ctx.runId,

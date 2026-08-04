@@ -244,6 +244,12 @@ const DRIVER_FAULTS: Readonly<Record<string, FakeDriverFaults>> = {
   // compensation clears it too.
   "collateral-restore": { preexistingMutationId: "preexisting-operator-change" },
   "failed-teardown": { failTeardown: true },
+  // A failed restoration and one safe resource whose per-resource destroy
+  // *throws* on every attempt. It is the only route from the CLI to the
+  // executor's catch path — the one place the Lab writes an emergency receipt on
+  // the driver's behalf — and therefore the only way to measure that the receipt
+  // it writes names the operation that was actually dispatched.
+  "failed-restore-destroy-throws": { failRestore: true },
   residue: { residualResourceIds: [] },
 };
 
@@ -269,6 +275,9 @@ function driverFaults(flags: ParsedFlags, runId: string): FakeDriverFaults {
   if (name === "residue") return { residualResourceIds: [`volume-${runId.slice(0, 8)}`] };
   if (name === "failed-restore-shared") {
     return { failRestore: true, sharedResourceIds: [`volume-${runId.slice(0, 8)}`] };
+  }
+  if (name === "failed-restore-destroy-throws") {
+    return { failRestore: true, throwOnDestroyResourceIds: [`volume-${runId.slice(0, 8)}`] };
   }
   if (name === "contaminated-baseline-shared") {
     return { ...fault, sharedResourceIds: [`volume-${runId.slice(0, 8)}`] };
