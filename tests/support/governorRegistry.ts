@@ -195,7 +195,82 @@ export interface BuildGovernorRegistryOptions {
    * id, a version, a set of operations and a signature.
    */
   readonly externalAdapterManifests?: readonly SubjectAdapterManifestV1[];
+  /**
+   * The ordered environment-phase intents every admitted candidate commits.
+   *
+   * Defaults to {@link ENVIRONMENT_JOURNEY}, and the default path does not read
+   * this field at all — a registry built without it produces byte-identical
+   * commitments, journeys, challenge manifests, family roots and policy hashes
+   * to the one every existing suite asserts against.
+   *
+   * It exists because one property cannot be exercised on the standard journey:
+   * `diagnose_decide` is the only intent that maps to the adapter protocol's
+   * `project` operation, and the standard journey commits no such step, so a
+   * subject that implements projection is never asked to project. Widening the
+   * standard journey to cover that would change what every other suite runs;
+   * widening it *here*, per registry, changes one caller's journey and nothing
+   * else.
+   *
+   * The order must remain a subsequence of the design's canonical intent order
+   * — the step engine's `nextPermittedIntents` is derived from it — and the
+   * intents must remain environment-phase ones. Both are checked below rather
+   * than assumed, because a governor fixture that admitted an unrunnable journey
+   * would fail deep inside a run with an unrelated message.
+   */
+  readonly environmentJourneyIntents?: readonly JourneyIntent[];
 }
+
+/**
+ * Refuses an environment journey the Lab could not run.
+ *
+ * Not defensiveness: this fixture *is* the governor, and a governor that admits
+ * an out-of-order or pre-environment journey is admitting a case no run can
+ * answer. Failing here names the fixture; failing in the run names a phase.
+ */
+function assertRunnableEnvironmentJourney(intents: readonly JourneyIntent[]): void {
+  if (intents.length === 0) {
+    throw new Error("an environment journey must commit at least one step");
+  }
+  let previous = -1;
+  for (const intent of intents) {
+    if (intent === "acquire" || intent === "verify_package") {
+      throw new Error(
+        `environment journey intent '${intent}' belongs to the pre-environment walk; ` +
+          "it runs through its own command and never through execute-subject",
+      );
+    }
+    const index = CANONICAL_INTENT_ORDER.indexOf(intent);
+    if (index <= previous) {
+      throw new Error(
+        `environment journey intent '${intent}' does not follow the canonical order; ` +
+          "the step engine derives each step's permitted successors from that order",
+      );
+    }
+    previous = index;
+  }
+}
+
+/**
+ * The design's canonical intent order, mirrored so this fixture can check a
+ * supplied journey without importing the engine into the governor's side of the
+ * partition.
+ */
+const CANONICAL_INTENT_ORDER: readonly JourneyIntent[] = [
+  "acquire",
+  "verify_package",
+  "install",
+  "configure",
+  "authenticate",
+  "connect",
+  "discover",
+  "exercise",
+  "observe",
+  "diagnose_decide",
+  "recover",
+  "upgrade",
+  "rollback",
+  "remove",
+];
 
 /**
  * Adapter ids this file admits on its own.
@@ -216,6 +291,8 @@ const ADAPTER_ID_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
 
 export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}): GovernorRegistry {
   const random = options.random;
+  const environmentJourney = options.environmentJourneyIntents ?? ENVIRONMENT_JOURNEY;
+  assertRunnableEnvironmentJourney(environmentJourney);
   const root = ownedTempDir("erl2-registry-");
   const vaultRoot = ownedTempDir("erl2-vault-");
   mkdirSync(root, { recursive: true });
@@ -536,7 +613,7 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
   // mirror. Members draw disjoint step commitments so a selection landing on the
   // wrong candidate is observable downstream.
   const challengeCandidates: ChallengeCandidate[] = CHALLENGE_FAMILY.map((candidate) => {
-    const steps = ENVIRONMENT_JOURNEY.map((intent) =>
+    const steps = environmentJourney.map((intent) =>
       commit(
         `${candidate.challengeId}-${intent.replaceAll("_", "-")}`,
         intent,
@@ -590,7 +667,7 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
       challengeId: candidate.challengeId,
       steps: steps.length,
       exposureEpoch: candidate.exposureEpoch,
-      intents: [...ENVIRONMENT_JOURNEY],
+      intents: [...environmentJourney],
       challengeManifestHash,
       journeyHash,
       personaScriptHash,
@@ -613,7 +690,7 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
       policy_id: "erl2-development-journey-selection-policy",
       challenge_family_hash: challengeFamilyHash,
       journey_family_root_hash: journeyFamilyRootHash,
-      allowed_intents: [...ENVIRONMENT_JOURNEY],
+      allowed_intents: [...environmentJourney],
       journey_schema_hash: h("journey-schema"),
       step_commitment_schema_hash: h("step-commitment-schema"),
       actor_policy_hash: h("actor-policy"),

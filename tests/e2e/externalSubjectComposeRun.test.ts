@@ -18,24 +18,19 @@
  *
  * What it asserts is generic and is exactly what the Lab owes any subject: the
  * run bound the externally supplied manifest, every declared step reported a
- * real outcome against a real environment, the frozen subject-output manifest
- * describes the bytes actually on disk, the subject wrote into its host-owned
- * run-scoped output directory within the host's declared bounds, restoration and
- * teardown left nothing behind, the terminal is valid, and an external reader
- * verifies the bundle offline.
+ * real outcome against a real environment, the subject's own written files are
+ * *retained* and referenced by the step that produced them, the host's
+ * adjudication of every dispatch is retained and reachable, the frozen
+ * subject-output manifest describes the bytes actually on disk, restoration and
+ * teardown left nothing behind, the terminal is valid, an external reader
+ * verifies the bundle offline, and a tampered copy of that bundle is refused.
  *
- * Two things it deliberately does **not** assert, because the Lab does not do
- * them today and this file must not pretend otherwise:
- *
- *   - the subject's written files are not frozen into retained evidence. Every
- *     `journey-step-outcome/v1` here carries `output_refs: []`, and
- *     `freezeAdapterOutput` has no caller, so the host's output bounds are never
- *     enforced against a real subject either.
- *   - the subject is never asked to project. `diagnose_decide` is the only
- *     intent mapping to the adapter's `project` operation, and the fixture
- *     journey commits no such step.
- *
- * Both are `packages/core` concerns and are out of scope here.
+ * The claim boundary is unchanged and stated here so it cannot drift: this is a
+ * development-tier, non-blind, trusted-source-and-adapter, local-process, T1 run
+ * on a self-qualified development Compose substrate. It is not OQ-008
+ * containment or isolation, and nothing here claims the subject consumed OTLP
+ * or inspected collector telemetry — the subject consumed analytics request
+ * JSON.
  *
  * ## When nothing is configured
  *
@@ -49,14 +44,15 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { ArtifactRef, JourneyIntent, JourneyStepOutcomeV1 } from "@erl2/contracts";
 import { dockerAvailable, OTEL_DEMO_RELEASE_TAG } from "@erl2/core";
 import { erl2, verifyBundle } from "../support/cliRun.js";
 import { adapterManifest } from "../support/adapterFixtures.js";
 import { buildGovernorRegistry, type GovernorRegistry } from "../support/governorRegistry.js";
-import { ownedRunRoot } from "../support/tempDirs.js";
+import { ownedRunRoot, ownedTempDir } from "../support/tempDirs.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const ARCHIVE = path.join(
@@ -81,6 +77,26 @@ const DEFAULT_OPERATIONS = [
   "report-residue",
   "compensate",
 ] as const;
+
+/**
+ * The environment journey this file selects.
+ *
+ * The standard fixture journey, plus `diagnose_decide` between `observe` and
+ * `remove`. The position is the design's canonical order and not a preference:
+ * `nextPermittedIntents` derives each step's successors from that order, and
+ * `diagnose_decide` sits between `observe` and `recover`.
+ */
+const EXTERNAL_SUBJECT_JOURNEY: readonly JourneyIntent[] = [
+  "install",
+  "configure",
+  "authenticate",
+  "connect",
+  "discover",
+  "exercise",
+  "observe",
+  "diagnose_decide",
+  "remove",
+];
 
 interface ExternalSubject {
   readonly entry: string;
@@ -208,6 +224,13 @@ function selectedExternalRun(subject: ExternalSubject): ExternalRun {
         packageKinds: ["archive"],
       }),
     ],
+    // The one journey difference from the standard fixture, and the reason the
+    // seam exists: `diagnose_decide` is the only intent that maps to the adapter
+    // protocol's `project` operation. Without it a subject that implements
+    // projection is never asked to project, so the operation was unit-tested and
+    // never produced live. Configured here rather than in the standard journey,
+    // which every other suite runs.
+    environmentJourneyIntents: EXTERNAL_SUBJECT_JOURNEY,
   });
   const adapterHash = registry.externalAdapterHashes[subject.adapterId];
   assert.ok(adapterHash, `the registry did not admit a manifest for ${subject.adapterId}`);
@@ -299,6 +322,7 @@ function composePlan(run: ExternalRun): readonly (readonly [string, readonly str
     ["freeze-observation", ["freeze-observation", ...env]],
     ["execute-subject:exercise", ["execute-subject", ...env]],
     ["execute-subject:observe", ["execute-subject", ...env]],
+    ["execute-subject:diagnose_decide", ["execute-subject", ...env]],
     ["remove", ["remove", ...env]],
     ["freeze-output", ["freeze-output", ...env]],
     ["reveal", ["reveal", ...env, "--vault", run.registry.vaultRoot]],
@@ -307,6 +331,13 @@ function composePlan(run: ExternalRun): readonly (readonly [string, readonly str
     ["destroy", ["destroy", ...env]],
     ["finalize-generic", ["finalize-generic", ...env]],
   ];
+}
+
+/** A byte copy of a run root, so each tamper control starts from a clean bundle. */
+function copyOf(runRoot: string): string {
+  const copy = path.join(ownedTempDir("erl2-external-bundle-copy-"), "run");
+  cpSync(runRoot, copy, { recursive: true });
+  return copy;
 }
 
 /** Every regular file under a directory, relative to it. */
@@ -397,35 +428,35 @@ test(
       );
     }
 
-    // Every step the subject was asked to perform reported a real outcome.
-    const outcomes = filesUnder(path.join(run.runRoot, "subject-output"))
-      .filter((rel) => rel.endsWith(".json"))
+    // Every step the subject was asked to perform reported a real outcome, and
+    // every step that wrote something retained it. This is the assertion the
+    // previous version of this file could not make: before the host froze its
+    // own output tree, every `journey-step-outcome/v1` here carried
+    // `output_refs: []` and the subject's files lived only in the host-owned
+    // working directory, outside the bundle and outside every accounting pass.
+    const outcomes = readdirSync(path.join(run.runRoot, "retained", "step-outcomes"))
+      .filter((name) => name.endsWith(".json"))
+      .sort()
       .map(
-        (rel) =>
-          JSON.parse(readFileSync(path.join(run.runRoot, "subject-output", rel), "utf8")) as {
-            intent: string;
-            status: string;
-            output_refs: unknown[];
-          },
+        (name) =>
+          JSON.parse(
+            readFileSync(path.join(run.runRoot, "retained", "step-outcomes", name), "utf8"),
+          ) as JourneyStepOutcomeV1,
       );
     assert.ok(outcomes.length > 0, "the subject produced no step outcomes");
     for (const outcome of outcomes) {
       assert.equal(outcome.status, "succeeded", `intent ${outcome.intent} did not succeed`);
     }
 
-    // What the subject *wrote* — as opposed to the outcomes the Lab froze about
-    // it — lands in the host-owned, run-scoped, empty-at-dispatch output
-    // directory. Asserted here because it is the only evidence that the subject
-    // did work rather than merely returning a status.
-    //
-    // NOTE, and it is a limitation of the Lab rather than of any subject: these
-    // files are **not frozen into retained evidence**. Every
-    // `journey-step-outcome/v1` this journey produces carries `output_refs: []`,
-    // and `freezeAdapterOutput` — the function that would collect, bound, scan
-    // and freeze them — has no caller. So the host's declared output bounds are
-    // never actually enforced against a real subject either. Both are recorded
-    // in the session report; closing them is a `packages/core` change and is
-    // deliberately out of this file's scope.
+    // Every committed intent ran, including the projection one.
+    const ranIntents = outcomes.map((o) => o.intent);
+    for (const intent of EXTERNAL_SUBJECT_JOURNEY) {
+      assert.ok(ranIntents.includes(intent), `the journey never ran its committed ${intent} step`);
+    }
+
+    // What the subject *wrote*, as the Lab retained it. Read from the host-owned
+    // working directory first so the comparison is against the adapter's own
+    // bytes rather than against the descriptor that claims to describe them.
     const workspaceRoot = path.join(run.runRoot, "adapter-workspace");
     const operationDirs = existsSync(workspaceRoot)
       ? readdirSync(workspaceRoot).filter((name) =>
@@ -433,9 +464,11 @@ test(
         )
       : [];
     let wroteSomething = false;
+    const producedByOperation = new Map<string, readonly string[]>();
     for (const operation of operationDirs) {
       const outputRoot = path.join(workspaceRoot, operation, "output");
       const produced = filesUnder(outputRoot);
+      producedByOperation.set(operation, produced);
       if (produced.length === 0) continue;
       wroteSomething = true;
       assert.ok(
@@ -443,11 +476,11 @@ test(
         `${operation} wrote ${produced.length} files, beyond the host's declared file bound`,
       );
       let totalBytes = 0;
-      for (const rel of produced) {
-        totalBytes += statSync(path.join(outputRoot, rel)).size;
+      for (const relative of produced) {
+        totalBytes += statSync(path.join(outputRoot, relative)).size;
         assert.ok(
-          rel.split("/").length <= 6,
-          `${operation} wrote ${rel}, beyond the host's declared depth bound`,
+          relative.split("/").length <= 6,
+          `${operation} wrote ${relative}, beyond the host's declared depth bound`,
         );
       }
       assert.ok(
@@ -457,18 +490,103 @@ test(
     }
     assert.ok(wroteSomething, "the subject wrote nothing into any run-scoped output directory");
 
-    // Projection, when the journey reaches it. The fixture journey commits no
-    // `diagnose_decide` step, and that is the only intent that maps to the
-    // adapter's `project` operation — so on this journey a subject is never
-    // asked to project, and there is nothing to check. Written as a conditional
-    // rather than deleted so that a journey which *does* dispatch it is covered,
-    // and asserted loudly when it is present.
+    // Retained, referenced and byte-identical. Every file the subject wrote into
+    // an operation's output tree must appear as an `output_ref` on some step,
+    // and the retained bytes must equal the bytes on the working copy.
+    const retainedOutputs = new Map<string, ArtifactRef>();
+    for (const outcome of outcomes) {
+      for (const ref of outcome.output_refs) retainedOutputs.set(ref.path, ref);
+    }
+    assert.ok(retainedOutputs.size > 0, "no step outcome referenced any retained subject output");
+    for (const [operation, produced] of producedByOperation) {
+      for (const relative of produced) {
+        const logical = `subject-output/adapter/${operation}/${relative}`;
+        const ref = retainedOutputs.get(logical);
+        assert.ok(ref, `the subject wrote ${operation}/${relative}, which no step outcome references`);
+        const retained = readFileSync(path.join(run.runRoot, logical));
+        assert.deepEqual(
+          retained,
+          readFileSync(path.join(workspaceRoot, operation, "output", relative)),
+          `${logical} is not byte-for-byte what the subject wrote`,
+        );
+        assert.equal(retained.byteLength, ref.byte_length, `${logical} byte length disagrees`);
+        assert.equal(
+          `sha256:${createHash("sha256").update(retained).digest("hex")}`,
+          ref.file_sha256,
+          `${logical} digest disagrees with its descriptor`,
+        );
+      }
+    }
+
+    // Diagnostics are referenced where the subject wrote any, and resolve.
+    const diagnosticRefs = outcomes.flatMap((o) => o.diagnostic_refs);
+    assert.ok(diagnosticRefs.length > 0, "no step outcome referenced any retained diagnostics");
+    for (const ref of diagnosticRefs) {
+      const bytes = readFileSync(path.join(run.runRoot, ref.path));
+      assert.equal(
+        `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+        ref.file_sha256,
+        `${ref.path} digest disagrees with its descriptor`,
+      );
+    }
+
+    // The host's own adjudication of each dispatch: every detail-record hash a
+    // step cites resolves to a retained object, and the response envelope is
+    // among them.
+    const retainedRecords = new Map<string, { schema_version: string }>();
+    for (const relative of filesUnder(path.join(run.runRoot, "retained", "adapter"))) {
+      if (!relative.endsWith(".json")) continue;
+      const value = JSON.parse(
+        readFileSync(path.join(run.runRoot, "retained", "adapter", relative), "utf8"),
+      ) as { core_hash: string; schema_version: string };
+      retainedRecords.set(value.core_hash, value);
+    }
+    assert.ok(retainedRecords.size > 0, "the run retained no adapter host records");
+    const citedSchemas = new Set<string>();
+    for (const outcome of outcomes) {
+      for (const hash of outcome.detail_record_hashes) {
+        const record = retainedRecords.get(hash);
+        if (record === undefined) continue; // a Lab-side detail record, not a host one
+        citedSchemas.add(record.schema_version);
+      }
+    }
+    for (const schema of [
+      "adapter-response-envelope/v1",
+      "sandbox-invocation-manifest/v1",
+      "sandbox-invocation-result/v1",
+      "adapter-capability-grant/v1",
+      "subject-diagnostics-manifest/v1",
+    ]) {
+      assert.ok(citedSchemas.has(schema), `no step outcome cites a retained ${schema}`);
+    }
+    // Nothing retained beneath `retained/adapter/` may be uncited: an unreachable
+    // retained artifact is what the closure derivation refuses everywhere else.
+    const citedHashes = new Set<string>(
+      outcomes.flatMap((o) => [
+        ...o.detail_record_hashes,
+        ...o.mutation_receipt_hashes,
+        ...o.compensation_receipt_hashes,
+      ]),
+    );
+    for (const [hash, record] of retainedRecords) {
+      assert.ok(
+        citedHashes.has(hash),
+        `retained ${record.schema_version} ${hash} is cited by no step outcome`,
+      );
+    }
+
+    // Projection ran live, and its claims cite files the subject actually wrote.
+    // Written as a loop over what is present rather than a hard-coded path, so
+    // this stays a statement about *a* subject rather than about one product.
     const claimFiles = operationDirs
       .map((operation) => path.join(workspaceRoot, operation, "output", "claims", "generic.json"))
       .filter((candidate) => existsSync(candidate));
+    assert.ok(
+      claimFiles.length > 0,
+      "the journey committed a diagnose_decide step but no operation produced a projection",
+    );
     for (const claimFile of claimFiles) {
-      const outputRoot = path.dirname(path.dirname(claimFile));
-      const produced = filesUnder(outputRoot);
+      const operation = path.basename(path.dirname(path.dirname(path.dirname(claimFile))));
       const projected = JSON.parse(readFileSync(claimFile, "utf8")) as {
         claims: { claim_id: string; citations: { locator: string }[] }[];
       };
@@ -476,12 +594,26 @@ test(
       for (const claim of projected.claims) {
         assert.ok(claim.citations.length > 0, `claim ${claim.claim_id} cites nothing`);
         for (const citation of claim.citations) {
-          assert.ok(
-            produced.includes(citation.locator),
-            `claim ${claim.claim_id} cites ${citation.locator}, which the subject did not write`,
+          // Resolved across the whole run, not within the projecting operation.
+          // The host gives every operation its own empty output directory, so a
+          // projection necessarily cites bytes an *earlier* operation wrote —
+          // and the question worth asking is whether those bytes are in the
+          // retained bundle, which is what this resolves against.
+          const cited = [...retainedOutputs.keys()].filter((logical) =>
+            logical.endsWith(`/${citation.locator}`),
+          );
+          assert.equal(
+            cited.length > 0,
+            true,
+            `claim ${claim.claim_id} cites ${citation.locator}, which this run retained nowhere`,
           );
         }
       }
+      // …and the projection itself is retained, not merely written.
+      assert.ok(
+        retainedOutputs.has(`subject-output/adapter/${operation}/claims/generic.json`),
+        `the projection from ${operation} is not retained`,
+      );
     }
 
     // The environment really was the Compose one.
@@ -503,5 +635,129 @@ test(
     assert.equal(data.verdict, "valid");
     assert.deepEqual(data.closure.missing_roles, []);
     assert.deepEqual(data.closure.rejected_extra_hashes, []);
+
+    // …and the same reader refuses a tampered copy. Each case starts from a
+    // fresh byte copy of the bundle, so one control cannot mask another, and
+    // each touches only the *subject's* retained output — the surface that was
+    // previously outside the accounting altogether.
+    const victim = [...retainedOutputs.keys()].sort()[0] as string;
+
+    const removed = copyOf(run.runRoot);
+    rmSync(path.join(removed, victim), { force: true });
+    rmSync(`${path.join(removed, victim)}.frozen`, { force: true });
+    const afterRemoval = verifyBundle(removed, {
+      sourceTrustPolicyHash: run.registry.sourceTrustPolicyHash,
+    });
+    assert.notEqual(afterRemoval.exitCode, 0, "a bundle missing a declared payload verified valid");
+    assert.equal(afterRemoval.body.errors[0]?.code, "ARTIFACT_NOT_FOUND");
+
+    const altered = copyOf(run.runRoot);
+    const originalBytes = readFileSync(path.join(altered, victim));
+    const flipped = Buffer.from(originalBytes);
+    flipped[0] = (originalBytes[0] as number) ^ 0xff;
+    // A frozen artifact is read-only on disk; an attacker with write access to
+    // the bundle is not stopped by a mode bit, so the control must not be.
+    chmodSync(path.join(altered, victim), 0o600);
+    writeFileSync(path.join(altered, victim), flipped);
+    const afterAlteration = verifyBundle(altered, {
+      sourceTrustPolicyHash: run.registry.sourceTrustPolicyHash,
+    });
+    assert.notEqual(afterAlteration.exitCode, 0, "a substituted payload verified valid");
+    assert.equal(afterAlteration.body.errors[0]?.code, "ARTIFACT_HASH_MISMATCH");
+
+    const padded = copyOf(run.runRoot);
+    writeFileSync(
+      path.join(path.dirname(path.join(padded, victim)), "unreferenced.txt"),
+      "bytes no retained descriptor declares\n",
+    );
+    const afterAddition = verifyBundle(padded, {
+      sourceTrustPolicyHash: run.registry.sourceTrustPolicyHash,
+    });
+    assert.notEqual(afterAddition.exitCode, 0, "an undeclared retained payload verified valid");
+    assert.equal(afterAddition.body.errors[0]?.code, "GRAPH_CLOSURE_EXTRA_ARTIFACT");
+  },
+);
+
+/**
+ * The supported cancellation path, on its own real Compose environment.
+ *
+ * Separately provisioned on purpose: cancellation is a *terminal*, so it cannot
+ * be appended to the run above without destroying the valid terminal that run
+ * exists to prove. This one provisions, cancels, and is then asked the only
+ * question that matters about a cleanup — whether anything is left.
+ *
+ * The defect it covers is the emergency operation id. `op-emergency-` plus the
+ * frontier's `<action-kind>-<resource_id>` exceeded the 64-character contract
+ * identifier for an ordinary Compose container, so the receipt failed validation
+ * *after* the destroy had been dispatched and the branch threw part-way through
+ * its action sequence. A unit control pins the derivation
+ * (`emergencyOperationIds.test.ts`); this one pins the consequence.
+ */
+test(
+  "EXTERNAL-SUBJECT-CANCEL: the supported cancellation path leaves zero residue",
+  SKIP,
+  () => {
+    const subject = SUBJECT as ExternalSubject;
+    const run = selectedExternalRun(subject);
+
+    const before = projectObjects(run.project);
+    assert.deepEqual(
+      [...before.containers, ...before.networks, ...before.volumes],
+      [],
+      "this run's project must not exist before it is provisioned",
+    );
+
+    for (const [name, argv] of [
+      [
+        "provision",
+        ["provision", ...run.base, "--archetype", run.registry.archetypeHash, "--environment-driver", "compose"],
+      ],
+      ["baseline", ["baseline", ...run.base]],
+    ] as const) {
+      const result = erl2(argv as readonly string[]);
+      assert.equal(result.exitCode, 0, `${name}: ${JSON.stringify(result.body.errors)}`);
+    }
+    assert.equal(
+      projectObjects(run.project).containers.length,
+      2,
+      "the qualified subset is exactly two containers",
+    );
+
+    // Cancellation exits on the cancellation class, not on success: a cancelled
+    // run still freezes its record, and a caller must not read that as a pass.
+    const cancelled = erl2(["cancel", ...run.base, "--reason", "operator_stop"]);
+    assert.notEqual(cancelled.exitCode, 0, "a cancellation must not exit as a success");
+    assert.equal(
+      cancelled.body.errors.some((e) => e.code === "CANCELLATION_REQUESTED"),
+      true,
+      `cancellation reported ${JSON.stringify(cancelled.body.errors)}`,
+    );
+
+    // The invalid terminal exists, names the cancellation, and its cleanup
+    // attempted every derived action rather than throwing part-way through.
+    const record = JSON.parse(
+      readFileSync(path.join(run.runRoot, "retained", "invalid-run-record.json"), "utf8"),
+    ) as {
+      failed_phase: { kind: string };
+      cleanup: { variant: string; status: string; attempt_hashes: string[] };
+    };
+    assert.equal(record.failed_phase.kind, "cancellation");
+    assert.ok(
+      record.cleanup.attempt_hashes.length > 0,
+      "the cancellation attempted no cleanup action at all",
+    );
+    assert.equal(
+      record.cleanup.status,
+      "attempted_succeeded",
+      `cleanup reported ${record.cleanup.status} with variant ${record.cleanup.variant}`,
+    );
+
+    // Residue, observed from Docker rather than from what the run reported.
+    const after = projectObjects(run.project);
+    assert.deepEqual(
+      { containers: [...after.containers], networks: [...after.networks], volumes: [...after.volumes] },
+      { containers: [], networks: [], volumes: [] },
+      "the cancelled run left Docker resources behind",
+    );
   },
 );
