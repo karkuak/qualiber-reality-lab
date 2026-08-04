@@ -17,7 +17,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -771,6 +771,18 @@ test("COMPOSE-ADV: an activation observed on an unproven container is not this r
 // -- the exposure the substrate actually has ---------------------------------
 
 /**
+ * The extracted upstream configuration the renderer hands to Compose directly.
+ *
+ * Named here so the admission check below and the renderer consult the *same*
+ * paths. Checking the archive's presence instead would be a proxy for these, and a
+ * wrong one: the archive can be fetched without having been extracted, and it is
+ * these two files — not the tarball — that `docker compose config` opens.
+ */
+const UPSTREAM_ROOT = path.join(repoRoot, "environments", "otel-demo", "upstream", "extracted-1bf3ef8fbaffc049");
+const UPSTREAM_ENV_FILE = path.join(UPSTREAM_ROOT, ".env");
+const UPSTREAM_COMPOSE_FILE = path.join(UPSTREAM_ROOT, "compose.yaml");
+
+/**
  * The rendered Compose configuration for the two-service subset.
  *
  * Asked of `docker compose config`, which is the merge Compose will actually
@@ -780,7 +792,6 @@ test("COMPOSE-ADV: an activation observed on an unproven container is not this r
  * value is supplied exactly as the driver supplies it.
  */
 function renderedComposeConfig(): Record<string, { ports?: readonly Record<string, unknown>[] }> {
-  const upstreamRoot = path.join(repoRoot, "environments", "otel-demo", "upstream", "extracted-1bf3ef8fbaffc049");
   const overlay = path.join(repoRoot, "environments", "otel-demo", "compose", "erl2-overlay.yaml");
   const extras = path.join(repoRoot, "environments", "otel-demo", "compose", "erl2-otelcol-extras.yaml");
   const result = spawnSync(
@@ -788,9 +799,9 @@ function renderedComposeConfig(): Record<string, { ports?: readonly Record<strin
     [
       "compose",
       "--project-name", "erl2-rendered-topology",
-      "--project-directory", upstreamRoot,
-      "--env-file", path.join(upstreamRoot, ".env"),
-      "--file", path.join(upstreamRoot, "compose.yaml"),
+      "--project-directory", UPSTREAM_ROOT,
+      "--env-file", UPSTREAM_ENV_FILE,
+      "--file", UPSTREAM_COMPOSE_FILE,
       "--file", overlay,
       "config", "--format", "json",
     ],
@@ -817,11 +828,57 @@ function renderedComposeConfig(): Record<string, { ports?: readonly Record<strin
     .services;
 }
 
-const RENDER_SKIP: { readonly skip?: string } = dockerAvailable()
-  ? {}
-  : { skip: "RENDERED TOPOLOGY UNPROVEN: docker compose is not available to render the merge" };
+/**
+ * Why the rendered topology cannot be observed here, or `undefined` when it can.
+ *
+ * Every prerequisite the renderer actually consumes, checked individually so the
+ * reason names the one that is missing. Gating on `dockerAvailable()` alone was
+ * wrong in a way that only a fresh checkout exposes: GitHub's runners *do* have
+ * Docker, so the test ran, and then `docker compose config` could not open an
+ * extracted upstream file that `.gitignore` excludes from the repository. The
+ * assertion was fine; its admission was not.
+ *
+ * Nothing here fetches or extracts anything. `npm test` is hermetic, and a suite
+ * that quietly downloaded a release archive to make itself runnable would be a
+ * worse problem than the one being fixed.
+ */
+function renderedTopologyUnavailable(): string | undefined {
+  if (!dockerAvailable()) return "docker compose is not available to render the merge";
+  const missing = [UPSTREAM_ENV_FILE, UPSTREAM_COMPOSE_FILE]
+    .filter((file) => !existsSync(file))
+    .map((file) => path.relative(repoRoot, file));
+  if (missing.length > 0) {
+    return (
+      `the extracted upstream configuration is absent (${missing.join(", ")}); ` +
+      "`environments/otel-demo/upstream/` is git-ignored, so a fresh checkout does not carry it — " +
+      "run `node scripts/qualify-otel-demo.mjs --fetch-only` to materialise it"
+    );
+  }
+  return undefined;
+}
+
+const RENDER_REASON = renderedTopologyUnavailable();
+/**
+ * Skip only when the topology is genuinely unobservable *and* nobody asked for it.
+ *
+ * The same three-state shape the live suites use: observable means the assertion
+ * runs; unobservable means an explicit `RENDERED TOPOLOGY UNPROVEN` skip that
+ * records the case as unproven rather than passed; and
+ * `ERL2_REQUIRE_LIVE_DOCKER=1` means a caller is gating on this claim, so the test
+ * is registered anyway and fails naming the prerequisite instead of vanishing.
+ */
+const RENDER_SKIP: { readonly skip?: string } =
+  RENDER_REASON === undefined || process.env["ERL2_REQUIRE_LIVE_DOCKER"] === "1"
+    ? {}
+    : { skip: `RENDERED TOPOLOGY UNPROVEN: ${RENDER_REASON}` };
 
 test("COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else", RENDER_SKIP, () => {
+  // Reachable with a reason only under `ERL2_REQUIRE_LIVE_DOCKER=1`, which is a
+  // caller saying "prove this or go red". The refusal names the prerequisite rather
+  // than surfacing as whatever error Compose happens to emit.
+  if (RENDER_REASON !== undefined) {
+    assert.fail(`ERL2_REQUIRE_LIVE_DOCKER=1 was set but ${RENDER_REASON}`);
+  }
   const services = renderedComposeConfig();
 
   // `quote`: exactly one entry, on 127.0.0.1, for the endpoint's container port,
