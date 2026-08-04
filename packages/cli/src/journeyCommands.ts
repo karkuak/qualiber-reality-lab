@@ -30,6 +30,7 @@ import {
   FakeSubjectPort,
   HostedSubjectPort,
   JOURNEY_PLANE_METRICS,
+  loopbackEgressPolicy,
   type FakeSubjectBehaviour,
   RunWorkspace,
   SteppingClock,
@@ -184,6 +185,16 @@ export function openWorkspace(
      * unwrapped.
      */
     readonly wrapSubjectPort?: (port: SubjectPort) => SubjectPort;
+    /**
+     * How a real adapter reaches the run's real environment (ERL2-OQ-005).
+     *
+     * Supplied only by the environment commands, and only once a Compose run has
+     * provisioned: the endpoint's host port is ephemeral, so it cannot be known
+     * before then and cannot be guessed after. Absent — which is every fake-driver
+     * run and every pre-provision command — the adapter host is constructed with
+     * no mounts and the deny-by-default egress policy, exactly as before.
+     */
+    readonly environmentAccess?: EnvironmentAccess;
   } = {},
 ): RunWorkspace {
   const runRoot = requireString(flags, "run-root");
@@ -202,7 +213,7 @@ export function openWorkspace(
     keyring: developmentKeyring(flags),
     tier: requireDevelopmentTier(flags),
     subjectPort: (options.wrapSubjectPort ?? ((port: SubjectPort) => port))(
-      subjectPort(flags, runId, runRoot, registry, clock),
+      subjectPort(flags, runId, runRoot, registry, clock, options.environmentAccess),
     ),
     ...(options.allowBootstrap === true ? { allowBootstrap: true } : {}),
   });
@@ -216,12 +227,29 @@ export function openWorkspace(
  * subject uses. Without it the development-only fake port stands in, which the
  * tier gate confines to `--tier development`.
  */
+/**
+ * The one read-only mount and the one egress destination a subject needs to
+ * interact with a real Compose environment (ERL2-OQ-005).
+ *
+ * Deliberately not an environment variable: the adapter environment allowlist is
+ * a fail-closed gate and widening it would be a weakening. A read-only mount is
+ * a surface the host already fingerprints and canary-scans, so the locator
+ * travels the same way canonical evidence does.
+ */
+export interface EnvironmentAccess {
+  readonly mountId: string;
+  readonly mountRoot: string;
+  readonly host: string;
+  readonly port: number;
+}
+
 function subjectPort(
   flags: ParsedFlags,
   runId: string,
   runRoot: string,
   registry: AdmissionRegistry,
   clock: SystemClock,
+  environmentAccess?: EnvironmentAccess,
 ): SubjectPort {
   const entry = flags["adapter-entry"] as string | undefined;
   if (entry === undefined) {
@@ -260,6 +288,23 @@ function subjectPort(
       workspaceRoot: path.join(path.resolve(runRoot), "adapter-workspace"),
       store: new ArtifactStore(runRoot),
       clock,
+      ...(environmentAccess === undefined
+        ? {}
+        : {
+            mounts: [
+              {
+                mountId: environmentAccess.mountId,
+                absolutePath: environmentAccess.mountRoot,
+                logicalPath: `environment/${environmentAccess.mountId}`,
+                purpose: "subject-visible-input" as const,
+              },
+            ],
+            egressPolicy: loopbackEgressPolicy(
+              "erl2-environment-endpoint",
+              environmentAccess.host,
+              environmentAccess.port,
+            ),
+          }),
     }),
   );
 }

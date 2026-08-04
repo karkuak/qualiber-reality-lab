@@ -34,7 +34,8 @@ export type ReferenceAdapterId =
   | "reference-correct"
   | "reference-limited"
   | "reference-misleading"
-  | "reference-inconclusive";
+  | "reference-inconclusive"
+  | "reference-otel-demo";
 
 export function referenceAdapterEntry(id: ReferenceAdapterId): string {
   return path.join(repoRoot, "adapters", id, "dist", "src", "main.js");
@@ -87,6 +88,33 @@ export const REFERENCE_CORRECT_MANIFEST = (): SubjectAdapterManifestV1 =>
       "acquire",
       "validate-package",
       "install",
+      "uninstall",
+      "translate-evidence",
+      "project",
+      "report-residue",
+      "compensate",
+    ],
+    packageKinds: ["archive"],
+  });
+
+/**
+ * The environment-interacting reference subject (ERL2-OQ-005).
+ *
+ * It declares `configure`, `start` and `interact` because it really performs
+ * them against a real endpoint; the other reference adapters declare none of the
+ * three and answer `unsupported` for them, which is the honest difference
+ * between a subject that touches the environment and one that does not.
+ */
+export const REFERENCE_OTEL_DEMO_MANIFEST = (): SubjectAdapterManifestV1 =>
+  adapterManifest({
+    adapterId: "reference-otel-demo",
+    operations: [
+      "acquire",
+      "validate-package",
+      "install",
+      "configure",
+      "start",
+      "interact",
       "uninstall",
       "translate-evidence",
       "project",

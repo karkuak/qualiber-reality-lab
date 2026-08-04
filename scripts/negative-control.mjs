@@ -1421,6 +1421,155 @@ export const CONTROLS = [
     expect: "fail",
   },
 
+  // -- ERL2-OQ-005 trust boundaries -----------------------------------------
+  //
+  // Three guards, three controls. Each one was a place where a *name* or a
+  // *retained file* stood in for an observation, so each control removes exactly
+  // the observation and names the case that must then stop refusing.
+
+  {
+    id: "compose-ownership-label-verification",
+    what: "an expected container name is not ownership: all three labels must be this run's",
+    file: "packages/core/src/environment/composeDriver.ts",
+    // Removes only the label half of the verdict, leaving the image half intact,
+    // so the control measures ownership rather than the whole check at once.
+    find: [
+      "      if (observed.runLabel !== this.runId) violations.push(VIOLATION_RUN_LABEL);",
+      "      if (observed.driverLabel !== COMPOSE_DRIVER_ID) violations.push(VIOLATION_DRIVER_LABEL);",
+      "      if (observed.projectLabel !== this.project) violations.push(VIOLATION_PROJECT_LABEL);",
+    ].join("\n"),
+    // The three violation constants stay referenced so the patched tree still
+    // typechecks under `noUnusedLocals`.
+    replace: "      void [VIOLATION_RUN_LABEL, VIOLATION_DRIVER_LABEL, VIOLATION_PROJECT_LABEL];",
+    tests: ["tests/dist/adversarial/composeSubstrate.test.js"],
+    mustFail: ["tests/dist/adversarial/composeSubstrate.test.js"],
+    mustFailCases: [
+      "COMPOSE-ADV: an expected container carrying another run's run_id label is refused",
+      "COMPOSE-ADV: an expected container carrying a foreign driver_id label is refused",
+      "COMPOSE-ADV: an expected container carrying a foreign Compose project label is refused",
+      "COMPOSE-ADV: an expected container MISSING an ownership label is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "compose-running-image-verification",
+    what: "the running image must resolve, through Docker, to the locked service/platform digest",
+    file: "packages/core/src/environment/composeDriver.ts",
+    // Reverts the verdict to the shape the reproduced defect had: the observation
+    // is still recorded, but nothing is derived from it.
+    find: "      if (!image.matchesLockedDigest) violations.push(VIOLATION_IMAGE);",
+    replace: "      void [image, VIOLATION_IMAGE];",
+    tests: ["tests/dist/adversarial/composeSubstrate.test.js"],
+    mustFail: ["tests/dist/adversarial/composeSubstrate.test.js"],
+    mustFailCases: [
+      "COMPOSE-ADV: an expected container name running an image the lock does not pin is refused",
+      "COMPOSE-ADV: an expected container name whose image cannot be resolved at all is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "compose-endpoint-live-revalidation",
+    what: "a retained endpoint record never authorizes egress on its own",
+    file: "packages/core/src/environment/composeDriver.ts",
+    // Removes the live re-observation and returns the record's own contents, which
+    // is exactly what the defect did: the file became the authorization.
+    find: [
+      "  const inspected = docker.run({",
+      '    args: ["container", "inspect", expectedContainer, "--format", "{{json .}}"],',
+      "    timeoutMs: 60_000,",
+      "  });",
+      "  if (inspected.status !== 0) return undefined;",
+    ].join("\n"),
+    // `docker` stays referenced so the patched tree typechecks; the inspection's
+    // result is simply no longer consulted.
+    replace: [
+      "  const inspected = docker.run({",
+      '    args: ["container", "inspect", expectedContainer, "--format", "{{json .}}"],',
+      "    timeoutMs: 60_000,",
+      "  });",
+      "  if (inspected.status !== 0) return { host: LOOPBACK_HOST, port, container: expectedContainer };",
+    ].join("\n"),
+    tests: ["tests/dist/adversarial/composeEndpointEgress.test.js"],
+    mustFail: ["tests/dist/adversarial/composeEndpointEgress.test.js"],
+    mustFailCases: [
+      "COMPOSE-EGRESS-ADV: a stale record surviving teardown grants nothing",
+      "COMPOSE-EGRESS-ADV: a record whose container no longer exists grants nothing",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "loopback-egress-host-validation",
+    what: "a loopback egress allowlist may name 127.0.0.1 and nothing else",
+    file: "packages/core/src/adapter/egress.ts",
+    find: "  if (host !== CANONICAL_LOOPBACK_HOST) {",
+    replace: '  if (host !== CANONICAL_LOOPBACK_HOST && String(1) === "2") {',
+    tests: ["tests/dist/adversarial/composeEndpointEgress.test.js"],
+    mustFail: ["tests/dist/adversarial/composeEndpointEgress.test.js"],
+    mustFailCases: ["COMPOSE-EGRESS-ADV: loopbackEgressPolicy refuses any host but 127.0.0.1"],
+    expect: "fail",
+  },
+  {
+    id: "endpoint-locked-image-verification",
+    what: "an endpoint is authorized only for a container running the locked image",
+    file: "packages/core/src/environment/composeDriver.ts",
+    // Removes only the image leg of the endpoint authorization, leaving the label,
+    // state and binding checks intact, so the control measures the image rule alone.
+    find: "  if (!image.matchesLockedDigest) return undefined;",
+    replace: "  void image;",
+    tests: ["tests/dist/adversarial/composeEndpointEgress.test.js"],
+    mustFail: ["tests/dist/adversarial/composeEndpointEgress.test.js"],
+    mustFailCases: [
+      "COMPOSE-EGRESS-ADV: the exact expected container running a substituted image grants nothing",
+      "COMPOSE-EGRESS-ADV: an unresolvable pinned image grants nothing",
+      "COMPOSE-EGRESS-ADV: image id and repository digest disagreeing grants nothing",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "endpoint-exact-port-binding",
+    what: "authorization requires 8090/tcp on 127.0.0.1 at exactly the recorded host port",
+    file: "packages/core/src/environment/composeDriver.ts",
+    // Reverts to the loose rule the defect had: any published host port matching the
+    // recorded number, under any container port, on any interface.
+    find: [
+      "  if (loopbackHostPort(observedBindings(raw.NetworkSettings?.Ports), OTEL_DEMO_ENDPOINT_CONTAINER_PORT) !== port) {",
+      "    return undefined;",
+      "  }",
+    ].join("\n"),
+    replace: [
+      "  const anyPublished = observedBindings(raw.NetworkSettings?.Ports).map((b) => b.hostPort);",
+      "  void OTEL_DEMO_ENDPOINT_CONTAINER_PORT;",
+      "  void loopbackHostPort;",
+      "  if (!anyPublished.includes(port)) {",
+      "    return undefined;",
+      "  }",
+    ].join("\n"),
+    tests: ["tests/dist/adversarial/composeEndpointEgress.test.js"],
+    mustFail: ["tests/dist/adversarial/composeEndpointEgress.test.js"],
+    mustFailCases: [
+      "COMPOSE-EGRESS-ADV: the recorded port published from the WRONG container port grants nothing",
+      "COMPOSE-EGRESS-ADV: a binding on any interface but 127.0.0.1 grants nothing",
+      "COMPOSE-EGRESS-ADV: an unrelated published binding does not stand in for the endpoint's",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "substrate-loopback-only-rendered",
+    what: "the rendered Compose configuration publishes one loopback port and nothing else",
+    file: "environments/otel-demo/compose/erl2-overlay.yaml",
+    // Restores upstream's exposure for the collector: `!reset` removed its
+    // 4317/4318 publication, and without it Compose merges upstream's entries back
+    // in — published on every interface, with no host_ip.
+    find: "    # No host publication at all. Reachable only on the Compose network.\n    ports: !reset []\n",
+    replace: "",
+    tests: ["tests/dist/adversarial/composeSubstrate.test.js"],
+    mustFail: ["tests/dist/adversarial/composeSubstrate.test.js"],
+    mustFailCases: [
+      "COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else",
+    ],
+    expect: "fail",
+    note: "the overlay is a locked configuration file, so this control also moves a config hash; the topology assertion is what it measures",
+  },
 ];
 
 // -- result classification ---------------------------------------------------

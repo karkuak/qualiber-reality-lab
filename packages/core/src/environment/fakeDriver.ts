@@ -7,8 +7,10 @@
  * restoration failure, teardown failure and residue.
  *
  * It satisfies the same `EnvironmentDriver` contract suite the Compose driver
- * must satisfy. While ERL2-OQ-005 is unresolved this is the *only* enabled
- * driver, and it is the one the Slice 3 exit gate is proven against.
+ * satisfies, and it remains the **default** driver: it needs no daemon, no
+ * network and no qualified lock, so it is the one every hermetic suite and every
+ * scripted failure path runs against. The Compose driver (ERL2-OQ-005) is
+ * selected explicitly and never by default.
  */
 
 import {

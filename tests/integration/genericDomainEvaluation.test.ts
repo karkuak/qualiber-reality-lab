@@ -50,6 +50,7 @@ import {
   RUN_START,
   REFERENCE_CORRECT_MANIFEST,
   REFERENCE_INCONCLUSIVE_MANIFEST,
+  REFERENCE_OTEL_DEMO_MANIFEST,
   REFERENCE_LIMITED_MANIFEST,
   REFERENCE_MISLEADING_MANIFEST,
   newHost,
@@ -123,6 +124,7 @@ function projectedClaims(id: ReferenceAdapterId): readonly EvaluationClaim[] {
     "reference-limited": REFERENCE_LIMITED_MANIFEST,
     "reference-misleading": REFERENCE_MISLEADING_MANIFEST,
     "reference-inconclusive": REFERENCE_INCONCLUSIVE_MANIFEST,
+    "reference-otel-demo": REFERENCE_OTEL_DEMO_MANIFEST,
   }[id]();
   const fixture = newHost(manifest, referenceAdapterEntry(id));
   const result = fixture.host.run({

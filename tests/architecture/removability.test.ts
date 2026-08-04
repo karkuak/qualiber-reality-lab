@@ -46,6 +46,7 @@ const ADAPTER_PACKAGE_NAMES = [
   "adapter-reference-limited",
   "adapter-reference-misleading",
   "adapter-reference-inconclusive",
+  "adapter-reference-otel-demo",
   "pack-operations",
 ] as const;
 

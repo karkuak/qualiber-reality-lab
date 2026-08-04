@@ -209,12 +209,125 @@ external call, so the count survives the process. Both are refused on the releas
 surface with `CFG_DEVELOPMENT_FLAG_UNAVAILABLE`, and an unknown boundary name is
 `CFG_MISSING_REQUIRED` rather than being ignored.
 
-## Enabling Compose (ERL2-OQ-005)
+## Running Compose (ERL2-OQ-005)
 
-Follow `environments/otel-demo/README.md`. In short: capture the archive digest,
-per-platform image digests for both `linux/amd64` and `darwin/arm64`, the SBOM,
-provenance and config hashes; set `qualification_status: "qualified"`; re-sign;
-then re-run the clean-control suite twice and confirm identical fingerprints.
+The OpenTelemetry Demo substrate is qualified. `erl2 doctor` derives the state
+from the retained lock on every call — read `compose_substrate` there rather than
+trusting this paragraph.
 
-There is no flag that skips this. `composeDriverManifestBody` derives `enabled`
-from the lock, so an unqualified lock always produces a disabled driver.
+```bash
+node scripts/qualify-otel-demo.mjs --fetch-only     # the pinned archive is an input
+erl2 provision --run <id> --run-root <root> --registry <reg> --tier development \
+  --archetype <hash> --environment-driver compose
+```
+
+`--environment-driver` defaults to `fake`, and a run binds its driver **once**: a
+later command naming the other one is refused with
+`ENV_SUBSTRATE_LOCATOR_CONFLICT`, and every later command with no flag reaches the
+substrate the run bound. `--substrate-lock` and `--otel-demo-archive` override the
+shipped paths; both are re-verified, so overriding them cannot weaken admission.
+
+What the qualified subset is, what is pinned, and what it does **not** prove is in
+`environments/otel-demo/README.md`. In short: two services (`quote` and
+`otel-collector`) out of the upstream demo's twenty-two, digest-pinned for
+`linux/amd64` and `linux/arm64`, with the lock signed by the repository's own
+*development* environment-governor key — a self-qualification, never an
+independent one.
+
+`darwin/arm64` is not a required platform and never was an image-manifest
+platform: Docker Desktop on macOS runs Linux containers, so the images a macOS
+host executes are `linux/arm64`. `REQUIRED_PLATFORMS` is `linux/amd64` +
+`linux/arm64`.
+
+There is no flag that skips qualification. `composeDriverManifestBody` derives
+`enabled` from the lock, so an unqualified lock always produces a disabled driver,
+and `assertObservedMatchesLock` re-observes the archive, the five applied
+configuration files and both platforms' image digests at `provision` — before a
+single container exists.
+
+### What is re-derived from Docker on every operation
+
+Admission covers the bytes that are *about* to run. Three things about what is
+*actually* running are re-derived instead of read back from a name or a file:
+
+- **ownership.** A container is treated as this run's only when it carries
+  `com.erl2.run_id=<this run>`, `com.erl2.driver_id=compose-driver` and
+  `com.docker.compose.project=erl2-<this run>` exactly, and only when the image it
+  is running resolves through the daemon to the exact service/platform digest the
+  lock pins — checked in both directions, so an unresolvable image is "not proven"
+  rather than assumed. A container that fails is still inventoried, as
+  `unverified-container-…`, but it fails the baseline probe, counts as preexisting
+  residue, withholds the endpoint record, blocks adoption of the provision receipt,
+  and refuses every write with `ENV_FOREIGN_RESOURCE_REJECTED`. An expected name is
+  not ownership.
+- **the endpoint.** The record `provision` writes under the substrate root is a
+  hint, not a grant. `readComposeEndpoint` checks every field against a value
+  derived from the run id — including `host` exactly `127.0.0.1` — and then
+  re-inspects live Docker for all four of: this run's three ownership labels, a
+  running state, the **locked image** (the same two-legged rule the driver uses, so
+  an exact-name container running other bytes is authorized nothing), and the
+  binding **`8090/tcp` on `127.0.0.1` at exactly the recorded host port**. A stale
+  record after teardown, a restarted container with a new ephemeral port, a port
+  another process took over, a binding on `0.0.0.0`, and the recorded port
+  published under some other container port all yield no endpoint — so the subject
+  gets no mount and no allowlist. The record is deleted on a clean `destroy`; that
+  is hygiene, and the revalidation is the control.
+- **the egress grant.** `loopbackEgressPolicy` refuses any host but `127.0.0.1`
+  (`ADAPTER_EGRESS_HOST_NOT_ALLOWED`) and any port that is not an integer in
+  `1..65535` (`ADAPTER_EGRESS_PORT_NOT_ALLOWED`), independently of the reader. Note
+  which of the two is doing the work in a record like `example.com:80`: it is the
+  **host**. `80` is a valid port and is accepted on `127.0.0.1`.
+
+### The substrate's host exposure
+
+The rendered configuration — `docker compose config` after the overlay merge, not
+the overlay's source text — publishes exactly one host port:
+
+| Service | Container port | Host publication |
+| --- | --- | --- |
+| `quote` | `8090/tcp` | one ephemeral host port, bound to `127.0.0.1` |
+| `otel-collector` | `4317/tcp`, `4318/tcp` | none; Compose network only |
+
+Upstream publishes all three with no `host_ip`, which is `0.0.0.0`. The overlay
+replaces those entries — `!override` for `quote`, `!reset` for the collector —
+rather than adding to them, because Compose merges `ports` across files and an
+added entry leaves upstream's publication standing. `quote`'s host port stays
+ephemeral so two concurrent runs cannot collide.
+
+### Verifying the retained qualification
+
+```bash
+node scripts/qualify-otel-demo.mjs --verify
+```
+
+`--verify` writes nothing under version control: it requires the archive to be
+present rather than fetching it, unpacks its comparison material into a temporary
+directory it removes, and generates no SBOM. It checks the lock's own core hash and
+signature classification, the archive digest and source commit, the exact image
+matrix, the exact five-file configuration hash set, the SBOM index's content and
+hash, the complete two-services × two-platforms document matrix, every referenced
+SPDX document's hash *and* its own package count, and the provenance record's
+binding to the same archive, commit and images. A successful run leaves the tree
+byte-identical.
+
+Regenerating the qualification is the other mode, and it does rewrite tracked
+files — including the signed lock. It also refuses a partial SBOM matrix: four
+documents or none.
+
+Between the two there is a third mode, for the case where a repository-owned
+configuration file changed and nothing else did:
+
+```bash
+node scripts/qualify-otel-demo.mjs --relock-config
+```
+
+`--relock-config` re-signs the lock for a new configuration hash set and writes
+**only** the lock. It re-observes the archive, the source commit and both platforms'
+image digests exactly as `--verify` does; it reuses the retained SBOM index, the
+four SPDX documents and the provenance record byte for byte; and it seals a
+candidate lock and then puts that candidate through the *complete* verifier over
+the whole retained set, writing only if that reports nothing. So it cannot assert a
+qualification — it can only record one the verifier already agrees with — and a
+drift in anything but the configuration hashes is a refusal. Use it instead of a
+full regeneration so a port-binding change does not produce four rewritten SPDX
+documents whose only difference is a fresh timestamp.

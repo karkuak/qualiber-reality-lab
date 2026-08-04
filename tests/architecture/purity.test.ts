@@ -41,6 +41,7 @@ const ALLOWED: Readonly<Record<string, readonly string[]>> = {
   "@erl2/adapter-reference-limited": ["@erl2/contracts", "@erl2/adapter-sdk"],
   "@erl2/adapter-reference-misleading": ["@erl2/contracts", "@erl2/adapter-sdk"],
   "@erl2/adapter-reference-inconclusive": ["@erl2/contracts", "@erl2/adapter-sdk"],
+  "@erl2/adapter-reference-otel-demo": ["@erl2/contracts", "@erl2/adapter-sdk"],
   "@erl2/pack-operations": ["@erl2/contracts", "@erl2/evaluation-sdk"],
 };
 
@@ -56,6 +57,7 @@ const PACKAGE_DIRS = [
   "adapters/reference-limited",
   "adapters/reference-misleading",
   "adapters/reference-inconclusive",
+  "adapters/reference-otel-demo",
   "packs/operations",
 ];
 

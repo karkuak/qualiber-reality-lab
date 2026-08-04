@@ -410,8 +410,11 @@ The one claim this slice earns, stated at exactly its width:
   is qualified. Selection runs non-blind at `development` tier only.
 - **No architectural-independence claim.** ERL2-OQ-003 is unresolved and no
   reference, OSS or opaque subject has been run through the core.
-- **No robustness or brownfield claim.** Only the fake environment driver
-  exists (ERL2-OQ-005).
+- **No robustness or brownfield claim.** Two drivers exist — the fake one and the
+  Compose one qualified under ERL2-OQ-005 — but one archetype
+  (clean-greenfield), one two-service substrate and one journey shape are not
+  robustness evidence, and no brownfield or constrained archetype exists
+  (ERL2-OQ-002).
 - **No subject-quality claim of any kind.** The only subjects are the two
   reference adapters, which exist to exercise the platform. Certification
   permits an adapter version and digest; it says nothing about the quality of
@@ -440,11 +443,15 @@ The one claim this slice earns, stated at exactly its width:
   encode T4; a contextual T4 statement requires a separately verified
   `CustomerVerificationBundleV1` that does not exist.
 - **No T2 and no T3.** Not as a matter of restraint but of derivation
-  (ADR-ERL2-025 §5). T2 needs a real, enabled driver on a qualified substrate
-  lock, and ERL2-OQ-005 keeps the only non-fake driver signed `enabled: false`.
-  T3 needs historical-reproduction evidence whose contracts belong to slice 12
-  and do not exist. Requesting either is a typed refusal in the producer and in
-  the offline verifier.
+  (ADR-ERL2-025 §5). A Compose run on the qualified OQ-005 substrate does raise
+  the *environment-realism* component to T2 — that component is what "a real,
+  enabled driver on a qualified substrate lock" means, and it is now satisfiable.
+  The **ceiling is the weakest applicable component**, and two others still cap
+  at T1 on every run this repository can produce: the selected case is drawn at
+  `development` tier and selection is non-blind, both pending ERL2-OQ-007. T3
+  additionally needs historical-reproduction evidence whose contracts belong to
+  slice 12 and do not exist. Requesting either is a typed refusal in the producer
+  and in the offline verifier.
 - **No "bias-free", "collusion-proof" or "universal" language.** Design v2 §6
   forbids it unconditionally. Blind reports, when they eventually exist, must
   carry the literal residual-collusion limitation, which
@@ -459,11 +466,46 @@ The one claim this slice earns, stated at exactly its width:
   development tier, fake driver, trusted reference subject, non-blind selection.
   It is evidence that the *mechanism* closes, not that any environment, subject or
   ecosystem was measured.
-- **No real-ecosystem claim.** The environment is the deterministic fake driver.
-  Its resources, probes and evidence sources are fixtures; no substrate was
-  provisioned, no service ran, and the three "evidence sources" the observation
-  captures produce zero records by construction. The Compose driver stays disabled
-  (ERL2-OQ-005).
+- **No real-ecosystem claim.** The default environment is the deterministic fake
+  driver, whose resources, probes and evidence sources are fixtures. The Compose
+  driver (ERL2-OQ-005) does provision a real substrate — two containers of
+  OpenTelemetry Demo `3.0.0` — and that is still not an ecosystem: two services
+  out of twenty-two, one archetype, one endpoint, one request. It is evidence that
+  the *driver* reaches a real substrate, never that any ecosystem was measured.
+  The substrate lock is signed by the repository's own development governor key, so
+  no independent qualification may be claimed from it either.
+- **The loopback-only statement is now true of the rendered configuration, and it
+  is bounded.** The merged Compose configuration publishes exactly one host port —
+  `quote`'s `8090/tcp`, on an ephemeral port bound to `127.0.0.1` — and the
+  collector's `4317`/`4318` are not published at all. Before this correction the
+  rendered configuration published all three with no `host_ip`, meaning `0.0.0.0`,
+  so "loopback-only" was a claim about the overlay's intent and not about the
+  substrate. What may be said is that the *published host exposure* is one loopback
+  port. What may **not** be said is that the container is network-isolated: it
+  shares a Compose network with the collector, and on the `local-process` sandbox
+  profile the host cannot stop a subject from opening a socket at all —
+  `sandboxControlReport` still reports `deny-by-default-egress` as
+  `unsupported_on_this_host`, and the egress control that *is* enforced is
+  adjudication, not a kernel block.
+- **No retained-telemetry claim, and the two statements are not the same.** Keep
+  these apart in any wording that mentions OTel:
+  - **What the live acceptance test observed.** `tests/e2e/composeEnvironmentRun.test.ts`
+    drives the reference adapter against the real endpoint and then reads the
+    collector's own output, asserting both that spans arrived and that they carry
+    this run's marker. That is a real observation of attributable telemetry, made
+    by a test, on a host with a daemon.
+  - **What an offline bundle attests.** Not that. No retained artifact carries the
+    telemetry observation: the archetype's `service-metric` source is recorded
+    `complete` because the collector reported its OTLP pipelines started, and every
+    source snapshot in this archetype freezes `records: 0`. Pipeline readiness is
+    reachability of the metric path, **not** the receipt of a service metric, and
+    `complete` here means "the source was served and returned nothing".
+  So a permitted statement is "the acceptance test observed attributable telemetry
+  at the collector"; a statement that the retained evidence *attests* received
+  telemetry is not permitted, and neither is describing collector startup as a
+  service metric. Retaining and gating on attributable telemetry is deferred to the
+  first Qualiber integration package (ERL2-OQ-005 detail in
+  `docs/decisions/open-questions.md`); until that lands, nothing above widens.
 - **No robustness claim from the environment branch.** One archetype
   (clean-greenfield), one driver, one journey shape. Failure paths are reached by
   scripted driver faults, not by an environment that failed on its own.

@@ -32,6 +32,7 @@ import {
   safeActions,
   SteppingClock,
   uuidV7From,
+  verifySubstrateLockSignature,
   type EnvironmentDriver,
   type FakeDriverFaults,
 } from "@erl2/core";
@@ -419,14 +420,40 @@ test("ARCHETYPE: a run may not release another run's lease", () => {
 // ERL2-OQ-005: substrate lock and the disabled Compose driver
 // --------------------------------------------------------------------------
 
-function loadCandidateLock(): SubstrateLockV1 {
+function loadShippedLock(): SubstrateLockV1 {
   return JSON.parse(
     readFileSync(path.join(repoRoot, "environments", "otel-demo", "substrate-lock.json"), "utf8"),
   ) as SubstrateLockV1;
 }
 
-test("ERL2-OQ-005 fail-closed: the retained OTel lock is unqualified and refuses", () => {
-  const lock = loadCandidateLock();
+/**
+ * The shipped lock as it was before qualification.
+ *
+ * The two fail-closed cases below used to read the shipped file, because the
+ * shipped file *was* the unqualified candidate. It is now qualified (OQ-005), so
+ * reading it would prove the opposite of what those cases exist to prove. The
+ * invariant is unchanged and is asserted against a lock in that state instead.
+ */
+function unqualifiedCandidateLock(): SubstrateLockV1 {
+  const shipped = loadShippedLock();
+  const { sbom: _sbom, provenance: _provenance, ...rest } = shipped;
+  const base = {
+    ...rest,
+    qualification_status: "unqualified_pending_erl2_oq_005" as const,
+    unqualified_reason_code: "OTEL_DEMO_NOT_RE_ADMITTED",
+    images: [] as SubstrateLockV1["images"],
+    config_hashes: [] as Hash[],
+  };
+  delete (base as { core_hash?: unknown }).core_hash;
+  delete (base as { signature?: unknown }).signature;
+  return assertContract<SubstrateLockV1>(
+    "SubstrateLockV1",
+    sealSigned(base, developmentKey("challenge-governor")),
+  );
+}
+
+test("ERL2-OQ-005 fail-closed: an unqualified lock refuses", () => {
+  const lock = unqualifiedCandidateLock();
   assertContract("SubstrateLockV1", lock);
   assert.equal(lock.qualification_status, "unqualified_pending_erl2_oq_005");
   assert.throws(
@@ -435,8 +462,8 @@ test("ERL2-OQ-005 fail-closed: the retained OTel lock is unqualified and refuses
   );
 });
 
-test("ERL2-OQ-005 fail-closed: the Compose driver manifest is disabled and cannot be driven", () => {
-  const lock = loadCandidateLock();
+test("ERL2-OQ-005 fail-closed: an unqualified lock yields a disabled Compose manifest", () => {
+  const lock = unqualifiedCandidateLock();
   const manifest = composeDriverManifestBody(lock, coreHash(lock));
   assert.equal(manifest.enabled, false);
   assert.equal(manifest.activation_gate, "ERL2-OQ-005");
@@ -444,6 +471,38 @@ test("ERL2-OQ-005 fail-closed: the Compose driver manifest is disabled and canno
     () => assertDriverEnabled({ ...manifest, core_hash: coreHash(lock), signature: dummySignature() }),
     (error: unknown) => (error as { code: string }).code === "ENV_DRIVER_DISABLED",
   );
+});
+
+/**
+ * The shipped OTel Demo lock, after ERL2-OQ-005 qualification.
+ *
+ * It is signed by the repository's *development* environment governor, which is
+ * repo-derivable and therefore never an independent authority. That is exactly
+ * what this case records: the lock qualifies and enables the Compose manifest,
+ * and its signer classification stays `signerIsDevelopmentKey`, so no claim of
+ * third-party qualification can be derived from it.
+ */
+test("ERL2-OQ-005: the shipped OTel lock is qualified, dev-signed and enables Compose", () => {
+  const lock = loadShippedLock();
+  assertContract("SubstrateLockV1", lock);
+  assert.equal(lock.qualification_status, "qualified");
+  assertSubstrateQualified(lock);
+
+  const platforms = new Set(lock.images.map((image) => image.platform));
+  assert.deepEqual([...platforms].sort(), ["linux/amd64", "linux/arm64"]);
+  assert.equal(platforms.has("darwin/arm64"), false, "darwin/arm64 is not an image manifest platform");
+
+  const verification = verifySubstrateLockSignature(lock);
+  assert.equal(verification.signatureValid, true);
+  assert.equal(verification.signerIsDevelopmentKey, true);
+  assert.equal(
+    verification.signerIsPinnedAuthority,
+    false,
+    "a development-signed lock is never an independent qualification authority",
+  );
+
+  const manifest = composeDriverManifestBody(lock, coreHash(lock));
+  assert.equal(manifest.enabled, true);
 });
 
 test("ERL2-OQ-005: a lock missing a required platform digest does not qualify", () => {
@@ -459,7 +518,7 @@ test("ERL2-OQ-005: a lock missing a required platform digest does not qualify", 
 test("ERL2-OQ-005: a qualified lock enables Compose, and observed drift still invalidates", () => {
   const lock = qualifiedLock([
     { service_id: "frontend", platform: "linux/amd64", digest: digest(1) },
-    { service_id: "frontend", platform: "darwin/arm64", digest: digest(2) },
+    { service_id: "frontend", platform: "linux/arm64", digest: digest(2) },
   ]);
   assertSubstrateQualified(lock);
   const manifest = composeDriverManifestBody(lock, coreHash(lock));
@@ -479,7 +538,7 @@ test("ERL2-OQ-005: a qualified lock enables Compose, and observed drift still in
         archiveSha256: lock.source_archive.archive_sha256,
         images: [
           { service_id: "frontend", platform: "linux/amd64", digest: digest(9) },
-          { service_id: "frontend", platform: "darwin/arm64", digest: digest(2) },
+          { service_id: "frontend", platform: "linux/arm64", digest: digest(2) },
         ],
         configHashes: [...lock.config_hashes],
       }),
@@ -501,7 +560,7 @@ test("ERL2-OQ-005: a qualified lock enables Compose, and observed drift still in
 test("ERL2-OQ-005 §11.5: an EXTRA observed image not pinned by the lock is drift", () => {
   const lock = qualifiedLock([
     { service_id: "frontend", platform: "linux/amd64", digest: digest(1) },
-    { service_id: "frontend", platform: "darwin/arm64", digest: digest(2) },
+    { service_id: "frontend", platform: "linux/arm64", digest: digest(2) },
   ]);
   // Before the fix, image comparison was `locked ⊆ observed`, so an unpinned
   // extra image passed silently.
@@ -522,7 +581,7 @@ test("ERL2-OQ-005 §11.5: an EXTRA observed image not pinned by the lock is drif
 test("ERL2-OQ-005 §11.5: a MISSING locked config that is not observed is drift", () => {
   const lock = qualifiedLock([
     { service_id: "frontend", platform: "linux/amd64", digest: digest(1) },
-    { service_id: "frontend", platform: "darwin/arm64", digest: digest(2) },
+    { service_id: "frontend", platform: "linux/arm64", digest: digest(2) },
   ]);
   // Before the fix, config comparison was `observed ⊆ locked`, so a locked
   // config missing from the observed set passed silently.
@@ -540,7 +599,7 @@ test("ERL2-OQ-005 §11.5: a MISSING locked config that is not observed is drift"
 test("ERL2-OQ-005 §11.5: a tampered substrate-lock signature is refused before drift", () => {
   const lock = qualifiedLock([
     { service_id: "frontend", platform: "linux/amd64", digest: digest(1) },
-    { service_id: "frontend", platform: "darwin/arm64", digest: digest(2) },
+    { service_id: "frontend", platform: "linux/arm64", digest: digest(2) },
   ]);
   const tampered = {
     ...lock,

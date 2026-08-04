@@ -63,6 +63,80 @@ export function denyByDefaultEgressPolicy(policyId: string): EgressAllowlistPoli
   });
 }
 
+/**
+ * The one loopback address this policy will build an allowlist for.
+ *
+ * Not a set of "loopback-ish" spellings. `localhost` is whatever the host's
+ * resolver says it is and can be pointed elsewhere; `0.0.0.0` is every
+ * interface, not a loopback address at all; `::1` is a different address family
+ * than the one the subset publishes on. Accepting any of them would widen the
+ * allowlist to something other than the endpoint that was observed.
+ */
+const CANONICAL_LOOPBACK_HOST = "127.0.0.1";
+
+/**
+ * An allowlist for exactly one loopback endpoint (ERL2-OQ-005).
+ *
+ * The Compose environment publishes the subset's endpoint as one ephemeral host
+ * port bound to `127.0.0.1` — and publishes nothing else, the collector's OTLP
+ * receivers included — so a subject that is supposed to interact with the real
+ * environment has to be allowed to reach exactly that. Everything the default
+ * policy denies is still denied: one scheme, one host, one port, no redirects,
+ * link-local and metadata services refused outright. `allow_loopback_hosts` names
+ * the single address rather than lifting the loopback rule.
+ *
+ * ## It validates its own arguments
+ *
+ * This function turns two values into a *grant*, so it does not trust them
+ * because a caller passed them. It is the second, independent check on the host
+ * and port — `readComposeEndpoint` is the first — and it is deliberately
+ * independent: a host of `example.com`, or a port of `0`, `-1`, `1.5`, `NaN` or
+ * `70000`, is refused here even if some future caller reached this function without
+ * going through the endpoint reader at all. A policy is not the place to discover
+ * that its host was arbitrary.
+ *
+ * The two checks are separate for a reason worth stating, because a record like
+ * `example.com:80` invites conflating them: **the host is what makes that
+ * inadmissible.** `80` is a perfectly valid numeric port and this function accepts
+ * it on `127.0.0.1`. Nothing here treats a port *number* as suspicious — the port
+ * check is a range and integrality check and nothing more — and a reading that had
+ * `80` refused on its own account would be describing a rule that does not exist.
+ */
+export function loopbackEgressPolicy(policyId: string, host: string, port: number): EgressAllowlistPolicyV1 {
+  if (host !== CANONICAL_LOOPBACK_HOST) {
+    throw new Erl2Error(
+      CODES.ADAPTER_EGRESS_HOST_NOT_ALLOWED,
+      `a loopback egress allowlist may name ${CANONICAL_LOOPBACK_HOST} and nothing else; ${JSON.stringify(host)} is not it`,
+      { owner: "lab" },
+    );
+  }
+  if (typeof port !== "number" || !Number.isInteger(port) || port < 1 || port > 65_535) {
+    throw new Erl2Error(
+      CODES.ADAPTER_EGRESS_PORT_NOT_ALLOWED,
+      `a loopback egress allowlist needs one real host port; ${JSON.stringify(port)} is not one`,
+      { owner: "lab" },
+    );
+  }
+  const base = {
+    schema_version: "egress-allowlist-policy/v1" as const,
+    policy_id: policyId,
+    default_action: "deny" as const,
+    allowed_schemes: ["http"] as ("https" | "http")[],
+    allowed_hosts: [host],
+    allowed_ports: [port],
+    max_redirects: 0,
+    revalidate_redirect_targets: true as const,
+    allow_loopback_hosts: [host],
+    deny_link_local: true as const,
+    deny_metadata_service: true as const,
+    deny_proxy_bypass: true as const,
+  };
+  return assertContract<EgressAllowlistPolicyV1>("EgressAllowlistPolicyV1", {
+    ...base,
+    core_hash: coreHash(base),
+  });
+}
+
 function isLinkLocalOrPrivate(address: string): boolean {
   if (address.startsWith("169.254.") || address.startsWith("fe80:")) return true;
   if (address.startsWith("10.") || address.startsWith("192.168.")) return true;

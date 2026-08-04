@@ -1,0 +1,45 @@
+{
+  "substrate_id": "opentelemetry-demo",
+  "release_tag": "3.0.0",
+  "source_commit": "1755859a9de82c2e5e225be68abc401a5ebf2b4f",
+  "archive_url": "https://codeload.github.com/open-telemetry/opentelemetry-demo/tar.gz/refs/tags/3.0.0",
+  "archive_sha256": "sha256:1bf3ef8fbaffc049919b497a9174637dbee74ec1797ce5ff85d3d12dc86c051c",
+  "qualified_on_platform": "linux/arm64",
+  "tooling": {
+    "sbom": "docker scout",
+    "image_resolution": "docker buildx imagetools",
+    "syft": "not installed on the qualifying host",
+    "cosign": "not installed on the qualifying host"
+  },
+  "independently_authenticated": false,
+  "images": [
+    {
+      "service_id": "otel-collector",
+      "platform": "linux/amd64",
+      "image_digest": "sha256:4eb842091c796156d4d3c994eb22ba793590f5723719dbf6b8436cb4dfc17f48",
+      "build_attestation_present": false,
+      "build_type": null
+    },
+    {
+      "service_id": "otel-collector",
+      "platform": "linux/arm64",
+      "image_digest": "sha256:1fef9f07f04eb6775b4076ea4f817d6b7b9050e23e52941f0756ba08df798ea6",
+      "build_attestation_present": false,
+      "build_type": null
+    },
+    {
+      "service_id": "quote",
+      "platform": "linux/amd64",
+      "image_digest": "sha256:87201885ff95bd4524fffe31b84cef90dabda0707a7f57d356a4932a461fd153",
+      "build_attestation_present": false,
+      "build_type": null
+    },
+    {
+      "service_id": "quote",
+      "platform": "linux/arm64",
+      "image_digest": "sha256:370d920d330a145a5e6769eab82dd256a11c8186c78d7afd7927119f402d2438",
+      "build_attestation_present": false,
+      "build_type": null
+    }
+  ]
+}

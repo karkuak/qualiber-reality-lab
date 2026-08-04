@@ -39,6 +39,7 @@ import {
 } from "@erl2/core";
 import { parseFlags, requireString, type ParsedFlags } from "./args.js";
 import { ISOLATION_EVIDENCE_DIR, isolationStatus } from "./isolationStatus.js";
+import { OTEL_DEMO_LOCK_FILE, composeSubstrateStatus } from "./composeStatus.js";
 import {
   acquire,
   cancel,
@@ -401,15 +402,23 @@ function doctor(argv: readonly string[]): CommandResult {
   const flags: ParsedFlags = parseFlags(argv, [
     { name: "profile", kind: "string" },
     { name: "isolation-evidence", kind: "string" },
+    { name: "substrate-lock", kind: "string" },
   ]);
   // The isolation section is *derived* from retained evidence on every call, so
   // doctor reports what is true rather than repeating a stored verdict.
   const isolation = isolationStatus(
     (flags["isolation-evidence"] as string | undefined) ?? ISOLATION_EVIDENCE_DIR,
   );
+  // Derived on every call for the same reason the isolation section is: a
+  // hardcoded "disabled_pending_erl2_oq_005" was accurate until OQ-005 was
+  // qualified and would have gone on being reported afterwards (ERL2-OQ-005).
+  const compose = composeSubstrateStatus(
+    (flags["substrate-lock"] as string | undefined) ?? OTEL_DEMO_LOCK_FILE,
+  );
   return ok("doctor", {
     data: {
       subject_isolation: isolation,
+      compose_substrate: compose,
       profile: flags["profile"] ?? "local-developer",
       node_version: process.version,
       registered_contracts: registeredContractCount(),
@@ -418,8 +427,10 @@ function doctor(argv: readonly string[]): CommandResult {
       threshold_vrf: "THRESHOLD_VRF_NOT_ACTIVATED",
       held_out_selection: "disabled_pending_erl2_oq_007",
       fake_environment_driver: "enabled",
-      compose_environment_driver: "disabled_pending_erl2_oq_005",
-      otel_demo_substrate_lock: "unqualified_pending_erl2_oq_005",
+      // Retained for callers that read the flat keys; both are the derived
+      // verdict above, never a separately maintained constant.
+      compose_environment_driver: compose.driver,
+      otel_demo_substrate_lock: compose.substrate_lock,
       constrained_archetypes: "clean_greenfield_only_pending_erl2_oq_002",
       pack_runtime: "data_only_dsl_pending_erl2_oq_004",
       generic_evaluator: EVALUATOR_RELEASE,
