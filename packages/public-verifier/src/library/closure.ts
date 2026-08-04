@@ -24,6 +24,42 @@ import { verifyLifecycleChain } from "@erl2/core";
 import { coreHash } from "@erl2/integrity";
 import type { ArtifactIndex } from "./artifactIndex.js";
 
+/**
+ * The adapter host's per-operation adjudication records, as roles.
+ *
+ * Shared by both terminal branches because both dispatch subjects: the
+ * pre-environment walk runs `acquire` and `verify_package`, the environment
+ * walk runs those and the journey. A run that never drives an out-of-process
+ * adapter produces none of them, which is why they are optional; a run that does
+ * produces one set per dispatch, and every one is derived from the lifecycle
+ * and resolved against the retained set like any other role.
+ *
+ * They are **roles**, deliberately, and not entries in `SUPPORTING_SCHEMAS`.
+ * A supporting schema is exempt from reachability: adding these there would have
+ * admitted *any* retained artifact of those schema versions, including one no
+ * event ever produced. As roles they must be produced to be admitted, and must
+ * be retained to be produced — which is the property the evidence is for.
+ *
+ * Each name is prefixed `adapter-` even where an unprefixed role already exists
+ * (`mutation-receipt`, `compensation-receipt`). Those belong to the *environment
+ * driver*, and one of them is load-bearing: `challenge_activation` is satisfied
+ * by `hasRole("mutation-receipt")`, so letting an adapter's mutation land under
+ * that name would let a subject's own declaration satisfy the Lab's activation
+ * prerequisite.
+ */
+export const ADAPTER_HOST_EVIDENCE_ROLES = [
+  "adapter-response-envelope",
+  "adapter-sandbox-invocation-manifest",
+  "adapter-sandbox-invocation-result",
+  "adapter-capability-grant",
+  "adapter-diagnostics-manifest",
+  "adapter-egress-decision-receipt",
+  "adapter-credential-use-receipt",
+  "adapter-mutation-intent",
+  "adapter-mutation-receipt",
+  "adapter-compensation-receipt",
+] as const;
+
 /** Roles a valid pre-environment terminal must close, in derivation order. */
 const PRE_ENVIRONMENT_ROLES = [
   "acquisition-preregistration",
@@ -48,7 +84,12 @@ const PRE_ENVIRONMENT_ROLES = [
  * produced one it belongs to the closure — an uncited retained artifact is a
  * rejected extra — but its absence is not a missing role.
  */
-const PRE_ENVIRONMENT_OPTIONAL_ROLES = ["finding", "metric-result", "judge-expectation-reveal"] as const;
+const PRE_ENVIRONMENT_OPTIONAL_ROLES = [
+  "finding",
+  "metric-result",
+  "judge-expectation-reveal",
+  ...ADAPTER_HOST_EVIDENCE_ROLES,
+] as const;
 
 /**
  * Roles that can only exist on the environment branch.  A `subject-package-

@@ -164,14 +164,25 @@ test("LIMIT-MATRIX: an oversized response is refused before it is parsed", () =>
   assert.equal(error?.code, "ADAPTER_RESPONSE_OVERSIZED");
 });
 
-test("LIMIT-MATRIX: output beyond the declared bound is refused at freeze time", () => {
+test("LIMIT-MATRIX: output beyond the declared bound is refused by the host itself", () => {
+  // Asserted against `host.run`, not against `collectBoundedTree` called
+  // afterwards by the test. Until the host froze its own output tree, this case
+  // proved only that the bound *function* worked: the shipped path ran the
+  // adapter, returned a supported envelope, and never consulted the bound at
+  // all. The distinction is the whole defect — a bound nothing calls is not a
+  // bound.
   const { host, workspaceRoot } = sabotageHost("oversized-output");
-  host.run({ operation: "acquire", operationId: "op-1", request: acquisitionRequest("op-1") });
   const error = refusalOf(() =>
-    collectBoundedTree(path.join(workspaceRoot, "op-1", "output"), DEFAULT_OUTPUT_BOUNDS),
+    host.run({ operation: "acquire", operationId: "op-1", request: acquisitionRequest("op-1") }),
   );
   assert.equal(error?.code, "SUBJECT_OUTPUT_LIMIT_EXCEEDED");
   assertNotSubjectAttributed(error as Erl2Error, "an output bound breach");
+  // The refusal published nothing: an over-large tree leaves no retained bytes.
+  assert.equal(
+    existsSync(path.join(workspaceRoot, "op-1", "output")),
+    true,
+    "the host-owned working directory is untouched by the refusal",
+  );
 });
 
 test("MOUNT-NET-NEG: writing into a read-only mount is detected and refused", () => {
@@ -223,23 +234,33 @@ test("SECRET-CANARY: a judge canary in diagnostics invalidates before subject at
   assert.equal(error?.owner, "lab", "an oracle leak is a Lab invalidity, never a subject result");
 });
 
-test("SECRET-CANARY: a secret canary in retained output is refused", async () => {
-  const { assertOutputClean } = await import("@erl2/core");
-  const { host, workspaceRoot } = sabotageHost("secret-in-output");
-  host.run({ operation: "acquire", operationId: "op-1", request: acquisitionRequest("op-1") });
-  const files = collectBoundedTree(path.join(workspaceRoot, "op-1", "output"), DEFAULT_OUTPUT_BOUNDS);
-  const error = refusalOf(() => assertOutputClean(files));
+test("SECRET-CANARY: a secret canary in retained output is refused by the host itself", () => {
+  const { host, storeRoot } = sabotageHost("secret-in-output");
+  const error = refusalOf(() =>
+    host.run({ operation: "acquire", operationId: "op-1", request: acquisitionRequest("op-1") }),
+  );
   assert.equal(error?.code, "SECRET_CANARY_IN_SUBJECT_OUTPUT");
   assert.equal(error?.owner, "lab");
+  // Refused before publication: the scan is a gate, not a report on bytes that
+  // are already retained.
+  assert.equal(
+    existsSync(path.join(storeRoot, "subject-output", "adapter", "op-1")),
+    false,
+    "a refused output tree must publish nothing",
+  );
 });
 
-test("PATH-FUZZ: a symlink in adapter output is refused", () => {
-  const { host, workspaceRoot } = sabotageHost("symlink-output");
-  host.run({ operation: "acquire", operationId: "op-1", request: acquisitionRequest("op-1") });
+test("PATH-FUZZ: a symlink in adapter output is refused by the host itself", () => {
+  const { host, storeRoot } = sabotageHost("symlink-output");
   const error = refusalOf(() =>
-    collectBoundedTree(path.join(workspaceRoot, "op-1", "output"), DEFAULT_OUTPUT_BOUNDS),
+    host.run({ operation: "acquire", operationId: "op-1", request: acquisitionRequest("op-1") }),
   );
   assert.equal(error?.code, "PATH_SYMLINK_REJECTED");
+  assert.equal(
+    existsSync(path.join(storeRoot, "subject-output", "adapter", "op-1")),
+    false,
+    "a refused output tree must publish nothing",
+  );
 });
 
 test("PATH-FUZZ: a traversal write never enters the admitted output tree", () => {
@@ -250,7 +271,9 @@ test("PATH-FUZZ: a traversal write never enters the admitted output tree", () =>
     DEFAULT_OUTPUT_BOUNDS,
   );
   // Whatever the adapter wrote outside its output directory is simply not
-  // admitted: only the confined tree is inventoried and frozen.
+  // admitted: only the confined tree is inventoried and frozen. The operation
+  // therefore *succeeds* — there is nothing forbidden inside the tree — which is
+  // why this case reads the tree rather than expecting a refusal.
   assert.deepEqual(files.map((f) => f.relativePath), []);
 });
 
@@ -743,10 +766,14 @@ test("RESIDUE: every sabotage fixture is exercised by this suite", () => {
     .filter((f) => f.endsWith(".mjs") && !f.startsWith("_"))
     .map((f) => f.replace(/\.mjs$/, ""))
     .sort();
-  const suite = readFileSync(
-    path.join(dir, "..", "..", "..", "tests", "adversarial", "adapterHost.test.ts"),
-    "utf8",
-  );
+  // Every adversarial suite, not this file alone. The property is "no sabotage
+  // fixture exists that nothing drives"; scoping it to one file made adding a
+  // fixture *and* a suite for it read as a coverage regression.
+  const adversarialDir = path.join(dir, "..", "..", "..", "tests", "adversarial");
+  const suite = readdirSync(adversarialDir)
+    .filter((f) => f.endsWith(".test.ts"))
+    .map((f) => readFileSync(path.join(adversarialDir, f), "utf8"))
+    .join("\n");
   const unexercised = fixtures.filter((name) => !suite.includes(`"${name}"`));
   assert.deepEqual(unexercised, [], `sabotage fixtures with no test: ${unexercised.join(", ")}`);
 });

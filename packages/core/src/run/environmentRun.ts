@@ -1145,8 +1145,15 @@ export class EnvironmentRun {
     // only thing in a step outcome that the *subject* wrote, so a run that threw
     // them away had no subject output to scan, evaluate or attribute — the
     // outcome recorded that a step happened, not what it produced.
-    const outputRefs =
-      response.outputBytes === undefined
+    //
+    // Two sources, and both are the subject's: the bytes a port hands back
+    // inline, and the tree a hosted adapter wrote into its run-scoped output
+    // directory, which the host has already bounded, scanned and frozen. Only
+    // the first existed before, so a real out-of-process subject — the only kind
+    // that writes files — produced steps with `output_refs: []` and its actual
+    // work stayed outside the retained bundle entirely.
+    const outputRefs = [
+      ...(response.outputBytes === undefined
         ? []
         : [
             this.ws.store.freeze({
@@ -1155,7 +1162,9 @@ export class EnvironmentRun {
               mediaType: "application/octet-stream",
               classification: "INTERNAL",
             }),
-          ];
+          ]),
+      ...(response.evidence?.outputRefs ?? []),
+    ];
     // Boundary 6: the subject's output bytes are frozen and no lifecycle event
     // names them. A retained byte the lifecycle never reached is precisely what
     // the closure derivation rejects as unaccounted, so this boundary is the one
@@ -1176,12 +1185,24 @@ export class EnvironmentRun {
       execute: () => ({
         status: response.status,
         attemptRecordHashes: [],
-        detailRecordHashes: [],
+        // The host's adjudication of this dispatch: the response envelope, the
+        // sandbox manifest and result, the capability grant, the diagnostics
+        // manifest and every egress, credential-use and mutation-intent record.
+        // Each hash resolves to an artifact the port froze, and each is named by
+        // `additionalProduced` below, so the offline closure derives them rather
+        // than being asked to exempt them.
+        detailRecordHashes: [...(response.evidence?.detailRecordHashes ?? [])],
         visibleInputHashes: [step.visibleStep.core_hash],
         outputRefs,
+        mutationReceiptHashes: [...(response.evidence?.mutationReceiptHashes ?? [])],
+        compensationReceiptHashes: [...(response.evidence?.compensationReceiptHashes ?? [])],
+        diagnosticRefs: [...(response.evidence?.diagnosticRefs ?? [])],
         activeOperatorMs: response.activeOperatorMs,
         ...(response.errorCode === undefined ? {} : { errorCode: response.errorCode }),
       }),
+      ...(response.evidence === undefined
+        ? {}
+        : { additionalProduced: response.evidence.produced }),
     });
     // Boundary 8: the outcome is frozen and its events are appended; only the
     // intent's own `settled` marker is missing. A restart must be a true no-op —
@@ -1926,6 +1947,10 @@ export class EnvironmentRun {
    */
   freezeOutput(): EnvironmentSubjectOutputManifestV1 {
     if (!this.enter("freeze-output", this.ws.hashForRole("subject-output-manifest") !== undefined)) {
+      // A replay of an already-frozen run closes the port too. The freeze is
+      // durable and the port is not: a resumed process holds a fresh one, and a
+      // fresh port that had never been told would happily dispatch again.
+      this.ws.subject.markOutputFrozen();
       return this.ws.artifact<EnvironmentSubjectOutputManifestV1>(
         this.ws.requireHashForRole("subject-output-manifest"),
         "EnvironmentSubjectOutputManifestV1",
@@ -2043,6 +2068,8 @@ export class EnvironmentRun {
         },
       ],
     });
+    // The subject's output has frozen; the port may not be dispatched again.
+    this.ws.subject.markOutputFrozen();
     return manifest;
   }
 

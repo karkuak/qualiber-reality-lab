@@ -674,7 +674,20 @@ export class RunWorkspace {
       execute: () => ({
         status: response.status,
         attemptRecordHashes: [],
-        detailRecordHashes: [record.core_hash],
+        // The acquisition record, and — when the port adjudicated an
+        // out-of-process adapter — the host's records for the same dispatch.
+        // Acquisition happens before the environment journey, which is a reason
+        // for it to be *first* in the retained trail and never a reason for it
+        // to be the one dispatch whose evidence is dropped.
+        detailRecordHashes: [record.core_hash, ...(response.evidence?.detailRecordHashes ?? [])],
+        ...(response.evidence === undefined
+          ? {}
+          : {
+              outputRefs: response.evidence.outputRefs,
+              mutationReceiptHashes: response.evidence.mutationReceiptHashes,
+              compensationReceiptHashes: response.evidence.compensationReceiptHashes,
+              diagnosticRefs: response.evidence.diagnosticRefs,
+            }),
         activeOperatorMs: response.activeOperatorMs,
         ...(response.errorCode === undefined ? {} : { errorCode: response.errorCode }),
       }),
@@ -684,6 +697,7 @@ export class RunWorkspace {
           artifact_core_hash: record.core_hash,
           artifact_schema_version: "subject-acquisition-record/v1",
         },
+        ...(response.evidence?.produced ?? []),
       ],
     });
     return record;
@@ -883,7 +897,15 @@ export class RunWorkspace {
       execute: () => ({
         status: response.status,
         attemptRecordHashes: [],
-        detailRecordHashes: [record.core_hash],
+        detailRecordHashes: [record.core_hash, ...(response.evidence?.detailRecordHashes ?? [])],
+        ...(response.evidence === undefined
+          ? {}
+          : {
+              outputRefs: response.evidence.outputRefs,
+              mutationReceiptHashes: response.evidence.mutationReceiptHashes,
+              compensationReceiptHashes: response.evidence.compensationReceiptHashes,
+              diagnosticRefs: response.evidence.diagnosticRefs,
+            }),
         activeOperatorMs: response.activeOperatorMs,
         ...(response.errorCode === undefined ? {} : { errorCode: response.errorCode }),
       }),
@@ -898,6 +920,7 @@ export class RunWorkspace {
           artifact_core_hash: f.hash,
           artifact_schema_version: "finding/v1",
         })),
+        ...(response.evidence?.produced ?? []),
       ],
     });
     return record;
@@ -1611,6 +1634,8 @@ export class RunWorkspace {
         },
       ],
     });
+    // The subject's output has frozen; the port may not be dispatched again.
+    this.port.markOutputFrozen();
     return manifest;
   }
 

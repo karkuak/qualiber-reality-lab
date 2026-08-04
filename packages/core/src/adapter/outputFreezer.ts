@@ -68,6 +68,37 @@ export interface CollectedFile {
 }
 
 /**
+ * The retained root every adapter-produced byte-stream is published beneath.
+ *
+ * `subject-output/` is the design's payload root (design v2 §14), and the
+ * offline verifier accounts it in *both* directions: a declared payload that is
+ * absent is a refusal, and a file present there that no retained descriptor
+ * declares is a rejected extra (`payloadAccounting.ts`). Publishing adapter
+ * output and diagnostics anywhere else would put them in a subtree no
+ * accounting pass walks — which is how they were previously retained beside the
+ * evidence rather than inside it.
+ */
+export const SUBJECT_OUTPUT_LOGICAL_ROOT = "subject-output";
+
+/** Where one operation's redacted diagnostics entries are published. */
+export const DIAGNOSTICS_LOGICAL_ROOT = `${SUBJECT_OUTPUT_LOGICAL_ROOT}/diagnostics`;
+
+/** Where one operation's admitted output tree is published. */
+export const ADAPTER_OUTPUT_LOGICAL_ROOT = `${SUBJECT_OUTPUT_LOGICAL_ROOT}/adapter`;
+
+/**
+ * The deterministic, operation-scoped logical prefix for an operation's output.
+ *
+ * Operation ids are Lab-authored and unique within a run (`op-acquire`,
+ * `op-verify-package`, `op-step-<n>`), so two operations can never collide and
+ * the same operation replayed produces the same path — which is what makes the
+ * store's identical-bytes freeze idempotent rather than a conflict.
+ */
+export function adapterOutputPrefix(operationId: string): string {
+  return `${ADAPTER_OUTPUT_LOGICAL_ROOT}/${operationId}`;
+}
+
+/**
  * Walks a directory the adapter wrote, enforcing every structural bound before
  * a single byte is admitted.
  */
@@ -400,7 +431,7 @@ export function freezeDiagnostics(
     budget -= Buffer.byteLength(body, "utf8");
     entries.push(
       options.store.freeze({
-        logicalPath: `diagnostics/${options.operationId}/${file.relativePath}`,
+        logicalPath: `${DIAGNOSTICS_LOGICAL_ROOT}/${options.operationId}/${file.relativePath}`,
         bytes: Buffer.from(body, "utf8"),
         mediaType: "text/plain",
         classification: "INTERNAL",

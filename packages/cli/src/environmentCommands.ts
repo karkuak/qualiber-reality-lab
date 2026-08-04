@@ -582,6 +582,9 @@ function countingSubjectPort(
     },
     acquire: (...args) => port.acquire(...args),
     validatePackage: (...args) => port.validatePackage(...args),
+    markOutputFrozen: () => {
+      port.markOutputFrozen();
+    },
     step: (request, intent) => {
       record({
         surface: "subject_port",

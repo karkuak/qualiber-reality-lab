@@ -19,16 +19,27 @@
  * not handed. It imports nothing from `environmentRun.ts`, so the dependency
  * runs one way and no cycle exists.
  *
- * **Every behaviour below is byte-for-byte the behaviour that lived in
- * `environmentRun.frontierDerivedCleanup`.** Lifecycle event types, operation
- * ids and order; retained paths and artifact roles; driver dispatch order;
- * intent settlement; safe-action ordering; per-action failure continuation;
- * whole-environment fallback authorization; post-action inspection timing;
- * residue-probe inputs; hash inputs; error codes and messages; terminal
- * variant, status and result selection; timestamp call order; and thrown-error
- * behaviour are all unchanged. The only edits made while moving were mechanical:
- * `this.<member>` became `ctx.<capability>`, and the two methods became
- * functions.
+ * The extraction itself changed no behaviour: lifecycle event types and order;
+ * artifact roles; driver dispatch order; intent settlement; safe-action
+ * ordering; per-action failure continuation; whole-environment fallback
+ * authorization; post-action inspection timing; residue-probe inputs; hash
+ * inputs; error codes and messages; terminal variant, status and result
+ * selection; and timestamp call order all moved unchanged. The only edits made
+ * while moving were mechanical: `this.<member>` became `ctx.<capability>`, and
+ * the two methods became functions.
+ *
+ * Two behaviours have since been *corrected* rather than moved, both because the
+ * supported cancellation path could not complete against a real Compose
+ * substrate:
+ *
+ *   - the per-action operation id, and with it the retained per-action receipt
+ *     file name. See {@link emergencyOperationId} — the previous id interpolated
+ *     a substrate-supplied resource id into a schema-constrained identifier, so
+ *     the receipt failed validation after the destroy had been dispatched;
+ *   - one bounded second attempt per safe action whose target the substrate still
+ *     reports. The frontier orders actions for containment and knows nothing
+ *     about how the substrate's objects depend on one another, so a first attempt
+ *     can fail purely because a dependency had not been removed yet.
  */
 
 import {
@@ -48,6 +59,64 @@ import type { EnvironmentDriver } from "../environment/driver.js";
 import { safeActions } from "../environment/frontier.js";
 import { buildResidueProbe } from "../environment/residueProbe.js";
 import { buildEmergencyCleanup } from "../cleanup/cleanup.js";
+
+/**
+ * The schema-valid operation id for one emergency action.
+ *
+ * ## What was wrong
+ *
+ * The id was `op-emergency-${action.action_id}`, and `action_id` is itself
+ * composed (`environment/frontier.ts`) as `<action-kind>-<resource_id>`. Three
+ * prefixes therefore stacked: 13 characters here, up to 25 for the action kind,
+ * and whatever the substrate called the resource. `EnvironmentOperationReceiptV1
+ * .operation_id` is `erl2:common#/$defs/Id` — `^[a-z][a-z0-9-]{0,63}$` — and the
+ * sum exceeded 64 for ordinary Compose resources. Measured against the qualified
+ * OpenTelemetry Demo subset: a `container` resource maps to the
+ * `destroy_partial_resource` action kind, giving
+ * `op-emergency-destroy-partial-resource-container-otel-collector-<runid8>` at
+ * **71 characters**. The frontier was valid; the operation id derived from it
+ * was not.
+ *
+ * The receipt then failed contract validation *after* the destroy had already
+ * been dispatched, so the supported `erl2 cancel` path threw part-way through
+ * its action sequence and left the remaining resources behind. Nothing caught it
+ * earlier because every fixture resource id is short.
+ *
+ * The character class was reachable the same way for any substrate whose ids are
+ * not already `Id`-shaped; the Compose driver happens to strip those before the
+ * frontier sees them, so length is what fired live. The derivation below is
+ * independent of both.
+ *
+ * ## Why a hash and not a sanitizer
+ *
+ * Sanitizing (strip, then truncate to 64) is lossy and therefore collision-prone
+ * in exactly the case that matters: two resources differing only in a stripped
+ * character, or only after the 64th, would share one operation id and one
+ * durable intent — and a durable intent is what makes a retry safe. A hash of
+ * the two identities keeps them distinct, and the identities themselves stay
+ * verbatim in the evidence fields that are *for* them —
+ * `EmergencyCleanupVerificationV1.actions[].action_id` and the receipt's
+ * `target_identity_hash` — so nothing is lost by not putting them in a name.
+ *
+ * Deterministic in the run id, the action id and the attempt number and nothing
+ * else, so a reconciliation after a crash derives the same id and the
+ * durable-intent journal stays idempotent. The attempt number is part of the
+ * derivation because a driver may memoize a completed operation by its id: a
+ * deliberate second attempt at the same action has to be a distinct operation or
+ * it would return the first attempt's receipt without re-dispatching.
+ */
+export function emergencyOperationId(runId: string, actionId: string, attempt = 1): string {
+  const digest = domainHash(HASH_DOMAINS.DRIVER_STATE, {
+    purpose: "emergency-action-operation-id",
+    run_id: runId,
+    action_id: actionId,
+    // Present from the first attempt rather than added only for retries: an id
+    // whose derivation changed shape between attempts would make the durable
+    // intent for attempt 1 unreproducible from the record.
+    attempt,
+  }).slice("sha256:".length, "sha256:".length + 16);
+  return `op-emergency-${digest}`;
+}
 
 /** Which failure the cleanup is cleaning up after. Unchanged from the method's parameter. */
 export type CleanupTrigger =
@@ -198,8 +267,16 @@ export function executeFrontierDerivedCleanup(
 
   if (ctx.driver.destroyResource !== undefined) {
     const destroyResource = ctx.driver.destroyResource.bind(ctx.driver);
-    for (const action of safe) {
-      const operationId = `op-emergency-${action.action_id}`;
+    /** Whether the substrate still reports this action's target. */
+    const stillPresent = (targetResourceId: string): boolean =>
+      ctx.driver.inspect(ctx.runId).resources.some((r) => r.resource_id === targetResourceId);
+
+    /** One dispatch of one safe action, under its own durable intent. */
+    const attemptOnce = (
+      action: (typeof safe)[number],
+      pass: number,
+    ): { succeeded: boolean; attemptReceiptHash: Hash; reasonCode?: string } => {
+      const operationId = emergencyOperationId(ctx.runId, action.action_id, pass);
       let receiptHash: Hash;
       try {
         receiptHash = record(
@@ -215,6 +292,7 @@ export function executeFrontierDerivedCleanup(
               run_id: ctx.runId,
               action_id: action.action_id,
               target_resource_id: action.target_resource_id,
+              attempt: pass,
             }),
             compensation: "retain the target as uncontained residue in the emergency verification",
             dispatch: () =>
@@ -224,7 +302,7 @@ export function executeFrontierDerivedCleanup(
                 operationId,
               }),
           }),
-          action.action_id,
+          operationId,
         );
         ctx.settleIntent(operationId, receiptHash);
       } catch (cause) {
@@ -234,29 +312,71 @@ export function executeFrontierDerivedCleanup(
         // `buildEmergencyCleanup` will refuse an attempt with no receipt,
         // which is why the synthetic receipt below exists rather than a bare
         // "it threw".
-        receiptHash = record(
-          failedActionReceipt(ctx, action.target_resource_id, action.action_id, cause),
-          action.action_id,
-        );
-        attempts.push({
-          actionId: action.action_id,
+        return {
           succeeded: false,
-          attemptReceiptHash: receiptHash,
+          attemptReceiptHash: record(
+            failedActionReceipt(ctx, action.target_resource_id, action.action_id, cause),
+            operationId,
+          ),
           reasonCode: cause instanceof Erl2Error ? cause.code : "EMERGENCY_ACTION_DRIVER_FAULT",
-        });
-        continue;
+        };
       }
       // Success is an *observation*, not a claim: re-inspect and ask whether
       // the target is actually gone.
-      const stillThere = ctx.driver
-        .inspect(ctx.runId)
-        .resources.some((r) => r.resource_id === action.target_resource_id);
-      attempts.push({
-        actionId: action.action_id,
-        succeeded: !stillThere,
+      const survived = stillPresent(action.target_resource_id);
+      return {
+        succeeded: !survived,
         attemptReceiptHash: receiptHash,
-        ...(stillThere ? { reasonCode: "RESOURCE_SURVIVED_EMERGENCY_DESTROY" } : {}),
-      });
+        ...(survived ? { reasonCode: "RESOURCE_SURVIVED_EMERGENCY_DESTROY" } : {}),
+      };
+    };
+
+    for (const action of safe) {
+      attempts.push({ actionId: action.action_id, ...attemptOnce(action, 1) });
+    }
+
+    // One bounded second pass, and only over targets the substrate still
+    // reports.
+    //
+    // ## Why a second pass exists at all
+    //
+    // The frontier's action order is a *containment* order — isolate, then
+    // destroy, then tear down what remains — and it is derived with no knowledge
+    // of how the substrate's objects depend on each other. On a real Compose
+    // environment that order asks for the run's network to be removed while its
+    // two containers are still attached to it, which Docker refuses. Measured on
+    // the qualified subset: `isolate_network` failed with `ENV_RESIDUE_DETECTED`,
+    // both containers were then destroyed successfully, and the network — and
+    // with it the project that is only observable because the network exists —
+    // was left behind. The residue probe reported it honestly and the run reached
+    // `attempted_failed`, which is a correct record of a cleanup that did not
+    // clean up.
+    //
+    // A dependency-aware order is not available to this executor: it holds a
+    // driver interface, not a substrate model, and encoding "networks come after
+    // containers" here would be one substrate's topology written into generic
+    // code. Re-attempting is the driver-agnostic form of the same knowledge — a
+    // failure caused by a dependency stops being a failure once the dependency is
+    // gone, and an operator would simply try again.
+    //
+    // Bounded at exactly one retry, deliberately. A loop until quiescent would
+    // turn a permanently undestroyable resource into an unbounded cleanup, and
+    // residue that survives two attempts is residue worth reporting rather than
+    // retrying.
+    for (const [index, attempt] of attempts.entries()) {
+      if (attempt.succeeded) continue;
+      const action = safe.find((a) => a.action_id === attempt.actionId);
+      /* c8 ignore next */
+      if (action === undefined) continue;
+      if (!stillPresent(action.target_resource_id)) {
+        // Gone anyway. The first attempt threw or receipted a failure, but the
+        // question this branch answers is containment, and the substrate says
+        // the target is not there. Recorded from the observation for the same
+        // reason the first pass is: success is observed, never claimed.
+        attempts[index] = { ...attempt, succeeded: true };
+        continue;
+      }
+      attempts[index] = { actionId: attempt.actionId, ...attemptOnce(action, 2) };
     }
   } else if (safe.length > 0) {
     // Whole-environment granularity only. It is authorized only when the
@@ -280,7 +400,7 @@ export function executeFrontierDerivedCleanup(
                   `${String(unauthorized.length)} observed resource(s) are not authorized targets`,
               ),
             ),
-            action.action_id,
+            emergencyOperationId(ctx.runId, action.action_id),
           ),
           reasonCode: CODES.EMERGENCY_ACTION_UNDECLARED_TARGET,
         });
@@ -482,7 +602,7 @@ function failedActionReceipt(
     schema_version: "environment-operation-receipt/v1" as const,
     run_id: ctx.runId,
     operation: "destroy" as const,
-    operation_id: `op-emergency-${actionId}`,
+    operation_id: emergencyOperationId(ctx.runId, actionId),
     idempotency_key: coreHash({ run: ctx.runId, action: actionId }).slice("sha256:".length),
     driver_manifest_hash: coreHash(ctx.driver.manifest),
     target_identity_hash: domainHash(HASH_DOMAINS.DRIVER_STATE, {

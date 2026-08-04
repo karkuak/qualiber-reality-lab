@@ -29,7 +29,7 @@ import {
 import { verifyLifecycleChain } from "@erl2/core";
 import { coreHash } from "@erl2/integrity";
 import type { ArtifactIndex } from "./artifactIndex.js";
-import type { ClosureInput } from "./closure.js";
+import { ADAPTER_HOST_EVIDENCE_ROLES, type ClosureInput } from "./closure.js";
 
 /** Roles a valid environment terminal must close, in derivation order. */
 const ENVIRONMENT_ROLES = [
@@ -106,6 +106,10 @@ const ENVIRONMENT_OPTIONAL_ROLES = [
   // traffic drop its commitment and still verify — the shape review P2 found for
   // the activation receipt.
   "evidence-window-commitment",
+  // The adapter host's per-dispatch adjudication. Optional as a group because a
+  // run driven by the development fake port produces none; every one that *is*
+  // produced must be retained, and is derived here rather than exempted.
+  ...ADAPTER_HOST_EVIDENCE_ROLES,
 ] as const;
 
 /** The three capture roles that must appear together or not at all. */

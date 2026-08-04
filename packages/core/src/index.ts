@@ -161,6 +161,7 @@ export {
   safeActions,
   type FreezeFrontierOptions,
 } from "./environment/frontier.js";
+export { emergencyOperationId } from "./run/environmentCleanup.js";
 export {
   assertSubstrateQualified,
   assertObservedMatchesLock,

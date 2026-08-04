@@ -66,7 +66,11 @@ interface AcquireResult {
 function toStepResponse(result: AdapterOperationResult): SubjectStepResponse {
   const envelope = result.envelope;
   if (envelope.status === "supported") {
-    return { status: "succeeded", activeOperatorMs: envelope.active_operator_ms };
+    return {
+      status: "succeeded",
+      activeOperatorMs: envelope.active_operator_ms,
+      evidence: result.retained,
+    };
   }
   if (envelope.error?.owner === "adapter") {
     throw new Erl2Error(
@@ -75,9 +79,14 @@ function toStepResponse(result: AdapterOperationResult): SubjectStepResponse {
       { owner: "adapter" },
     );
   }
+  // An `unsupported` or subject-owned `failed` envelope is a *retained* result
+  // (ERL2-FR-005), so it carries its evidence exactly as a supported one does.
+  // Dropping it here would mean the only steps with an adjudication trail were
+  // the ones that went well.
   return {
     status: envelope.status === "unsupported" ? "unsupported" : "failed",
     activeOperatorMs: envelope.active_operator_ms,
+    evidence: result.retained,
     ...(envelope.error === undefined ? {} : { errorCode: envelope.error.code }),
     ...(envelope.status === "unsupported"
       ? { unsupportedInputs: [...envelope.unsupported_inputs] }
@@ -88,11 +97,27 @@ function toStepResponse(result: AdapterOperationResult): SubjectStepResponse {
 export class HostedSubjectPort implements SubjectPort {
   readonly portId = HOSTED_SUBJECT_PORT_ID;
   readonly host: AdapterHost;
-  /** Every host result, retained so the workspace can freeze the receipts. */
+  /**
+   * Every host result, in dispatch order.
+   *
+   * Diagnostic only. The evidence each result carries is frozen by the host and
+   * travels back through `SubjectStepResponse.evidence`; this array is not the
+   * route by which anything is retained, and a reader must not treat it as one.
+   */
   readonly results: AdapterOperationResult[] = [];
 
   constructor(host: AdapterHost) {
     this.host = host;
+  }
+
+  /**
+   * Closes the host for this run.
+   *
+   * The guard itself is the host's and always was. This method is the seam that
+   * lets a run reach it without knowing it is talking to an adapter host.
+   */
+  markOutputFrozen(): void {
+    this.host.markOutputFrozen();
   }
 
   acquire(request: AcquisitionAdapterRequestV1): SubjectAcquisitionResponse {

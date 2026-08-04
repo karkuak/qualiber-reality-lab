@@ -54,6 +54,7 @@ import {
   deriveInvalidEnvironmentSemantics,
   deriveResidueProbe,
 } from "@erl2/public-verifier";
+import { emergencyOperationId } from "@erl2/core";
 import type {
   CleanupResidueProbeV1,
   EmergencyCleanupVerificationV1,
@@ -205,11 +206,20 @@ test("BOUNDED-CLEANUP: no whole-environment destroy is dispatched on the bounded
     );
   }
   // And it did dispatch, per action, exactly the ones the frontier authorized.
+  //
+  // The operation id is derived rather than interpolated: `op-emergency-` plus
+  // the frontier's own `<action-kind>-<resource_id>` overflowed the 64-character
+  // contract identifier for ordinary Compose resources, which made the receipt
+  // fail validation after the destroy had already been dispatched. The identity
+  // under test is unchanged — this reads the derivation the shipped path uses
+  // rather than restating it as a string.
   const safe = frontierOf(run).derived_actions.filter((a) => a.independently_safe);
   assert.ok(safe.length > 0, "this fixture must derive at least one safe action");
   for (const action of safe) {
+    const operationId = emergencyOperationId(run.runId, action.action_id);
+    assert.match(operationId, /^[a-z][a-z0-9-]{0,63}$/, `${operationId} is not a contract identifier`);
     assert.ok(
-      operations.includes(`op-emergency-${action.action_id}`),
+      operations.includes(operationId),
       `safe action ${action.action_id} was never dispatched`,
     );
   }
