@@ -12,9 +12,9 @@
  */
 
 import { createHash } from "node:crypto";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
-import type { Hash, JourneyIntent } from "@erl2/contracts";
+import type { Hash, JourneyIntent, SubjectAdapterManifestV1 } from "@erl2/contracts";
 import {
   ageRecipientOf,
   ArtifactStore,
@@ -44,6 +44,15 @@ export interface GovernorRegistry {
   readonly referenceCorrectAdapterHash: Hash;
   readonly referenceLimitedAdapterHash: Hash;
   readonly referenceOtelDemoAdapterHash: Hash;
+  /**
+   * Core hash of each externally supplied adapter manifest, keyed by its
+   * `adapter_id`.
+   *
+   * Empty unless the caller supplied `externalAdapterManifests`, which is what
+   * keeps a registry built without them byte-identical to the one every existing
+   * suite already asserts against.
+   */
+  readonly externalAdapterHashes: Readonly<Record<string, Hash>>;
   readonly genericRunPolicyHash: Hash;
   readonly runTrustPolicyHash: Hash;
   readonly limitsHash: Hash;
@@ -172,7 +181,38 @@ export interface BuildGovernorRegistryOptions {
    * token here is the production route to the `lab_telemetry` scan.
    */
   readonly extraEvidenceSourceId?: string;
+  /**
+   * Adapter manifests authored outside this repository.
+   *
+   * The governor admits artifacts it did not write all the time — that is what a
+   * governor is for — but until now the only adapters a run could bind were the
+   * ones this file constructs, so an externally built subject had no route into
+   * a registry at all. Each manifest here is written through the *same* `admit`
+   * path as every built-in one and resolved by the same core hash; nothing about
+   * the admission is special-cased.
+   *
+   * The Lab learns nothing about what the subject is. A manifest is an adapter
+   * id, a version, a set of operations and a signature.
+   */
+  readonly externalAdapterManifests?: readonly SubjectAdapterManifestV1[];
 }
+
+/**
+ * Adapter ids this file admits on its own.
+ *
+ * An external manifest may not claim one of them. Overwriting a built-in entry
+ * would silently change which bytes a run that asked for the built-in adapter
+ * actually binds, which is the one failure mode this seam must not have.
+ */
+const BUILT_IN_ADAPTER_IDS = [
+  "fake-subject",
+  "reference-correct",
+  "reference-limited",
+  "reference-otel-demo",
+] as const;
+
+/** The same shape the contracts' `Id` uses, so a manifest id is a safe file name. */
+const ADAPTER_ID_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
 
 export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}): GovernorRegistry {
   const random = options.random;
@@ -243,6 +283,46 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
     "adapter-manifest-reference-otel-demo",
     REFERENCE_OTEL_DEMO_MANIFEST(),
   );
+
+  // Externally authored adapters, admitted through the same path and refused
+  // rather than merged whenever two of them are indistinguishable. This loop
+  // does not execute when the caller supplies none, which is why a default
+  // registry's bytes and hashes are unchanged by this seam existing.
+  const externalAdapterHashes: Record<string, Hash> = {};
+  const externalHashes = new Set<Hash>();
+  for (const manifest of options.externalAdapterManifests ?? []) {
+    const adapterId = manifest.adapter_id;
+    if (!ADAPTER_ID_PATTERN.test(adapterId)) {
+      throw new Error(
+        `external adapter manifest id '${adapterId}' is not a well-formed adapter id; ` +
+          "it would not resolve, and it is not a safe registry entry name",
+      );
+    }
+    if ((BUILT_IN_ADAPTER_IDS as readonly string[]).includes(adapterId)) {
+      throw new Error(
+        `external adapter manifest '${adapterId}' collides with an adapter this registry already admits; ` +
+          "a run asking for the built-in one must not silently bind other bytes",
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(externalAdapterHashes, adapterId)) {
+      throw new Error(
+        `external adapter manifest '${adapterId}' was supplied more than once; ` +
+          "which of the two a run would bind is ambiguous",
+      );
+    }
+    if (externalHashes.has(manifest.core_hash)) {
+      throw new Error(
+        `two external adapter manifests share core hash ${manifest.core_hash}; ` +
+          "they are the same artifact under two identities",
+      );
+    }
+    const entryName = `adapter-manifest-external-${adapterId}`;
+    if (existsSync(path.join(root, `${entryName}.json`))) {
+      throw new Error(`registry entry '${entryName}' already exists; refusing to overwrite it`);
+    }
+    externalHashes.add(manifest.core_hash);
+    externalAdapterHashes[adapterId] = admit(entryName, manifest);
+  }
 
   const runPolicy = sealSigned(
     {
@@ -581,6 +661,7 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
     referenceCorrectAdapterHash,
     referenceLimitedAdapterHash,
     referenceOtelDemoAdapterHash,
+    externalAdapterHashes,
     genericRunPolicyHash,
     runTrustPolicyHash,
     limitsHash: h("limits"),
