@@ -114,6 +114,30 @@ export interface AdapterHostOptions {
   /** Descriptor prefixes an adapter may mutate; defaults to its own workspace. */
   readonly permittedMutationPrefixes?: readonly string[];
   readonly nodeExecutable?: string;
+  /**
+   * An EVIDENCE-FIXTURE MEASUREMENT OVERRIDE for the retained sandbox result's
+   * `wall_clock_ms`, and for nothing else.
+   *
+   * This is not a timing control. It does not shorten, lengthen or influence any
+   * deadline: the supervisor is still launched with `wallClockMs`, still enforces
+   * that deadline against real elapsed time, and still terminates the adapter's
+   * process tree on it. The spawn ceiling, the response-byte caps, the sandbox
+   * control report and the certification suite are all untouched. The single
+   * effect is which number is written into `sandbox-invocation-result/v1`.
+   *
+   * It exists because `sandbox-invocation-result/v1` is retained, integrity-bound
+   * evidence and its `wall_clock_ms` is a real measurement of a real process —
+   * correct production evidence that cannot be byte-identical between two
+   * deliberate generations of the pinned goldens. Rather than normalizing or
+   * dropping the field in production, or excluding it from the core hash, the
+   * evidence harness supplies one fixture value here.
+   *
+   * ABSENT BY DEFAULT, and supplied only by the CLI composition root under the
+   * existing `ERL2_EVIDENCE_CLOCK` evidence mode. When absent — every production
+   * path, every certification, every test that does not ask for it — the observed
+   * supervisor duration is retained unchanged.
+   */
+  readonly evidenceFixtureWallClockMs?: number;
 }
 
 export interface AdapterOperationResult {
@@ -235,6 +259,8 @@ export class AdapterHost {
   private readonly mounts: readonly AdapterMount[];
   private readonly permittedMutationPrefixes: readonly string[];
   private readonly nodeExecutable: string;
+  /** See `AdapterHostOptions.evidenceFixtureWallClockMs`. Undefined in production. */
+  private readonly evidenceFixtureWallClockMs: number | undefined;
   private outputFrozen = false;
   private invocationSequence = 0;
 
@@ -253,6 +279,7 @@ export class AdapterHost {
     this.mounts = options.mounts ?? [];
     this.permittedMutationPrefixes = options.permittedMutationPrefixes ?? ["adapter-workspace/"];
     this.nodeExecutable = options.nodeExecutable ?? process.execPath;
+    this.evidenceFixtureWallClockMs = options.evidenceFixtureWallClockMs;
 
     if (this.manifest.protocol_version !== ADAPTER_PROTOCOL_VERSION) {
       throw new Erl2Error(
@@ -907,7 +934,11 @@ export class AdapterHost {
       response_bytes: exchange.responseBytes,
       stdout_bytes: exchange.stdoutBytes,
       stderr_bytes: exchange.stderrBytes,
-      wall_clock_ms: exchange.wallClockMs,
+      // The observed supervisor duration, unless the evidence harness supplied a
+      // fixture measurement. Nothing else on this record, and nothing anywhere
+      // else in the host, consults the override — the deadline the supervisor
+      // enforced was `this.wallClockMs` against real time either way.
+      wall_clock_ms: this.evidenceFixtureWallClockMs ?? exchange.wallClockMs,
       ...(exchange.refusalCode === undefined ? {} : { refusal_code: exchange.refusalCode }),
       started_at: startedAt,
       ended_at: endedAt,

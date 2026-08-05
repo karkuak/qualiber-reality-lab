@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 /**
- * Produces the Slice 2 CLI/verifier evidence into `fixtures/golden/`.
+ * Produces the Slice 2 CLI/verifier evidence for `fixtures/golden/`.
  *
  * Nothing here is a development shortcut in the release CLI: the harness builds
  * the runs through `@erl2/core`, then the *real* `erl2` binary verifies them
  * offline in a fresh process, exactly as an external consumer would.
+ *
+ * Every mode generates into a task-owned staging root and publishes nothing
+ * except on `--update` (into `fixtures/golden`) or `--out <dir>` (into an empty
+ * or absent named directory). See the staging block below for why the staging
+ * root's path *length* is load-bearing.
  */
 
 import { spawnSync } from "node:child_process";
@@ -22,6 +27,8 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { doctorTranscriptFailures, doctorTranscriptSummary } from "./lib/doctorTranscriptGate.mjs";
+import { createStagingRoot } from "./lib/evidenceStaging.mjs";
 
 /**
  * A deterministic byte stream for evidence builds (6R-D): seeds the governor's
@@ -47,23 +54,62 @@ function seededRandom(label) {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-// Deterministic evidence (P2-10, plan §19.3): routine generation writes into a
-// throwaway directory and NEVER mutates the approved goldens.  Only the explicit
-// `--update` (evidence:update) rewrites `fixtures/golden`; `--out <dir>` targets
-// a named directory.  A fixed evidence clock and fixed run ids anchor every run
-// so the run artifacts are reproducible (the hiding-commitment salts in the test
-// governor and the real-adapter subprocess remain nondeterministic — see the
-// remediation ledger).
+// ---------------------------------------------------------------------------
+// Staging: every mode generates the same way, into the same shape of path.
+// ---------------------------------------------------------------------------
+//
+// Deterministic evidence (P2-10, plan §19.3): routine generation NEVER mutates
+// the approved goldens.  Only the explicit `--update` (evidence:update) rewrites
+// `fixtures/golden`, and it does so by *publishing* an already-generated,
+// already-validated staging tree.  A fixed evidence clock and fixed run ids
+// anchor every run so the artifacts are reproducible (the hiding-commitment
+// salts in the test governor and the real-adapter subprocess remain
+// nondeterministic — see the remediation ledger).
+//
+// The staging root itself — one fixed repo-relative parent, one fixed prefix,
+// `mkdtemp`'s fixed-length suffix — and its cleanup live in
+// `scripts/lib/evidenceStaging.mjs`, where the paths' equal-length property and
+// the cleanup after a throw, an early exit and an interrupt are driven by tests
+// rather than asserted by reading this file.
+
 const outFlagIndex = process.argv.indexOf("--out");
-let goldenRoot;
-if (process.argv.includes("--update")) {
-  goldenRoot = path.join(root, "fixtures", "golden");
-} else if (outFlagIndex >= 0 && process.argv[outFlagIndex + 1]) {
-  goldenRoot = path.resolve(process.argv[outFlagIndex + 1]);
-} else {
-  goldenRoot = mkdtempSync(path.join(tmpdir(), "erl2-evidence-out-"));
+const outFlagValue = outFlagIndex >= 0 ? process.argv[outFlagIndex + 1] : undefined;
+if (outFlagIndex >= 0 && (outFlagValue === undefined || outFlagValue.startsWith("--"))) {
+  console.error("--out requires a directory path");
+  process.exit(2);
 }
-mkdirSync(goldenRoot, { recursive: true });
+
+/**
+ * What happens to the staged tree once it is generated and validated.
+ *
+ *   `update`    — replace `fixtures/golden` with it (evidence:update).
+ *   `verify`    — byte-compare it against `fixtures/golden`; publish nothing.
+ *   `out`       — copy it into the named `--out <dir>`; publish nothing else.
+ *   `throwaway` — generate, validate, report, discard. The default.
+ *
+ * In every mode the staging root itself is removed on the way out, success or
+ * failure.
+ */
+const mode = process.argv.includes("--update")
+  ? "update"
+  : process.argv.includes("--verify")
+    ? "verify"
+    : outFlagValue !== undefined
+      ? "out"
+      : "throwaway";
+const pinnedRoot = path.join(root, "fixtures", "golden");
+const publishTarget =
+  mode === "update" ? pinnedRoot : mode === "out" ? path.resolve(outFlagValue) : undefined;
+
+// `--out` never overwrites a directory this script did not create: an evidence
+// tree is dropped into a fresh or empty directory, or not at all.
+if (mode === "out" && existsSync(publishTarget) && readdirSync(publishTarget).length > 0) {
+  console.error(`--out ${publishTarget} already exists and is not empty; refusing to overwrite it`);
+  process.exit(2);
+}
+
+const { stagingRoot } = createStagingRoot(root);
+
 process.env.ERL2_EVIDENCE_CLOCK = "2026-07-01T00:00:00Z";
 // The evidence runs drive the development fake subject port with scripted
 // outcomes, so they opt into the explicit development profile that gates the
@@ -95,7 +141,7 @@ function runCli(args) {
 }
 
 function materialize(name, run, extra = {}) {
-  const dir = path.join(goldenRoot, name);
+  const dir = path.join(stagingRoot, name);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   cpSync(run.root, path.join(dir, "artifacts"), { recursive: true });
@@ -227,7 +273,7 @@ transcript.push(
     path.join(root, "tests", "dist", "support", "governorRegistry.js")
   );
   const registry = buildGovernorRegistry({ random: seededRandom("journey") });
-  const journeyDir = path.join(goldenRoot, "journey-acquisition-to-frozen-output");
+  const journeyDir = path.join(stagingRoot, "journey-acquisition-to-frozen-output");
   rmSync(journeyDir, { recursive: true, force: true });
   mkdirSync(journeyDir, { recursive: true });
   const runRoot = path.join(journeyDir, "run");
@@ -358,7 +404,7 @@ transcript.push(
     path.join(root, "packages", "core", "dist", "src", "index.js")
   );
 
-  const adapterDir = path.join(goldenRoot, "adapter-platform");
+  const adapterDir = path.join(stagingRoot, "adapter-platform");
   rmSync(adapterDir, { recursive: true, force: true });
   mkdirSync(adapterDir, { recursive: true });
 
@@ -614,7 +660,7 @@ transcript.push(
       ]),
     );
 
-    const dir = path.join(goldenRoot, label);
+    const dir = path.join(stagingRoot, label);
     rmSync(dir, { recursive: true, force: true });
     mkdirSync(dir, { recursive: true });
     cpSync(runRoot, path.join(dir, "artifacts"), { recursive: true });
@@ -661,7 +707,7 @@ transcript.push(
   // The run itself is built OUTSIDE the golden tree, because its bytes cannot be
   // pinned. Only the deterministic summary below lands in `fixtures/golden`.
   const envDir = mkdtempSync(path.join(tmpdir(), "erl2-environment-run-"));
-  const goldenEnvDir = path.join(goldenRoot, "environment-run");
+  const goldenEnvDir = path.join(stagingRoot, "environment-run");
   rmSync(goldenEnvDir, { recursive: true, force: true });
   mkdirSync(goldenEnvDir, { recursive: true });
   const runRoot = path.join(envDir, "run");
@@ -853,13 +899,13 @@ transcript.push(
 transcript.push(runCli(["select", "--request", "x"]));
 
 writeFileSync(
-  path.join(goldenRoot, "cli-transcript.json"),
+  path.join(stagingRoot, "cli-transcript.json"),
   `${JSON.stringify(transcript, null, 2)}\n`,
 );
 
 const failures = transcript.filter((t) => t.exit_code !== 0);
 console.log(
-  `wrote ${goldenRoot} (${String(transcript.length)} CLI invocations, ${String(failures.length)} expected refusals)`,
+  `wrote ${stagingRoot} (${String(transcript.length)} CLI invocations, ${String(failures.length)} expected refusals)`,
 );
 for (const t of transcript) {
   const code = t.stdout?.errors?.[0]?.code ?? "-";
@@ -867,11 +913,36 @@ for (const t of transcript) {
 }
 
 // ---------------------------------------------------------------------------
+// The doctor transcript semantic gate (see scripts/lib/doctorTranscriptGate.mjs).
+// ---------------------------------------------------------------------------
+//
+// `cli-transcript.json` is one of the seven files the byte-pin cannot cover, and
+// an excluded file is an uncovered file — the committed transcript went on
+// carrying a pre-OQ-005 doctor report with no `compose_substrate` block at all
+// and nothing noticed. So it is gated semantically instead, on every generation,
+// against the transcript this process just wrote. The decision lives in a pure
+// module so every branch of it is driven by a test rather than only by a run.
+{
+  const failures = doctorTranscriptFailures(transcript);
+  if (failures.length > 0) {
+    console.error("\ndoctor transcript gate FAILED:");
+    for (const f of failures) console.error(`  ${f}`);
+    console.error(
+      "\n`cli-transcript.json` is excluded from the byte-pin, so its correctness is this\n" +
+        "gate's job and nothing else's. If the doctor report legitimately changed shape,\n" +
+        "update scripts/lib/doctorTranscriptGate.mjs in the same commit and say why in the review.",
+    );
+    process.exit(1);
+  }
+  console.log(`\ndoctor transcript gate OK — ${doctorTranscriptSummary(transcript)}`);
+}
+
+// ---------------------------------------------------------------------------
 // evidence:verify — a deterministic byte-pin (6R-D, plan §9.1).
 // ---------------------------------------------------------------------------
 //
 // `--verify` byte-compares the freshly, deterministically generated evidence in
-// `goldenRoot` against the committed pinned goldens under `fixtures/golden`,
+// `stagingRoot` against the committed pinned goldens under `fixtures/golden`,
 // WITHOUT mutating them.
 //
 // Exclusions are per-FILE, never per-subtree, and are LOGGED (never silently
@@ -881,18 +952,21 @@ for (const t of transcript) {
 //
 //   - `**/request.frames` — the adapter host bakes the absolute
 //     adapter-workspace path into the request frames, so these vary with the
-//     checkout location.
+//     staging root's bytes (its *length* is fixed by construction, which is what
+//     keeps the retained `request_bytes` counts pinned).
 //   - `**/grandchild.pid` — the hostile-adapter fixture writes a REAL OS pid to
 //     prove the supervisor tree-kill; a pid varies per process launch.
 //   - `cli-transcript.json` — records the absolute `--artifact-root`/path
 //     arguments of each CLI invocation, so it is path-dependent by construction.
+//     Its correctness is gated semantically instead, above.
 //
 // Everything else — every fake-run terminal, the journey run, the generic
 // finalization runs, invalid records, bundles, lifecycle logs, root configs and
-// the real adapter protocol evidence — is byte-identical to the pin or
-// `--verify` fails.
-if (process.argv.includes("--verify")) {
-  const pinned = path.join(root, "fixtures", "golden");
+// the real adapter protocol evidence — including every retained
+// `sandbox-invocation-result/v1` and every hash downstream of one — is
+// byte-identical to the pin or `--verify` fails.
+if (mode === "verify") {
+  const pinned = pinnedRoot;
   // Per-file exclusions as EXACT root-relative paths — never a basename, never a
   // subtree. A basename rule (`request.frames`) silently unpins every same-named
   // file anywhere in the tree, now and in future; an exact path unpins one file
@@ -988,7 +1062,7 @@ if (process.argv.includes("--verify")) {
   }
 
   const goldenFiles = new Set(walk(pinned).filter((r) => !EXCLUDE(r)));
-  const freshFiles = new Set(walk(goldenRoot).filter((r) => !EXCLUDE(r)));
+  const freshFiles = new Set(walk(stagingRoot).filter((r) => !EXCLUDE(r)));
   const mismatches = [];
   const missing = [];
   const extra = [];
@@ -998,7 +1072,7 @@ if (process.argv.includes("--verify")) {
       continue;
     }
     const a = readFileSync(path.join(pinned, rel));
-    const b = readFileSync(path.join(goldenRoot, rel));
+    const b = readFileSync(path.join(stagingRoot, rel));
     if (!a.equals(b)) mismatches.push(rel);
   }
   for (const rel of freshFiles) if (!goldenFiles.has(rel)) extra.push(rel);
@@ -1029,6 +1103,68 @@ if (process.argv.includes("--verify")) {
   }
   console.log("evidence:verify OK — deterministic evidence matches the pinned goldens byte-for-byte");
 
+  verifyGoldenFixtures(pinned, "fixtures/golden");
+}
+
+// ---------------------------------------------------------------------------
+// Publication: the staged tree, validated, then copied.
+// ---------------------------------------------------------------------------
+//
+// Nothing above this line has written outside the staging root, and nothing below
+// it generates. `--update` and `--out` validate what was staged and only then
+// replace the target with it; every other mode publishes nothing at all. That is
+// what makes routine generation non-mutating rather than merely careful.
+if (publishTarget !== undefined) {
+  verifyGoldenFixtures(stagingRoot, "the staged tree, before publishing");
+
+  // A REPLACEMENT, not a merge: a family the generator stopped producing must
+  // disappear from the goldens rather than linger as an orphan nothing regenerates.
+  // The removal is visible in `git status` and, for `fixtures/golden`, the very
+  // next `evidence:verify` fails its `EXPECTED_PINNED` coverage assertion.
+  const before = existsSync(publishTarget) ? walkTree(publishTarget) : [];
+  rmSync(publishTarget, { recursive: true, force: true });
+  mkdirSync(publishTarget, { recursive: true });
+  cpSync(stagingRoot, publishTarget, { recursive: true });
+  const after = walkTree(publishTarget);
+  const beforeSet = new Set(before);
+  const afterSet = new Set(after);
+  const added = after.filter((r) => !beforeSet.has(r));
+  const removed = before.filter((r) => !afterSet.has(r));
+  console.log(
+    `\npublished the staged tree to ${publishTarget} — ${String(after.length)} file(s), ` +
+      `${String(added.length)} added, ${String(removed.length)} removed`,
+  );
+  for (const r of added) console.log(`  + ${r}`);
+  for (const r of removed) console.log(`  - ${r}`);
+  if (mode === "update") {
+    console.log(
+      "\nevidence:update wrote fixtures/golden. Review the diff, then run evidence:verify.",
+    );
+  }
+}
+
+/** Every file beneath `base`, as sorted root-relative `/`-separated paths. */
+function walkTree(base) {
+  const out = [];
+  const rec = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, entry.name);
+      if (entry.isDirectory()) rec(abs);
+      else out.push(path.relative(base, abs).split(path.sep).join("/"));
+    }
+  };
+  rec(base);
+  return out.sort();
+}
+
+// ---------------------------------------------------------------------------
+// The golden-fixture verification gates.
+// ---------------------------------------------------------------------------
+//
+// Run by `--verify` over the committed `fixtures/golden`, and by `--update`/`--out`
+// over the STAGED tree before it is published: an evidence update never replaces
+// the approved goldens with fixtures that do not themselves verify.
+function verifyGoldenFixtures(pinned, label) {
   // -------------------------------------------------------------------------
   // The invalid-golden verification gate (ADR-ERL2-029 §7).
   // -------------------------------------------------------------------------
@@ -1072,7 +1208,7 @@ if (process.argv.includes("--verify")) {
     .filter((name) => existsSync(path.join(pinned, name, "invalid-record.json")))
     .sort();
 
-  console.log(`\nevidence:verify — directly verifying ${String(invalidGoldens.length)} invalid golden(s):`);
+  console.log(`\ngolden gate (${label}) — directly verifying ${String(invalidGoldens.length)} invalid golden(s):`);
   const invalidFailures = [];
   for (const name of invalidGoldens) {
     const dir = path.join(pinned, name);
@@ -1108,7 +1244,7 @@ if (process.argv.includes("--verify")) {
   }
 
   if (invalidFailures.length > 0) {
-    console.error("\nevidence:verify FAILED: an invalid golden did not verify.");
+    console.error(`\ngolden gate FAILED (${label}): an invalid golden did not verify.`);
     for (const f of invalidFailures) {
       console.error(`  ${f.name}: exit ${String(f.exit)}, verdict ${String(f.verdict)}, ${String(f.code)}`);
     }
@@ -1120,14 +1256,14 @@ if (process.argv.includes("--verify")) {
   }
   if (invalidGoldens.length !== EXPECTED_INVALID_GOLDENS) {
     console.error(
-      `\nevidence:verify FAILED: coverage moved — ${String(invalidGoldens.length)} invalid golden(s), ` +
+      `\ngolden gate FAILED (${label}): coverage moved — ${String(invalidGoldens.length)} invalid golden(s), ` +
         `expected ${String(EXPECTED_INVALID_GOLDENS)}.\n` +
         `If this change is intended, update EXPECTED_INVALID_GOLDENS in the same commit.`,
     );
     process.exit(1);
   }
   console.log(
-    `evidence:verify OK — all ${String(invalidGoldens.length)} invalid goldens verify at exit 0 / valid ` +
+    `golden gate OK (${label}) — all ${String(invalidGoldens.length)} invalid goldens verify at exit 0 / valid ` +
       `in a fresh process`,
   );
 
@@ -1157,7 +1293,7 @@ if (process.argv.includes("--verify")) {
     .filter((name) => existsSync(path.join(pinned, name, "public-bundle.json")))
     .sort();
 
-  console.log(`\nevidence:verify — directly verifying ${String(validGoldens.length)} valid golden(s):`);
+  console.log(`\ngolden gate (${label}) — directly verifying ${String(validGoldens.length)} valid golden(s):`);
   const validFailures = [];
   for (const name of validGoldens) {
     const dir = path.join(pinned, name);
@@ -1189,7 +1325,7 @@ if (process.argv.includes("--verify")) {
   }
 
   if (validFailures.length > 0) {
-    console.error("\nevidence:verify FAILED: a valid golden did not verify.");
+    console.error(`\ngolden gate FAILED (${label}): a valid golden did not verify.`);
     for (const f of validFailures) {
       console.error(`  ${f.name}: exit ${String(f.exit)}, verdict ${String(f.verdict)}, ${String(f.code)}`);
     }
@@ -1201,14 +1337,14 @@ if (process.argv.includes("--verify")) {
   }
   if (validGoldens.length !== EXPECTED_VALID_GOLDENS) {
     console.error(
-      `\nevidence:verify FAILED: coverage moved — ${String(validGoldens.length)} valid golden(s), ` +
+      `\ngolden gate FAILED (${label}): coverage moved — ${String(validGoldens.length)} valid golden(s), ` +
         `expected ${String(EXPECTED_VALID_GOLDENS)}.\n` +
         `If this change is intended, update EXPECTED_VALID_GOLDENS in the same commit.`,
     );
     process.exit(1);
   }
   console.log(
-    `evidence:verify OK — all ${String(validGoldens.length)} valid goldens verify at exit 0 / valid ` +
+    `golden gate OK (${label}) — all ${String(validGoldens.length)} valid goldens verify at exit 0 / valid ` +
       `in a fresh process`,
   );
 }

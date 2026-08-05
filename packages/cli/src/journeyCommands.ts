@@ -288,6 +288,7 @@ function subjectPort(
       workspaceRoot: path.join(path.resolve(runRoot), "adapter-workspace"),
       store: new ArtifactStore(runRoot),
       clock,
+      ...evidenceFixtureSandboxMeasurement(),
       ...(environmentAccess === undefined
         ? {}
         : {
@@ -307,6 +308,40 @@ function subjectPort(
           }),
     }),
   );
+}
+
+/**
+ * The retained `wall_clock_ms` a generated evidence fixture carries.
+ *
+ * Zero, because it is not a measurement and must not be mistaken for one. A real
+ * sandbox invocation spawns two processes and exchanges frames, so it never
+ * measures zero; a reader who sees this value is looking at a deliberately
+ * generated fixture, not at how long anything took.
+ */
+const EVIDENCE_FIXTURE_SANDBOX_WALL_CLOCK_MS = 0;
+
+/**
+ * The evidence-fixture sandbox measurement override — an EVIDENCE MECHANISM, not
+ * a timing control, and deliberately not a flag.
+ *
+ * `sandbox-invocation-result/v1` is retained, integrity-bound evidence, and its
+ * `wall_clock_ms` is what the supervisor really measured. That is correct
+ * production evidence and it is also, by construction, not byte-reproducible
+ * between two generations of the pinned goldens. So the evidence harness — and
+ * only the evidence harness — supplies one fixture value for the retained field.
+ *
+ * It rides the evidence mode that already exists and is already confined to this
+ * composition root: `ERL2_EVIDENCE_CLOCK`, set by `scripts/generate-evidence.mjs`
+ * and by nothing on the release surface. There is no `--wall-clock-ms`-shaped
+ * flag and there must not be one: a user-facing control over a retained
+ * measurement would let a run misstate what it observed. Deadlines, process-tree
+ * termination, the spawn ceiling, response byte caps, sandbox controls and
+ * certification are unaffected in either mode (see `AdapterHostOptions`).
+ */
+function evidenceFixtureSandboxMeasurement(): { readonly evidenceFixtureWallClockMs?: number } {
+  const evidenceClock = process.env["ERL2_EVIDENCE_CLOCK"];
+  if (evidenceClock === undefined || evidenceClock.length === 0) return {};
+  return { evidenceFixtureWallClockMs: EVIDENCE_FIXTURE_SANDBOX_WALL_CLOCK_MS };
 }
 
 /**
