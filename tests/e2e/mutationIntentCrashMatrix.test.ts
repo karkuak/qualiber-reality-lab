@@ -178,6 +178,10 @@ class CountingSubjectPort implements SubjectPort {
     return this.inner.portId;
   }
 
+  markOutputFrozen(): void {
+    this.inner.markOutputFrozen();
+  }
+
   acquire(...args: Parameters<FakeSubjectPort["acquire"]>): ReturnType<FakeSubjectPort["acquire"]> {
     return this.inner.acquire(...args);
   }

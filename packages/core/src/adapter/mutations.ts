@@ -69,7 +69,7 @@ export interface DeclaredCompensation {
   readonly reasonCode?: string;
 }
 
-interface LedgerEntry {
+export interface LedgerEntry {
   readonly intent: MutationIntentV1;
   readonly receipt: MutationReceiptV1;
   compensation?: CompensationReceiptV1;

@@ -23,15 +23,26 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { execFileSync, spawn } from "node:child_process";
+import { once } from "node:events";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  captureProcessIdentity,
+  capturedProcessIsRunning,
+  killCapturedProcess,
+  parseProcessIdentity,
+} from "../support/processIdentity.js";
+import type { ProcessIdentity } from "../support/processIdentity.js";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const here = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(here, "..", "..", "..");
 const scriptsDir = path.join(repoRoot, "scripts");
 const targetModulePath = path.join(scriptsDir, "lib", "controlTarget.mjs");
 const worktreeModulePath = path.join(scriptsDir, "lib", "disposableWorktree.mjs");
+/** The identity helper, reachable from the probe's own process by URL. */
+const identityModulePath = pathToFileURL(path.join(here, "..", "support", "processIdentity.js")).href;
 
 interface PatchPlan {
   readonly outcome: string;
@@ -832,6 +843,198 @@ test("NC-TIMEOUT: a timeout is a harness error, never a kill and never an agreem
   }
 });
 
+/** What the probe records about one of its two processes, before either dies. */
+interface RecordedProcess {
+  readonly pid: number;
+  /** `null` when `ps` never established one, which fails the test rather than weakening it. */
+  readonly identity: ProcessIdentity | null;
+}
+
+interface RecordedProbe {
+  readonly parent: RecordedProcess;
+  readonly grandchild: RecordedProcess;
+}
+
+/** The bare-pid predicate this test used to assert on. Kept only to prove it is wrong. */
+function barePidIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// -- the identity the process-tree assertions rest on -------------------------
+//
+// `NC-PROCTREE` concludes that two specific processes are gone. Everything it
+// concludes depends on "gone" meaning *the captured process*, not the small
+// recycled integer it used to hold — so the comparison is measured here rather
+// than trusted. These cases are also where the two controls live: that the
+// bare-pid comparison this replaced really is fooled by a reused pid, and that a
+// genuine survivor is still reported alive.
+
+interface Sleeper {
+  readonly pid: number;
+  readonly identity: ProcessIdentity;
+  readonly child: ReturnType<typeof spawn>;
+  readonly stop: () => void;
+}
+
+/** A real live process, with its identity captured while it is certainly alive. */
+function sleeper(): Sleeper {
+  const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });
+  const pid = child.pid;
+  if (pid === undefined) assert.fail("the sleeper process was not spawned");
+  let identity: ProcessIdentity | undefined;
+  // `ps` can lag a just-forked pid by a scheduling quantum. Bounded, and a
+  // failure to establish identity fails the test rather than skipping it.
+  for (let attempt = 0; attempt < 100 && identity === undefined; attempt += 1) {
+    identity = captureProcessIdentity(pid);
+    if (identity === undefined) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);
+  }
+  if (identity === undefined) assert.fail(`ps never reported the just-spawned process ${String(pid)}`);
+  return {
+    pid,
+    identity,
+    child,
+    stop: () => {
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        // Already gone, which is the expected case once a test has killed it.
+      }
+    },
+  };
+}
+
+test("NC-PROCIDENTITY: a running process matches the identity captured from it", () => {
+  const live = sleeper();
+  try {
+    assert.equal(capturedProcessIsRunning(live.identity), true, "a live process must match its own capture");
+
+    // This process too, which is beyond doubt running.
+    const own = captureProcessIdentity(process.pid);
+    if (own === undefined) assert.fail("ps must report the process asking the question");
+    assert.equal(own.pid, process.pid);
+    assert.match(own.startedAt, /^\w{3} \w{3} \d{1,2} \d{2}:\d{2}:\d{2} \d{4}$/, own.startedAt);
+    assert.ok(own.command.length > 0, "an identity with no command is not an identity");
+    assert.equal(capturedProcessIsRunning(own), true);
+  } finally {
+    live.stop();
+  }
+});
+
+test("NC-PROCIDENTITY: an exited process and a pid ps refuses are both absent", async () => {
+  const live = sleeper();
+  assert.equal(capturedProcessIsRunning(live.identity), true, "the fixture must start alive");
+  live.stop();
+  await once(live.child, "exit");
+
+  // True whether the number was left free or immediately reused, which is what
+  // makes this deterministic where a bare-pid check is not.
+  assert.equal(
+    capturedProcessIsRunning(live.identity),
+    false,
+    "a process that exited must never be reported as still running",
+  );
+  // `ps` refusing outright is the same answer, not a different one.
+  assert.equal(captureProcessIdentity(-1), undefined, "a pid ps refuses must establish no identity");
+});
+
+test("NC-PROCIDENTITY: the same pid with a different start is not the captured process", () => {
+  const live = sleeper();
+  try {
+    const stale: ProcessIdentity = { ...live.identity, startedAt: "Mon Jan 1 00:00:00 2001" };
+    assert.notEqual(stale.startedAt, live.identity.startedAt, "the fixture must actually differ");
+    // The pid really is held — so this is a mismatch, not an absence.
+    assert.equal(barePidIsAlive(stale.pid), true);
+    assert.equal(capturedProcessIsRunning(stale), false, "a different start instant is a different process");
+  } finally {
+    live.stop();
+  }
+});
+
+test("NC-PROCIDENTITY: the same pid with a different command is not the captured process", () => {
+  const live = sleeper();
+  try {
+    const other: ProcessIdentity = { ...live.identity, command: `${live.identity.command} --not-this-one` };
+    assert.notEqual(other.command, live.identity.command, "the fixture must actually differ");
+    assert.equal(barePidIsAlive(other.pid), true);
+    assert.equal(capturedProcessIsRunning(other), false, "a different command is a different process");
+  } finally {
+    live.stop();
+  }
+});
+
+test("NC-PROCIDENTITY: malformed or empty ps output establishes no identity", () => {
+  // Fail closed: every way of not establishing identity answers "not running",
+  // because the alternative is signalling or asserting about someone else.
+  for (const raw of [
+    undefined,
+    "",
+    "   ",
+    "\n\n",
+    "garbage",
+    "Wed Aug  5 08:49:30 2026" /* an lstart with no command */,
+    "a b c d e" /* five tokens, nothing more */,
+    "Wed Aug  5 08:49:30 2026 node\nWed Aug  5 08:49:31 2026 node" /* two answers to one question */,
+  ]) {
+    assert.equal(
+      parseProcessIdentity(4242, raw),
+      undefined,
+      `this must not parse: ${JSON.stringify(raw)}`,
+    );
+  }
+
+  // …and a well-formed line still parses, or every case above is satisfied by a
+  // parser that simply always refuses.
+  assert.deepEqual(parseProcessIdentity(4242, "Wed Aug  5 08:49:30 2026 /usr/bin/node -e x\n"), {
+    pid: 4242,
+    startedAt: "Wed Aug 5 08:49:30 2026",
+    command: "/usr/bin/node -e x",
+  });
+});
+
+test("NC-PROCIDENTITY: a reused pid is not the captured process, and cleanup will not signal it", () => {
+  const live = sleeper();
+  try {
+    // A simulated pid reuse: the recorded identity names a process that has
+    // died, and the number is now held by an unrelated live process. This is
+    // the exact shape that turned a correctly terminated process tree into a
+    // red publication gate.
+    const reused: ProcessIdentity = { ...live.identity, command: `${live.identity.command} --a-different-process` };
+
+    // THE CONTROL. Reverting to the bare-pid comparison this replaced answers
+    // "alive" here — so the assertion `alive(pid) === false` that NC-PROCTREE
+    // used to make fails on a process that died exactly as intended. If this
+    // ever stops holding, the identity comparison has stopped being
+    // load-bearing and the case below proves nothing.
+    assert.equal(
+      barePidIsAlive(reused.pid),
+      true,
+      "the bare-pid check must be fooled here, or this control is vacuous",
+    );
+    assert.equal(capturedProcessIsRunning(reused), false, "identity must not be fooled by a reused pid");
+
+    // …and cleanup must refuse to signal it. A `finally` block SIGKILLing a
+    // stranger is the least observable bug this file could ship.
+    assert.equal(killCapturedProcess(reused), "gone");
+    assert.equal(
+      capturedProcessIsRunning(live.identity),
+      true,
+      "cleanup killed a process whose identity it could not confirm",
+    );
+
+    // THE OTHER HALF. A genuine survivor — same pid, same start, same command —
+    // is still reported alive and is still the thing cleanup kills. Without
+    // this, "never signals" would be satisfied by never signalling at all.
+    assert.equal(killCapturedProcess(live.identity), "signalled");
+  } finally {
+    live.stop();
+  }
+});
+
 test("NC-PROCTREE: a timed-out stage kills its grandchild, not only its direct child", async () => {
   // The property the previous test did *not* have. `spawnSync(… killSignal)`
   // kills and reaps exactly one process, and both real stages spawn
@@ -839,45 +1042,104 @@ test("NC-PROCTREE: a timed-out stage kills its grandchild, not only its direct c
   // process per test file. Asserting `run.pid` is dead was true and beside the
   // point.
   //
-  // Both pids are written to disk *before* the parent starts waiting, so the
-  // proof survives the SIGKILL that removes every chance to report them.
+  // Both processes are recorded to disk *before* the parent starts waiting, so
+  // the proof survives the SIGKILL that removes every chance to report them.
+  //
+  // What is recorded is an *identity*, not a number. A pid is recycled — macOS
+  // wraps at 99999 and a full gate spawns thousands of processes — so asking
+  // `kill(grandchildPid, 0)` asks whether *anyone* holds that number, not
+  // whether the grandchild survived. That is a weaker question than the one the
+  // production harness answers (it reconciles on the process *group*), and it
+  // is why this test failed intermittently on a correctly terminated tree.
+  //
+  // The probe is a file rather than `node -e`, because the recorded command is
+  // half of the identity: a multi-line `-e` source appears as one line in macOS
+  // `ps` and as several in Linux `ps`, and an identity that parses on one
+  // platform and not the other is not an identity.
   const probe = mkdtempSync(path.join(tmpdir(), "erl2-tree-probe-"));
   const pidFile = path.join(probe, "pids.json");
-  const parentSource = [
-    'import { spawn } from "node:child_process";',
-    'import { writeFileSync } from "node:fs";',
-    'const grandchild = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });',
-    `writeFileSync(${JSON.stringify(pidFile)}, JSON.stringify({ parent: process.pid, grandchild: grandchild.pid }));`,
-    "setInterval(() => {}, 1000);",
-  ].join("\n");
+  const probeScript = path.join(probe, "probe.mjs");
+  writeFileSync(
+    probeScript,
+    [
+      'import { spawn } from "node:child_process";',
+      'import { writeFileSync } from "node:fs";',
+      `import { captureProcessIdentity } from ${JSON.stringify(identityModulePath)};`,
+      'const grandchild = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });',
+      // `ps` can lag a just-forked pid by a scheduling quantum, so the capture
+      // is retried — bounded, and never degrading to "close enough". A capture
+      // that does not succeed is recorded as `null` and fails the test.
+      "const identify = (pid) => {",
+      "  for (let attempt = 0; attempt < 100; attempt += 1) {",
+      "    const identity = captureProcessIdentity(pid);",
+      "    if (identity !== undefined) return identity;",
+      "    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);",
+      "  }",
+      "  return null;",
+      "};",
+      // Captured while both are certainly alive: this process is executing the
+      // line, and the grandchild has a 1 s interval holding it open.
+      "const recorded = {",
+      "  parent: { pid: process.pid, identity: identify(process.pid) },",
+      "  grandchild: { pid: grandchild.pid, identity: identify(grandchild.pid) },",
+      "};",
+      `writeFileSync(${JSON.stringify(pidFile)}, JSON.stringify(recorded));`,
+      "setInterval(() => {}, 1000);",
+      "",
+    ].join("\n"),
+  );
 
-  let pids: { parent: number; grandchild: number } | undefined;
+  let recorded: RecordedProbe | undefined;
   try {
     const run = await harness.runStage({
       command: process.execPath,
-      args: ["--input-type=module", "-e", parentSource],
+      args: [probeScript],
       cwd: probe,
       timeoutMs: 1_500,
       stage: "suite",
     });
     assert.equal(run.timedOut, true);
+    // Unchanged, and still the load-bearing production assertion: the harness
+    // itself proved the spawned process *group* was empty. Identity below
+    // narrows what "empty" is allowed to mean; it does not replace this.
     assert.equal(run.treeTerminationFailed, false, "the group must be terminable inside its grace window");
 
-    pids = JSON.parse(readFileSync(pidFile, "utf8")) as { parent: number; grandchild: number };
-    assert.equal(typeof pids.grandchild, "number", "the probe must have recorded a grandchild");
-    assert.notEqual(pids.grandchild, pids.parent);
-    assert.equal(pids.parent, run.pid, "the stage's own pid must be the parent it spawned");
+    recorded = JSON.parse(readFileSync(pidFile, "utf8")) as RecordedProbe;
+    assert.equal(typeof recorded.grandchild.pid, "number", "the probe must have recorded a grandchild");
+    assert.notEqual(recorded.grandchild.pid, recorded.parent.pid);
+    assert.equal(recorded.parent.pid, run.pid, "the stage's own pid must be the parent it spawned");
 
-    const alive = (pid: number): boolean => {
-      try {
-        process.kill(pid, 0);
-        return true;
-      } catch {
-        return false;
-      }
-    };
-    assert.equal(alive(pids.parent), false, "the direct child must be dead");
-    assert.equal(alive(pids.grandchild), false, "the grandchild must be dead too — this is the whole finding");
+    const parentIdentity = recorded.parent.identity;
+    const grandchildIdentity = recorded.grandchild.identity;
+    // Both identities had to be established while the processes were alive, or
+    // the assertions below compare against nothing and pass vacuously.
+    if (parentIdentity === null || grandchildIdentity === null) {
+      assert.fail(
+        "the probe must capture both identities while both are alive; got " +
+          `parent=${JSON.stringify(parentIdentity)} grandchild=${JSON.stringify(grandchildIdentity)}`,
+      );
+    }
+    for (const [name, identity] of [
+      ["parent", parentIdentity],
+      ["grandchild", grandchildIdentity],
+    ] as const) {
+      assert.match(
+        identity.startedAt,
+        /^\w{3} \w{3} \d{1,2} \d{2}:\d{2}:\d{2} \d{4}$/,
+        `the ${name}'s recorded start is not an lstart instant: ${identity.startedAt}`,
+      );
+      assert.ok(identity.command.length > 0, `the ${name}'s recorded command is empty`);
+    }
+
+    // "Dead" means the process we started is gone — not that nobody holds its
+    // number. A pid inherited by one of the thousands of processes a full gate
+    // spawns answers the second question wrongly and the first one correctly.
+    assert.equal(capturedProcessIsRunning(parentIdentity), false, "the direct child must be dead");
+    assert.equal(
+      capturedProcessIsRunning(grandchildIdentity),
+      false,
+      "the grandchild must be dead too — this is the whole finding",
+    );
 
     // The stage owns its own TMPDIR and removes it once the tree is proven
     // dead, so a timed-out stage leaves nothing behind either.
@@ -886,13 +1148,14 @@ test("NC-PROCTREE: a timed-out stage kills its grandchild, not only its direct c
   } finally {
     // Bounded on every failure path: if an assertion above threw, anything the
     // probe left running is killed here rather than inherited by the suite.
-    if (pids !== undefined) {
-      for (const pid of [pids.grandchild, pids.parent]) {
-        try {
-          process.kill(pid, "SIGKILL");
-        } catch {
-          // Already gone, which is the expected case.
-        }
+    //
+    // Never to a bare recorded number. `killCapturedProcess` re-reads the pid's
+    // current identity and signals only a match, so a recycled pid is reported
+    // `gone` instead of being SIGKILLed — a stranger being killed from a
+    // `finally` block on a failure path is the least observable bug available.
+    if (recorded !== undefined) {
+      for (const entry of [recorded.grandchild, recorded.parent]) {
+        if (entry.identity !== null) killCapturedProcess(entry.identity);
       }
     }
     rmSync(probe, { recursive: true, force: true });

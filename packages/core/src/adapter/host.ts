@@ -38,6 +38,7 @@ import {
   type AdapterProtocolNegotiationV1,
   type AdapterResponseEnvelopeV1,
   type AdapterResponseMessage,
+  type ArtifactRef,
   type CompensationReceiptV1,
   type CredentialUseReceiptV1,
   type EgressAllowlistPolicyV1,
@@ -45,6 +46,8 @@ import {
   type Hash,
   type HostOperationMessage,
   type Instant,
+  type MutationIntentV1,
+  type MutationReceiptV1,
   type SandboxInvocationManifestV1,
   type SandboxInvocationResultV1,
   type SubjectAdapterManifestV1,
@@ -53,6 +56,10 @@ import {
 import { ArtifactStore, coreHash, hashBytes } from "@erl2/integrity";
 import type { Clock } from "../runtime/seams.js";
 import { assertNoOracleFields } from "../journey/oracle.js";
+import type {
+  SubjectProducedArtifact,
+  SubjectStepEvidence,
+} from "../journey/subjectPort.js";
 import {
   assertManifestCapabilitiesUnprivileged,
   grantCapabilities,
@@ -64,8 +71,10 @@ import { decideEgress, denyByDefaultEgressPolicy } from "./egress.js";
 import { MutationLedger } from "./mutations.js";
 import { assertAdapterResponseShape } from "./responseShape.js";
 import {
+  adapterOutputPrefix,
   assertNoExecutionAfterOutputFreeze,
   DEFAULT_OUTPUT_BOUNDS,
+  freezeAdapterOutput,
   freezeDiagnostics,
   scanBytes,
   type OutputBounds,
@@ -105,6 +114,30 @@ export interface AdapterHostOptions {
   /** Descriptor prefixes an adapter may mutate; defaults to its own workspace. */
   readonly permittedMutationPrefixes?: readonly string[];
   readonly nodeExecutable?: string;
+  /**
+   * An EVIDENCE-FIXTURE MEASUREMENT OVERRIDE for the retained sandbox result's
+   * `wall_clock_ms`, and for nothing else.
+   *
+   * This is not a timing control. It does not shorten, lengthen or influence any
+   * deadline: the supervisor is still launched with `wallClockMs`, still enforces
+   * that deadline against real elapsed time, and still terminates the adapter's
+   * process tree on it. The spawn ceiling, the response-byte caps, the sandbox
+   * control report and the certification suite are all untouched. The single
+   * effect is which number is written into `sandbox-invocation-result/v1`.
+   *
+   * It exists because `sandbox-invocation-result/v1` is retained, integrity-bound
+   * evidence and its `wall_clock_ms` is a real measurement of a real process —
+   * correct production evidence that cannot be byte-identical between two
+   * deliberate generations of the pinned goldens. Rather than normalizing or
+   * dropping the field in production, or excluding it from the core hash, the
+   * evidence harness supplies one fixture value here.
+   *
+   * ABSENT BY DEFAULT, and supplied only by the CLI composition root under the
+   * existing `ERL2_EVIDENCE_CLOCK` evidence mode. When absent — every production
+   * path, every certification, every test that does not ask for it — the observed
+   * supervisor duration is retained unchanged.
+   */
+  readonly evidenceFixtureWallClockMs?: number;
 }
 
 export interface AdapterOperationResult {
@@ -115,9 +148,31 @@ export interface AdapterOperationResult {
   readonly diagnostics: SubjectDiagnosticsManifestV1;
   readonly credentialUseReceipts: readonly CredentialUseReceiptV1[];
   readonly egressReceipts: readonly EgressDecisionReceiptV1[];
+  readonly mutationIntents: readonly MutationIntentV1[];
+  readonly mutationReceipts: readonly MutationReceiptV1[];
   readonly compensationReceipts: readonly CompensationReceiptV1[];
   readonly result: unknown;
   readonly outputDirectory: string;
+  /**
+   * Everything the host published for this operation, and the metadata that
+   * makes it reachable.
+   *
+   * The records above are the host's *in-process* adjudication. This is the
+   * retained form of them: frozen artifacts, their hashes, and the lifecycle
+   * production entries a caller must append so the offline closure can derive
+   * them. Before it existed the host adjudicated an operation completely and
+   * then handed the caller objects that were never written down, so a run could
+   * attest a step whose adapter evidence existed only in memory.
+   */
+  readonly retained: SubjectStepEvidence;
+}
+
+/** The retained root every host adjudication record for one operation lives under. */
+const HOST_EVIDENCE_LOGICAL_ROOT = "retained/adapter";
+
+/** A four-digit ordinal, so a repeated record kind gets a stable, safe file name. */
+function ordinal(index: number): string {
+  return String(index + 1).padStart(4, "0");
 }
 
 interface RawExchange {
@@ -204,6 +259,8 @@ export class AdapterHost {
   private readonly mounts: readonly AdapterMount[];
   private readonly permittedMutationPrefixes: readonly string[];
   private readonly nodeExecutable: string;
+  /** See `AdapterHostOptions.evidenceFixtureWallClockMs`. Undefined in production. */
+  private readonly evidenceFixtureWallClockMs: number | undefined;
   private outputFrozen = false;
   private invocationSequence = 0;
 
@@ -222,6 +279,7 @@ export class AdapterHost {
     this.mounts = options.mounts ?? [];
     this.permittedMutationPrefixes = options.permittedMutationPrefixes ?? ["adapter-workspace/"];
     this.nodeExecutable = options.nodeExecutable ?? process.execPath;
+    this.evidenceFixtureWallClockMs = options.evidenceFixtureWallClockMs;
 
     if (this.manifest.protocol_version !== ADAPTER_PROTOCOL_VERSION) {
       throw new Erl2Error(
@@ -417,8 +475,10 @@ export class AdapterHost {
       permittedTargetPrefixes: this.permittedMutationPrefixes,
       grantedCapabilities: capabilityGrant.granted_capability_ids,
     });
+    const mutationIntents: MutationIntentV1[] = [];
+    const mutationReceipts: MutationReceiptV1[] = [];
     for (const declared of response.mutations) {
-      ledger.record(
+      const entry = ledger.record(
         {
           mutationId: declared.mutation_id,
           mutationClass: declared.mutation_class,
@@ -434,6 +494,8 @@ export class AdapterHost {
         input.operationId,
         endedAt,
       );
+      mutationIntents.push(entry.intent);
+      mutationReceipts.push(entry.receipt);
     }
     const compensationReceipts = response.compensations.map((declared) =>
       ledger.compensate(
@@ -532,6 +594,44 @@ export class AdapterHost {
       core_hash: coreHash(envelopeBase),
     });
 
+    // The adapter's output tree, admitted last and only once every other
+    // adjudication has passed.
+    //
+    // `freezeAdapterOutput` walks the tree refusing symlinks, hard links,
+    // non-regular entries, path escapes, over-deep paths and over-large or
+    // over-numerous entries, scans every byte for judge canaries, secret
+    // canaries and forbidden identifiers, and only then publishes. Every one of
+    // those gates existed and none of them ran against a real adapter, because
+    // this function had no caller: the output stayed in the host-owned working
+    // directory and the step outcome carried `output_refs: []`. An adapter could
+    // therefore write an oversized, structurally forbidden or secret-bearing
+    // tree, return a supported envelope, and leave an offline-valid terminal.
+    //
+    // Placed *after* the ledger, credential and egress adjudication so that a
+    // refusal from any of those publishes nothing for this operation; placed
+    // before the host's own records are frozen for the same reason.
+    const output = freezeAdapterOutput({
+      outputRoot: outputDirectory,
+      store: this.store,
+      logicalPrefix: adapterOutputPrefix(input.operationId),
+      bounds: this.bounds,
+    });
+
+    const retained = this.retainHostEvidence({
+      operationId: input.operationId,
+      envelope,
+      sandboxManifest,
+      sandboxResult,
+      capabilityGrant,
+      diagnostics,
+      credentialUseReceipts,
+      egressReceipts,
+      mutationIntents,
+      mutationReceipts,
+      compensationReceipts,
+      outputRefs: output.entries,
+    });
+
     return {
       envelope,
       sandboxResult,
@@ -540,9 +640,167 @@ export class AdapterHost {
       diagnostics,
       credentialUseReceipts,
       egressReceipts,
+      mutationIntents,
+      mutationReceipts,
       compensationReceipts,
       result: response.result,
       outputDirectory,
+      retained,
+    };
+  }
+
+  /**
+   * Freezes the host's adjudication records for one operation and returns the
+   * evidence the caller needs to make them reachable.
+   *
+   * ## Why the host freezes them rather than the caller
+   *
+   * These are the *host's* decisions about an untrusted process: what it was
+   * granted, what sandbox it ran in, how it ended, what it was allowed to reach
+   * and what it declared it changed. The host is the only component that holds
+   * them, and the previous seam handed them back as in-process objects that the
+   * `SubjectPort` reduced to a status and a duration. Nothing else ever saw
+   * them, so nothing else could have frozen them.
+   *
+   * ## Why every record gets its own retained file
+   *
+   * The offline closure resolves a produced hash to a retained artifact
+   * (`ArtifactIndex.get`). A hash appended to the lifecycle whose object is not
+   * on disk is an unreachable-artifact refusal, which is the correct outcome
+   * and a useless one: the point is that the object *is* there. One artifact per
+   * file also means the retained-file accounting pass indexes each of them, so
+   * a deleted or substituted record is caught rather than merely absent.
+   *
+   * File names are Lab-authored ordinals, never adapter-supplied identifiers: a
+   * mutation id or a decision id is a string the untrusted process chose, and a
+   * chosen string does not belong in a path even behind path confinement.
+   */
+  private retainHostEvidence(input: {
+    readonly operationId: string;
+    readonly envelope: AdapterResponseEnvelopeV1;
+    readonly sandboxManifest: SandboxInvocationManifestV1;
+    readonly sandboxResult: SandboxInvocationResultV1;
+    readonly capabilityGrant: AdapterCapabilityGrantV1;
+    readonly diagnostics: SubjectDiagnosticsManifestV1;
+    readonly credentialUseReceipts: readonly CredentialUseReceiptV1[];
+    readonly egressReceipts: readonly EgressDecisionReceiptV1[];
+    readonly mutationIntents: readonly MutationIntentV1[];
+    readonly mutationReceipts: readonly MutationReceiptV1[];
+    readonly compensationReceipts: readonly CompensationReceiptV1[];
+    readonly outputRefs: readonly ArtifactRef[];
+  }): SubjectStepEvidence {
+    const root = `${HOST_EVIDENCE_LOGICAL_ROOT}/${input.operationId}`;
+    const produced: SubjectProducedArtifact[] = [];
+    const detailRecordHashes: Hash[] = [];
+
+    const freeze = (
+      name: string,
+      role: string,
+      schemaVersion: string,
+      value: { readonly core_hash: Hash },
+    ): Hash => {
+      this.store.freezeJson(`${root}/${name}.json`, value, "INTERNAL");
+      produced.push({
+        artifact_role: role,
+        artifact_core_hash: value.core_hash,
+        artifact_schema_version: schemaVersion,
+      });
+      return value.core_hash;
+    };
+
+    // Detail records: the adjudication trail for this one dispatch.
+    detailRecordHashes.push(
+      freeze(
+        "response-envelope",
+        "adapter-response-envelope",
+        "adapter-response-envelope/v1",
+        input.envelope,
+      ),
+      freeze(
+        "sandbox-invocation-manifest",
+        "adapter-sandbox-invocation-manifest",
+        "sandbox-invocation-manifest/v1",
+        input.sandboxManifest,
+      ),
+      freeze(
+        "sandbox-invocation-result",
+        "adapter-sandbox-invocation-result",
+        "sandbox-invocation-result/v1",
+        input.sandboxResult,
+      ),
+      freeze(
+        "capability-grant",
+        "adapter-capability-grant",
+        "adapter-capability-grant/v1",
+        input.capabilityGrant,
+      ),
+      freeze(
+        "diagnostics-manifest",
+        "adapter-diagnostics-manifest",
+        "subject-diagnostics-manifest/v1",
+        input.diagnostics,
+      ),
+    );
+    input.egressReceipts.forEach((receipt, index) => {
+      detailRecordHashes.push(
+        freeze(
+          `egress-decision-receipt-${ordinal(index)}`,
+          "adapter-egress-decision-receipt",
+          "egress-decision-receipt/v1",
+          receipt,
+        ),
+      );
+    });
+    input.credentialUseReceipts.forEach((receipt, index) => {
+      detailRecordHashes.push(
+        freeze(
+          `credential-use-receipt-${ordinal(index)}`,
+          "adapter-credential-use-receipt",
+          "credential-use-receipt/v1",
+          receipt,
+        ),
+      );
+    });
+    // A mutation intent is a detail record; its receipt is the mutation field.
+    // Splitting them this way is not cosmetic: `JourneyStepOutcomeV1` declares
+    // `mutation_receipt_hashes`, and an intent is not a receipt.
+    input.mutationIntents.forEach((intent, index) => {
+      detailRecordHashes.push(
+        freeze(
+          `mutation-intent-${ordinal(index)}`,
+          "adapter-mutation-intent",
+          "mutation-intent/v1",
+          intent,
+        ),
+      );
+    });
+    const mutationReceiptHashes = input.mutationReceipts.map((receipt, index) =>
+      freeze(
+        `mutation-receipt-${ordinal(index)}`,
+        "adapter-mutation-receipt",
+        "mutation-receipt/v1",
+        receipt,
+      ),
+    );
+    const compensationReceiptHashes = input.compensationReceipts.map((receipt, index) =>
+      freeze(
+        `compensation-receipt-${ordinal(index)}`,
+        "adapter-compensation-receipt",
+        "compensation-receipt/v1",
+        receipt,
+      ),
+    );
+
+    return {
+      produced,
+      detailRecordHashes,
+      mutationReceiptHashes,
+      compensationReceiptHashes,
+      outputRefs: [...input.outputRefs],
+      // The diagnostics manifest's own entries, which the freezer already
+      // published and redacted. Referencing them is what puts them inside the
+      // retained bundle's accounting rather than beside it.
+      diagnosticRefs: [...input.diagnostics.entries],
     };
   }
 
@@ -676,7 +934,11 @@ export class AdapterHost {
       response_bytes: exchange.responseBytes,
       stdout_bytes: exchange.stdoutBytes,
       stderr_bytes: exchange.stderrBytes,
-      wall_clock_ms: exchange.wallClockMs,
+      // The observed supervisor duration, unless the evidence harness supplied a
+      // fixture measurement. Nothing else on this record, and nothing anywhere
+      // else in the host, consults the override — the deadline the supervisor
+      // enforced was `this.wallClockMs` against real time either way.
+      wall_clock_ms: this.evidenceFixtureWallClockMs ?? exchange.wallClockMs,
       ...(exchange.refusalCode === undefined ? {} : { refusal_code: exchange.refusalCode }),
       started_at: startedAt,
       ended_at: endedAt,

@@ -17,6 +17,8 @@ import {
   Erl2Error,
   type AcquisitionAdapterRequestV1,
   type AdapterStepRequestV1,
+  type ArtifactRef,
+  type Hash,
   type JourneyIntent,
   type PackageVerificationRequestV1,
   type Tier,
@@ -78,6 +80,46 @@ export function assertDevelopmentSubjectPort(tier: Tier, portId: string): void {
   }
 }
 
+/**
+ * One artifact a port retained for a step, as the lifecycle must name it.
+ *
+ * This is exactly the shape `LabLifecycleEventV1.produced` carries. A port that
+ * freezes evidence has to hand back production metadata or the artifact is
+ * retained and unreachable — the shape the closure derivation rejects
+ * everywhere else.
+ */
+export interface SubjectProducedArtifact {
+  readonly artifact_role: string;
+  readonly artifact_core_hash: Hash;
+  readonly artifact_schema_version: string;
+}
+
+/**
+ * The evidence a port retained while answering one request.
+ *
+ * Every field maps onto a field `JourneyStepOutcomeV1` already declares. This
+ * interface exists so the *engine* never has to know what kind of port it is
+ * talking to: a port that adjudicates an out-of-process adapter fills it, the
+ * development fake leaves it out, and the step outcome is assembled the same
+ * way in both cases.
+ *
+ * Nothing here is adapter-specific and nothing here is optional evidence: the
+ * hashes must resolve to artifacts the port actually froze, and `produced` is
+ * what makes them lifecycle-reachable.
+ */
+export interface SubjectStepEvidence {
+  /** Host adjudication records, published and reachable, for the lifecycle. */
+  readonly produced: readonly SubjectProducedArtifact[];
+  /** The same records, as the step's `detail_record_hashes`. */
+  readonly detailRecordHashes: readonly Hash[];
+  readonly mutationReceiptHashes: readonly Hash[];
+  readonly compensationReceiptHashes: readonly Hash[];
+  /** The subject's own retained output tree, as frozen references. */
+  readonly outputRefs: readonly ArtifactRef[];
+  /** The retained, redacted diagnostics entries. */
+  readonly diagnosticRefs: readonly ArtifactRef[];
+}
+
 export interface SubjectStepResponse {
   readonly status: "succeeded" | "failed" | "unsupported";
   /** Bytes the subject produced for this step, if any. */
@@ -85,6 +127,8 @@ export interface SubjectStepResponse {
   readonly errorCode?: string;
   readonly activeOperatorMs: number;
   readonly unsupportedInputs?: readonly string[];
+  /** What the port retained while answering, if it retains anything. */
+  readonly evidence?: SubjectStepEvidence;
 }
 
 export interface SubjectAcquisitionResponse extends SubjectStepResponse {
@@ -110,6 +154,21 @@ export interface SubjectPort {
   acquire(request: AcquisitionAdapterRequestV1): SubjectAcquisitionResponse;
   validatePackage(request: PackageVerificationRequestV1): SubjectStepResponse;
   step(request: AdapterStepRequestV1, intent: JourneyIntent): SubjectStepResponse;
+  /**
+   * Closes the port for this run: the subject's output has frozen.
+   *
+   * The rule is design v2 §14's — once subject output is frozen no subject or
+   * adapter process may run again — and the enforcement already existed inside
+   * the adapter host (`assertNoExecutionAfterOutputFreeze`). It was simply
+   * unreachable from a run, because nothing on the port seam could tell the host
+   * that the freeze had happened. Declaring it *here* rather than on the hosted
+   * port is what keeps the boundary generic: the run says "output froze" to
+   * whatever port it holds, and no caller branches on which one that is.
+   *
+   * Idempotent by construction: freezing twice is the replay case, and a port
+   * that is already closed stays closed.
+   */
+  markOutputFrozen(): void;
 }
 
 export interface FakeSubjectBehaviour {
@@ -162,11 +221,16 @@ export interface FakeSubjectBehaviour {
 export class FakeSubjectPort implements SubjectPort {
   readonly portId = FAKE_SUBJECT_PORT_ID;
   private readonly behaviour: FakeSubjectBehaviour;
+  private outputFrozen = false;
   /** Requests the port saw, retained so tests can scan them for canaries. */
   readonly observedRequests: unknown[] = [];
 
   constructor(behaviour: FakeSubjectBehaviour = {}) {
     this.behaviour = behaviour;
+  }
+
+  markOutputFrozen(): void {
+    this.outputFrozen = true;
   }
 
   acquire(request: AcquisitionAdapterRequestV1): SubjectAcquisitionResponse {
@@ -254,6 +318,17 @@ export class FakeSubjectPort implements SubjectPort {
   }
 
   private observe(what: string, request: unknown): void {
+    // The post-freeze boundary, enforced from inside the untrusted plane as well
+    // as from the run. The hosted port inherits the same rule from the adapter
+    // host; a development fake that answered after the freeze would make the
+    // guard a property of one implementation rather than of the seam.
+    if (this.outputFrozen) {
+      throw new Erl2Error(
+        CODES.ADAPTER_EXECUTION_AFTER_OUTPUT_FREEZE,
+        `${what} is forbidden after subject output freezes`,
+        { owner: "lab" },
+      );
+    }
     // Structural half of the oracle partition: an expectation-shaped field must
     // not exist at all, whatever its value.
     assertNoOracleFields(what, request);

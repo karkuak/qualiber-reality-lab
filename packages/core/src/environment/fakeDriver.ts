@@ -100,6 +100,25 @@ export interface FakeDriverFaults {
    * (ADR-ERL2-027 §1.5, §4.7).
    */
   readonly foreignResourceKinds?: readonly string[];
+  /**
+   * Resource ids whose per-resource destroy **throws** rather than receipting a
+   * failure, while the resource stays owned, destroyable and present.
+   *
+   * Distinct from every neighbour here, and the distinction is the only reason
+   * it exists. `residualResourceIds` marks a resource undestroyable, so the
+   * frontier derives `contain_residual` and the action is never dispatched.
+   * `failTeardown` makes the driver *receipt* a failure, which the executor
+   * records directly. `foreignResourceKinds` fails ownership, which again means
+   * the frontier classifies the action unsafe.
+   *
+   * None of them reaches the executor's catch path — the one place the Lab
+   * writes a receipt on the driver's behalf, and therefore the one place a
+   * receipt can disagree with the operation it describes. Without this fault
+   * that path is unreachable from a run, and the defect it carried (a second
+   * attempt journaled under the attempt-2 id retaining a receipt claiming the
+   * attempt-1 id) could only be argued about, never measured.
+   */
+  readonly throwOnDestroyResourceIds?: readonly string[];
 }
 
 /**
@@ -506,6 +525,17 @@ export class FakeEnvironmentDriver implements EnvironmentDriver {
     // veto the destruction of the run's own resources.
     assertOwnedByRun(request.runId, target);
     assertNarrowSelector(request.runId, target.run_scoped_name);
+    // Thrown *after* the ownership and narrowness gates and before any state
+    // change, which is where a real driver fault lands: the call was authorized,
+    // the substrate refused it, and nothing was destroyed. The resource stays
+    // present, so the executor's own re-observation still reports it.
+    if ((this.faults.throwOnDestroyResourceIds ?? []).includes(request.resourceId)) {
+      throw new Erl2Error(
+        CODES.ENV_SUBSTRATE_UNREADABLE,
+        `the substrate could not be asked to destroy ${request.resourceId}`,
+        { owner: "lab" },
+      );
+    }
     const before = resources.map((r) => r.identity_hash);
     if (!target.destroyable) {
       return this.remember(request.runId, this.receipt({

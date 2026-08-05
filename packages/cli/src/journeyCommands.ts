@@ -288,6 +288,7 @@ function subjectPort(
       workspaceRoot: path.join(path.resolve(runRoot), "adapter-workspace"),
       store: new ArtifactStore(runRoot),
       clock,
+      ...evidenceFixtureSandboxMeasurement(runRoot),
       ...(environmentAccess === undefined
         ? {}
         : {
@@ -307,6 +308,79 @@ function subjectPort(
           }),
     }),
   );
+}
+
+/**
+ * The retained `wall_clock_ms` a generated evidence fixture carries.
+ *
+ * Zero, because it is not a measurement and must not be mistaken for one. A real
+ * sandbox invocation spawns two processes and exchanges frames, so it never
+ * measures zero; a reader who sees this value is looking at a deliberately
+ * generated fixture, not at how long anything took.
+ */
+const EVIDENCE_FIXTURE_SANDBOX_WALL_CLOCK_MS = 0;
+
+/**
+ * The evidence-fixture sandbox measurement override — an EVIDENCE MECHANISM, not
+ * a timing control, and deliberately not a flag.
+ *
+ * `sandbox-invocation-result/v1` is retained, integrity-bound evidence, and its
+ * `wall_clock_ms` is what the supervisor really measured. That is correct
+ * production evidence and it is also, by construction, not byte-reproducible
+ * between two generations of the pinned goldens. So the evidence harness — and
+ * only the evidence harness — supplies one fixture value for the retained field.
+ *
+ * ## The activation condition, and why the obvious one was wrong
+ *
+ * The first version activated on the mere presence of `ERL2_EVIDENCE_CLOCK`, and
+ * justified itself by saying the variable is set by the evidence harness and by
+ * nothing on the release surface. That describes where the variable is *read*,
+ * not what it *implies*, and the independent review measured the gap: `runClock`
+ * prefers the durable preregistration's `registered_at`, so on any run that
+ * already preregistered, setting the variable changes no timestamp — it only
+ * zeroed the retained measurement. A run preregistered at real wall time could
+ * therefore retain `wall_clock_ms: 0` between two timestamps two seconds apart,
+ * and still verify.
+ *
+ * So presence is not enough. The run must **durably belong** to the same evidence
+ * clock: its preregistration — written once, at preregistration time, and never
+ * rewritten here — must be stamped with exactly this instant. An evidence run is
+ * preregistered under the evidence clock, so `registered_at` is that instant
+ * verbatim; a real run's `registered_at` is real wall time and can never be. The
+ * condition is therefore unforgeable without fabricating the run's entire time
+ * base, which is the same thing as generating evidence.
+ *
+ * Absent, malformed, real-time-stamped or mismatched preregistration all mean the
+ * same thing: no override, and the observed supervisor duration is retained.
+ *
+ * There is no `--wall-clock-ms`-shaped flag and there must not be one: a
+ * user-facing control over a retained measurement would let a run misstate what
+ * it observed. Deadlines, process-tree termination, the spawn ceiling, response
+ * byte caps, sandbox controls and certification are unaffected in every mode
+ * (see `AdapterHostOptions`).
+ */
+function evidenceFixtureSandboxMeasurement(
+  runRoot: string,
+): { readonly evidenceFixtureWallClockMs?: number } {
+  const evidenceClock = process.env["ERL2_EVIDENCE_CLOCK"];
+  if (evidenceClock === undefined || evidenceClock.length === 0) return {};
+
+  const preregPath = path.join(path.resolve(runRoot), "retained", "acquisition-preregistration.json");
+  if (!existsSync(preregPath)) return {};
+  let registeredAt: unknown;
+  try {
+    // Read, never rewritten or reinterpreted: this is the run's durable record
+    // and the condition is a comparison against it, not an adjustment of it.
+    registeredAt = (
+      parseStrictJson(readFileSync(preregPath, "utf8")) as { registered_at?: unknown }
+    ).registered_at;
+  } catch {
+    // A torn or malformed preregistration cannot establish evidence mode. The
+    // workspace refuses it on its own account moments later.
+    return {};
+  }
+  if (typeof registeredAt !== "string" || registeredAt !== evidenceClock) return {};
+  return { evidenceFixtureWallClockMs: EVIDENCE_FIXTURE_SANDBOX_WALL_CLOCK_MS };
 }
 
 /**

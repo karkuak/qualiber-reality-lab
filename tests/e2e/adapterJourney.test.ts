@@ -158,10 +158,22 @@ test("ADAPTER-CERT: acquisition through the correct reference adapter reaches a 
   assert.equal(early.exitCode, 10);
   assert.equal(early.body.errors[0]?.code, "GRAPH_CLOSURE_TERMINAL_MISMATCH");
 
-  // The host froze diagnostics for every operation, scanned and bounded.
-  const diagnostics = path.join(journey.runRoot, "diagnostics");
+  // The host froze diagnostics for every operation, scanned and bounded, beneath
+  // the subject-output payload root. They used to be published to a top-level
+  // `diagnostics/` directory, which no offline accounting pass walks — so the
+  // bytes were retained beside the evidence rather than inside it, and a deleted
+  // or added diagnostics entry was invisible to the verifier.
+  const diagnostics = path.join(journey.runRoot, "subject-output", "diagnostics");
   assert.equal(existsSync(diagnostics), true, "adapter diagnostics must be retained");
   assert.ok(readdirSync(diagnostics).length >= 2, "one diagnostics tree per operation");
+
+  // …and each operation's host adjudication is retained beside them.
+  const hostRecords = path.join(journey.runRoot, "retained", "adapter");
+  assert.equal(existsSync(hostRecords), true, "adapter host records must be retained");
+  assert.ok(
+    readdirSync(hostRecords).length >= 2,
+    "one host adjudication tree per operation",
+  );
 });
 
 test("UNSUPPORTED-HONESTY: the limited reference adapter reaches a retained unsupported terminal", () => {

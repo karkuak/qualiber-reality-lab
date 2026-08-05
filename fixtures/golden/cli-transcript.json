@@ -157,6 +157,24 @@
             }
           ]
         },
+        "compose_substrate": {
+          "substrate_lock": "qualified_development_signed",
+          "driver": "enabled_by_development_signed_lock",
+          "lock_hash": "sha256:a124cd47c4264e6f37a35f4069b71227c2fb9a643513010a1d9730e64a967ec2",
+          "signer_key_id": "erl2-dev-challenge-governor-ed25519-1",
+          "signer_classification": "development_key",
+          "release_tag": "3.0.0",
+          "source_commit": "1755859a9de82c2e5e225be68abc401a5ebf2b4f",
+          "platforms": [
+            "linux/amd64",
+            "linux/arm64"
+          ],
+          "services": [
+            "otel-collector",
+            "quote"
+          ],
+          "independently_qualified": false
+        },
         "profile": "local-developer",
         "node_version": "v26.4.0",
         "registered_contracts": 155,
@@ -165,8 +183,8 @@
         "threshold_vrf": "THRESHOLD_VRF_NOT_ACTIVATED",
         "held_out_selection": "disabled_pending_erl2_oq_007",
         "fake_environment_driver": "enabled",
-        "compose_environment_driver": "disabled_pending_erl2_oq_005",
-        "otel_demo_substrate_lock": "unqualified_pending_erl2_oq_005",
+        "compose_environment_driver": "enabled_by_development_signed_lock",
+        "otel_demo_substrate_lock": "qualified_development_signed",
         "constrained_archetypes": "clean_greenfield_only_pending_erl2_oq_002",
         "pack_runtime": "data_only_dsl_pending_erl2_oq_004",
         "generic_evaluator": "erl2-generic-evaluator/0.1.0",
@@ -191,7 +209,7 @@
       "--run",
       "019f1af9-b400-7111-9111-111111111111",
       "--artifact-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/artifacts"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/artifacts"
     ],
     "exit_code": 0,
     "stdout": {
@@ -215,13 +233,13 @@
       "erl2",
       "verify",
       "--public-bundle",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/public-bundle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/public-bundle.json",
       "--root-config",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/root-config.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/root-config.json",
       "--artifact-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/artifacts",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/artifacts",
       "--lifecycle",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/lifecycle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/lifecycle.json",
       "--offline"
     ],
     "exit_code": 0,
@@ -350,9 +368,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-31T00:40:48Z",
+          "verified_at": "2026-08-05T02:45:34Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:8b179a867899bc8702b6ca397324f2e48882dd0cdb5dcc36334d4a4540908861"
+          "core_hash": "sha256:3df680ea62f0489842418b493ad3f4c01027ad97db1d6460229e0d8b7223dcce"
         }
       }
     },
@@ -363,13 +381,13 @@
       "erl2",
       "verify",
       "--public-bundle",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/public-bundle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/public-bundle.json",
       "--root-config",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/root-config.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/root-config.json",
       "--artifact-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/artifacts",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/artifacts",
       "--lifecycle",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/lifecycle.json"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/lifecycle.json"
     ],
     "exit_code": 10,
     "stdout": {
@@ -393,13 +411,13 @@
       "erl2",
       "verify-record",
       "--record",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-cancellation/invalid-record.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/invalid-run-cancellation/invalid-record.json",
       "--lifecycle",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-cancellation/lifecycle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/invalid-run-cancellation/lifecycle.json",
       "--artifact-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-cancellation/artifacts",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/invalid-run-cancellation/artifacts",
       "--root-config",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-cancellation/root-config.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/invalid-run-cancellation/root-config.json",
       "--offline"
     ],
     "exit_code": 0,
@@ -447,9 +465,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-31T00:40:49Z",
+          "verified_at": "2026-08-05T02:45:35Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:fe62ccfd6c16252501b6cb15f978e8361d8c579bdc22f12419205b77a0d723fc"
+          "core_hash": "sha256:c7c850eeb6c7d89f3ffd43b78dbaf5bcde0a329f339d2e0d40c2ced44a3dca4d"
         }
       }
     },
@@ -460,13 +478,13 @@
       "erl2",
       "verify-record",
       "--record",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-classified-lab-failure/invalid-record.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/invalid-run-classified-lab-failure/invalid-record.json",
       "--lifecycle",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-classified-lab-failure/lifecycle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/invalid-run-classified-lab-failure/lifecycle.json",
       "--artifact-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-classified-lab-failure/artifacts",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/invalid-run-classified-lab-failure/artifacts",
       "--root-config",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-classified-lab-failure/root-config.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/invalid-run-classified-lab-failure/root-config.json",
       "--offline"
     ],
     "exit_code": 0,
@@ -515,9 +533,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-31T00:40:49Z",
+          "verified_at": "2026-08-05T02:45:35Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:eb37f5e0ed077beb2f4c316cdf3669c940f1be59eefa11034f0f7f002dce34f8"
+          "core_hash": "sha256:6b1fd4190e81af5ddd2c307009a7ffd04645f8e4547b1d8806bc8e2be0c08c15"
         }
       }
     },
@@ -528,13 +546,13 @@
       "erl2",
       "verify-record",
       "--record",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-emergency-cleanup/invalid-record.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/invalid-run-emergency-cleanup/invalid-record.json",
       "--lifecycle",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-emergency-cleanup/lifecycle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/invalid-run-emergency-cleanup/lifecycle.json",
       "--artifact-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-emergency-cleanup/artifacts",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/invalid-run-emergency-cleanup/artifacts",
       "--root-config",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/invalid-run-emergency-cleanup/root-config.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/invalid-run-emergency-cleanup/root-config.json",
       "--offline"
     ],
     "exit_code": 0,
@@ -601,9 +619,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-31T00:40:50Z",
+          "verified_at": "2026-08-05T02:45:36Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:780f26bff9015720f639c7079198569c35a83504ed698b6cca7fbaad912adada"
+          "core_hash": "sha256:1cda5f7434f39506baad074008bed4a8541f3f1d830f4e41bfec6e9f766eafda"
         }
       }
     },
@@ -614,13 +632,13 @@
       "erl2",
       "verify-record",
       "--record",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/public-bundle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/public-bundle.json",
       "--lifecycle",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/lifecycle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/lifecycle.json",
       "--artifact-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/artifacts",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/artifacts",
       "--root-config",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/valid-pre-environment-run/root-config.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/valid-pre-environment-run/root-config.json",
       "--offline"
     ],
     "exit_code": 10,
@@ -645,9 +663,9 @@
       "erl2",
       "preregister-acquisition",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "development",
       "--run",
@@ -696,9 +714,9 @@
       "erl2",
       "acquire",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "development",
       "--run",
@@ -735,9 +753,9 @@
       "erl2",
       "freeze-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "development",
       "--run",
@@ -766,9 +784,9 @@
       "erl2",
       "verify-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "development",
       "--run",
@@ -803,9 +821,9 @@
       "erl2",
       "freeze-output",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "development",
       "--run",
@@ -841,9 +859,9 @@
       "erl2",
       "preregister-acquisition",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "development",
       "--run",
@@ -892,9 +910,9 @@
       "erl2",
       "acquire",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "development",
       "--run",
@@ -931,9 +949,9 @@
       "erl2",
       "freeze-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "development",
       "--run",
@@ -962,9 +980,9 @@
       "erl2",
       "verify-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "development",
       "--run",
@@ -1000,9 +1018,9 @@
       "erl2",
       "freeze-output",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/verified-package-continues",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/verified-package-continues",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "development",
       "--run",
@@ -1032,9 +1050,9 @@
       "erl2",
       "preregister-acquisition",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/failed-acquisition",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/failed-acquisition",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "development",
       "--run",
@@ -1083,9 +1101,9 @@
       "erl2",
       "acquire",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/failed-acquisition",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/failed-acquisition",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "development",
       "--run",
@@ -1126,9 +1144,9 @@
       "erl2",
       "preregister-acquisition",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/journey-acquisition-to-frozen-output/held-out-refused",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/journey-acquisition-to-frozen-output/held-out-refused",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-THGVL2",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8NVF3y",
       "--tier",
       "held_out",
       "--acquisition-source",
@@ -1174,9 +1192,9 @@
       "erl2",
       "preregister-acquisition",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-N3fy7p",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1227,9 +1245,9 @@
       "erl2",
       "acquire",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-N3fy7p",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1268,9 +1286,9 @@
       "erl2",
       "freeze-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-N3fy7p",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1301,9 +1319,9 @@
       "erl2",
       "verify-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-N3fy7p",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1341,9 +1359,9 @@
       "erl2",
       "freeze-output",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-correct/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/reference-correct/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-N3fy7p",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1375,9 +1393,9 @@
       "erl2",
       "preregister-acquisition",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-N3fy7p",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1428,9 +1446,9 @@
       "erl2",
       "acquire",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-N3fy7p",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1468,9 +1486,9 @@
       "erl2",
       "freeze-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-N3fy7p",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1501,9 +1519,9 @@
       "erl2",
       "verify-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-N3fy7p",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1538,9 +1556,9 @@
       "erl2",
       "freeze-output",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/reference-limited/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/reference-limited/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-N3fy7p",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1562,13 +1580,13 @@
       "run_id": "00000000-0000-7000-8000-000000000005",
       "state": "subject_output_frozen",
       "data": {
-        "subject_output_hash": "sha256:b780b22643ba8e650beae677de261c383bebc7e10f6cf77f27d554bfa7fc042b",
+        "subject_output_hash": "sha256:fdb9d53f51b7c58502cfa62174645eb339e9c5298ba3ca93a118b17ec8281295",
         "terminal_stage": "verify_package",
         "step_outcome_hashes": [
-          "sha256:b57b9765d2062bd7541d1a9cdc9c075541c6b52adf83eac7e0d320a74020f983",
-          "sha256:51de9be0bae43eaa52a6219b4cff31461cd60f2b0a6ffa359e3d4eac2afd6129"
+          "sha256:1b2673d4243e9cb7a7ef200d09634e6a56b0107f12c70ba47adb44d04dfb2cdc",
+          "sha256:a2abc7fabc968c2aa487a42bff63a2ec51ac5825b968137b4df11b72bd6cb8a7"
         ],
-        "tree_hash": "sha256:2f8d640dbae3a2ed13eb41c15e905e711bed5bd3e4e39f0d91c3998bab0a36b4"
+        "tree_hash": "sha256:0e99497b59128a9270f2fce694de433fc3ca76db2d1c2eac594c4577cd4b21c4"
       }
     },
     "stderr": ""
@@ -1578,9 +1596,9 @@
       "erl2",
       "preregister-acquisition",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/hostile-adapter/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-N3fy7p",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1631,9 +1649,9 @@
       "erl2",
       "acquire",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/hostile-adapter/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-YHaZwe",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-N3fy7p",
       "--tier",
       "development",
       "--adapter-entry",
@@ -1672,13 +1690,13 @@
       "erl2",
       "verify-record",
       "--record",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/run/retained/invalid-run-record.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/hostile-adapter/run/retained/invalid-run-record.json",
       "--lifecycle",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/lifecycle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/hostile-adapter/lifecycle.json",
       "--artifact-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/hostile-adapter/run",
       "--root-config",
-      "/Users/karthik/Developer/qualiber-reality-lab/fixtures/golden/adapter-platform/hostile-adapter/root-config.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________stage-qMAFQE/adapter-platform/hostile-adapter/root-config.json",
       "--offline"
     ],
     "exit_code": 0,
@@ -1730,9 +1748,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-31T00:41:31Z",
+          "verified_at": "2026-08-05T02:46:17Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:fcd72187c932ac656790dd4faf100c50e2c01646ebe0ce0e9c55952b4ea0cf21"
+          "core_hash": "sha256:4467a1d817b58babaafdaf5b8640e3c638e960cffeb136f4b821d053f01ddf1a"
         }
       }
     },
@@ -1743,9 +1761,9 @@
       "erl2",
       "preregister-acquisition",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-hYKMHF",
       "--tier",
       "development",
       "--run",
@@ -1794,9 +1812,9 @@
       "erl2",
       "acquire",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-hYKMHF",
       "--tier",
       "development",
       "--run",
@@ -1833,9 +1851,9 @@
       "erl2",
       "freeze-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-hYKMHF",
       "--tier",
       "development",
       "--run",
@@ -1864,9 +1882,9 @@
       "erl2",
       "verify-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-hYKMHF",
       "--tier",
       "development",
       "--run",
@@ -1901,9 +1919,9 @@
       "erl2",
       "freeze-output",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-hYKMHF",
       "--tier",
       "development",
       "--run",
@@ -1939,15 +1957,15 @@
       "erl2",
       "reveal",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-hYKMHF",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000007",
       "--vault",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-B6Vurj"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-co0iO5"
     ],
     "exit_code": 0,
     "stdout": {
@@ -1975,9 +1993,9 @@
       "erl2",
       "evaluate",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-hYKMHF",
       "--tier",
       "development",
       "--run",
@@ -2078,9 +2096,9 @@
       "erl2",
       "finalize-generic",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-dWTHUF",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-hYKMHF",
       "--tier",
       "development",
       "--run",
@@ -2118,13 +2136,13 @@
       "erl2",
       "verify",
       "--public-bundle",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification/retained/public-bundle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification/retained/public-bundle.json",
       "--root-config",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification/root-config.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification/root-config.json",
       "--artifact-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification",
       "--lifecycle",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification/lifecycle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification/lifecycle.json",
       "--offline"
     ],
     "exit_code": 0,
@@ -2273,9 +2291,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-31T00:41:34Z",
+          "verified_at": "2026-08-05T02:46:20Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:403e31611267a156a45aec390dd3f9baeb41eafab7abf08e44dbf321abfea607"
+          "core_hash": "sha256:522a32c7f853ae591588c20fd83361b1079cc0c7a5ac4e9c693317b5b5c0e61c"
         }
       }
     },
@@ -2286,13 +2304,13 @@
       "erl2",
       "verify-record",
       "--record",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification/retained/public-bundle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification/retained/public-bundle.json",
       "--lifecycle",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification/lifecycle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification/lifecycle.json",
       "--artifact-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification",
       "--root-config",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-failed-verification/root-config.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-failed-verification/root-config.json",
       "--offline"
     ],
     "exit_code": 10,
@@ -2317,9 +2335,9 @@
       "erl2",
       "preregister-acquisition",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-jid0T9",
       "--tier",
       "development",
       "--run",
@@ -2368,9 +2386,9 @@
       "erl2",
       "acquire",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-jid0T9",
       "--tier",
       "development",
       "--run",
@@ -2407,9 +2425,9 @@
       "erl2",
       "freeze-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-jid0T9",
       "--tier",
       "development",
       "--run",
@@ -2438,9 +2456,9 @@
       "erl2",
       "verify-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-jid0T9",
       "--tier",
       "development",
       "--run",
@@ -2475,9 +2493,9 @@
       "erl2",
       "freeze-output",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-jid0T9",
       "--tier",
       "development",
       "--run",
@@ -2513,15 +2531,15 @@
       "erl2",
       "reveal",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-jid0T9",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000008",
       "--vault",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-Cr5ATf"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-k9KDbD"
     ],
     "exit_code": 0,
     "stdout": {
@@ -2549,9 +2567,9 @@
       "erl2",
       "evaluate",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-jid0T9",
       "--tier",
       "development",
       "--run",
@@ -2652,9 +2670,9 @@
       "erl2",
       "finalize-generic",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-lRrbvI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-jid0T9",
       "--tier",
       "development",
       "--run",
@@ -2692,13 +2710,13 @@
       "erl2",
       "verify",
       "--public-bundle",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification/retained/public-bundle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification/retained/public-bundle.json",
       "--root-config",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification/root-config.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification/root-config.json",
       "--artifact-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification",
       "--lifecycle",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification/lifecycle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification/lifecycle.json",
       "--offline"
     ],
     "exit_code": 0,
@@ -2847,9 +2865,9 @@
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-31T00:41:38Z",
+          "verified_at": "2026-08-05T02:46:23Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:96aec4f80e42b7942fa832f0651c5ac4ea157af366173b8fe831e031fa42092e"
+          "core_hash": "sha256:5d2f8e833a94cef7cc5c06b273c512cba7ac941bae40f0f68e814ac9996ef23b"
         }
       }
     },
@@ -2860,13 +2878,13 @@
       "erl2",
       "verify-record",
       "--record",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification/retained/public-bundle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification/retained/public-bundle.json",
       "--lifecycle",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification/lifecycle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification/lifecycle.json",
       "--artifact-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification",
       "--root-config",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-unsupported-verification/root-config.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-unsupported-verification/root-config.json",
       "--offline"
     ],
     "exit_code": 10,
@@ -2891,9 +2909,9 @@
       "erl2",
       "preregister-acquisition",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8kID8P",
       "--tier",
       "development",
       "--run",
@@ -2942,9 +2960,9 @@
       "erl2",
       "acquire",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8kID8P",
       "--tier",
       "development",
       "--run",
@@ -2981,9 +2999,9 @@
       "erl2",
       "freeze-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8kID8P",
       "--tier",
       "development",
       "--run",
@@ -3012,9 +3030,9 @@
       "erl2",
       "verify-package",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8kID8P",
       "--tier",
       "development",
       "--run",
@@ -3049,9 +3067,9 @@
       "erl2",
       "freeze-output",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8kID8P",
       "--tier",
       "development",
       "--run",
@@ -3087,15 +3105,15 @@
       "erl2",
       "reveal",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8kID8P",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000009",
       "--vault",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-sKuV9F"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-fQ2ZBD"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3123,9 +3141,9 @@
       "erl2",
       "finalize-generic",
       "--run-root",
-      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence/generic-finalization-missing-result-join",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/generic-finalization/generic-finalization-missing-result-join",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-u8bAIy",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-8kID8P",
       "--tier",
       "development",
       "--run",
@@ -3155,9 +3173,9 @@
       "erl2",
       "preregister-acquisition",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
@@ -3206,9 +3224,9 @@
       "erl2",
       "acquire",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
@@ -3245,9 +3263,9 @@
       "erl2",
       "freeze-package",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
@@ -3276,9 +3294,9 @@
       "erl2",
       "verify-package",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
@@ -3314,9 +3332,9 @@
       "erl2",
       "preregister-challenge",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
@@ -3359,15 +3377,15 @@
       "erl2",
       "select",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--source-trust-config",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/source-trust.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/source-trust.json",
       "--expires",
       "2026-12-31T00:00:00Z"
     ],
@@ -3385,8 +3403,8 @@
       "data": {
         "steps_run": 14,
         "selection_complete": true,
-        "selected_binding_hash": "sha256:d803d25fea69b0ae3d0ae0055c280dd6e3a57f8368239a762277d273b47a5b10",
-        "selection_receipt_hash": "sha256:bd917c2e7ffa61efad0c5ad87dec6bd8c375bd20c7d35a933e671d6ae771e09d"
+        "selected_binding_hash": "sha256:152cb4e6a87c59dfd11069fa7f835a1981bcf54fe6176cd25125e2112db16cbf",
+        "selection_receipt_hash": "sha256:bd188019f8b3e3904803ebf083bf68ddeb8d94038738639c3d741008d98274ec"
       }
     },
     "stderr": ""
@@ -3396,17 +3414,17 @@
       "erl2",
       "provision",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations",
       "--archetype",
       "sha256:935991a0505ace1e49c02242c4ce7208b4cd09f7878a5fea736b7d1ac4518c61"
     ],
@@ -3434,17 +3452,17 @@
       "erl2",
       "baseline",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3472,17 +3490,17 @@
       "erl2",
       "plan",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3496,9 +3514,9 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "execution_plan_frozen",
       "data": {
-        "execution_plan_hash": "sha256:85974504bd4aab358c7d5757365373e8d8897b130fea43c99c058099f032b137",
-        "actor_script_hash": "sha256:f24b7976e4d7a9ca9c040117d4e3ae5af073cd36e9a3515078f06f9bab2a4e3f",
-        "journey_hash": "sha256:3ee71400cf36537a0683e2a3ff7ba3bdfe1d2f7c763b92774f58ee558ced80b2"
+        "execution_plan_hash": "sha256:b0e2d0b1ca7b99deab60b426e01eb52663da5bdcc1897c8d6810ee42c4e60553",
+        "actor_script_hash": "sha256:b0dc6f3f8e4e4dccdbf59d4fbee5f0519bb9bc41a18fb421badca71e309496d8",
+        "journey_hash": "sha256:ab9b55784e359d3975b4659294a9cee47c5297b842f88720beb0de93a80a6121"
       }
     },
     "stderr": ""
@@ -3508,17 +3526,17 @@
       "erl2",
       "install",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3532,10 +3550,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "c-install",
+        "step_id": "b-install",
         "intent": "install",
         "status": "succeeded",
-        "step_outcome_hash": "sha256:4ec5dd05b9e9f64aae61eb37b44622734635d6cc8e5c50d3e4bf6aac910ee420",
+        "step_outcome_hash": "sha256:74e882e3c41c8eaedd8a714c149269cb7d2945f80bcc8b53430132df7860c803",
         "unsupported_inputs": 0,
         "next_intent": "configure"
       }
@@ -3547,17 +3565,17 @@
       "erl2",
       "configure",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3571,10 +3589,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "c-configure",
+        "step_id": "b-configure",
         "intent": "configure",
         "status": "succeeded",
-        "step_outcome_hash": "sha256:6072c9aaeb442d3cef0f89a576d060fecc53f5175985c1e704465bddb937a093",
+        "step_outcome_hash": "sha256:defef179065adfb22a2ade2a57918be562220ec952145900fa41d63f56c2baf6",
         "unsupported_inputs": 0,
         "next_intent": "authenticate"
       }
@@ -3586,17 +3604,17 @@
       "erl2",
       "authenticate",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3610,10 +3628,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "c-authenticate",
+        "step_id": "b-authenticate",
         "intent": "authenticate",
         "status": "unsupported",
-        "step_outcome_hash": "sha256:8338f706283ef66b908258d659567cb0267c01cdef780fcd210ff1642797ae53",
+        "step_outcome_hash": "sha256:b42a1f1dac5b9ae257f0024088ce7a9056200a3dd2904eadd9a47213c76a6b83",
         "unsupported_inputs": 0,
         "next_intent": "connect"
       }
@@ -3625,17 +3643,17 @@
       "erl2",
       "connect",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3649,10 +3667,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "c-connect",
+        "step_id": "b-connect",
         "intent": "connect",
         "status": "succeeded",
-        "step_outcome_hash": "sha256:b9d6b223a6c6bad40c6c07e413db3b0f86a4aead647a1977359371a996d7e6fe",
+        "step_outcome_hash": "sha256:2dbe31613e2deeafc6cb4868e52ed0b80c682f9f997e9aed57d6e1e1c30d8ddd",
         "unsupported_inputs": 0,
         "next_intent": "discover"
       }
@@ -3664,17 +3682,17 @@
       "erl2",
       "execute-subject",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3688,10 +3706,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "c-discover",
+        "step_id": "b-discover",
         "intent": "discover",
         "status": "unsupported",
-        "step_outcome_hash": "sha256:ad34aff10a4f74d261a82d6a50980793b1bac054d7605ad4cc2309c67396bf4b",
+        "step_outcome_hash": "sha256:ec20c8ea735e4f4aa84d0d9c559d3821a9691779c1f7abb0531004a9bce5c4f2",
         "unsupported_inputs": 0,
         "next_intent": "exercise"
       }
@@ -3703,17 +3721,17 @@
       "erl2",
       "activate",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3727,8 +3745,8 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "challenge_activated",
       "data": {
-        "mutation_receipt_hash": "sha256:2bade9fcf0654950293adc64c5b00ec0b7f5d438284bca77a6b0e759ba4ff7f4",
-        "activation_receipt_hash": "sha256:e8fd422c75b49c69ee1b76c22198e62796050aaaf87b27de451aedb7bac2bc55"
+        "mutation_receipt_hash": "sha256:328170d2c332e4e2636b282b2074eaa302a0d1cc5475ec9873b3bfd3df11ecd0",
+        "activation_receipt_hash": "sha256:c89ee49861723d8e28dd7178513c6e42667ad1ed716392eb500ffbf9b4320c2a"
       }
     },
     "stderr": ""
@@ -3738,17 +3756,17 @@
       "erl2",
       "journey",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations",
       "--comparison-policy",
       "sha256:9f03b638499d058b16338cc31b02f6590e1ed212b4b549236d8286a711d232aa",
       "--cutoff-policy",
@@ -3766,7 +3784,7 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "traffic_or_journey_started",
       "data": {
-        "runtime_milestone_hash": "sha256:550469d76bd9181055c7b7260605f9dca361e5fe22d4925fb0f0911dadb301f8"
+        "runtime_milestone_hash": "sha256:d2e068d44d678a760fc5ce1bf9ca388f8697708ef9c23f04258a6128d8fd9945"
       }
     },
     "stderr": ""
@@ -3776,17 +3794,17 @@
       "erl2",
       "observe",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3825,17 +3843,17 @@
       "erl2",
       "freeze-observation",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3849,10 +3867,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "adapter_translation_frozen",
       "data": {
-        "observation_bundle_hash": "sha256:7bb028bfac1a4c7e444ff0fe238c1eb1112373daf7ea0d01784006aba59edd72",
-        "canonical_evidence_envelope_hash": "sha256:aab829f51d36bce423de5365117f93aa5c7057c2074adfb372bb90d624f9c3f8",
+        "observation_bundle_hash": "sha256:8c06a91ba740074ff6c8fae2f78ded4ebd8e79fa22771bff468cd23ed76459d9",
+        "canonical_evidence_envelope_hash": "sha256:1cd82997928b1d4253bd123505d1bab4e3d915a1bc962f1c35e1d598eb24fe4a",
         "envelope_entry_count": 3,
-        "adapter_translation_receipt_hash": "sha256:81d116ad6c56cc79fb1f7630f5e5192859d89d774cd0d6dd8f3d0dacb4e63602"
+        "adapter_translation_receipt_hash": "sha256:8b2d8b1812f68552741a6c9491841a91fec84bc7efb07fa17c5bf02dad7f0cdc"
       }
     },
     "stderr": ""
@@ -3862,17 +3880,17 @@
       "erl2",
       "execute-subject",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3886,10 +3904,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "c-exercise",
+        "step_id": "b-exercise",
         "intent": "exercise",
         "status": "succeeded",
-        "step_outcome_hash": "sha256:849f2869856bace28233f8fc229274f0961c51e45b95f216ec571a4ff7f1168a",
+        "step_outcome_hash": "sha256:88f582cd3f1aa201e17c333720fc27dd9a81488565967e2e456fac0f225cc060",
         "unsupported_inputs": 0,
         "next_intent": "observe"
       }
@@ -3901,17 +3919,17 @@
       "erl2",
       "execute-subject",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3925,10 +3943,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "c-observe",
+        "step_id": "b-observe",
         "intent": "observe",
         "status": "unsupported",
-        "step_outcome_hash": "sha256:83cab7a7a322204d49d93a32fc4a96c7d99f98855b2d563a454fdd81844732d2",
+        "step_outcome_hash": "sha256:d9c6b8b2d91ba37aa85c75a6975f2159f68d72899c79da3e447812c972d9945a",
         "unsupported_inputs": 0,
         "next_intent": "remove"
       }
@@ -3940,17 +3958,17 @@
       "erl2",
       "remove",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -3964,10 +3982,10 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "step_outcome_frozen",
       "data": {
-        "step_id": "c-remove",
+        "step_id": "b-remove",
         "intent": "remove",
         "status": "succeeded",
-        "step_outcome_hash": "sha256:392f695af9cc0f075ec59a826951b6ccfdb4aea9b2bfadd9244551cf9d6d215d",
+        "step_outcome_hash": "sha256:a59afe9068955f95f1f16f7109d5bd12d90d8c508b41c891df841de15a35e10c",
         "unsupported_inputs": 0,
         "journey_complete": true
       }
@@ -3979,17 +3997,17 @@
       "erl2",
       "freeze-output",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -4003,26 +4021,26 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "subject_output_frozen",
       "data": {
-        "subject_output_hash": "sha256:28dc8f33d10e1e29aefa33ca91b196ecd0367fee103690a19405bed868e15bc6",
+        "subject_output_hash": "sha256:03750cae416cba7ca318028e2ec9e63f3a73e6457a78038d6cc272059de75085",
         "terminal_stage": "remove",
         "step_outcome_hashes": [
           "sha256:165fcd1a54cdb8877259a4a01b06b6cdf3b1480aed8c8ce5cc41c39dd455bae3",
           "sha256:7e31d60342a15d2e92ed871f535f544650edfbd10348b4b1f9cfbcfb04f13b76",
-          "sha256:4ec5dd05b9e9f64aae61eb37b44622734635d6cc8e5c50d3e4bf6aac910ee420",
-          "sha256:6072c9aaeb442d3cef0f89a576d060fecc53f5175985c1e704465bddb937a093",
-          "sha256:8338f706283ef66b908258d659567cb0267c01cdef780fcd210ff1642797ae53",
-          "sha256:b9d6b223a6c6bad40c6c07e413db3b0f86a4aead647a1977359371a996d7e6fe",
-          "sha256:ad34aff10a4f74d261a82d6a50980793b1bac054d7605ad4cc2309c67396bf4b",
-          "sha256:849f2869856bace28233f8fc229274f0961c51e45b95f216ec571a4ff7f1168a",
-          "sha256:83cab7a7a322204d49d93a32fc4a96c7d99f98855b2d563a454fdd81844732d2",
-          "sha256:392f695af9cc0f075ec59a826951b6ccfdb4aea9b2bfadd9244551cf9d6d215d"
+          "sha256:74e882e3c41c8eaedd8a714c149269cb7d2945f80bcc8b53430132df7860c803",
+          "sha256:defef179065adfb22a2ade2a57918be562220ec952145900fa41d63f56c2baf6",
+          "sha256:b42a1f1dac5b9ae257f0024088ce7a9056200a3dd2904eadd9a47213c76a6b83",
+          "sha256:2dbe31613e2deeafc6cb4868e52ed0b80c682f9f997e9aed57d6e1e1c30d8ddd",
+          "sha256:ec20c8ea735e4f4aa84d0d9c559d3821a9691779c1f7abb0531004a9bce5c4f2",
+          "sha256:88f582cd3f1aa201e17c333720fc27dd9a81488565967e2e456fac0f225cc060",
+          "sha256:d9c6b8b2d91ba37aa85c75a6975f2159f68d72899c79da3e447812c972d9945a",
+          "sha256:a59afe9068955f95f1f16f7109d5bd12d90d8c508b41c891df841de15a35e10c"
         ],
         "unsupported_inputs": [
-          "authenticate:c-authenticate",
-          "discover:c-discover",
-          "observe:c-observe"
+          "authenticate:b-authenticate",
+          "discover:b-discover",
+          "observe:b-observe"
         ],
-        "tree_hash": "sha256:812b314fa6a93e66cb610a7e75ec54ff03a16b1195c9c1e40ebfe63bbc87709e"
+        "tree_hash": "sha256:eb521a120382411acb6dea16a7b2a38feceee4c784b4f2f7444fb5571183c8ec"
       }
     },
     "stderr": ""
@@ -4032,19 +4050,19 @@
       "erl2",
       "reveal",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations",
       "--vault",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-E3opA0"
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-vault-zB5Bqe"
     ],
     "exit_code": 0,
     "stdout": {
@@ -4058,14 +4076,14 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "judge_journey_expectation_revealed",
       "data": {
-        "reveal_record_hash": "sha256:67cba0c32147de570be89f7ae1b12eecd3c89f4f19c48a68f1daf5717f9ac06d",
+        "reveal_record_hash": "sha256:f843fa33bd8065f10fb619fd1a1f723e51509db4eb10fc580798b6a3f8814d92",
         "revealed_expectation_hashes": [
-          "sha256:cede78dd839deb4b64479479690dd60cac48a7219d486800130c97f7e5d5655d",
-          "sha256:cfcef02d646d694d44152728612243028e7aabc7232ca73036d028609fdb9a74",
-          "sha256:3018c2b29e6cfac3f28c4b877b5125a0dd8ac5681060deef7c8bb24235892bee"
+          "sha256:5c593630026dc1fdd19081258e756a1fda9e97e1a550d0dd03dff3eafd05e26e",
+          "sha256:0bc25fb53ae3d4022376e4e7e1990ee8f9bad4b4a8c1a2a5ac4d14119c14f27f",
+          "sha256:a3393ba0b4c33231db1c7a37e09ac1112ae75a1bfd6f5ff746805b77a92e6ce9"
         ],
         "revealed_count": 3,
-        "exposure_event_hash": "sha256:a5610420187fea4c41463f5e15569196a94467fe1a759876e22cb3c888adf2d3"
+        "exposure_event_hash": "sha256:a580d2eec17dd3518b35d3bb86372aa0ebb656272473f7a59a1646ad617d1eab"
       }
     },
     "stderr": ""
@@ -4075,17 +4093,17 @@
       "erl2",
       "evaluate",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -4099,22 +4117,22 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "generic_precleanup_results_complete",
       "data": {
-        "journey_result_hash": "sha256:25cdf1d89eb1bf31d60b019d88a927a974fc2657731afe522cedae70b5226f81",
+        "journey_result_hash": "sha256:493ea63ee2351f5e2b771c0513709ea74c07fc5577cbc7ea0d07789094d528b5",
         "journey_status": "evaluated",
-        "domain_result_hash": "sha256:16888bbfd9ca7b128b902115a2f7b1d8112541a58f552b546f5f4dbb352897cc",
+        "domain_result_hash": "sha256:9c2262b2f24ecd93d697bbc56fadfb96e629ab12716f460081f29a4852e37636",
         "domain_status": "not_applicable",
         "domain_not_applicable_reason": "functional_evidence_unavailable",
-        "precleanup_result_join_hash": "sha256:09cae4165220c0cdc6524ad29cc5c1a636f7af34ee23737654ec8dc9ee0d557f",
+        "precleanup_result_join_hash": "sha256:a811a5b6cc108a3606d6f7a890ea2da8c8ce15e9b5f36a1e129539759e0090c0",
         "metric_result_hashes": [
           "sha256:11f4c54ee1a2617178cbc2dd1b344033b23e3361b1a31767f8d0952d14d1f321",
-          "sha256:17f004d5e33582c91c827da0ee4bb34fe2589e73a290a81c03459dc2ee5600e9",
-          "sha256:a39d2df009ceea3554ca885a3e55e223ddaf43fe347310b0404fa6377372215d",
+          "sha256:99cea495777a995aa5df6eac4bd0def288067d20822c89e2df5a8328e7b5f795",
+          "sha256:5fdc38a26a917989b647a0ab6de8f0c8c282e27ab4c511b73c2bbf49f6abe764",
           "sha256:93463700465bd27386ea80829d471777e83a74d0366f3062825cf354241304c3",
           "sha256:748126620dbc4dfbd4fb4ecc6d45c72032a90c5f71598d5240c81f390a8d3e51",
-          "sha256:a569d9a9ac8eef720a7621002f475e204cbabfd694cf282ecc5f33e8ba3bba8a",
-          "sha256:a9af49bbb77634b9574ef75d8d28d1066f192b04c9b39b19ec2d7d58fa649ab7",
-          "sha256:a79e8b704d69957034ebbfaa8718162551cffe9b2cf3dfa53f2bb437dec03f71",
-          "sha256:242fb5c3b30c576f682c436a930219ba1b70bb8e174d20361fe0f821eb70eed6"
+          "sha256:e7484c5e96046d9ac55e66e3eee3b8e4ceec5da1dd4496bc5d7979430d617719",
+          "sha256:0a36e2283e6d81e97857c23a870aad80ef7b991e545be0fed48b10430e470833",
+          "sha256:56e51e0c17e649877d407ef645417fa19f34a95f5551b0a1094cd5d3c01d04c3",
+          "sha256:e367647062178304c2ac8aeb6237a76c5404ac06ab655604c94d4c8750988f1e"
         ]
       }
     },
@@ -4125,17 +4143,17 @@
       "erl2",
       "restore",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -4149,7 +4167,7 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "environment_restored",
       "data": {
-        "environment_restoration_hash": "sha256:fe9b3f5ab47cb26fb6528e47b0e2b8638d0f718af7ad19aac2bf4ca8f311cd6c",
+        "environment_restoration_hash": "sha256:1a68d31c2a32b3a7b3a9f515076cd11e22cfd9ea712193d87e48b1800e9afc40",
         "passed": true,
         "residual_resources": 0
       }
@@ -4161,17 +4179,17 @@
       "erl2",
       "destroy",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations"
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations"
     ],
     "exit_code": 0,
     "stdout": {
@@ -4185,7 +4203,7 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "teardown_verified",
       "data": {
-        "teardown_hash": "sha256:08310841778703f512e72bcdc71c17914f460dc6b514dd586fb332b53f32204f",
+        "teardown_hash": "sha256:fcfa635cfcf87744d40144a3c674056209182e647a1f792c913b8091ff55bbb7",
         "passed": true,
         "residue_after_teardown": 0,
         "checks": 5
@@ -4198,17 +4216,17 @@
       "erl2",
       "finalize-generic",
       "--run-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--registry",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-UmbYHI",
+      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-registry-R3TShK",
       "--tier",
       "development",
       "--run",
       "00000000-0000-7000-8000-000000000010",
       "--substrate-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/substrate",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/substrate",
       "--reservation-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/reservations",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/reservations",
       "--claim-scope",
       "T1"
     ],
@@ -4224,15 +4242,15 @@
       "run_id": "00000000-0000-7000-8000-000000000010",
       "state": "generic_finalized",
       "data": {
-        "validity_result_hash": "sha256:07149a04a9cb438a37be26b681abb9c92224f77ac12223680042783a278af3f2",
+        "validity_result_hash": "sha256:943f0c9f1707c3b264b959c49b8637219d01713cf4e24a3444472559f0768ea4",
         "validity_status": "valid",
-        "generic_evaluation_index_hash": "sha256:5777102516d5905590ed2537535bb8a944fbb556b40e666a2d8e84ac7c2c0cdc",
-        "run_record_hash": "sha256:49b7b8cb7c74668fcecf2636afe942e7d6a3ced7f71f3c1202b2a86cf4d2396b",
+        "generic_evaluation_index_hash": "sha256:a30785b0b9166e6ffda896e398d97370db42e57e3e84b9bad067eb7900189dba",
+        "run_record_hash": "sha256:64eef538c7804a715e2a766dddf2982d832342ad17d8eb8aaa17e8eb1df5f18c",
         "terminal_stage": "remove",
-        "final_attestation_hash": "sha256:63cd27bfa37399979755f367e25da630c9afcbf55ffa2c7fd9ccd766e7a3b025",
+        "final_attestation_hash": "sha256:4a45c058f44640e3ca92288bbdbd228e47b8b3565da9eb5b4e9d161ff7f34ba4",
         "claim_scope": "T1",
-        "signer_inventory_hash": "sha256:56f9998c7a2193dfb8297a2a320c703f7a755a9a73f5819c475daaefa464d8d7",
-        "public_bundle_hash": "sha256:343b08a3b0fdced43ee013b97e4af16060e7ea32e6f828a6dbb533cebb9fd07c",
+        "signer_inventory_hash": "sha256:b7f8b7ec70c0b5598d66c8fd2f5937d082d7f71c5e21f97822d627521b21f5cb",
+        "public_bundle_hash": "sha256:9d142e9b38d16abbc990d4e949672acff74273c35f6488dac73dc7518a308488",
         "public_bundle_path": "retained/public-bundle.json",
         "derived_missing_roles": [],
         "derived_extra_hashes": []
@@ -4245,13 +4263,13 @@
       "erl2",
       "verify",
       "--public-bundle",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run/retained/public-bundle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run/retained/public-bundle.json",
       "--root-config",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/root-config.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/root-config.json",
       "--artifact-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--lifecycle",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/lifecycle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/lifecycle.json",
       "--offline"
     ],
     "exit_code": 0,
@@ -4264,7 +4282,7 @@
       "findings": [],
       "errors": [],
       "run_id": "00000000-0000-7000-8000-000000000010",
-      "record_hash": "sha256:63cd27bfa37399979755f367e25da630c9afcbf55ffa2c7fd9ccd766e7a3b025",
+      "record_hash": "sha256:4a45c058f44640e3ca92288bbdbd228e47b8b3565da9eb5b4e9d161ff7f34ba4",
       "data": {
         "verdict": "valid",
         "trust_head_hash": "sha256:6c528ab0e034c3a774d7d19f65eb6c0be74a6edbce9427c22582d920a1d14afb",
@@ -4276,7 +4294,7 @@
           "run_id": "00000000-0000-7000-8000-000000000010",
           "derived_terminal_phase": "remove",
           "derived_terminal_variant": "environment",
-          "lifecycle_head_hash": "sha256:a617da0c6386aff42d9334465e8d655ad45718a09bc54dd4aeccb22fc6e8856c",
+          "lifecycle_head_hash": "sha256:3dfe4a16b64367e6ddcbd8b2f0e90b3232a340ba1370a4e9a1c526f24b61ba61",
           "verified_trust_head_hash": "sha256:6c528ab0e034c3a774d7d19f65eb6c0be74a6edbce9427c22582d920a1d14afb",
           "required_hashes_by_role": [
             {
@@ -4318,37 +4336,37 @@
             {
               "role": "eligibility-pool-manifest",
               "ordered_hashes": [
-                "sha256:182d887a6629b93dc50e6b2634f8310134b124032dce847231fb3329f82bb1f6"
+                "sha256:a2321ac14ed63dcfbfa622aa4733923cae4b8063c84a27c95f65532659f05459"
               ]
             },
             {
               "role": "selection-commitment",
               "ordered_hashes": [
-                "sha256:0d31b45b218c49132a7ff6d52fd35d682898ad962ac5d82ce9aeeadb68a2f3aa"
+                "sha256:0f4bc9cf6b24d5a93a8c3bb8fa63fe2749c08e66a4241f27310997e3eba213bd"
               ]
             },
             {
               "role": "selected-challenge-journey-binding",
               "ordered_hashes": [
-                "sha256:d803d25fea69b0ae3d0ae0055c280dd6e3a57f8368239a762277d273b47a5b10"
+                "sha256:152cb4e6a87c59dfd11069fa7f835a1981bcf54fe6176cd25125e2112db16cbf"
               ]
             },
             {
               "role": "selection-proof",
               "ordered_hashes": [
-                "sha256:5e8ccbb2ccb229d5c85de3a5a4673f7695def9e6aaa44b7ede9322f2e069d878"
+                "sha256:3b0123742af8ab2e402aa5623f4ab4c868e5f1e8b3dd8872f946f468eaf81df2"
               ]
             },
             {
               "role": "selection-verification-receipt",
               "ordered_hashes": [
-                "sha256:bd917c2e7ffa61efad0c5ad87dec6bd8c375bd20c7d35a933e671d6ae771e09d"
+                "sha256:bd188019f8b3e3904803ebf083bf68ddeb8d94038738639c3d741008d98274ec"
               ]
             },
             {
               "role": "substrate-binding",
               "ordered_hashes": [
-                "sha256:fe12c7465ac943bde5c050b64785e0abe231c680ee959312fe4a89554c5bf9c7"
+                "sha256:9fa424a3d069ba7bc9121f69c016eb73d597b668636739801561d6bfa7c3cc51"
               ]
             },
             {
@@ -4375,7 +4393,7 @@
             {
               "role": "execution-plan",
               "ordered_hashes": [
-                "sha256:85974504bd4aab358c7d5757365373e8d8897b130fea43c99c058099f032b137"
+                "sha256:b0e2d0b1ca7b99deab60b426e01eb52663da5bdcc1897c8d6810ee42c4e60553"
               ]
             },
             {
@@ -4383,124 +4401,124 @@
               "ordered_hashes": [
                 "sha256:165fcd1a54cdb8877259a4a01b06b6cdf3b1480aed8c8ce5cc41c39dd455bae3",
                 "sha256:7e31d60342a15d2e92ed871f535f544650edfbd10348b4b1f9cfbcfb04f13b76",
-                "sha256:4ec5dd05b9e9f64aae61eb37b44622734635d6cc8e5c50d3e4bf6aac910ee420",
-                "sha256:6072c9aaeb442d3cef0f89a576d060fecc53f5175985c1e704465bddb937a093",
-                "sha256:8338f706283ef66b908258d659567cb0267c01cdef780fcd210ff1642797ae53",
-                "sha256:b9d6b223a6c6bad40c6c07e413db3b0f86a4aead647a1977359371a996d7e6fe",
-                "sha256:ad34aff10a4f74d261a82d6a50980793b1bac054d7605ad4cc2309c67396bf4b",
-                "sha256:849f2869856bace28233f8fc229274f0961c51e45b95f216ec571a4ff7f1168a",
-                "sha256:83cab7a7a322204d49d93a32fc4a96c7d99f98855b2d563a454fdd81844732d2",
-                "sha256:392f695af9cc0f075ec59a826951b6ccfdb4aea9b2bfadd9244551cf9d6d215d"
+                "sha256:74e882e3c41c8eaedd8a714c149269cb7d2945f80bcc8b53430132df7860c803",
+                "sha256:defef179065adfb22a2ade2a57918be562220ec952145900fa41d63f56c2baf6",
+                "sha256:b42a1f1dac5b9ae257f0024088ce7a9056200a3dd2904eadd9a47213c76a6b83",
+                "sha256:2dbe31613e2deeafc6cb4868e52ed0b80c682f9f997e9aed57d6e1e1c30d8ddd",
+                "sha256:ec20c8ea735e4f4aa84d0d9c559d3821a9691779c1f7abb0531004a9bce5c4f2",
+                "sha256:88f582cd3f1aa201e17c333720fc27dd9a81488565967e2e456fac0f225cc060",
+                "sha256:d9c6b8b2d91ba37aa85c75a6975f2159f68d72899c79da3e447812c972d9945a",
+                "sha256:a59afe9068955f95f1f16f7109d5bd12d90d8c508b41c891df841de15a35e10c"
               ]
             },
             {
               "role": "subject-output-manifest",
               "ordered_hashes": [
-                "sha256:28dc8f33d10e1e29aefa33ca91b196ecd0367fee103690a19405bed868e15bc6"
+                "sha256:03750cae416cba7ca318028e2ec9e63f3a73e6457a78038d6cc272059de75085"
               ]
             },
             {
               "role": "journey-result",
               "ordered_hashes": [
-                "sha256:25cdf1d89eb1bf31d60b019d88a927a974fc2657731afe522cedae70b5226f81"
+                "sha256:493ea63ee2351f5e2b771c0513709ea74c07fc5577cbc7ea0d07789094d528b5"
               ]
             },
             {
               "role": "domain-result",
               "ordered_hashes": [
-                "sha256:16888bbfd9ca7b128b902115a2f7b1d8112541a58f552b546f5f4dbb352897cc"
+                "sha256:9c2262b2f24ecd93d697bbc56fadfb96e629ab12716f460081f29a4852e37636"
               ]
             },
             {
               "role": "precleanup-result-join",
               "ordered_hashes": [
-                "sha256:09cae4165220c0cdc6524ad29cc5c1a636f7af34ee23737654ec8dc9ee0d557f"
+                "sha256:a811a5b6cc108a3606d6f7a890ea2da8c8ce15e9b5f36a1e129539759e0090c0"
               ]
             },
             {
               "role": "environment-restoration",
               "ordered_hashes": [
-                "sha256:fe9b3f5ab47cb26fb6528e47b0e2b8638d0f718af7ad19aac2bf4ca8f311cd6c"
+                "sha256:1a68d31c2a32b3a7b3a9f515076cd11e22cfd9ea712193d87e48b1800e9afc40"
               ]
             },
             {
               "role": "restoration-probe",
               "ordered_hashes": [
-                "sha256:8ed44024598a76cf6b060c28da1b01ff5d226e9a2ea6c1b41c1e42da438e5140"
+                "sha256:d2bd50bc88bb807a9604f9ec75661cddfb4ffa63826cb12f44ea29f1fd003adc"
               ]
             },
             {
               "role": "teardown-verification",
               "ordered_hashes": [
-                "sha256:08310841778703f512e72bcdc71c17914f460dc6b514dd586fb332b53f32204f"
+                "sha256:fcfa635cfcf87744d40144a3c674056209182e647a1f792c913b8091ff55bbb7"
               ]
             },
             {
               "role": "validity-result",
               "ordered_hashes": [
-                "sha256:07149a04a9cb438a37be26b681abb9c92224f77ac12223680042783a278af3f2"
+                "sha256:943f0c9f1707c3b264b959c49b8637219d01713cf4e24a3444472559f0768ea4"
               ]
             },
             {
               "role": "generic-evaluation-index",
               "ordered_hashes": [
-                "sha256:5777102516d5905590ed2537535bb8a944fbb556b40e666a2d8e84ac7c2c0cdc"
+                "sha256:a30785b0b9166e6ffda896e398d97370db42e57e3e84b9bad067eb7900189dba"
               ]
             },
             {
               "role": "run-record",
               "ordered_hashes": [
-                "sha256:49b7b8cb7c74668fcecf2636afe942e7d6a3ced7f71f3c1202b2a86cf4d2396b"
+                "sha256:64eef538c7804a715e2a766dddf2982d832342ad17d8eb8aaa17e8eb1df5f18c"
               ]
             },
             {
               "role": "final-attestation",
               "ordered_hashes": [
-                "sha256:63cd27bfa37399979755f367e25da630c9afcbf55ffa2c7fd9ccd766e7a3b025"
+                "sha256:4a45c058f44640e3ca92288bbdbd228e47b8b3565da9eb5b4e9d161ff7f34ba4"
               ]
             },
             {
               "role": "signer-inventory",
               "ordered_hashes": [
-                "sha256:56f9998c7a2193dfb8297a2a320c703f7a755a9a73f5819c475daaefa464d8d7"
+                "sha256:b7f8b7ec70c0b5598d66c8fd2f5937d082d7f71c5e21f97822d627521b21f5cb"
               ]
             },
             {
               "role": "metric-result",
               "ordered_hashes": [
                 "sha256:11f4c54ee1a2617178cbc2dd1b344033b23e3361b1a31767f8d0952d14d1f321",
-                "sha256:17f004d5e33582c91c827da0ee4bb34fe2589e73a290a81c03459dc2ee5600e9",
-                "sha256:a39d2df009ceea3554ca885a3e55e223ddaf43fe347310b0404fa6377372215d",
+                "sha256:99cea495777a995aa5df6eac4bd0def288067d20822c89e2df5a8328e7b5f795",
+                "sha256:5fdc38a26a917989b647a0ab6de8f0c8c282e27ab4c511b73c2bbf49f6abe764",
                 "sha256:93463700465bd27386ea80829d471777e83a74d0366f3062825cf354241304c3",
                 "sha256:748126620dbc4dfbd4fb4ecc6d45c72032a90c5f71598d5240c81f390a8d3e51",
-                "sha256:a569d9a9ac8eef720a7621002f475e204cbabfd694cf282ecc5f33e8ba3bba8a",
-                "sha256:a9af49bbb77634b9574ef75d8d28d1066f192b04c9b39b19ec2d7d58fa649ab7",
-                "sha256:a79e8b704d69957034ebbfaa8718162551cffe9b2cf3dfa53f2bb437dec03f71",
-                "sha256:242fb5c3b30c576f682c436a930219ba1b70bb8e174d20361fe0f821eb70eed6"
+                "sha256:e7484c5e96046d9ac55e66e3eee3b8e4ceec5da1dd4496bc5d7979430d617719",
+                "sha256:0a36e2283e6d81e97857c23a870aad80ef7b991e545be0fed48b10430e470833",
+                "sha256:56e51e0c17e649877d407ef645417fa19f34a95f5551b0a1094cd5d3c01d04c3",
+                "sha256:e367647062178304c2ac8aeb6237a76c5404ac06ab655604c94d4c8750988f1e"
               ]
             },
             {
               "role": "judge-expectation-reveal",
               "ordered_hashes": [
-                "sha256:67cba0c32147de570be89f7ae1b12eecd3c89f4f19c48a68f1daf5717f9ac06d"
+                "sha256:f843fa33bd8065f10fb619fd1a1f723e51509db4eb10fc580798b6a3f8814d92"
               ]
             },
             {
               "role": "observation-bundle",
               "ordered_hashes": [
-                "sha256:7bb028bfac1a4c7e444ff0fe238c1eb1112373daf7ea0d01784006aba59edd72"
+                "sha256:8c06a91ba740074ff6c8fae2f78ded4ebd8e79fa22771bff468cd23ed76459d9"
               ]
             },
             {
               "role": "canonical-evidence-envelope",
               "ordered_hashes": [
-                "sha256:aab829f51d36bce423de5365117f93aa5c7057c2074adfb372bb90d624f9c3f8"
+                "sha256:1cd82997928b1d4253bd123505d1bab4e3d915a1bc962f1c35e1d598eb24fe4a"
               ]
             },
             {
               "role": "adapter-translation-receipt",
               "ordered_hashes": [
-                "sha256:81d116ad6c56cc79fb1f7630f5e5192859d89d774cd0d6dd8f3d0dacb4e63602"
+                "sha256:8b2d8b1812f68552741a6c9491841a91fec84bc7efb07fa17c5bf02dad7f0cdc"
               ]
             },
             {
@@ -4521,34 +4539,34 @@
             {
               "role": "mutation-receipt",
               "ordered_hashes": [
-                "sha256:2bade9fcf0654950293adc64c5b00ec0b7f5d438284bca77a6b0e759ba4ff7f4"
+                "sha256:328170d2c332e4e2636b282b2074eaa302a0d1cc5475ec9873b3bfd3df11ecd0"
               ]
             },
             {
               "role": "compensation-receipt",
               "ordered_hashes": [
-                "sha256:2d78e69b7b187a915ef1340fb41275d83c1067cf6802a94bd1ab7752dca30789"
+                "sha256:fab177b0659c2e7ce0570f07b192dbb21e251aef077dec13ab29fe64f87c226b"
               ]
             },
             {
               "role": "challenge-activation-receipt",
               "ordered_hashes": [
-                "sha256:e8fd422c75b49c69ee1b76c22198e62796050aaaf87b27de451aedb7bac2bc55"
+                "sha256:c89ee49861723d8e28dd7178513c6e42667ad1ed716392eb500ffbf9b4320c2a"
               ]
             },
             {
               "role": "evidence-window-commitment",
               "ordered_hashes": [
-                "sha256:7a860a04359ccb69b7b6a546894899b7858edfd654a0169332c303a5112ca3ba"
+                "sha256:8bb01a5da12ae260ec8668b41c4fe187e63c377100967747f0465f55bc1789fa"
               ]
             }
           ],
           "rejected_extra_hashes": [],
           "missing_roles": [],
           "verdict": "valid",
-          "verified_at": "2026-07-31T00:41:55Z",
+          "verified_at": "2026-08-05T02:46:41Z",
           "verifier_release_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
-          "core_hash": "sha256:e8f7618c592258547de24fc1ad94b69afc06cb0c2fd4e013c03827895010a505"
+          "core_hash": "sha256:bb399a30c6377e3d76fab8aaa75c97c90ca6d7e3a7924bfae53743f32a72638e"
         }
       }
     },
@@ -4559,13 +4577,13 @@
       "erl2",
       "verify",
       "--public-bundle",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run/retained/public-bundle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run/retained/public-bundle.json",
       "--root-config",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/root-config-unpinned.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/root-config-unpinned.json",
       "--artifact-root",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/run",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/run",
       "--lifecycle",
-      "/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-environment-run-VKbOFX/lifecycle.json",
+      "/Users/karthik/Developer/qualiber-reality-lab/.erl2-work/evidence-staging/__________________________________________________________________________________________________________________work--qMAFQE/environment-run/lifecycle.json",
       "--offline"
     ],
     "exit_code": 3,

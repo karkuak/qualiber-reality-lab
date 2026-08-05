@@ -27,6 +27,15 @@ const PACKAGE_BYTES = Buffer.from("reference-limited subject package v0.1.0\n", 
 
 function acquire(context: AdapterOperationContext): AdapterOperationOutcome {
   context.diagnostic("acquired the distributed artifact; no authentication was required");
+  // A file, not only a diagnostic. This subject reaches the pre-environment
+  // terminal — the honest `unsupported` one — and that terminal is therefore the
+  // cheapest run that carries a *retained subject output payload*. Writing
+  // nothing here left the whole payload-accounting boundary reachable only
+  // through a full environment terminal.
+  context.writeOutput(
+    "acquisition/source.txt",
+    "distributed as an oci image; acquired the published artifact\n",
+  );
   return {
     status: "supported",
     resultSchemaVersion: "reference-limited-acquisition/v1",
