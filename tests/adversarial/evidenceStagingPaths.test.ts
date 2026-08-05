@@ -415,7 +415,7 @@ test("EVIDENCE-STAGING: two concurrent generations share no mutable execution di
     childPath,
     [
       `import { createStagingRoot } from ${JSON.stringify(stagingModule)};`,
-      `import { mkdirSync, writeFileSync, readFileSync, readdirSync } from "node:fs";`,
+      `import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from "node:fs";`,
       `import path from "node:path";`,
       `const marker = process.argv[2];`,
       `const { stagingRoot, workRoot, release } = createStagingRoot(${JSON.stringify(checkout)});`,
@@ -423,17 +423,36 @@ test("EVIDENCE-STAGING: two concurrent generations share no mutable execution di
       `const runRoot = path.join(workRoot, "generic-finalization", "generic-finalization-failed-verification");`,
       `mkdirSync(runRoot, { recursive: true });`,
       `writeFileSync(path.join(runRoot, "execution-state.json"), marker);`,
-      // Hold both roots open across the other process's whole lifetime.
-      `await new Promise((r) => setTimeout(r, 1500));`,
+      // A MUTUAL rendezvous, not a sleep and not a one-sided wait. Each side
+      // announces itself, waits for the other's announcement, and only then
+      // releases — so neither can tear its roots down before the other has
+      // looked. A timed sleep passed alone and failed under a full gate's
+      // scheduling; a one-sided wait then failed the other way, because the
+      // faster generation released while the slower one was still polling.
+      `const flag = (name) => path.join(${JSON.stringify(checkout)}, name);`,
+      `const bothPresent = async (suffix) => {`,
+      `  for (let i = 0; i < 600; i += 1) {`,
+      `    if (["generation-a", "generation-b"].every((m) => existsSync(flag(m + suffix)))) return true;`,
+      `    await new Promise((r) => setTimeout(r, 50));`,
+      `  }`,
+      `  return false;`,
+      `};`,
+      `writeFileSync(flag(marker + ".ready"), "");`,
+      `const met = await bothPresent(".ready");`,
+      // Counted while both are provably alive: each has announced and neither
+      // has been allowed to release yet.
+      `const siblings = readdirSync(path.dirname(workRoot)).length;`,
+      `writeFileSync(flag(marker + ".observed"), "");`,
+      `const released = await bothPresent(".observed");`,
       // What survived is what this process wrote, or the isolation failed.
       `const seen = readFileSync(path.join(runRoot, "execution-state.json"), "utf8");`,
-      `process.stdout.write(JSON.stringify({ marker, seen, stagingRoot, workRoot, siblings: readdirSync(path.dirname(workRoot)).length }));`,
+      `process.stdout.write(JSON.stringify({ marker, seen, stagingRoot, workRoot, siblings, met, released }));`,
       `release();`,
       "",
     ].join("\n"),
   );
 
-  const run = (marker: string): Promise<{ marker: string; seen: string; stagingRoot: string; workRoot: string; siblings: number }> =>
+  const run = (marker: string): Promise<{ marker: string; seen: string; stagingRoot: string; workRoot: string; siblings: number; met: boolean; released: boolean }> =>
     new Promise((resolve, reject) => {
       const child = spawn(process.execPath, [childPath, marker], { encoding: "utf8" } as never);
       let out = "";
@@ -452,9 +471,19 @@ test("EVIDENCE-STAGING: two concurrent generations share no mutable execution di
   assert.equal(second.seen, "generation-b", "a concurrent generation overwrote this one's execution state");
   // Four distinct roots, and both processes really were alive together.
   assert.equal(new Set([first.stagingRoot, first.workRoot, second.stagingRoot, second.workRoot]).size, 4);
-  assert.ok(
-    first.siblings >= 4 && second.siblings >= 4,
-    "the two generations did not overlap; the control proves nothing",
+  // The rendezvous succeeded on both sides, so the two generations really were
+  // holding their roots at the same moment — without that, the control proves
+  // only that two sequential runs do not collide, which is a weaker claim.
+  // Both sides met, and both counted four roots while neither had released —
+  // so the two generations really were holding their own execution state at the
+  // same moment. Without that, the control proves only that two *sequential*
+  // runs do not collide, which is a weaker claim than the one being made.
+  assert.ok(first.met && second.met, "the two generations never met; the control proves nothing");
+  assert.ok(first.released && second.released, "a generation released before the other had looked");
+  assert.deepEqual(
+    [first.siblings, second.siblings],
+    [4, 4],
+    "each generation must see exactly its own pair and the other's while both are alive",
   );
   // Both released: nothing is left under the shared parent.
   assert.equal(
