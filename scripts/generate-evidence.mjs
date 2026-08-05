@@ -18,13 +18,11 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { doctorTranscriptFailures, doctorTranscriptSummary } from "./lib/doctorTranscriptGate.mjs";
@@ -108,7 +106,11 @@ if (mode === "out" && existsSync(publishTarget) && readdirSync(publishTarget).le
   process.exit(2);
 }
 
-const { stagingRoot } = createStagingRoot(root);
+// `stagingRoot` is what may be published; `workRoot` is where runs that must not
+// be published execute. Both are this generation's alone, both are exactly
+// `STAGING_ROOT_TARGET_BYTES` bytes long wherever the repository is checked out,
+// and both are released together.
+const { stagingRoot, workRoot } = createStagingRoot(root);
 
 process.env.ERL2_EVIDENCE_CLOCK = "2026-07-01T00:00:00Z";
 // The evidence runs drive the development fake subject port with scripted
@@ -577,10 +579,12 @@ transcript.push(
     ["generic-finalization-missing-result-join", "failed", true],
   ]) {
     const registry = buildGovernorRegistry({ random: seededRandom(`generic-finalization:${label}`) });
-    // A fixed, cleaned working directory (never a random tmpdir) so the run's
-    // absolute paths are reproducible; `.erl2-work` is removed by `npm run clean`.
-    const runRoot = path.join(root, ".erl2-work", "evidence", label);
-    rmSync(runRoot, { recursive: true, force: true });
+    // This generation's own working directory, never a shared one. It used to be
+    // `<repoRoot>/.erl2-work/evidence/<label>`, deleted on entry — so two
+    // concurrent generations deleted each other's execution state mid-run. The
+    // work root is unique per process and constant in absolute byte length, so
+    // the reproducibility the fixed path was chosen for survives the isolation.
+    const runRoot = path.join(workRoot, "generic-finalization", label);
     mkdirSync(runRoot, { recursive: true });
     const base = [
       "--run-root", runRoot,
@@ -706,7 +710,12 @@ transcript.push(
 
   // The run itself is built OUTSIDE the golden tree, because its bytes cannot be
   // pinned. Only the deterministic summary below lands in `fixtures/golden`.
-  const envDir = mkdtempSync(path.join(tmpdir(), "erl2-environment-run-"));
+  //
+  // In this generation's work root rather than a fresh `os.tmpdir()` directory:
+  // that one was never removed by anything, so every generation since the harness
+  // was written left one behind. This one is released with the staging root.
+  const envDir = path.join(workRoot, "environment-run");
+  mkdirSync(envDir, { recursive: true });
   const goldenEnvDir = path.join(stagingRoot, "environment-run");
   rmSync(goldenEnvDir, { recursive: true, force: true });
   mkdirSync(goldenEnvDir, { recursive: true });

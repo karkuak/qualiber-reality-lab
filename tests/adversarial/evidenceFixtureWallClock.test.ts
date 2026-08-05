@@ -15,6 +15,18 @@
  * harness through the CLI composition root's existing `ERL2_EVIDENCE_CLOCK`
  * evidence mode.
  *
+ * ## The activation condition
+ *
+ * The first version activated on the mere presence of `ERL2_EVIDENCE_CLOCK`. The
+ * independent review measured why that was wrong: `runClock` prefers the durable
+ * preregistration's `registered_at`, so on an already-preregistered run the
+ * variable changed no timestamp and only zeroed the retained measurement — a run
+ * stamped at real wall time could retain `wall_clock_ms: 0` between two
+ * timestamps two seconds apart, and still verify. The override now requires the
+ * run to *durably belong* to the same evidence clock. That condition is exercised
+ * below through the CLI, because the CLI composition root is where the defect
+ * lived; a test that hands `AdapterHost` the option directly cannot see it.
+ *
  * ## What these controls assert
  *
  * The three properties that make it a measurement override rather than a timing
@@ -36,8 +48,10 @@
 
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { existsSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { chmodSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Erl2Error } from "@erl2/contracts";
 import { coreHash } from "@erl2/integrity";
 import {
@@ -48,9 +62,43 @@ import {
   REFERENCE_CORRECT_MANIFEST,
   sabotageAdapterEntry,
 } from "../support/adapterFixtures.js";
+import { buildGovernorRegistry } from "../support/governorRegistry.js";
+import { ownedRunRoot } from "../support/tempDirs.js";
 
 /** The value the CLI composition root supplies in evidence mode. */
 const EVIDENCE_FIXTURE_WALL_CLOCK_MS = 0;
+
+/** The instant `scripts/generate-evidence.mjs` anchors a generated run on. */
+const EVIDENCE_CLOCK = "2026-07-01T00:00:00Z";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const cliBin = path.join(repoRoot, "packages", "cli", "dist", "src", "bin.js");
+
+interface CliResult {
+  readonly exitCode: number;
+  readonly body: { readonly errors?: readonly { readonly code?: string }[] };
+}
+
+/**
+ * The shipped binary, in its own process, with the evidence clock set or absent.
+ *
+ * Local rather than `support/cliRun.ts`'s `erl2`, because the variable under test
+ * is exactly the one that helper does not vary — and a helper that always set it
+ * would make every one of these cases agree with itself.
+ */
+function erl2WithClock(args: readonly string[], evidenceClock?: string): CliResult {
+  const env: NodeJS.ProcessEnv = { ...process.env, ERL2_DEVELOPMENT_FAKE_SUBJECT: "1" };
+  if (evidenceClock === undefined) delete env["ERL2_EVIDENCE_CLOCK"];
+  else env["ERL2_EVIDENCE_CLOCK"] = evidenceClock;
+  const result = spawnSync(process.execPath, [cliBin, ...args], { encoding: "utf8", env });
+  let body: CliResult["body"];
+  try {
+    body = JSON.parse(result.stdout) as CliResult["body"];
+  } catch {
+    body = { errors: [{ code: "NON_JSON_OUTPUT" }] };
+  }
+  return { exitCode: result.status ?? -1, body };
+}
 
 function runReferenceAcquire(overrides: Record<string, unknown> = {}) {
   const { host } = newHost(
@@ -185,4 +233,195 @@ test("EVIDENCE-CLOCK: the deadline and the process-tree kill still use real supe
     }
     assert.equal(alive, false, "the grandchild survived process-tree termination");
   }
+});
+
+
+// ---------------------------------------------------------------------------
+// The CLI activation condition (review F-2).
+// ---------------------------------------------------------------------------
+//
+// Everything above drives `AdapterHost` directly, which is the wrong altitude for
+// this question: the option was always honoured correctly, and the defect was in
+// *when the composition root supplies it*. These cases run the shipped binary in
+// its own process, over a real out-of-process adapter, and vary only the durable
+// preregistration and the environment.
+
+/** One run's worth of CLI plumbing against a real reference adapter. */
+function adapterRun(): {
+  readonly runRoot: string;
+  readonly runId: string;
+  readonly base: readonly string[];
+  readonly registry: ReturnType<typeof buildGovernorRegistry>;
+} {
+  const registry = buildGovernorRegistry({});
+  const runRoot = ownedRunRoot("erl2-evidence-clock-");
+  const runId = "00000000-0000-7000-8000-0000000000ab";
+  return {
+    runRoot,
+    runId,
+    registry,
+    base: [
+      "--run-root", runRoot,
+      "--registry", registry.root,
+      "--tier", "development",
+      "--adapter-entry", referenceAdapterEntry("reference-correct"),
+    ],
+  };
+}
+
+function preregister(run: ReturnType<typeof adapterRun>, evidenceClock?: string): CliResult {
+  return erl2WithClock(
+    [
+      "preregister-acquisition", ...run.base, "--run", run.runId,
+      "--acquisition-source", run.registry.sourceManifestHash,
+      "--adapter", run.registry.referenceCorrectAdapterHash,
+      "--acquisition-actor-script", run.registry.acquisitionActorScriptHash,
+      "--acquisition-actor-schema", run.registry.acquisitionActorSchemaHash,
+      "--acquisition-step", run.registry.acquisitionStep.commitmentHash,
+      "--package-verification-step", run.registry.packageVerificationStep.commitmentHash,
+      "--generic-policy", run.registry.genericRunPolicyHash,
+      "--trust-policy", run.registry.runTrustPolicyHash,
+      "--limits", run.registry.limitsHash,
+      "--expires", "2030-12-31T00:00:00Z",
+    ],
+    evidenceClock,
+  );
+}
+
+/** The retained sandbox result for the run's `acquire`. */
+function retainedAcquire(runRoot: string): { wall_clock_ms: number; started_at: string; ended_at: string } {
+  return JSON.parse(
+    readFileSync(
+      path.join(runRoot, "retained", "adapter", "op-acquire", "sandbox-invocation-result.json"),
+      "utf8",
+    ),
+  ) as { wall_clock_ms: number; started_at: string; ended_at: string };
+}
+
+test("EVIDENCE-CLOCK-CLI: a real preregistration keeps its real duration even when the evidence clock appears later", () => {
+  // The exact defect: preregister normally, then set the variable for `acquire`
+  // alone. The run's time base is the real `registered_at`, so the variable
+  // changes no timestamp — and must therefore change no measurement either.
+  const run = adapterRun();
+  assert.equal(preregister(run).exitCode, 0);
+
+  const prereg = JSON.parse(
+    readFileSync(path.join(run.runRoot, "retained", "acquisition-preregistration.json"), "utf8"),
+  ) as { registered_at: string };
+  assert.notEqual(prereg.registered_at, EVIDENCE_CLOCK, "the fixture must be stamped with real time");
+
+  const acquired = erl2WithClock(["acquire", ...run.base, "--run", run.runId], EVIDENCE_CLOCK);
+  assert.equal(acquired.exitCode, 0, JSON.stringify(acquired.body));
+
+  const retained = retainedAcquire(run.runRoot);
+  assert.ok(
+    retained.wall_clock_ms > 0,
+    `a real run must retain a real measurement, got ${String(retained.wall_clock_ms)}`,
+  );
+});
+
+test("EVIDENCE-CLOCK-CLI: a run preregistered under the evidence clock retains the fixture value", () => {
+  // The generation path, which must keep working: preregistered under the
+  // evidence clock and continued under the same one.
+  const run = adapterRun();
+  assert.equal(preregister(run, EVIDENCE_CLOCK).exitCode, 0);
+
+  const prereg = JSON.parse(
+    readFileSync(path.join(run.runRoot, "retained", "acquisition-preregistration.json"), "utf8"),
+  ) as { registered_at: string };
+  assert.equal(prereg.registered_at, EVIDENCE_CLOCK, "an evidence run is stamped with the evidence clock");
+
+  assert.equal(erl2WithClock(["acquire", ...run.base, "--run", run.runId], EVIDENCE_CLOCK).exitCode, 0);
+  assert.equal(retainedAcquire(run.runRoot).wall_clock_ms, EVIDENCE_FIXTURE_WALL_CLOCK_MS);
+});
+
+test("EVIDENCE-CLOCK-CLI: a second, different evidence clock does not activate the override", () => {
+  // Preregistered under clock A, continued under clock B. The run belongs to A,
+  // so B is somebody else's evidence mode and buys nothing here.
+  const run = adapterRun();
+  assert.equal(preregister(run, EVIDENCE_CLOCK).exitCode, 0);
+
+  const acquired = erl2WithClock(["acquire", ...run.base, "--run", run.runId], "2026-09-09T00:00:00Z");
+  assert.equal(acquired.exitCode, 0, JSON.stringify(acquired.body));
+  assert.ok(
+    retainedAcquire(run.runRoot).wall_clock_ms > 0,
+    "a mismatched evidence clock must not zero the retained measurement",
+  );
+});
+
+test("EVIDENCE-CLOCK-CLI: an absent or malformed preregistration cannot activate the override", () => {
+  // Malformed: the durable record exists but establishes nothing. It is read, not
+  // repaired — the workspace refuses the run on its own account moments later,
+  // and in the meantime no override is supplied.
+  const run = adapterRun();
+  assert.equal(preregister(run, EVIDENCE_CLOCK).exitCode, 0);
+  const preregPath = path.join(run.runRoot, "retained", "acquisition-preregistration.json");
+
+  // The retained record is frozen read-only, which is itself the answer to "could
+  // this happen by accident" — it takes a deliberate `chmod` to get here.
+  const corruptions = [
+    "{ not json",
+    JSON.stringify({ registered_at: 12345 }),
+    JSON.stringify({}),
+    undefined /* absent entirely */,
+  ];
+  for (const corruption of corruptions) {
+    chmodSync(preregPath, 0o600);
+    if (corruption === undefined) rmSync(preregPath, { force: true });
+    else writeFileSync(preregPath, corruption);
+
+    const acquired = erl2WithClock(["acquire", ...run.base, "--run", run.runId], EVIDENCE_CLOCK);
+    // A refusal is equally acceptable — what must never happen is a fixture value
+    // standing in for a measurement on a run that established no evidence mode.
+    if (acquired.exitCode === 0 && existsSync(path.join(run.runRoot, "retained", "adapter", "op-acquire", "sandbox-invocation-result.json"))) {
+      assert.ok(
+        retainedAcquire(run.runRoot).wall_clock_ms > 0,
+        `a ${String(corruption).slice(0, 24)} preregistration activated the override`,
+      );
+    }
+    if (corruption === undefined) break;
+  }
+});
+
+test("EVIDENCE-CLOCK-CLI: the supervisor deadline stays real in evidence mode", () => {
+  // The property that must hold in *both* modes, asserted through the CLI: a
+  // hostile adapter that never responds is still timed out against real time
+  // while the evidence clock is in force.
+  const registry = buildGovernorRegistry({});
+  const runRoot = ownedRunRoot("erl2-evidence-clock-timeout-");
+  const runId = "00000000-0000-7000-8000-0000000000ac";
+  const base = [
+    "--run-root", runRoot,
+    "--registry", registry.root,
+    "--tier", "development",
+    "--adapter-entry", sabotageAdapterEntry("timeout"),
+  ];
+  const prereg = erl2WithClock(
+    [
+      "preregister-acquisition", ...base, "--run", runId,
+      "--acquisition-source", registry.sourceManifestHash,
+      "--adapter", registry.referenceCorrectAdapterHash,
+      "--acquisition-actor-script", registry.acquisitionActorScriptHash,
+      "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
+      "--acquisition-step", registry.acquisitionStep.commitmentHash,
+      "--package-verification-step", registry.packageVerificationStep.commitmentHash,
+      "--generic-policy", registry.genericRunPolicyHash,
+      "--trust-policy", registry.runTrustPolicyHash,
+      "--limits", registry.limitsHash,
+      "--expires", "2030-12-31T00:00:00Z",
+    ],
+    EVIDENCE_CLOCK,
+  );
+  assert.equal(prereg.exitCode, 0, JSON.stringify(prereg.body));
+
+  const started = Date.now();
+  const acquired = erl2WithClock(["acquire", ...base, "--run", runId], EVIDENCE_CLOCK);
+  const elapsed = Date.now() - started;
+
+  assert.notEqual(acquired.exitCode, 0, "an adapter that never responds must not succeed");
+  assert.equal(acquired.body.errors?.[0]?.code, "ADAPTER_DEADLINE_EXCEEDED");
+  assert.ok(
+    elapsed >= 1_000,
+    `the deadline must have been enforced against real time, took ${String(elapsed)}ms`,
+  );
 });

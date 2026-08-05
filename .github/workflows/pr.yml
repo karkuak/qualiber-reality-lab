@@ -44,7 +44,7 @@ jobs:
             "tests/dist/e2e/adapterJourney.test.js"
       - name: Adapter packages are removable
         run: node --test "tests/dist/architecture/removability.test.js" "tests/dist/architecture/adapterSurface.test.js"
-      - name: Evidence byte-pin (780 files byte-identical to the pinned goldens; exactly 7 exact-path exclusions, each printed, with the exclusion manifest and the coverage counts themselves pinned)
+      - name: Evidence byte-pin (832 files byte-identical to the pinned goldens; exactly 7 exact-path exclusions, each printed, with the exclusion manifest and the coverage counts themselves pinned)
         run: npm run evidence:verify
       - name: Golden fixtures must not drift (P2-10 — routine verification never rewrites approved evidence)
         run: git diff --exit-code -- fixtures/golden
