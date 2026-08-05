@@ -1017,7 +1017,16 @@ if (mode === "verify") {
   // provisioned", and the archetype it names — neither of which was ever added,
   // so the fixture's cleanup verdicts could be attributed to no substrate at all.
   // The exclusion manifest is unchanged; the pin grew, it did not narrow.
-  const EXPECTED_PINNED = 787;
+  //
+  // 787 -> 832 as the adapter host's own adjudication became retained evidence:
+  // the two reference-adapter runs each gained their per-operation response
+  // envelope, sandbox invocation manifest and result, capability grant and
+  // diagnostics manifest, plus the frozen subject-output and diagnostics trees —
+  // each pinned as content and as its `.frozen` marker — while the old
+  // `run/diagnostics/**` copies moved beneath `subject-output/` and two
+  // content-addressed step-outcome names moved with their hashes. 57 files added,
+  // 12 removed. Again: the exclusion manifest is unchanged and the pin grew.
+  const EXPECTED_PINNED = 832;
   const EXPECTED_EXCLUDED = 7;
 
   const manifestDigest = createHash("sha256")

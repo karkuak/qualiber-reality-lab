@@ -1,0 +1,1 @@
+distributed as an oci image; acquired the published artifact
