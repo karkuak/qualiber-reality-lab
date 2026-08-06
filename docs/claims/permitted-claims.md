@@ -490,20 +490,24 @@ The one claim this slice earns, stated at exactly its width:
 - **The retained-telemetry claim, at exactly its width (ADR-ERL2-033).** The
   deferred ERL2-OQ-005 obligation is discharged: the observation the live
   acceptance test used to make alone is now retained into the run's evidence
-  and gated. What may now be said: *a valid Compose-driver run on an archetype
-  that declares a metric evidence source retains an attributable-telemetry
-  observation — the run's own collector, Docker-verified by its three ownership
-  labels and the locked image digest, received spans, and the retained record
-  counts how many retained log lines carry the run's own id — frozen before
-  `teardown_started` so the lifecycle chain itself proves the collector was
-  read while the containers lived; the producer's
-  `attributable-telemetry-retained` validity gate and the offline verifier's
-  `deriveAttributableTelemetry` each refuse the terminal where that observation
-  was declared obtainable and is missing, unattributed, or in contradiction
-  with the retained log excerpt its every count is re-derived from.* That
-  statement is bounded to the development tier, the development-signed
-  self-qualified substrate, non-blind selection and T1: no component of the
-  claim ceiling moves. What may still **not** be said:
+  and gated. What may now be said: *a valid Compose-driver run whose archetype
+  declares a metric evidence source and whose exercising journey step succeeded
+  retains an attributable-telemetry observation reporting at least one record
+  that names the run's own id — read from the run's own collector,
+  Docker-verified by its three ownership labels and the locked image digest,
+  and frozen before `teardown_started` so the lifecycle chain itself proves the
+  collector was read while the containers lived. The producer's
+  `attributable-telemetry-retained` validity gate refuses such a run when that
+  observation is missing, not an observation, not this run's, or names the run
+  in no record; the offline verifier's `deriveAttributableTelemetry` refuses
+  the same run on the same grounds and additionally recomputes every count from
+  the observation's own retained log excerpt, refusing any disagreement.* Read
+  the three conjuncts as load-bearing: a Compose run whose exercising step did
+  not succeed declares nothing, and its retained observation — which may
+  honestly report zero — supports **no** receipt claim at all. The statement is
+  bounded to the development tier, the development-signed self-qualified
+  substrate, non-blind selection and T1: no component of the claim ceiling
+  moves. What may still **not** be said:
   - that any telemetry record lies **inside the frozen evidence window**. The
     exercising step runs after the cutoff is realized, and the observation is
     stamped post-cutoff: it attests receipt *during the run, before teardown*,

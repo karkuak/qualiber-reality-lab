@@ -34,6 +34,7 @@ import {
   dockerAvailable,
   fileSha256,
   OTEL_DEMO_SERVICES,
+  parseCollectorTelemetry,
   resourceIdentityHash,
   SteppingClock,
   uuidV7From,
@@ -45,6 +46,7 @@ import {
   putStubImage,
   StubDockerCli,
   type StubBehaviour,
+  withTelemetry,
   type StubContainer,
   type StubWorld,
 } from "../support/composeStub.js";
@@ -211,6 +213,9 @@ function fixture(
     upstream,
     repositoryConfig: repository,
     docker,
+    // The stub has no exporter to wait for: the world is already arranged when
+    // the observation runs, so a settle budget would only spend wall clock.
+    telemetrySettleAttempts: 1,
   });
   return { driver, docker, world, lock, repository };
 }
@@ -925,4 +930,71 @@ test("COMPOSE-ADV: the substrate identity changes when the daemon does", () => {
   // first substrate must not accept the second.
   f.world.engineId = "stub-engine-0002";
   assert.notEqual(f.driver.substrateInstance()?.instanceHash, bound?.instanceHash);
+});
+
+// -- the attributable-telemetry observation (ADR-ERL2-033) -------------------
+//
+// The driver's own half of the obligation: what it observes, and — the part
+// that has no other witness — what it records when it cannot observe. An
+// `absent` branch that returned the wrong shape, or that dressed a failure as
+// an observation, would be invisible to the live acceptance test, which only
+// ever exercises the happy path on a host with a daemon.
+
+test("COMPOSE-ADV: telemetry the collector received is observed with the lines its counts derive from", () => {
+  const f = provisioned();
+  withTelemetry(f.world, `${PROJECT}-otel-collector`, RUN_ID, 3);
+  const material = f.driver.observeAttributableTelemetry(RUN_ID);
+  assert.equal(material.evidence, "observed");
+  if (material.evidence !== "observed") return;
+  assert.equal(material.marker, RUN_ID);
+  assert.equal(material.counts.spans, 3);
+  assert.equal(material.counts.traceBatches, 1);
+  assert.ok(material.counts.runAttributedRecords > 0);
+  assert.deepEqual(material.counts.serviceNames, ["quote"]);
+  assert.equal(material.collector.serviceId, "otel-collector");
+  assert.equal(material.collector.containerName, `${PROJECT}-otel-collector`);
+  // The excerpt is exactly the lines the counts derive from, and re-parsing it
+  // reproduces them — the property the offline verifier stands on.
+  assert.deepEqual(parseCollectorTelemetry(material.excerpt, RUN_ID), material.counts);
+  assert.equal(material.excerpt.includes("Everything is ready"), false);
+});
+
+test("COMPOSE-ADV: a collector that is not provably this run's yields an absent observation, not a zero", () => {
+  const f = provisioned();
+  withTelemetry(f.world, `${PROJECT}-otel-collector`, RUN_ID, 3);
+  // The exact-name container is now running substituted bytes: verified()
+  // fails, so its logs may not be read at all — and the honest record of that
+  // is `absent` with a reason, never an observation reporting zero.
+  const collector = f.world.containers.get(`${PROJECT}-otel-collector`) as StubContainer;
+  f.world.containers.set(`${PROJECT}-otel-collector`, { ...collector, image: "sha256:deadbeef" });
+  const material = f.driver.observeAttributableTelemetry(RUN_ID);
+  assert.equal(material.evidence, "absent");
+  if (material.evidence !== "absent") return;
+  assert.equal(material.reasonCode, "collector_not_verified");
+  assert.equal(material.marker, RUN_ID);
+});
+
+test("COMPOSE-ADV: a collector whose logs cannot be read is absent for a different, named reason", () => {
+  const f = provisioned({
+    behaviour: { fail: (args) => args[0] === "container" && args[1] === "logs" },
+  });
+  const material = f.driver.observeAttributableTelemetry(RUN_ID);
+  assert.equal(material.evidence, "absent");
+  if (material.evidence !== "absent") return;
+  assert.equal(
+    material.reasonCode,
+    "collector_logs_unreadable",
+    "an unreadable log and an unverified container are different facts and must stay distinct",
+  );
+});
+
+test("COMPOSE-ADV: a verified collector that received nothing this run is observed, honestly, as zero", () => {
+  const f = provisioned();
+  // No telemetry appended: the collector is provably this run's and its log is
+  // readable, so the observation is real — and it reports nothing attributed.
+  const material = f.driver.observeAttributableTelemetry(RUN_ID);
+  assert.equal(material.evidence, "observed");
+  if (material.evidence !== "observed") return;
+  assert.equal(material.counts.runAttributedRecords, 0);
+  assert.equal(material.counts.spans, 0);
 });

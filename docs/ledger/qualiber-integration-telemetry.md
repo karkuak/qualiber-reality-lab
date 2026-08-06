@@ -43,10 +43,10 @@ because they were found by reading and grepping, not by a failing test:
   `docker container logs`, with slightly different regexes. The seam was
   prepared, never consumed.
 - The byte pin is **832 files / 7 excluded** (`EXPECTED_PINNED` in
-  `scripts/generate-evidence.mjs`), while `README.md` still said 780 — a count
-  two pin-growths stale (781 → 787 under ADR-ERL2-027, 787 → 832 when adapter
-  adjudication became retained evidence). The README number is corrected in
-  this package.
+  `scripts/generate-evidence.mjs`), while `README.md` still said 780 — three
+  pin-growths stale, traced through the script's own history: 780 → 781 (slice
+  6.5 close-out) → 787 (ADR-ERL2-027) → 832 (adapter adjudication became
+  retained evidence). The README number is corrected in this package.
 
 One ordering fact shaped the design: in the committed phase order the cutoff is
 realized at `observe` **before** `execute-subject:exercise`, so the run's
@@ -58,7 +58,7 @@ and no wording anywhere is permitted to place it inside the window.
 
 | Concern | Before | Now |
 | --- | --- | --- |
-| Receipt of run-attributed telemetry | Observed by the live test, retained by nothing | Retained as `attributable-telemetry-observation/v1` + the exact log lines the counts derive from, frozen before `teardown_started` |
+| Receipt of run-attributed telemetry | Observed by the live test, retained by nothing | Retained as one `attributable-telemetry-observation/v1` carrying the counts and the exact log lines they derive from, frozen before `teardown_started` |
 | Who may read collector logs | The driver, for a probe and an unconsumed counter | Unchanged (Docker-verified container only); the unverified/unreadable cases now stay distinct so an `absent` record can say why |
 | Producer enforcement | none | Lab validity gate `attributable-telemetry-retained`, required on every environment terminal, vacuous where undeclared |
 | Offline verification | none | `deriveAttributableTelemetry`: declaration predicate re-derived, every count recomputed from the retained excerpt bytes |
@@ -94,9 +94,11 @@ verifier independently.
   `observeTelemetry` now delegates to the shared definition.
 - `packages/core/src/run/environmentRun.ts` — `retainAttributableTelemetry()`
   inside `destroy()`: produced exactly where the capability and a declared
-  `metric` source coexist; excerpt frozen, then the observation, then the
-  `teardown_started` event that anchors both (freeze first, anchor second; no
-  throwing resolution between two freezes). The gate
+  `metric` source coexist; one artifact validated and frozen, then the
+  `teardown_started` event that anchors it (freeze first, anchor second; the
+  throwing validation runs before the freeze). On re-entry after a crash in
+  that window the run **reads what it already wrote** instead of re-observing
+  — see §7. The gate
   `attributable-telemetry-retained` is catalogued under
   `evidence_completeness` and required by `ENVIRONMENT_GATE_IDS`; a failing
   gate freezes a finding and the terminal goes invalid, like every other
@@ -118,14 +120,15 @@ missing role keeps its more fundamental cause. In order: exactly one retained
 driver manifest and archetype; the declaration predicate recomputed
 (`driver_kind: "compose"`, a declared `metric` source, a succeeded `exercise`
 outcome of this run); exactly one observation where declared
-(`ENV_TELEMETRY_OBSERVATION_MISSING` / `_MISMATCH`); produced by
+(`ENV_TELEMETRY_OBSERVATION_MISSING` when none is retained,
+`ENV_TELEMETRY_OBSERVATION_MISMATCH` when more than one is); produced by
 `teardown_started` and by nothing else — the placement *is* the liveness
-proof; this run's id and this run's id as marker; excerpt bytes present
-(`ARTIFACT_NOT_FOUND`), hash-matching (`ARTIFACT_HASH_MISMATCH`), a fixed
-point of excerpting, and every count recomputed from them
-(`ENV_TELEMETRY_OBSERVATION_MISMATCH` on any disagreement, in both
-directions); at least one run-attributed record where declared
-(`ENV_TELEMETRY_NOT_ATTRIBUTED`). The role is
+proof; this run's id and this run's id as marker; an excerpt present at all
+(`ArtifactIndex.typed` validates neither the contract nor the fields, so this
+is a live check, not dead defensiveness), a fixed point of excerpting, and
+every count recomputed from it (`ENV_TELEMETRY_OBSERVATION_MISMATCH` on any
+disagreement, in both directions); at least one run-attributed record where
+declared (`ENV_TELEMETRY_NOT_ATTRIBUTED`). The role is
 `attributable-telemetry-observation` in `ENVIRONMENT_OPTIONAL_ROLES` — a
 role, deliberately not a `SUPPORTING_SCHEMAS` entry. The invalid branch is
 untouched: an invalid terminal claims nothing.
@@ -141,20 +144,59 @@ against the pinned goldens after the change: `evidence:verify OK` over
 three invalid goldens and the valid golden re-verifying at exit 0 in fresh
 processes.
 
-## 7. Negative controls
+## 7. A defect this package's own review caught
 
-Four controls registered in `scripts/negative-control.mjs`, one per
-enforcement point, each proven to land on its declared bytes by the standing
-`NC-CAMPAIGN` targeting test and scored by a focused campaign:
+The first implementation retained the excerpt as a **second file** referenced
+by an `ArtifactRef`. An adversarial review of the branch found the window that
+makes unrecoverable: both files freeze before the `teardown_started` event that
+anchors them, and a crash between the freezes and the append leaves either an
+excerpt no artifact references or a reference to bytes that were never written
+— the retained-file accounting refuses the first, the referenced-bytes pass the
+second, so an *honest crash* produced a run with no reachable verifiable
+terminal. Worse, a resumed `destroy` re-observed and re-froze with a fresh
+`observed_at`, wedging the run on `ARTIFACT_ALREADY_FROZEN` on every retry
+forever.
+
+Two files cannot be frozen atomically, so the fix was structural rather than
+defensive: the excerpt became a bounded, hash-covered field of the observation
+— one artifact, one freeze, no window — and the re-entry path now reads the
+already-frozen observation instead of re-observing, mirroring
+`retainedSubstrateBinding`. Recorded here rather than in a fix note because it
+was found by reading the crash matrix against the new code, not by a failing
+test; the suite was green in both shapes.
+
+## 8. Negative controls
+
+Eight controls registered in `scripts/negative-control.mjs` — seven that kill,
+one recorded as unmeasured — each proven to land on its declared bytes by the
+standing `NC-CAMPAIGN` targeting test and scored by a focused campaign:
 
 | Control | Patched lie | Result |
 | --- | --- | --- |
 | `telemetry-gate-satisfaction` | the producer gate accepts any observation set where declared | **20 pass / 3 fail — killed as declared** |
 | `telemetry-verifier-declared-requires-observation` | the verifier stops requiring an observation where the bytes declare it | **22 pass / 1 fail — killed as declared** |
 | `telemetry-verifier-count-derivation` | the verifier believes the observation's counts instead of recomputing them from the excerpt | **22 pass / 1 fail — killed as declared** |
-| `telemetry-verifier-attribution-floor` | a declared observation with zero run-marked records is recorded instead of refused | **22 pass / 1 fail — killed as declared** |
+| `telemetry-verifier-attribution-floor` | a declared observation with zero run-marked records is recorded instead of refused | RESULT_FLOOR |
+| `telemetry-verifier-observation-cardinality` | a second retained observation is silently ignored rather than refused | RESULT_CARD |
+| `telemetry-verifier-excerpt-fixed-point` | an excerpt padded with non-contributing lines is accepted | RESULT_FIXED |
+| `telemetry-driver-verified-collector` | the driver reads logs from a container Docker has not proven is this run's | RESULT_DRIVER |
 
-The fake-driver immunity is measured separately rather than patched:
+### 8.1 One rule recorded as unmeasured
+
+`telemetry-producer-gate-wiring` patches the validity gate's `passed:` to a
+constant `true` and is declared `expect: "pass"` — it kills nothing, and the
+declaration says why rather than implying coverage it does not provide. The
+gate's *arithmetic* is killed by `telemetry-gate-satisfaction` and its inputs
+are unit-tested, but no test drives a run in which the wiring evaluates false:
+that needs a live Compose substrate whose collector receives nothing, and the
+ordinary suite must never require a daemon. The refusing side of the producer
+gate is therefore **unmeasured on this branch**, stated here rather than
+implied. The offline verifier's refusing side, which is the one an external
+reader depends on, is measured four ways.
+
+### 8.2 Fake-driver immunity
+
+Measured separately rather than patched:
 `ATTR-TELEM-E2E: a fake-driver run declares nothing, retains nothing, and
 still verifies offline` drives a real fake-driver run to `generic_finalized`,
 asserts the gate is present and passing with no artifact retained, and
@@ -167,7 +209,7 @@ worktree; the working tree was proven byte-identical afterward, and the
 results were rewritten to [`negative-controls.json`](negative-controls.json)
 per the harness's overwrite convention.
 
-## 8. The live acceptance run
+## 9. The live acceptance run
 
 `npm test` — the full suite, on a host with a live Docker daemon (29.5.3):
 **1134 tests, 1132 pass, 0 fail, 2 skipped.** The two skips are the
@@ -187,19 +229,21 @@ re-derived from the retained excerpt by the test's own arithmetic
 roles, no rejected extras. Zero Docker residue after teardown, observed
 independently of the run's own report.
 
-## 9. Claims
+## 10. Claims
 
 What moves: `permitted-claims.md` now permits the retained-telemetry statement
 at exactly its width — a valid Compose-driver run on a metric-declaring
-archetype retains the observation, and both enforcement points refuse a
-declared run whose observation is missing, unattributed, or in contradiction
-with its retained excerpt. What does not move: no claim inside the frozen
+archetype **whose exercising step succeeded** retains an observation naming
+this run in at least one record. Both enforcement points refuse such a run
+whose observation is missing, is not an observation, or names the run in no
+record; only the offline verifier additionally recomputes the counts from the
+excerpt and refuses a contradiction, and only it owns the refusal codes. What does not move: no claim inside the frozen
 evidence window (the observation is post-cutoff by construction), no
 service-metric reading of pipeline startup, no independent qualification, no
 ecosystem or subject-quality statement. **The claims ceiling is unchanged:
 T1.**
 
-## 10. What this package does not claim
+## 11. What this package does not claim
 
 - That telemetry arrives **inside the evidence window**. Making that claimable
   would mean moving the exercising step ahead of the cutoff, which is

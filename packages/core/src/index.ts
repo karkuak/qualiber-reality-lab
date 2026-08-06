@@ -140,6 +140,7 @@ export {
   attributableTelemetryGatePassed,
   contributesToTelemetryCounts,
   excerptCollectorTelemetry,
+  MAX_TELEMETRY_EXCERPT_CHARS,
   parseCollectorTelemetry,
   supportsAttributableTelemetry,
   type AttributableTelemetryMaterial,

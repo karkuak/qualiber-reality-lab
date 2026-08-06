@@ -92,8 +92,8 @@ test("ATTR-TELEM: service names are deduplicated and sorted", () => {
 function observedRecord(
   mutate?: (base: Record<string, unknown>) => void,
 ): AttributableTelemetryObservationV1 {
-  const excerptBytes = Buffer.from(excerptCollectorTelemetry(collectorLog(RUN_ID), RUN_ID), "utf8");
-  const counts = parseCollectorTelemetry(excerptBytes.toString("utf8"), RUN_ID);
+  const excerpt = excerptCollectorTelemetry(collectorLog(RUN_ID), RUN_ID);
+  const counts = parseCollectorTelemetry(excerpt, RUN_ID);
   const base: Record<string, unknown> = {
     schema_version: "attributable-telemetry-observation/v1",
     run_id: RUN_ID,
@@ -112,13 +112,7 @@ function observedRecord(
     spans: counts.spans,
     service_names: counts.serviceNames,
     run_attributed_records: counts.runAttributedRecords,
-    log_excerpt: {
-      path: "retained/environment/attributable-telemetry-log-excerpt.txt",
-      media_type: "text/plain",
-      byte_length: excerptBytes.byteLength,
-      file_sha256: hashBytes(excerptBytes),
-      classification: "INTERNAL",
-    },
+    log_excerpt: excerpt,
   };
   mutate?.(base);
   return { ...base, core_hash: coreHash(base) } as AttributableTelemetryObservationV1;
@@ -146,15 +140,7 @@ test("ATTR-TELEM-CONTRACT: an absent record cannot carry a count, an excerpt or 
     { trace_batches: 1 },
     { spans: 1 },
     { service_names: ["quote"] },
-    {
-      log_excerpt: {
-        path: "retained/x.txt",
-        media_type: "text/plain",
-        byte_length: 1,
-        file_sha256: hashBytes(Buffer.from("x")),
-        classification: "INTERNAL",
-      },
-    },
+    { log_excerpt: "some collector line" },
   ]) {
     const base = {
       schema_version: "attributable-telemetry-observation/v1",
@@ -308,8 +294,12 @@ interface SyntheticOptions {
   readonly sourceKind?: string;
   readonly exerciseStatus?: string;
   readonly observation?: AttributableTelemetryObservationV1 | "none";
-  readonly excerptBytes?: Buffer | "missing";
+  /** A second observation produced under the same role, to test cardinality. */
+  readonly secondObservation?: AttributableTelemetryObservationV1;
   readonly producedBy?: string;
+  /** Extra driver manifests / archetypes produced, to test preconditions. */
+  readonly duplicateManifest?: boolean;
+  readonly duplicateArchetype?: boolean;
 }
 
 /** Writes a minimal retained tree the derivation can scan, and its lifecycle. */
@@ -349,17 +339,9 @@ function syntheticTree(options: SyntheticOptions = {}): SyntheticTree {
   write("step-outcome-exercise.json", outcome);
 
   const observation = options.observation === "none" ? undefined : options.observation ?? observedRecord();
-  if (observation !== undefined) {
-    write("attributable-telemetry-observation.json", observation);
-    const excerptBytes =
-      options.excerptBytes ??
-      Buffer.from(excerptCollectorTelemetry(collectorLog(RUN_ID), RUN_ID), "utf8");
-    if (excerptBytes !== "missing") {
-      writeFileSync(
-        path.join(retained, "attributable-telemetry-log-excerpt.txt"),
-        excerptBytes,
-      );
-    }
+  if (observation !== undefined) write("attributable-telemetry-observation.json", observation);
+  if (options.secondObservation !== undefined) {
+    write("attributable-telemetry-observation-2.json", options.secondObservation);
   }
 
   const event = (eventType: string, produced: readonly Record<string, string>[]): LabLifecycleEventV1 =>
@@ -371,11 +353,29 @@ function syntheticTree(options: SyntheticOptions = {}): SyntheticTree {
         artifact_core_hash: manifest.core_hash,
         artifact_schema_version: "environment-driver-manifest/v1",
       },
+      ...(options.duplicateManifest === true
+        ? [
+            {
+              artifact_role: "environment-driver-manifest",
+              artifact_core_hash: manifest.core_hash,
+              artifact_schema_version: "environment-driver-manifest/v1",
+            },
+          ]
+        : []),
       {
         artifact_role: "environment-archetype",
         artifact_core_hash: archetype.core_hash,
         artifact_schema_version: "environment-archetype/v1",
       },
+      ...(options.duplicateArchetype === true
+        ? [
+            {
+              artifact_role: "environment-archetype",
+              artifact_core_hash: archetype.core_hash,
+              artifact_schema_version: "environment-archetype/v1",
+            },
+          ]
+        : []),
     ]),
     event("subject_exercise_outcome_frozen", [
       {
@@ -393,6 +393,15 @@ function syntheticTree(options: SyntheticOptions = {}): SyntheticTree {
               artifact_core_hash: observation.core_hash,
               artifact_schema_version: "attributable-telemetry-observation/v1",
             },
+            ...(options.secondObservation === undefined
+              ? []
+              : [
+                  {
+                    artifact_role: "attributable-telemetry-observation",
+                    artifact_core_hash: options.secondObservation.core_hash,
+                    artifact_schema_version: "attributable-telemetry-observation/v1",
+                  },
+                ]),
           ]),
         ]),
   ];
@@ -454,18 +463,16 @@ test("ATTR-TELEM-VERIFY: an absent observation where declared is refused", () =>
 
 test("ATTR-TELEM-VERIFY: a declared observation with zero run-attributed records is refused", () => {
   const unmarked = excerptCollectorTelemetry(collectorLog(OTHER_RUN_ID), RUN_ID);
-  const bytes = Buffer.from(unmarked, "utf8");
   const counts = parseCollectorTelemetry(unmarked, RUN_ID);
   const observation = observedRecord((base) => {
     base["trace_batches"] = counts.traceBatches;
     base["spans"] = counts.spans;
     base["service_names"] = counts.serviceNames;
     base["run_attributed_records"] = counts.runAttributedRecords;
-    (base["log_excerpt"] as Record<string, unknown>)["byte_length"] = bytes.byteLength;
-    (base["log_excerpt"] as Record<string, unknown>)["file_sha256"] = hashBytes(bytes);
+    base["log_excerpt"] = unmarked;
   });
   assert.equal(counts.runAttributedRecords, 0);
-  const tree = syntheticTree({ observation, excerptBytes: bytes });
+  const tree = syntheticTree({ observation });
   assert.equal(
     refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
     CODES.ENV_TELEMETRY_NOT_ATTRIBUTED,
@@ -485,12 +492,10 @@ test("ATTR-TELEM-VERIFY: counts that contradict the retained excerpt are refused
 
 test("ATTR-TELEM-VERIFY: an excerpt padded with non-contributing lines is refused", () => {
   const excerpt = excerptCollectorTelemetry(collectorLog(RUN_ID), RUN_ID);
-  const padded = Buffer.from(`${excerpt}\nan idle line that contributes to no count`, "utf8");
   const observation = observedRecord((base) => {
-    (base["log_excerpt"] as Record<string, unknown>)["byte_length"] = padded.byteLength;
-    (base["log_excerpt"] as Record<string, unknown>)["file_sha256"] = hashBytes(padded);
+    base["log_excerpt"] = `${excerpt}\nan idle line that contributes to no count`;
   });
-  const tree = syntheticTree({ observation, excerptBytes: padded });
+  const tree = syntheticTree({ observation });
   assert.equal(
     refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
     CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
@@ -532,11 +537,40 @@ test("ATTR-TELEM-VERIFY: another run's observation, a foreign marker, or a wrong
   );
 });
 
-test("ATTR-TELEM-VERIFY: a missing excerpt payload is refused as a missing artifact", () => {
-  const tree = syntheticTree({ excerptBytes: "missing" });
+test("ATTR-TELEM-VERIFY: a second retained observation is refused rather than silently ignored", () => {
+  const second = observedRecord((base) => {
+    base["run_attributed_records"] = 99;
+    base["observed_at"] = "2026-08-03T00:00:09Z";
+  });
+  const tree = syntheticTree({ secondObservation: second });
   assert.equal(
     refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
-    CODES.ARTIFACT_NOT_FOUND,
+    CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+  );
+});
+
+test("ATTR-TELEM-VERIFY: an ambiguous driver manifest or archetype is refused before anything is derived", () => {
+  for (const options of [{ duplicateManifest: true }, { duplicateArchetype: true }]) {
+    assert.equal(
+      refusalCode(() =>
+        deriveAttributableTelemetry({ ...syntheticTree(options), runId: RUN_ID }),
+      ),
+      CODES.ENV_SUBSTRATE_BINDING_MISMATCH,
+    );
+  }
+});
+
+test("ATTR-TELEM-VERIFY: an observed record whose excerpt the index never validated is still refused", () => {
+  // ArtifactIndex.typed checks the schema_version string and the recomputed
+  // core hash and nothing else, so a record the contract would refuse still
+  // reaches the derivation. The defensive branch is not dead code.
+  const noExcerpt = observedRecord((base) => {
+    delete base["log_excerpt"];
+  });
+  const tree = syntheticTree({ observation: noExcerpt });
+  assert.equal(
+    refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
+    CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
   );
 });
 

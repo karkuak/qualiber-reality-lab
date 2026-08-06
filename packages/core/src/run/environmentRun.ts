@@ -90,7 +90,6 @@ import {
   coreHash,
   domainHash,
   HASH_DOMAINS,
-  hashBytes,
   sealSigned,
   signCoreHash,
   SIGNATURE_DOMAINS,
@@ -132,7 +131,9 @@ import { freezeResourceFrontier } from "../environment/frontier.js";
 import {
   attributableTelemetryDeclared,
   attributableTelemetryGatePassed,
+  MAX_TELEMETRY_EXCERPT_CHARS,
   supportsAttributableTelemetry,
+  type AttributableTelemetryObserver,
 } from "../environment/telemetryObservation.js";
 import { buildEnvironmentRestoration, buildTeardownVerification, type TeardownCheck } from "../cleanup/cleanup.js";
 import {
@@ -2667,13 +2668,47 @@ export class EnvironmentRun {
   }[] {
     if (!supportsAttributableTelemetry(this.driver)) return [];
     if (!this.archetype.evidence_sources.some((source) => source.kind === "metric")) return [];
-    const material = this.driver.observeAttributableTelemetry(this.runId);
+    const observationPath = `${RETAINED}/attributable-telemetry-observation.json`;
+
+    // The freeze precedes the event that anchors it, so a crash between the two
+    // leaves a retained byte the lifecycle never reached — and a re-observation
+    // on resume would carry a fresh `observed_at` over a collector log that may
+    // have grown, wedging the run on `ARTIFACT_ALREADY_FROZEN` forever. The run
+    // already observed; the honest thing on resume is to read what it wrote,
+    // exactly as `retainedSubstrateBinding` does for the same class of window.
+    // The excerpt rides *inside* this artifact for the other half of the same
+    // reason: two files cannot be frozen atomically, and a crash between them
+    // would leave either an excerpt nothing references or a reference to absent
+    // bytes — each of which the offline accounting refuses.
+    const observation = this.ws.store.isFrozen(observationPath)
+      ? assertContract<AttributableTelemetryObservationV1>(
+          "AttributableTelemetryObservationV1",
+          this.ws.store.readJson(observationPath),
+        )
+      : this.freezeTelemetryObservation(observationPath);
+    return [
+      {
+        artifact_role: "attributable-telemetry-observation",
+        artifact_core_hash: observation.core_hash,
+        artifact_schema_version: "attributable-telemetry-observation/v1",
+      },
+    ];
+  }
+
+  /** Observes, validates and freezes the telemetry observation exactly once. */
+  private freezeTelemetryObservation(
+    observationPath: string,
+  ): AttributableTelemetryObservationV1 {
+    const material = (this.driver as unknown as AttributableTelemetryObserver)
+      .observeAttributableTelemetry(this.runId);
     const observedAt = this.now();
-    const excerptBytes =
-      material.evidence === "observed" ? Buffer.from(material.excerpt, "utf8") : undefined;
-    const excerptPath = `${RETAINED}/attributable-telemetry-log-excerpt.txt`;
+    // A collector output past the retention bound is refused as an honest
+    // `absent`, never truncated: an excerpt cut short derives counts that are
+    // not this run's, and a count nobody can reproduce is worse than none.
+    const overBound =
+      material.evidence === "observed" && material.excerpt.length > MAX_TELEMETRY_EXCERPT_CHARS;
     const base =
-      material.evidence === "observed"
+      material.evidence === "observed" && !overBound
         ? {
             schema_version: "attributable-telemetry-observation/v1" as const,
             run_id: this.runId,
@@ -2695,16 +2730,7 @@ export class EnvironmentRun {
             spans: material.counts.spans,
             service_names: material.counts.serviceNames,
             run_attributed_records: material.counts.runAttributedRecords,
-            // The reference the freeze below will return, computed first so the
-            // validation that can throw runs before any byte freezes (P1-10: a
-            // resolution that can throw must never sit between two freezes).
-            log_excerpt: {
-              path: excerptPath,
-              media_type: "text/plain",
-              byte_length: (excerptBytes as Buffer).byteLength,
-              file_sha256: hashBytes(excerptBytes as Buffer),
-              classification: "INTERNAL" as const,
-            },
+            log_excerpt: material.excerpt,
           }
         : {
             schema_version: "attributable-telemetry-observation/v1" as const,
@@ -2712,32 +2738,16 @@ export class EnvironmentRun {
             marker: material.marker,
             evidence: "absent" as const,
             observed_at: observedAt,
-            reason_code: material.reasonCode,
+            reason_code: overBound
+              ? "telemetry_excerpt_exceeds_retention_bound"
+              : (material as { readonly reasonCode: string }).reasonCode,
           };
     const observation = assertContract<AttributableTelemetryObservationV1>(
       "AttributableTelemetryObservationV1",
       { ...base, core_hash: coreHash(base) },
     );
-    if (excerptBytes !== undefined) {
-      this.ws.store.freeze({
-        logicalPath: excerptPath,
-        bytes: excerptBytes,
-        mediaType: "text/plain",
-        classification: "INTERNAL",
-      });
-    }
-    this.ws.store.freezeJson(
-      `${RETAINED}/attributable-telemetry-observation.json`,
-      observation,
-      "INTERNAL",
-    );
-    return [
-      {
-        artifact_role: "attributable-telemetry-observation",
-        artifact_core_hash: observation.core_hash,
-        artifact_schema_version: "attributable-telemetry-observation/v1",
-      },
-    ];
+    this.ws.store.freezeJson(observationPath, observation, "INTERNAL");
+    return observation;
   }
 
   // -- 12. validity and the generic index ------------------------------------

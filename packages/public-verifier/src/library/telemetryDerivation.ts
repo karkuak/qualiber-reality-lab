@@ -6,7 +6,7 @@
  * trust even by accident — so what is under test here is its *observations*:
  * whether this run declared the observation obtainable, whether exactly one
  * observation was produced where declared, whether it is this run's, and
- * whether every count it declares is the count its own retained log excerpt
+ * whether every count it declares is the count its own inline log excerpt
  * derives. The parsing arithmetic (`parseCollectorTelemetry`,
  * `excerptCollectorTelemetry`) is shared with the producer on purpose: it is a
  * *definition*, not a judgement (ADR-ERL2-024 §7.2). Every refusal on this
@@ -27,10 +27,8 @@ import {
   type JourneyStepOutcomeV1,
   type LabLifecycleEventV1,
 } from "@erl2/contracts";
-import { hashBytes, hashesEqual } from "@erl2/integrity";
 import { excerptCollectorTelemetry, parseCollectorTelemetry } from "@erl2/core";
 import type { ArtifactIndex } from "./artifactIndex.js";
-import { readReferenced, resolveBeneathRoot } from "./referencedBytes.js";
 
 const OBSERVATION_ROLE = "attributable-telemetry-observation";
 const OBSERVATION_SCHEMA = "attributable-telemetry-observation/v1";
@@ -187,31 +185,17 @@ export function deriveAttributableTelemetry(options: {
     return { declared: false, observed: false, runAttributedRecords: 0 };
   }
 
-  // Defensive reads below the schema, deliberately: "the schema would have
-  // caught it" is not a check.
-  const excerptRef = observation.log_excerpt;
-  if (excerptRef === undefined) {
+  // Defensive reads below the schema, deliberately: `ArtifactIndex.typed`
+  // checks the schema_version string and the recomputed core hash and nothing
+  // else, so "the schema would have caught it" is not a check here.
+  const excerpt = observation.log_excerpt;
+  if (excerpt === undefined) {
     throw new Erl2Error(
       CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
       "an observed telemetry record carries no log excerpt; counts with no derivable source attest nothing",
     );
   }
-  const absolute = resolveBeneathRoot(options.index.root, excerptRef.path, "attributable-telemetry-observation");
-  const bytes = readReferenced(absolute, excerptRef.path, "attributable-telemetry-observation");
-  if (bytes === undefined) {
-    throw new Erl2Error(
-      CODES.ARTIFACT_NOT_FOUND,
-      `the telemetry log excerpt ${excerptRef.path} referenced by the retained observation is missing`,
-    );
-  }
-  if (!hashesEqual(hashBytes(bytes), excerptRef.file_sha256)) {
-    throw new Erl2Error(
-      CODES.ARTIFACT_HASH_MISMATCH,
-      `the telemetry log excerpt ${excerptRef.path} does not match the observation's declared file_sha256`,
-    );
-  }
 
-  const excerpt = bytes.toString("utf8");
   // The excerpt must be a fixed point of excerpting: a line that contributes
   // to no count has no business in the bytes the counts are derived from.
   if (excerptCollectorTelemetry(excerpt, observation.marker) !== excerpt) {

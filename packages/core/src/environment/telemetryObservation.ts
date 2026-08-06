@@ -16,6 +16,15 @@ import type {
   JourneyStepOutcomeV1,
 } from "@erl2/contracts";
 
+/**
+ * The retention bound on a log excerpt, matching the contract's `maxLength`.
+ *
+ * A collector output past it yields an honest `absent` observation with
+ * `telemetry_excerpt_exceeds_retention_bound`, never a truncated excerpt: an
+ * excerpt cut short derives counts that are not the run's.
+ */
+export const MAX_TELEMETRY_EXCERPT_CHARS = 262_144;
+
 /** The counts derivable from a collector's own debug-exporter output. */
 export interface CollectorTelemetryCounts {
   readonly traceBatches: number;

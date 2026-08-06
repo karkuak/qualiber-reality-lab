@@ -216,13 +216,18 @@ the first one is now retained evidence rather than a live-test observation.
 evidence, and gating on it, landed as that package. The gate binds to
 declaration, not to every run: where the retained bytes declare the observation
 obtainable — `driver_kind: "compose"`, an archetype declaring a `metric`
-evidence source, and a succeeded `exercise` step outcome — the producer's
-`attributable-telemetry-retained` validity gate and the offline verifier's
-`deriveAttributableTelemetry` each refuse a terminal whose observation is
-missing (`ENV_TELEMETRY_OBSERVATION_MISSING`), absent or unattributed
-(`ENV_TELEMETRY_NOT_ATTRIBUTED`), or inconsistent with its own retained excerpt
-(`ENV_TELEMETRY_OBSERVATION_MISMATCH`). Everywhere else — every fake-driver
-run, every golden — nothing was declared and nothing changed.
+evidence source, and a succeeded `exercise` step outcome — both enforcement
+points refuse a terminal whose observation is missing, is not an observation,
+or names this run in no record. They are not the same check twice: the
+producer's `attributable-telemetry-retained` validity gate answers from the
+retained observation's own fields, while the offline verifier's
+`deriveAttributableTelemetry` additionally recomputes every count from the
+observation's inline log excerpt and owns the refusal codes
+(`ENV_TELEMETRY_OBSERVATION_MISSING`, `ENV_TELEMETRY_NOT_ATTRIBUTED`,
+`ENV_TELEMETRY_OBSERVATION_MISMATCH`) — the producer refuses through a frozen
+finding and an invalid terminal, as every environment gate does. Everywhere
+else — every fake-driver run, every golden — nothing was declared and nothing
+changed.
 `docs/claims/permitted-claims.md` now permits the retained-telemetry statement
 at exactly that width and continues to forbid any claim inside the evidence
 window; the claim ceiling is unchanged at T1.

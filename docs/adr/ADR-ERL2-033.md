@@ -84,7 +84,7 @@ observation with discriminated evidence in the ADR-ERL2-016 sense:
 
 - `evidence: "observed" | "absent"`. Only `observed` may carry the counts
   (`trace_batches`, `spans`, `service_names`, `run_attributed_records`), the
-  collector identity, and the log-excerpt reference; the schema requires all of
+  collector identity, and the log excerpt; the schema requires all of
   them then and forbids all of them otherwise, and an `absent` record must say
   why (`reason_code`). A non-observation that carried a count would be
   unrepresentable, not merely refused.
@@ -104,17 +104,26 @@ observation with discriminated evidence in the ADR-ERL2-016 sense:
   whose emitted telemetry embeds the run id is attributable, and the expected
   marker is re-derivable by every reader from the run id alone.
 
-**The supporting log excerpt is retained bytes, and the counts are re-derivable
-from it.** The parsing arithmetic lives in `@erl2/core` as *definitions* in the
-ADR-ERL2-024 §7.2 sense (`parseCollectorTelemetry`,
+**The supporting log excerpt rides inside the observation, and the counts are
+re-derivable from it.** The parsing arithmetic lives in `@erl2/core` as
+*definitions* in the ADR-ERL2-024 §7.2 sense (`parseCollectorTelemetry`,
 `excerptCollectorTelemetry`): the excerpt keeps exactly the collector log lines
 that contribute to any count (trace-batch lines, `service.name` lines, lines
 carrying the marker), in order, so `parse(excerpt, marker)` equals
-`parse(full logs, marker)` by construction. The excerpt is frozen under
-`retained/` and referenced by an `ArtifactRef` inside the hash-covered
-observation, so the referenced-bytes pass re-hashes it and the retained-file
-accounting pass accounts for it. The offline verifier recomputes every count
-from those bytes and refuses disagreement — in both directions.
+`parse(full logs, marker)` by construction, and excerpting an excerpt returns
+it unchanged. The excerpt is a hash-covered field of the observation rather
+than a second retained file, and that is a crash-atomicity decision, not a
+convenience: the observation freezes before the lifecycle event that anchors
+it, two files cannot be frozen atomically, and a crash between them would
+leave either an excerpt no artifact references or a reference to bytes that do
+not exist — each of which the offline accounting refuses, leaving a run with no
+reachable verifiable terminal. One artifact, one freeze, no such window. The
+excerpt is bounded (262 144 characters); a collector output past the bound
+yields an honest `absent` observation with
+`telemetry_excerpt_exceeds_retention_bound`, never a truncated excerpt, because
+an excerpt cut short derives counts that are not the run's. The offline
+verifier recomputes every count from that field and refuses disagreement — in
+both directions.
 
 ## 4. Decision 3 — the gate binds to declaration, not to all runs
 
@@ -156,7 +165,7 @@ its own negative control):
   with a typed code. It reads no producer verdict — there is none to read.
 
 New refusal codes (append-only): `ENV_TELEMETRY_OBSERVATION_MISSING` (declared
-and not retained, or the role count is wrong), `ENV_TELEMETRY_NOT_ATTRIBUTED`
+and not retained), `ENV_TELEMETRY_NOT_ATTRIBUTED`
 (declared and the retained observation is `absent` or carries zero run-marked
 records), `ENV_TELEMETRY_OBSERVATION_MISMATCH` (an observation that is not this
 run's, whose marker is not the run id, whose counts contradict its excerpt,
@@ -173,10 +182,17 @@ the closure, not slip past it.
 ## 5. Decision 4 — when the observation is taken, and what its timing can never claim
 
 The observation is taken inside `destroy()`, **before** the `teardown_started`
-lifecycle event is appended: observe, freeze the excerpt, freeze the
-observation, and only then append `teardown_started` carrying the produced
-entry — freeze first, anchor second, one durable transition at a time, with no
-throwing resolution between two freezes (P1-10). Producing it on
+lifecycle event is appended: observe, validate, freeze the one artifact, and
+only then append `teardown_started` carrying the produced entry — freeze first,
+anchor second, one durable transition at a time, with no throwing resolution
+between two freezes (P1-10; the validation that can throw runs before the
+freeze, and there is only one freeze to sit between). Because that freeze
+precedes its anchor, a crash between them leaves a retained byte the lifecycle
+never reached, and a re-observation on resume would carry a fresh `observed_at`
+over a collector log that may have grown — so on re-entry the run **reads what
+it already wrote** rather than re-observing, exactly as `retainedSubstrateBinding`
+does for the same class of window. Without that, an honest crash would wedge
+the run on `ARTIFACT_ALREADY_FROZEN` forever. Producing it on
 `teardown_started` makes the ordering claim self-proving: the hash chain places
 the observation before the event that begins teardown, so the collector was
 read while this run's containers were provably alive. The driver's observation
@@ -200,7 +216,7 @@ retains it.
 | --- | --- | --- |
 | `ENV_TELEMETRY_OBSERVATION_MISSING` | offline verifier | declaration predicate holds and no `attributable-telemetry-observation` role is retained |
 | `ENV_TELEMETRY_NOT_ATTRIBUTED` | offline verifier | declaration predicate holds and the retained observation is `absent`, or carries `run_attributed_records: 0` |
-| `ENV_TELEMETRY_OBSERVATION_MISMATCH` | offline verifier | the observation is not this run's, its marker is not the run id, its counts disagree with the counts recomputed from its retained excerpt bytes, its excerpt carries a line that contributes to no count, there is more than one observation, or its producing event is not `teardown_started` |
+| `ENV_TELEMETRY_OBSERVATION_MISMATCH` | offline verifier | the observation is not this run's, its marker is not the run id, its counts disagree with the counts recomputed from its own inline excerpt, its excerpt carries a line that contributes to no count, it carries no excerpt at all, there is more than one observation, or its producing event is not `teardown_started` |
 | gate `attributable-telemetry-retained` failing | producer validity | the same declaration predicate holds and the retained observation is missing, not `observed`, not this run's, or unattributed — the terminal goes invalid through a frozen finding, like every environment gate |
 
 All failures are Lab-owned. An invalid terminal is unaffected: it claims
@@ -226,6 +242,7 @@ untouched; nothing about this observation participates in the evidence window.
 
 | Alternative | Rejected because |
 | --- | --- |
+| A separate retained excerpt file referenced by an `ArtifactRef` | Two files cannot be frozen atomically before a single anchor: a crash between them leaves an unreferenced excerpt or a dangling reference, and the offline accounting refuses both — turning an honest crash into a run with no verifiable terminal. |
 | The fake driver retains an `absent` observation on every run | A record of a non-observation by a driver that cannot observe attests nothing, invites the retained-telemetry conflation this package closes, and rewrites every golden byte for no evidentiary gain. |
 | A new lifecycle phase / CLI command for the observation | A new durable state on the shared phase machine for a driver-concrete observation widens every run's state space to serve one driver; `destroy()` already owns the last moment the substrate is provably alive. |
 | Reorder the journey so exercise precedes the cutoff | The cutoff discipline (ADR-ERL2-031, remediation 6.5) is not this package's to move, and honest post-cutoff wording costs nothing but a narrower claim. |

@@ -900,7 +900,7 @@ export type AttributableTelemetryObservationV1 = {
   readonly spans?: number;
   readonly service_names?: readonly string[];
   readonly run_attributed_records?: number;
-  readonly log_excerpt?: ArtifactRef;
+  readonly log_excerpt?: string;
   readonly reason_code?: string;
   readonly core_hash: Hash;
 };

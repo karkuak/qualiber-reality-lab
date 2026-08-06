@@ -1256,8 +1256,9 @@
           "maximum": 100000000
         },
         "log_excerpt": {
-          "$comment": "The retained collector-log lines every count above is derived from, kept such that re-parsing the excerpt reproduces the counts exactly. The referenced bytes are re-hashed by the referenced-bytes pass and re-parsed by the offline verifier.",
-          "$ref": "erl2:common#/$defs/ArtifactRef"
+          "$comment": "The collector-log lines every count above is derived from, kept inline and hash-covered rather than as a second retained file: the observation freezes before the lifecycle event that anchors it, and two files cannot be frozen atomically — a crash between them would leave either an excerpt no artifact references or an artifact referencing absent bytes, both of which the offline accounting refuses. Inline, one freeze carries both, and the verifier re-parses this string to recompute every count. Bounded: a collector output that exceeds the bound yields an `absent` observation with a reason code, never a truncated excerpt, because a truncated excerpt would derive counts that are not the run's.",
+          "type": "string",
+          "maxLength": 262144
         },
         "reason_code": {
           "type": "string",

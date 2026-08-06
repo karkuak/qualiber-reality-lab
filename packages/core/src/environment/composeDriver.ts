@@ -182,6 +182,16 @@ export interface ComposeDriverOptions {
   readonly repositoryConfig: RepositoryConfigPaths;
   readonly evidenceSourceIds?: readonly string[];
   readonly docker?: DockerCli;
+  /**
+   * How many times `observeAttributableTelemetry` re-reads the collector while
+   * no run-marked record is visible, one second apart.
+   *
+   * The exporter flushes on its own schedule, so a real run gives it a little
+   * room. The budget is an option rather than a constant because a stub
+   * substrate has no scheduler to wait for: a test that has already arranged
+   * the world would otherwise spend the whole budget proving nothing.
+   */
+  readonly telemetrySettleAttempts?: number;
 }
 
 // -- durable, substrate-anchored run state -----------------------------------
@@ -585,6 +595,7 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
   private readonly store: ComposeRunStore;
   private readonly archetypeHash: Hash;
   private readonly sourceIds: readonly string[];
+  private readonly telemetrySettleAttempts: number;
   private platformCache: Platform | undefined;
   /** Image resolutions already asked of this daemon. See `newImageResolutionMemo`. */
   private readonly imageMemo = newImageResolutionMemo();
@@ -598,6 +609,7 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
     this.docker = options.docker ?? new SpawnDockerCli();
     this.archetypeHash = options.archetypeHash;
     this.sourceIds = options.evidenceSourceIds ?? ["deployment-log", "service-metric", "change-record"];
+    this.telemetrySettleAttempts = options.telemetrySettleAttempts ?? TELEMETRY_SETTLE_ATTEMPTS;
     this.project = composeProjectName(options.runId);
     this.store = new ComposeRunStore(options.substrateRoot, options.runId, this.project);
     this.manifest = assertContract<EnvironmentDriverManifestV1>(
@@ -1596,7 +1608,7 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
         };
       }
       const counts = parseCollectorTelemetry(observed.logs, marker);
-      if (counts.runAttributedRecords >= 1 || attempt >= TELEMETRY_SETTLE_ATTEMPTS) {
+      if (counts.runAttributedRecords >= 1 || attempt >= this.telemetrySettleAttempts) {
         const image = observed.collector.image;
         return {
           evidence: "observed",
