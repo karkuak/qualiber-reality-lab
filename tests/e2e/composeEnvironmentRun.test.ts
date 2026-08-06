@@ -423,7 +423,7 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
     trace_batches: number;
     service_names: string[];
     collector: { service_id: string; container_name: string; ownership_verified: boolean };
-    log_excerpt: { path: string; file_sha256: string };
+    log_excerpt: string;
   }>(run, "environment", "attributable-telemetry-observation.json");
   assert.equal(observation.evidence, "observed", "the collector observation was not made");
   assert.equal(observation.run_id, run.runId);
@@ -436,10 +436,7 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
   assert.equal(observation.collector.service_id, "otel-collector");
   assert.equal(observation.collector.ownership_verified, true);
   assert.ok(observation.collector.container_name.includes("otel-collector"));
-  const excerptText = readFileSync(
-    path.join(run.runRoot, "retained", "environment", "attributable-telemetry-log-excerpt.txt"),
-    "utf8",
-  );
+  const excerptText = observation.log_excerpt;
   assert.equal(
     excerptText.split(`erl2_run=${run.runId}`).length - 1 > 0,
     true,
