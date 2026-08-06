@@ -14,6 +14,7 @@ below is executable, not aspirational: the linked check refuses the unsafe path.
 | ERL2-OQ-006 | Seven-year retention legal approval | Privacy/Legal | before slice 11 | No held-out production release | no held-out release path exists |
 | ERL2-OQ-008 | Container or disposable-VM substrate for opaque subjects | Security + Core | before slice 7 execution of an opaque package | **Controls locally observed but unauthenticated; profile still disabled.** The twenty controls were `observed` against a digest-pinned container substrate, but the substrate lock is signed by the repo-derivable **development** governor key — not a pinned qualification authority — so the evidence is self-reported: `erl2 doctor` reports `locally_observed_unauthenticated`, **never** the producer-assertable `authenticated`/`qualified`. And no launcher can start an adapter inside the substrate, so `local-process` remains the only usable profile and every opaque-private or third-party subject is still refused (ADR-ERL2-017, review P2-1/6R-E) | `verifyIsolationLockSignature` verifies the lock's Ed25519 signature and classifies the signer; `deriveIsolationAuthenticity` returns `locally_observed_unauthenticated` for a valid dev-signed lock and `not_qualified` for a tampered/forged one; `qualifyIsolationProfile` returns `qualified` only as the *content* verdict (twenty *observed* controls) which the authenticity layer then downgrades; `assertQualifiedForExecution` re-derives and refuses on substrate drift; `assertSandboxProfileEnabled` refuses the container profile with `disabled_no_container_adapter_launcher_pending_erl2_oq_008`; `erl2 doctor` reports the lock signature, signer, per-control probe status and the distinguished authenticity outcome under `subject_isolation` |
 | ERL2-OQ-007 | External beacon, locally pinned source registry entry, custodian roster, and any future audited threshold-VRF construction | Security + Environment Governor | before slice 2 selection freeze | **Non-blind `development` selection only.** Threshold VRF always fails with `THRESHOLD_VRF_NOT_ACTIVATED` | `assertDevelopmentTierOnly` refuses a held-out or blind tier against the development beacon; `assertActiveRandomnessVariant` refuses every threshold-VRF policy |
+| ERL2-OQ-009 | Externally supplied environment: a lock-driven Compose service graph, external substrate qualification, and whether an archetype admission seam mirrors the external-adapter one (issue #8, EQ-L-002/EQ-L-003) | Environment Governor + Core | decide at slice 10 entry, before any brownfield archetype parameter set freezes (with ERL2-OQ-002) | **No external environment admission; the interim path is adapter-served-on-loopback.** The driver enum is closed and bound once per run; the Compose service graph is a code constant with, deliberately, no mechanism for describing a different environment; a run's archetype must be in its selected challenge's admissible set; and the environment mount plus loopback egress grant derive only from the run's own provisioned, lock-pinned, live container — access is withdrawn, not inherited. An externally authored subject runs against the qualified subset, and may serve its own application on loopback inside the `local-process` claim boundary, where the Lab's provisioning, baseline, restoration-observation, residue and egress guarantees extend to the Lab's environment and **not** to that application | `resolveDriverKind` refuses an unknown driver and any mid-run substitution; `OTEL_DEMO_SERVICES` is a constant (`composeSubstrate.ts`); `assertArchetypeAdmissible` refuses an archetype outside the selected challenge's set; `readComposeEndpoint` authorizes only the run's own live, lock-pinned endpoint; `tests/e2e/externalSubjectComposeRun.test.ts` pins the external-subject shape and its stated claim boundary |
 
 ## ERL2-OQ-001 in detail
 
@@ -295,3 +296,74 @@ package and Slice 9 must not execute a third-party OSS subject.
 sandbox launcher, a digest-pinned runtime image able to host the adapter
 protocol, and a passing `ADAPTER-CERT-V1` run under that profile. See
 ADR-ERL2-017.
+
+## ERL2-OQ-009 in detail — externally supplied environments
+
+Raised by the independent evaluator workspace as
+[issue #8](https://github.com/karkuak/qualiber-reality-lab/issues/8)
+(EQ-L-002/EQ-L-003), answered there on 2026-08-06. This entry records the
+sequencing so the decision has an owner, a target and a fail-closed state the
+implementation actually exhibits.
+
+### What exists today, and what does not
+
+The external-subject seam is adapter-only. `buildGovernorRegistry` admits
+externally authored `SubjectAdapterManifestV1`s through the same `admit` path as
+every built-in manifest; nothing equivalent admits an externally authored
+`environment-archetype/v1`, and an archetype could not be admitted alone anyway:
+
+- `assertArchetypeAdmissible` requires the archetype to be named by the
+  *selected challenge's* `archetype_hashes`, so an external archetype implies an
+  externally authored challenge/journey/step-commitment/vault graph — the unit
+  of admission is the governor artifact graph, not one artifact;
+- the Compose driver realizes exactly one service graph. `OTEL_DEMO_SERVICES`
+  is a constant, and `composeSubstrate.ts` states the design position verbatim:
+  *"there is no mechanism for describing a different environment"*;
+- the environment mount and loopback egress grant derive from
+  `readComposeEndpoint`, which authorizes only this run's own provisioned
+  container, running the lock-pinned image, publishing on loopback at the moment
+  of the check. The Lab cannot be pointed at an environment it did not
+  provision, and that is a property, not a gap.
+
+### The interim path, and its exact boundary
+
+An externally authored adapter may serve its own application on loopback from
+inside its operations. This is mechanically possible because the only enabled
+sandbox profile is `local-process`, whose honest control report declares
+`deny-by-default-egress` and `network-namespace-isolation`
+`unsupported_on_this_host`. `tests/e2e/externalSubjectComposeRun.test.ts`
+proves a full offline-valid terminal on exactly this shape.
+
+On that path, every Lab guarantee still holds **for the Lab's environment**
+(the qualified subset): provisioning receipts, inventory, baseline,
+restoration observation, teardown, zero Docker-project residue. None of them
+extends to the adapter-served application: it has no provisioning evidence, is
+invisible to the baseline and the restoration probe, is outside the residue
+enumeration (a process that outlives a cleanly exited operation is untracked
+residue — the process group is SIGKILLed only on deadline or overflow), and its
+loopback-only posture is the adapter's discipline, not a Lab-enforced or
+receipted constraint. Its behaviour enters the record only as retained,
+hash-accounted subject output and cited projection claims — first-party
+evidence the Lab retains faithfully but does not observe independently. The
+run's tier ceiling is unchanged (development, non-blind, T1, dev-signed
+self-qualification), so this forfeits nothing the current surface ever offered.
+
+### The seam, if the decision is to build it
+
+The generic seam is **not** archetype admission — `erl2-clean-greenfield`
+already describes a generic loopback service topology. The product-specific pin
+is the qualified substrate. The seam is an externally supplied **substrate
+lock**: make the service graph, endpoint service and container port
+lock-declared data instead of code constants; generalize the qualification
+script so any archive+overlay pair can be pinned and dev-signed; admit the lock
+through the registry like any governor artifact; and mirror the external-subject
+E2E against an externally supplied substrate. A lock is service ids, digests,
+config hashes and a signature — the Lab learns nothing about what the
+application is, which keeps this seam exactly as generic as the
+adapter-manifest one. Claim ceiling unchanged (self-qualification, T1).
+
+Estimated one slice-sized package (roughly 7–12 working days), owned by
+Environment Governor + Core, decided and sequenced at slice 10 entry together
+with ERL2-OQ-002 so brownfield archetypes and external substrates are designed
+against the same framework. The interim path above is available now and does
+not gate on this.
