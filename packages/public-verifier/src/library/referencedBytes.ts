@@ -45,7 +45,7 @@ export interface Descriptor {
  * beneath `root`, refusing absolute inputs, `..` traversal, and any component
  * that resolves through a symlink pointing outside the root.
  */
-function resolveBeneathRoot(root: string, declaredPath: string, origin: string): string {
+export function resolveBeneathRoot(root: string, declaredPath: string, origin: string): string {
   if (declaredPath.length === 0 || path.isAbsolute(declaredPath) || declaredPath.includes("\0")) {
     throw new Erl2Error(
       CODES.PATH_INVALID_COMPONENT,
@@ -77,7 +77,7 @@ function resolveBeneathRoot(root: string, declaredPath: string, origin: string):
  * Reads the referenced regular file, refusing symlinks and oversized payloads,
  * and returns its bytes — or `undefined` if the file does not exist.
  */
-function readReferenced(absolute: string, declaredPath: string, origin: string): Buffer | undefined {
+export function readReferenced(absolute: string, declaredPath: string, origin: string): Buffer | undefined {
   let info;
   try {
     info = lstatSync(absolute);
