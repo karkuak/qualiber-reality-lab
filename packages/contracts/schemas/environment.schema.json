@@ -1152,6 +1152,200 @@
           "$ref": "erl2:common#/$defs/Signature"
         }
       }
+    },
+    "AttributableTelemetryObservationV1": {
+      "$comment": "ADR-ERL2-033: telemetry the run's own collector actually received, attributable to this run by its marker — the run id itself. Discriminated evidence in the ADR-ERL2-016 sense: only `observed` may carry counts, a collector identity or the log excerpt, and no field stores a verdict. 'Attributable telemetry was received' is derivable only from an `observed` record whose `run_attributed_records` is positive, by the producer's validity gate and the offline verifier independently — the verifier recomputes every count from the retained excerpt's bytes. The observation post-dates the realized evidence cutoff by construction (the exercising step runs after `observe`), so it backs no claim inside the frozen evidence window and never touches the source snapshots' `records: 0`.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "marker",
+        "evidence",
+        "observed_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "attributable-telemetry-observation/v1"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "marker": {
+          "$comment": "The string whose occurrences in the collector's own output count as run-attributed records. The gate and the verifier both require it to equal `run_id`: the expected marker is re-derivable by every reader, never a subject-shaped free variable.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "evidence": {
+          "$comment": "Only `observed` can contribute to any positive statement (ADR-ERL2-016 decision 2, applied here by ADR-ERL2-033 decision 2).",
+          "enum": [
+            "observed",
+            "absent"
+          ]
+        },
+        "observed_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "collector": {
+          "$comment": "The exact container the logs were read from, as Docker proved it — the observed identity, never the lock's expectation. The driver refuses to read an unverified container's logs, so an unverified observation is unrepresentable as `observed`: both proof booleans are schema constants.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "service_id",
+            "container_name",
+            "ownership_verified",
+            "image_id",
+            "observed_image_repo_digests",
+            "image_matches_locked_digest"
+          ],
+          "properties": {
+            "service_id": {
+              "$ref": "erl2:common#/$defs/Id"
+            },
+            "container_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "ownership_verified": {
+              "const": true
+            },
+            "image_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "observed_image_repo_digests": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "image_matches_locked_digest": {
+              "const": true
+            }
+          }
+        },
+        "trace_batches": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000
+        },
+        "spans": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000
+        },
+        "service_names": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "run_attributed_records": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000
+        },
+        "log_excerpt": {
+          "$comment": "The retained collector-log lines every count above is derived from, kept such that re-parsing the excerpt reproduces the counts exactly. The referenced bytes are re-hashed by the referenced-bytes pass and re-parsed by the offline verifier.",
+          "$ref": "erl2:common#/$defs/ArtifactRef"
+        },
+        "reason_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "Only an observation may carry counts, a collector identity or an excerpt; an `absent` record claiming any of them would be exactly the conflation ADR-ERL2-033 exists to prevent, so the schema makes it unrepresentable. Anything that is not an observation must say why.",
+          "if": {
+            "type": "object",
+            "properties": {
+              "evidence": {
+                "const": "observed"
+              }
+            },
+            "required": [
+              "evidence"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "collector",
+              "trace_batches",
+              "spans",
+              "service_names",
+              "run_attributed_records",
+              "log_excerpt"
+            ],
+            "not": {
+              "required": [
+                "reason_code"
+              ]
+            }
+          },
+          "else": {
+            "type": "object",
+            "required": [
+              "reason_code"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "collector"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "trace_batches"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "spans"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "service_names"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "run_attributed_records"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "log_excerpt"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   }
 }

@@ -368,6 +368,26 @@ export const CODES = {
    * fail-closed refusal.
    */
   ENV_SUBSTRATE_UNREADABLE: "ENV_SUBSTRATE_UNREADABLE",
+  /**
+   * The run declares an obtainable attributable-telemetry observation — a
+   * driver that can observe it, an archetype declaring a metric source and a
+   * succeeded exercising step — and retains none (ADR-ERL2-033).
+   */
+  ENV_TELEMETRY_OBSERVATION_MISSING: "ENV_TELEMETRY_OBSERVATION_MISSING",
+  /**
+   * The observation was declared obtainable and the retained record is
+   * `absent` or carries zero records naming this run's marker. Telemetry
+   * silence where telemetry was declared is a refusal, never a downgrade
+   * (ADR-ERL2-033).
+   */
+  ENV_TELEMETRY_NOT_ATTRIBUTED: "ENV_TELEMETRY_NOT_ATTRIBUTED",
+  /**
+   * A retained telemetry observation that is not this run's, whose marker is
+   * not the run id, whose counts disagree with the counts recomputed from its
+   * own retained log excerpt, or whose lifecycle placement does not prove the
+   * collector was read before teardown began (ADR-ERL2-033).
+   */
+  ENV_TELEMETRY_OBSERVATION_MISMATCH: "ENV_TELEMETRY_OBSERVATION_MISMATCH",
   /** An external dispatch was reached with no durable intent. A Lab defect; fails closed. */
   ENV_MUTATION_INTENT_MISSING: "ENV_MUTATION_INTENT_MISSING",
   /**
