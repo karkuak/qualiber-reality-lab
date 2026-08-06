@@ -409,6 +409,53 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
     assert.equal(check.residue_count, 0);
   }
 
+  // The attributable-telemetry observation is *retained*, not merely observed
+  // live (ADR-ERL2-033): frozen before teardown began, marked with this run's
+  // id, and carrying the exact log lines its counts derive from. The counts
+  // are re-derived here from the retained excerpt with the test's own
+  // arithmetic, independently of the driver's.
+  const observation = retained<{
+    evidence: string;
+    run_id: string;
+    marker: string;
+    run_attributed_records: number;
+    spans: number;
+    trace_batches: number;
+    service_names: string[];
+    collector: { service_id: string; container_name: string; ownership_verified: boolean };
+    log_excerpt: { path: string; file_sha256: string };
+  }>(run, "environment", "attributable-telemetry-observation.json");
+  assert.equal(observation.evidence, "observed", "the collector observation was not made");
+  assert.equal(observation.run_id, run.runId);
+  assert.equal(observation.marker, run.runId, "the marker must be the run id itself");
+  assert.ok(
+    observation.run_attributed_records > 0,
+    "the retained observation carries no record naming this run's marker",
+  );
+  assert.ok(observation.spans > 0);
+  assert.equal(observation.collector.service_id, "otel-collector");
+  assert.equal(observation.collector.ownership_verified, true);
+  assert.ok(observation.collector.container_name.includes("otel-collector"));
+  const excerptText = readFileSync(
+    path.join(run.runRoot, "retained", "environment", "attributable-telemetry-log-excerpt.txt"),
+    "utf8",
+  );
+  assert.equal(
+    excerptText.split(`erl2_run=${run.runId}`).length - 1 > 0,
+    true,
+    "the retained excerpt does not carry the run marker",
+  );
+  assert.equal(
+    excerptText.split(run.runId).length - 1,
+    observation.run_attributed_records,
+    "the declared run-attributed count must equal the count re-derived from the retained excerpt",
+  );
+  const excerptSpans = [...excerptText.matchAll(/\bTraces\b.*"spans":\s*(\d+)/g)].reduce(
+    (total, match) => total + Number(match[1]),
+    0,
+  );
+  assert.equal(excerptSpans, observation.spans, "the declared span count must be derivable from the excerpt");
+
   // Offline verification, in a fresh process, as an external reader.
   const verified = verifyBundle(run.runRoot, {
     sourceTrustPolicyHash: run.registry.sourceTrustPolicyHash,

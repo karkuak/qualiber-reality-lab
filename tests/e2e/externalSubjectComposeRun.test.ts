@@ -623,6 +623,28 @@ test(
     assert.equal(manifest.driver_kind, "compose");
     assert.equal(manifest.enabled, true);
 
+    // The attributable-telemetry observation is retained for an external
+    // subject exactly as for the reference one (ADR-ERL2-033): the external
+    // adapter's exercising step embeds the run id, so its telemetry is
+    // attributable through the same declaration-bound gate.
+    const observation = JSON.parse(
+      readFileSync(
+        path.join(
+          run.runRoot,
+          "retained",
+          "environment",
+          "attributable-telemetry-observation.json",
+        ),
+        "utf8",
+      ),
+    ) as { evidence: string; marker: string; run_attributed_records: number };
+    assert.equal(observation.evidence, "observed");
+    assert.equal(observation.marker, run.runId);
+    assert.ok(
+      observation.run_attributed_records > 0,
+      "the retained observation carries no record naming this run's marker",
+    );
+
     // Offline verification, in a fresh process, as an external reader.
     const verified = verifyBundle(run.runRoot, {
       sourceTrustPolicyHash: run.registry.sourceTrustPolicyHash,
