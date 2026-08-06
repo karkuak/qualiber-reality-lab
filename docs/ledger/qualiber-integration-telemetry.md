@@ -173,13 +173,13 @@ standing `NC-CAMPAIGN` targeting test and scored by a focused campaign:
 
 | Control | Patched lie | Result |
 | --- | --- | --- |
-| `telemetry-gate-satisfaction` | the producer gate accepts any observation set where declared | **20 pass / 3 fail — killed as declared** |
-| `telemetry-verifier-declared-requires-observation` | the verifier stops requiring an observation where the bytes declare it | **22 pass / 1 fail — killed as declared** |
-| `telemetry-verifier-count-derivation` | the verifier believes the observation's counts instead of recomputing them from the excerpt | **22 pass / 1 fail — killed as declared** |
-| `telemetry-verifier-attribution-floor` | a declared observation with zero run-marked records is recorded instead of refused | RESULT_FLOOR |
-| `telemetry-verifier-observation-cardinality` | a second retained observation is silently ignored rather than refused | RESULT_CARD |
-| `telemetry-verifier-excerpt-fixed-point` | an excerpt padded with non-contributing lines is accepted | RESULT_FIXED |
-| `telemetry-driver-verified-collector` | the driver reads logs from a container Docker has not proven is this run's | RESULT_DRIVER |
+| `telemetry-gate-satisfaction` | the producer gate accepts any observation set where declared | **22 pass / 3 fail — killed** |
+| `telemetry-verifier-declared-requires-observation` | the verifier stops requiring an observation where the bytes declare it | **24 pass / 1 fail — killed** |
+| `telemetry-verifier-count-derivation` | the verifier believes the observation's counts instead of recomputing them from the excerpt | **24 pass / 1 fail — killed** |
+| `telemetry-verifier-attribution-floor` | a declared observation with zero run-marked records is recorded instead of refused | **24 pass / 1 fail — killed** |
+| `telemetry-verifier-observation-cardinality` | a second retained observation is silently ignored rather than refused | **24 pass / 1 fail — killed** |
+| `telemetry-verifier-excerpt-fixed-point` | an excerpt padded with non-contributing lines is accepted | **24 pass / 1 fail — killed** |
+| `telemetry-driver-verified-collector` | the driver reads logs from a container Docker has not proven is this run's | **27 pass / 1 fail — killed** |
 
 ### 8.1 One rule recorded as unmeasured
 
@@ -201,25 +201,27 @@ Measured separately rather than patched:
 still verifies offline` drives a real fake-driver run to `generic_finalized`,
 asserts the gate is present and passing with no artifact retained, and
 verifies the bundle offline; `npm run evidence:verify` pins the same property
-across every golden. Campaign: `npm run negative-control -- telemetry`, **5 of 104 scored, all
-agreed** — the four controls above plus the pre-existing
-`lab-telemetry-oracle-scan`, which the substring filter selects and which
-still kills as declared. Scored against commit `e051e58` in a disposable
-worktree; the working tree was proven byte-identical afterward, and the
-results were rewritten to [`negative-controls.json`](negative-controls.json)
-per the harness's overwrite convention.
+across every golden. Campaign: `npm run negative-control -- telemetry`, **9 of 108 scored, all nine
+agreed** — the seven kills above, the one unmeasured rule below, and the
+pre-existing `lab-telemetry-oracle-scan`, which the substring filter selects
+and which still kills as declared (9 pass / 3 fail). Scored against commit
+`2c69e9c` in a disposable worktree; the working tree was proven byte-identical
+afterward, and the results were rewritten to
+[`negative-controls.json`](negative-controls.json) per the harness's overwrite
+convention. The standing `NC-CAMPAIGN` test re-proves all 108 controls'
+targeting on every `npm test`.
 
 ## 9. The live acceptance run
 
 `npm test` — the full suite, on a host with a live Docker daemon (29.5.3):
-**1134 tests, 1132 pass, 0 fail, 2 skipped.** The two skips are the
+**1140 tests, 1138 pass, 0 fail, 2 skipped.** The two skips are the
 external-subject E2E cases, which skip loudly (`EXTERNAL SUBJECT UNPROVEN: no
 external adapter entry was supplied`) — their new retained-observation
 assertion is therefore **untested on this host**, stated plainly rather than
 implied.
 
 `COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compose
-substrate` passed in 78 s with this package's new assertions: the retained
+substrate` passed with this package's new assertions: the retained
 observation is `evidence: "observed"`, its marker is the run id, its
 `run_attributed_records` is positive, its span and marker counts are
 re-derived from the retained excerpt by the test's own arithmetic
