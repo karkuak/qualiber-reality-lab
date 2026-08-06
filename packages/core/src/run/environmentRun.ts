@@ -36,6 +36,7 @@ import {
   type AdapterStepRequestV1,
   type AdapterTranslationReceiptV1,
   type ArtifactRef,
+  type AttributableTelemetryObservationV1,
   type CancellationRequestV1,
   type ChallengeActivationReceiptV1,
   type ChallengeManifestV1,
@@ -127,6 +128,11 @@ import {
   type ExpectedRevertedMutation,
 } from "../environment/restorationProbe.js";
 import { freezeResourceFrontier } from "../environment/frontier.js";
+import {
+  attributableTelemetryDeclared,
+  attributableTelemetryGatePassed,
+  supportsAttributableTelemetry,
+} from "../environment/telemetryObservation.js";
 import { buildEnvironmentRestoration, buildTeardownVerification, type TeardownCheck } from "../cleanup/cleanup.js";
 import {
   assertTelemetryOracleClean,
@@ -2558,6 +2564,11 @@ export class EnvironmentRun {
     assertOperationSupported(this.driver.manifest, "destroy");
     const restorationHash = this.ws.requireHashForRole("environment-restoration");
     const declared = this.inventory().resources;
+    // ADR-ERL2-033: observe and freeze the attributable telemetry before the
+    // event that begins teardown — freeze first, anchor second — so the
+    // produced entry on `teardown_started` is itself the proof the collector
+    // was read while this run's containers provably still lived.
+    const telemetryProduced = this.retainAttributableTelemetry();
     this.ws.lifecycle.append({
       eventType: "teardown_started",
       stateTo: "teardown_started",
@@ -2565,6 +2576,7 @@ export class EnvironmentRun {
       commandId: "destroy",
       operationId: "op-teardown-start",
       requiredHashes: [restorationHash],
+      produced: telemetryProduced,
     });
 
     const result = this.driverOperation<DestroyResult>({
@@ -2632,6 +2644,84 @@ export class EnvironmentRun {
     });
     this.intents.settle("op-destroy", result.receipt.core_hash);
     return { teardown, residue: remaining.size };
+  }
+
+  /**
+   * The retained attributable-telemetry observation (ADR-ERL2-033).
+   *
+   * Produced exactly where the capability and a declared metric source coexist
+   * — a driver that can observe attributable telemetry and an archetype
+   * declaring an evidence source of kind `metric` — and nowhere else: on every
+   * other run, including every fake-driver golden, the artifact's absence
+   * means *never produced* (ADR-ERL2-033 §2). Where the observation could not
+   * be made, an `absent` record with a typed reason is retained instead, so
+   * absence of observation is a fact the gate can refuse on, not a missing
+   * file. The excerpt is frozen before the observation that references it, and
+   * both before the lifecycle event that anchors them.
+   */
+  private retainAttributableTelemetry(): readonly {
+    readonly artifact_role: string;
+    readonly artifact_core_hash: Hash;
+    readonly artifact_schema_version: string;
+  }[] {
+    if (!supportsAttributableTelemetry(this.driver)) return [];
+    if (!this.archetype.evidence_sources.some((source) => source.kind === "metric")) return [];
+    const material = this.driver.observeAttributableTelemetry(this.runId);
+    const observedAt = this.now();
+    const base =
+      material.evidence === "observed"
+        ? {
+            schema_version: "attributable-telemetry-observation/v1" as const,
+            run_id: this.runId,
+            marker: material.marker,
+            evidence: "observed" as const,
+            observed_at: observedAt,
+            collector: {
+              service_id: material.collector.serviceId,
+              container_name: material.collector.containerName,
+              // Schema constants, not observations of convenience: the driver
+              // refuses to read an unverified container's logs, so reaching
+              // this branch at all is the proof.
+              ownership_verified: true as const,
+              image_id: material.collector.imageId,
+              observed_image_repo_digests: material.collector.observedImageRepoDigests,
+              image_matches_locked_digest: true as const,
+            },
+            trace_batches: material.counts.traceBatches,
+            spans: material.counts.spans,
+            service_names: material.counts.serviceNames,
+            run_attributed_records: material.counts.runAttributedRecords,
+            log_excerpt: this.ws.store.freeze({
+              logicalPath: `${RETAINED}/attributable-telemetry-log-excerpt.txt`,
+              bytes: Buffer.from(material.excerpt, "utf8"),
+              mediaType: "text/plain",
+              classification: "INTERNAL",
+            }),
+          }
+        : {
+            schema_version: "attributable-telemetry-observation/v1" as const,
+            run_id: this.runId,
+            marker: material.marker,
+            evidence: "absent" as const,
+            observed_at: observedAt,
+            reason_code: material.reasonCode,
+          };
+    const observation = assertContract<AttributableTelemetryObservationV1>(
+      "AttributableTelemetryObservationV1",
+      { ...base, core_hash: coreHash(base) },
+    );
+    this.ws.store.freezeJson(
+      `${RETAINED}/attributable-telemetry-observation.json`,
+      observation,
+      "INTERNAL",
+    );
+    return [
+      {
+        artifact_role: "attributable-telemetry-observation",
+        artifact_core_hash: observation.core_hash,
+        artifact_schema_version: "attributable-telemetry-observation/v1",
+      },
+    ];
   }
 
   // -- 12. validity and the generic index ------------------------------------
@@ -3821,6 +3911,35 @@ export class EnvironmentRun {
         passed:
           this.ws.hashesForRole("source-snapshot").length === baseline.evidence_source_states.length,
         evidence_refs: [baselineHash],
+      },
+      // ADR-ERL2-033: binds to declaration, not to every run. A run that never
+      // declared the observation obtainable — a fake driver, an archetype with
+      // no metric source, a journey that never reached a succeeded exercising
+      // step — passes vacuously; a run that declared it and retained no
+      // observed, run-attributed observation of its own fails, and the failing
+      // gate freezes a finding like every other environment gate.
+      {
+        gate_id: "attributable-telemetry-retained",
+        passed: attributableTelemetryGatePassed({
+          declared: attributableTelemetryDeclared({
+            driverKind: this.driver.manifest.driver_kind,
+            evidenceSources: this.archetype.evidence_sources,
+            outcomes: this.ws.derivedStepOutcomes(),
+          }),
+          runId: this.runId,
+          observations: this.ws
+            .hashesForRole("attributable-telemetry-observation")
+            .map((hash) =>
+              this.ws.artifact<AttributableTelemetryObservationV1>(
+                hash,
+                "AttributableTelemetryObservationV1",
+              ),
+            ),
+        }),
+        evidence_refs:
+          this.ws.hashesForRole("attributable-telemetry-observation").length > 0
+            ? [...this.ws.hashesForRole("attributable-telemetry-observation")]
+            : [coreHash(this.driver.manifest)],
       },
       { gate_id: "adapter-certified", passed: true, evidence_refs: [this.ws.requireHashForRole("adapter-manifest")] },
       {

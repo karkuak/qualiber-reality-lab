@@ -112,6 +112,12 @@ import {
 } from "./composeSubstrate.js";
 import { SpawnDockerCli, type DockerCli } from "./dockerCli.js";
 import {
+  excerptCollectorTelemetry,
+  parseCollectorTelemetry,
+  type AttributableTelemetryMaterial,
+  type AttributableTelemetryObserver,
+} from "./telemetryObservation.js";
+import {
   assertDriverEnabled,
   assertNarrowSelector,
   assertOperationSupported,
@@ -152,6 +158,15 @@ const RESOURCE_KINDS = ["project", "network", "container", "port", "volume"] as 
 
 const UP_TIMEOUT_SECONDS = 240;
 const DOWN_TIMEOUT_SECONDS = 30;
+
+/**
+ * How long `observeAttributableTelemetry` waits for the collector's exporter to
+ * flush before recording whatever is there. Bounded: a run whose telemetry
+ * never arrives spends at most attempts × delay here and then retains the
+ * honest zero the validity gate refuses.
+ */
+const TELEMETRY_SETTLE_ATTEMPTS = 20;
+const TELEMETRY_SETTLE_DELAY_MS = 1_000;
 
 export interface ComposeDriverOptions {
   readonly runId: string;
@@ -557,7 +572,7 @@ const VIOLATION_DRIVER_LABEL = `${ERL2_DRIVER_LABEL}_mismatch`;
 const VIOLATION_PROJECT_LABEL = `${COMPOSE_PROJECT_LABEL}_mismatch`;
 const VIOLATION_IMAGE = "image_not_locked_digest";
 
-export class ComposeEnvironmentDriver implements EnvironmentDriver {
+export class ComposeEnvironmentDriver implements EnvironmentDriver, AttributableTelemetryObserver {
   readonly manifest: EnvironmentDriverManifestV1;
   readonly project: string;
 
@@ -1449,17 +1464,20 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
    * why the mapping below is deliberately annotated rather than left to read as
    * more than it is: what is observed is the collector reporting that its OTLP
    * pipelines started. Pipeline readiness is **not** the receipt of a service
-   * metric. Telemetry the collector really received — spans, with this run's own
-   * marker on them — is observed by `observeTelemetry`, which the live acceptance
-   * test asserts on and which no run artifact currently retains.
+   * metric, and this mapping never changed meaning: `complete` still says only
+   * that the metric path was reachable, and every snapshot still freezes
+   * `records: 0`.
    *
-   * Closing that gap means retaining and gating on attributable telemetry, which
-   * is a change to what evidence a run keeps rather than a change to this
-   * derivation. It belongs to the next integration package and is recorded as that
-   * package's obligation in `docs/decisions/open-questions.md` (ERL2-OQ-005) and
-   * `docs/ledger/requirements.json` — which name it, as core deliberately does
-   * not: no module here may name a subject (`CORE-PURITY`). Until then the claim
-   * boundary says only what the bundle can support.
+   * Telemetry the collector really received — spans, with this run's own marker
+   * on them — is now **separately retained** as the attributable-telemetry
+   * observation (ADR-ERL2-033): `observeAttributableTelemetry` is captured into
+   * the run's evidence before teardown begins, the `attributable-telemetry-retained`
+   * validity gate refuses the terminal where the observation was declared
+   * obtainable and is missing or unattributed, and the offline verifier
+   * re-derives its counts from the retained log excerpt. That observation
+   * post-dates the realized cutoff, so it backs no claim inside the evidence
+   * window this source state describes — the two statements stay apart on
+   * purpose.
    */
   private evidenceSourceState(
     sourceId: string,
@@ -1496,44 +1514,54 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
   }
 
   /**
-   * The run's collector's own output, or nothing.
+   * The run's collector's own output, with the failure mode kept distinct.
    *
    * Verified before it is read, and for the same reason every other expected-name
    * lookup is: logs read out of a container that is not provably this run's would
-   * be attributed to this run anyway. Both consumers make a claim about this run —
-   * the pipeline-readiness probe and `observeTelemetry` — so neither may read from
-   * a container Docker has not confirmed.
+   * be attributed to this run anyway. Every consumer makes a claim about this
+   * run — the pipeline-readiness probe, `observeTelemetry` and the retained
+   * attributable-telemetry observation — so none may read from a container
+   * Docker has not confirmed. The retained observation additionally needs to
+   * say *why* nothing was read, so unverified and unreadable stay separate
+   * instead of both collapsing to an empty string.
    */
-  private collectorLogs(): string {
+  private collectorLogsObserved():
+    | { readonly status: "ok"; readonly logs: string; readonly collector: VerifiedContainer }
+    | { readonly status: "unverified" }
+    | { readonly status: "unreadable" } {
     const collector = this.observeExpectedContainers().find(
       (entry) => entry.service.serviceId === "otel-collector",
     );
-    if (!ComposeEnvironmentDriver.verified(collector)) return "";
+    if (collector === undefined || !ComposeEnvironmentDriver.verified(collector)) {
+      return { status: "unverified" };
+    }
     const result = this.docker.run({
-      args: ["container", "logs", collector?.name as string],
+      args: ["container", "logs", collector.name],
       timeoutMs: 120_000,
     });
-    if (result.status !== 0) return "";
-    return `${result.stdout}\n${result.stderr}`;
+    if (result.status !== 0) return { status: "unreadable" };
+    return { status: "ok", logs: `${result.stdout}\n${result.stderr}`, collector };
+  }
+
+  /** The collector's output, or nothing — for consumers that only count. */
+  private collectorLogs(): string {
+    const observed = this.collectorLogsObserved();
+    return observed.status === "ok" ? observed.logs : "";
   }
 
   /**
    * Telemetry the collector actually received, attributable to this run.
    *
    * Read-only, and not part of the `EnvironmentDriver` contract: it is a concrete
-   * observation this concrete driver can make, exposed so a caller can prove that
-   * the subject's interaction with the real endpoint really did produce
-   * OpenTelemetry data and that the collector really did receive it. `marker` is
-   * a string the caller arranged to appear in the emitted telemetry — the
-   * reference adapter puts the run id in the request's query string, and the PHP
-   * auto-instrumentation records it as `url.full`.
+   * observation this concrete driver can make. `marker` is a string the caller
+   * arranged to appear in the emitted telemetry — the reference adapter puts the
+   * run id in the request's query string, and the PHP auto-instrumentation
+   * records it as `url.full`. The arithmetic is the shared definition in
+   * `telemetryObservation.ts`, which is also what the offline verifier recomputes
+   * over the retained log excerpt (ADR-ERL2-033).
    *
-   * **Its only consumer today is the live acceptance test.** Nothing here is
-   * retained into a run's evidence, so an offline bundle carries no attestation
-   * that telemetry was received — `evidenceSourceState` explains what the bundle
-   * does say, and the claim boundary is written to that and not to this. Retaining
-   * and gating on this observation is the next integration package's obligation,
-   * recorded under ERL2-OQ-005.
+   * The retained form of this observation is `observeAttributableTelemetry`
+   * below; this counting view stays for callers that only need numbers.
    */
   observeTelemetry(marker: string): {
     readonly traceBatches: number;
@@ -1541,18 +1569,52 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver {
     readonly serviceNames: readonly string[];
     readonly runAttributedRecords: number;
   } {
-    const logs = this.collectorLogs();
-    let traceBatches = 0;
-    let spans = 0;
-    for (const line of logs.split("\n")) {
-      const match = /\bTraces\b.*"spans":\s*(\d+)/.exec(line);
-      if (match?.[1] === undefined) continue;
-      traceBatches += 1;
-      spans += Number.parseInt(match[1], 10);
+    return parseCollectorTelemetry(this.collectorLogs(), marker);
+  }
+
+  /**
+   * The retained attributable-telemetry observation (ADR-ERL2-033 decisions
+   * 1–2): the counts, the exact log lines they are derived from, and the
+   * Docker-proven identity of the container they were read out of. `observed`
+   * exists only over a verified collector; anything else is an `absent` with a
+   * typed reason, so a non-observation cannot be dressed as one.
+   *
+   * The collector's exporter flushes on its own schedule, so while zero
+   * run-marked records are visible this retries briefly and then records
+   * honestly whatever it last saw. Waiting longer can only *add* records to an
+   * append-only log, never remove one, so the retry biases nothing.
+   */
+  observeAttributableTelemetry(marker: string): AttributableTelemetryMaterial {
+    for (let attempt = 1; ; attempt += 1) {
+      const observed = this.collectorLogsObserved();
+      if (observed.status !== "ok") {
+        return {
+          evidence: "absent",
+          marker,
+          reasonCode:
+            observed.status === "unverified" ? "collector_not_verified" : "collector_logs_unreadable",
+        };
+      }
+      const counts = parseCollectorTelemetry(observed.logs, marker);
+      if (counts.runAttributedRecords >= 1 || attempt >= TELEMETRY_SETTLE_ATTEMPTS) {
+        const image = observed.collector.image;
+        return {
+          evidence: "observed",
+          marker,
+          counts,
+          excerpt: excerptCollectorTelemetry(observed.logs, marker),
+          collector: {
+            serviceId: observed.collector.service.serviceId,
+            containerName: observed.collector.name,
+            imageId: image?.containerImageId ?? "",
+            observedImageRepoDigests: [...(image?.observedRepoDigests ?? [])].sort(),
+          },
+        };
+      }
+      // Synchronous by design, like every other driver wait: the caller is the
+      // one durable transition that must finish before teardown may begin.
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, TELEMETRY_SETTLE_DELAY_MS);
     }
-    const serviceNames = [...new Set([...logs.matchAll(/service\.name:\s*Str\(([^)]*)\)/g)].map((m) => m[1] ?? ""))];
-    const runAttributedRecords = marker === "" ? 0 : logs.split(marker).length - 1;
-    return { traceBatches, spans, serviceNames: serviceNames.sort(), runAttributedRecords };
   }
 
   // -- mutate and restore ---------------------------------------------------
