@@ -109,9 +109,13 @@ but the lock is signed by this repository's own development governor key, so it
 is a self-qualification and `erl2 doctor` reports
 `independently_qualified: false`. The fake driver remains the default; a run
 selects its driver once with `--environment-driver` and may not substitute it.
-The live acceptance test observes attributable telemetry at the collector; an
-offline bundle **does not attest received telemetry**, and retaining that
-observation is deferred to the first Qualiber integration package (ERL2-OQ-005).
+A Compose run **retains the attributable-telemetry observation** — the run's
+own collector received records carrying the run's id, frozen with the log lines
+the counts derive from before teardown begins — and an offline bundle attests
+received telemetry exactly that far: the validity gate and the offline verifier
+each refuse a declared run whose observation is missing or unattributed
+(ADR-ERL2-033, discharging the ERL2-OQ-005 deferred obligation; the evidence
+window and the T1 ceiling are unchanged).
 **Held-out and blind execution is refused** because ERL2-OQ-007
 is unresolved, so the journey runs at `development` tier. **Privileged subject
 operations are refused** because ERL2-OQ-001 is unresolved, so the platform
@@ -154,7 +158,7 @@ npm run evidence
 ```
 
 Byte-compare a deterministic generation against the pinned goldens without
-touching them (780 files pinned; 7 are excluded with a printed reason — the
+touching them (832 files pinned; 7 are excluded with a printed reason — the
 adapter `request.frames` bake an absolute workspace path, `grandchild.pid` is a
 real OS pid, and `cli-transcript.json` records absolute CLI paths):
 

@@ -10,7 +10,7 @@ below is executable, not aspirational: the linked check refuses the unsafe path.
 | ERL2-OQ-002 | First three constrained archetype parameter sets | Environment Governor | before slice 10 | Clean preview only; brownfield claims withheld | no archetype fixtures are admitted |
 | ERL2-OQ-003 | Non-Qualiber OSS subject | Governor + independent QE | before slice 9 | Architectural-independence claim withheld | `docs/claims/permitted-claims.md` |
 | ERL2-OQ-004 | Evaluation pack executable format | Evaluation + Security | before slice 6 | **Data-only DSL only.** A pack is a closed `EvaluationPackBodyV1` whose every predicate, input selector, measure, ordering key and finding category is drawn from a closed vocabulary the Lab implements; there is no pack runtime to sandbox | `packages/evaluation-sdk` exposes declarative data and `certifyPack` only; `bindDomainPack` reads a pack solely through the frozen contract; `tests/architecture/evaluationBoundary.test.ts` proves the contract has no code, I/O, clock, randomness, validity or threshold member |
-| ERL2-OQ-005 | OpenTelemetry Demo release and per-platform image digest lock | Environment Governor | before slice 3 | **Qualified, development-signed.** A two-service subset of release `3.0.0` is pinned by archive digest, source commit, per-platform image digests (`linux/amd64` + `linux/arm64`), five config hashes, SBOM and provenance, and the Compose driver is enabled by it. The lock is signed by the repo-derivable **development** governor key, so this is a self-qualification: no independent-qualification claim may be derived, and the claim ceiling is unaffected (tier and blindness still cap at T1) | `assertSubstrateQualified` accepts the retained lock; `verifySubstrateLockSignature` classifies the signer `signerIsDevelopmentKey`; `composeDriverManifestBody` emits `enabled: true`; `assertObservedMatchesLock` re-observes archive, config and both platforms' digests at `provision`; `erl2 doctor` derives `compose_substrate` from the lock on every call |
+| ERL2-OQ-005 | OpenTelemetry Demo release and per-platform image digest lock | Environment Governor | before slice 3 | **Qualified, development-signed.** A two-service subset of release `3.0.0` is pinned by archive digest, source commit, per-platform image digests (`linux/amd64` + `linux/arm64`), five config hashes, SBOM and provenance, and the Compose driver is enabled by it. The lock is signed by the repo-derivable **development** governor key, so this is a self-qualification: no independent-qualification claim may be derived, and the claim ceiling is unaffected (tier and blindness still cap at T1). The deferred obligation is discharged: the attributable-telemetry observation is retained into the run's evidence and gated on where declared obtainable (ADR-ERL2-033) | `assertSubstrateQualified` accepts the retained lock; `verifySubstrateLockSignature` classifies the signer `signerIsDevelopmentKey`; `composeDriverManifestBody` emits `enabled: true`; `assertObservedMatchesLock` re-observes archive, config and both platforms' digests at `provision`; `erl2 doctor` derives `compose_substrate` from the lock on every call; `retainAttributableTelemetry` freezes the observation before `teardown_started`, the `attributable-telemetry-retained` validity gate refuses a declared run without an attributed observation, and `deriveAttributableTelemetry` re-derives it offline from the retained excerpt |
 | ERL2-OQ-006 | Seven-year retention legal approval | Privacy/Legal | before slice 11 | No held-out production release | no held-out release path exists |
 | ERL2-OQ-008 | Container or disposable-VM substrate for opaque subjects | Security + Core | before slice 7 execution of an opaque package | **Controls locally observed but unauthenticated; profile still disabled.** The twenty controls were `observed` against a digest-pinned container substrate, but the substrate lock is signed by the repo-derivable **development** governor key — not a pinned qualification authority — so the evidence is self-reported: `erl2 doctor` reports `locally_observed_unauthenticated`, **never** the producer-assertable `authenticated`/`qualified`. And no launcher can start an adapter inside the substrate, so `local-process` remains the only usable profile and every opaque-private or third-party subject is still refused (ADR-ERL2-017, review P2-1/6R-E) | `verifyIsolationLockSignature` verifies the lock's Ed25519 signature and classifies the signer; `deriveIsolationAuthenticity` returns `locally_observed_unauthenticated` for a valid dev-signed lock and `not_qualified` for a tampered/forged one; `qualifyIsolationProfile` returns `qualified` only as the *content* verdict (twenty *observed* controls) which the authenticity layer then downgrades; `assertQualifiedForExecution` re-derives and refuses on substrate drift; `assertSandboxProfileEnabled` refuses the container profile with `disabled_no_container_adapter_launcher_pending_erl2_oq_008`; `erl2 doctor` reports the lock signature, signer, per-control probe status and the distinguished authenticity outcome under `subject_isolation` |
 | ERL2-OQ-007 | External beacon, locally pinned source registry entry, custodian roster, and any future audited threshold-VRF construction | Security + Environment Governor | before slice 2 selection freeze | **Non-blind `development` selection only.** Threshold VRF always fails with `THRESHOLD_VRF_NOT_ACTIVATED` | `assertDevelopmentTierOnly` refuses a held-out or blind tier against the development beacon; `assertActiveRandomnessVariant` refuses every threshold-VRF policy |
@@ -192,27 +192,40 @@ a file used to stand in for an observation:
   referenced SPDX document's hash *and* its own package count, and the provenance
   record's binding to the same archive, commit and images.
 
-**Telemetry: what was observed and what is attested.** These are different
-statements and the documents now keep them apart.
+**Telemetry: what is retained and what it can never say.** The two statements
+the documents kept apart are still different statements — what changed is that
+the first one is now retained evidence rather than a live-test observation.
 
-- The **live acceptance test** drives the reference adapter against the real
-  endpoint and reads the collector's own output, asserting that spans arrived and
-  that they carry this run's marker. That is a real observation of attributable
-  telemetry.
-- An **offline bundle attests no such thing.** The archetype's `service-metric`
-  source is recorded `complete` because the collector reported that its OTLP
-  pipelines started, and every source snapshot in this archetype freezes
-  `records: 0`. Pipeline readiness is reachability of the metric path, not the
-  receipt of a service metric; `complete` means the source was served and returned
-  nothing.
+- An **offline bundle now attests received telemetry**, exactly this far: the
+  run retains an `attributable-telemetry-observation/v1` (ADR-ERL2-033) — the
+  counts the run's own Docker-verified collector's output supports, the exact
+  log lines those counts derive from, and the container identity the logs were
+  read out of — frozen before `teardown_started`, so the lifecycle chain
+  proves the collector was read while the containers lived. The offline
+  verifier re-derives every count from the retained excerpt bytes and reads no
+  producer verdict; the contract stores none.
+- The **evidence window is untouched.** The exercising step runs after the
+  cutoff is realized, so the observation is a post-cutoff statement about
+  receipt during the run — never a record inside the frozen window. The
+  archetype's `service-metric` source is still recorded `complete` on pipeline
+  readiness, every source snapshot still freezes `records: 0`, and pipeline
+  readiness is still not the receipt of a service metric.
 
-**Deferred obligation — the first Qualiber integration package.** Retaining the
-attributable-telemetry observation into a run's evidence, and gating on it, is that
-package's work and is not in this one. It is a change to what a run keeps, not to
-any derivation here, and no general evidence subsystem was introduced to
-anticipate it. Until it lands, `docs/claims/permitted-claims.md` permits "the
-acceptance test observed attributable telemetry at the collector" and forbids any
-claim that retained evidence attests received telemetry.
+**Deferred obligation — discharged by the first Qualiber integration package
+(ADR-ERL2-033).** Retaining the attributable-telemetry observation into a run's
+evidence, and gating on it, landed as that package. The gate binds to
+declaration, not to every run: where the retained bytes declare the observation
+obtainable — `driver_kind: "compose"`, an archetype declaring a `metric`
+evidence source, and a succeeded `exercise` step outcome — the producer's
+`attributable-telemetry-retained` validity gate and the offline verifier's
+`deriveAttributableTelemetry` each refuse a terminal whose observation is
+missing (`ENV_TELEMETRY_OBSERVATION_MISSING`), absent or unattributed
+(`ENV_TELEMETRY_NOT_ATTRIBUTED`), or inconsistent with its own retained excerpt
+(`ENV_TELEMETRY_OBSERVATION_MISMATCH`). Everywhere else — every fake-driver
+run, every golden — nothing was declared and nothing changed.
+`docs/claims/permitted-claims.md` now permits the retained-telemetry statement
+at exactly that width and continues to forbid any claim inside the evidence
+window; the claim ceiling is unchanged at T1.
 
 The qualification procedure is in `environments/otel-demo/README.md`.
 
