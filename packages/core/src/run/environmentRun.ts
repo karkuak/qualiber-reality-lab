@@ -90,6 +90,7 @@ import {
   coreHash,
   domainHash,
   HASH_DOMAINS,
+  hashBytes,
   sealSigned,
   signCoreHash,
   SIGNATURE_DOMAINS,
@@ -2668,6 +2669,9 @@ export class EnvironmentRun {
     if (!this.archetype.evidence_sources.some((source) => source.kind === "metric")) return [];
     const material = this.driver.observeAttributableTelemetry(this.runId);
     const observedAt = this.now();
+    const excerptBytes =
+      material.evidence === "observed" ? Buffer.from(material.excerpt, "utf8") : undefined;
+    const excerptPath = `${RETAINED}/attributable-telemetry-log-excerpt.txt`;
     const base =
       material.evidence === "observed"
         ? {
@@ -2691,12 +2695,16 @@ export class EnvironmentRun {
             spans: material.counts.spans,
             service_names: material.counts.serviceNames,
             run_attributed_records: material.counts.runAttributedRecords,
-            log_excerpt: this.ws.store.freeze({
-              logicalPath: `${RETAINED}/attributable-telemetry-log-excerpt.txt`,
-              bytes: Buffer.from(material.excerpt, "utf8"),
-              mediaType: "text/plain",
-              classification: "INTERNAL",
-            }),
+            // The reference the freeze below will return, computed first so the
+            // validation that can throw runs before any byte freezes (P1-10: a
+            // resolution that can throw must never sit between two freezes).
+            log_excerpt: {
+              path: excerptPath,
+              media_type: "text/plain",
+              byte_length: (excerptBytes as Buffer).byteLength,
+              file_sha256: hashBytes(excerptBytes as Buffer),
+              classification: "INTERNAL" as const,
+            },
           }
         : {
             schema_version: "attributable-telemetry-observation/v1" as const,
@@ -2710,6 +2718,14 @@ export class EnvironmentRun {
       "AttributableTelemetryObservationV1",
       { ...base, core_hash: coreHash(base) },
     );
+    if (excerptBytes !== undefined) {
+      this.ws.store.freeze({
+        logicalPath: excerptPath,
+        bytes: excerptBytes,
+        mediaType: "text/plain",
+        classification: "INTERNAL",
+      });
+    }
     this.ws.store.freezeJson(
       `${RETAINED}/attributable-telemetry-observation.json`,
       observation,
