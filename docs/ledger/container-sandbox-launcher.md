@@ -244,7 +244,35 @@ which silently measures nothing is the most expensive way to be wrong.
 
 ### Campaign results
 
-_(recorded below by the campaign run for this package)_
+`npm run negative-control -- container`, against a disposable worktree at
+`265eb39`, 8 of 116 controls selected. **All eight matched their recorded
+expectation, and the working tree was byte-identical afterwards.**
+
+| control | result | pass / fail |
+|---|---|---|
+| `container-profile-requires-derivation` | `named_tests_failed` | 12 / 1 |
+| `container-profile-substrate-qualification` | `named_tests_failed` | 9 / 4 |
+| `container-profile-subject-trust` | `named_tests_failed` | 11 / 2 |
+| `container-profile-launcher-observed` | `named_tests_failed` | 11 / 2 |
+| `container-control-report-derived-per-control` | `named_tests_failed` | 12 / 1 |
+| `container-activation-rederived-from-evidence` | `named_tests_failed` | 12 / 1 |
+| `container-manifest-names-its-substrate` | `named_tests_failed` | 12 / 1 |
+| `container-deadline-kills-the-container` | `named_tests_failed` | 0 / 2 |
+
+Two readings worth making explicit:
+
+- `container-profile-substrate-qualification` killed **four** cases against three
+  named. That is the expected shape rather than a surprise: removing
+  `assertQualifiedForExecution` removes drift, suite-digest, lock-binding *and*
+  observed-not-mocked in one line, and the fourth casualty is the
+  container-certification file's own derivation. A single guard carrying four
+  properties is worth knowing about.
+- `container-deadline-kills-the-container` scored **0 pass / 2 fail** because
+  the authoring host has a daemon, so both deadline tests ran for real and both
+  died. On a host without one they would take their announced skip branch and
+  this control would score `no_test_failed` — **UNMEASURED HERE**, never "not
+  load-bearing". The control's `note` field carries that reading so a later
+  reader of the results file does not have to reconstruct it.
 
 ---
 
