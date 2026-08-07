@@ -11,7 +11,7 @@
  */
 
 import { assertContract, CODES, Erl2Error, type Classification } from "@erl2/contracts";
-import { coreHash, isCanonicalizableNumber, isCanonicalizableString } from "@erl2/integrity";
+import { coreHash, isCanonicalizableString } from "@erl2/integrity";
 import type {
   AttributableTelemetryObservationV1,
   EnvironmentArchetypeV1,
@@ -272,13 +272,17 @@ export function telemetryRetentionRefusal(material: AttributableTelemetryMateria
   }
 
   // A count is parsed out of the collector's text, so a long enough digit run
-  // reaches `Infinity` before it reaches any bound the schema states.
+  // reaches `Infinity` before it reaches any bound the schema states. One test
+  // covers both that and the schema's range, deliberately: an integer within
+  // `[0, MAX_TELEMETRY_COUNT]` is finite and safe by arithmetic, so a separate
+  // `isCanonicalizableNumber` call here would be a guard nothing could kill —
+  // it was written, measured as non-load-bearing by the campaign, and removed
+  // (ADR-ERL2-034 §5.1).
   for (const count of [
     material.counts.traceBatches,
     material.counts.spans,
     material.counts.runAttributedRecords,
   ]) {
-    if (!isCanonicalizableNumber(count)) return R.countNotRepresentable;
     if (!Number.isInteger(count) || count < 0 || count > MAX_TELEMETRY_COUNT) {
       return R.countNotRepresentable;
     }

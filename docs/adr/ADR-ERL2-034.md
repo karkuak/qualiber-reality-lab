@@ -134,12 +134,18 @@ independently with `ENV_TELEMETRY_NOT_ATTRIBUTED`. Invalid-with-cleanup is the
 correct outcome and no pass is engineered out of it.
 
 The canonicalizability question is answered by **running the canonicalizer**:
-`isCanonicalizableString` / `isCanonicalizableNumber` in `packages/integrity`
-call `canonicalString` / `canonicalNumber` and read the refusal. A second copy of
-"NFC, no unpaired surrogate" in `packages/core` would have been free to drift
-from the copy that actually decides, and a precondition that disagrees with the
-function it guards is worse than no precondition. This is the ADR-ERL2-024 §7.2
-shared-definition pattern, not a duplicate guard.
+`isCanonicalizableString` in `packages/integrity` calls `canonicalString` and
+reads its refusal. A second copy of "NFC, no unpaired surrogate" in
+`packages/core` would have been free to drift from the copy that actually
+decides, and a precondition that disagrees with the function it guards is worse
+than no precondition. This is the ADR-ERL2-024 §7.2 shared-definition pattern,
+not a duplicate guard.
+
+There is deliberately **no** `isCanonicalizableNumber` beside it. The numeric
+precondition is `Number.isInteger(count) && 0 <= count <= 100 000 000`, and
+every value that satisfies it is finite and safely representable by arithmetic,
+so a canonicalizer call there would guard nothing. §5.1 records how that was
+established, because it was not established by reasoning.
 
 ## 3. Decision 2 — the new reason codes are not a contract change at all
 
@@ -200,10 +206,35 @@ owns the telemetry vocabulary — and driven in `ATTR-TELEM-RETAIN` over a real
 `ArtifactStore` and a stand-in observer. `EnvironmentRun.destroy` calls it and
 decides nothing else. One seam, now reachable.
 
-Thirteen negative controls are registered (§6 of the remediation ledger records
-the campaign): one kills the re-entry branch, one kills each of the ten
-preconditions above, one kills the routable boundary, and one kills the excerpt
-retention bound that ADR-ERL2-033 shipped without a control of its own.
+Twelve negative controls are registered and every one of them kills (§4 of the
+remediation ledger records the campaign): one on the re-entry branch, one on the
+routable boundary, and ten on the preconditions of freezing — including the
+excerpt retention bound that ADR-ERL2-033 shipped without a control of its own.
+
+### 5.1 The thirteenth control, and why it is not here
+
+The campaign was run before this ADR was final, and it killed twelve of thirteen.
+`telemetry-count-canonicalizable` scored **41 pass / 0 fail** against an
+`expect: "fail"` — `tests_passed_unexpectedly`, the harness's name for a guard
+that is not load-bearing.
+
+It was right. The guard it patched was an `isCanonicalizableNumber(count)` call
+sitting immediately above the contract's range check, and every value the
+canonicalizer would refuse — `Infinity`, `NaN`, a non-integer, an unsafe integer
+— fails `Number.isInteger(count) && 0 <= count <= 100 000 000` as well. Disabling
+it changed nothing because it decided nothing.
+
+The guard was **removed**, not re-declared `expect: "pass"`. A guard nothing can
+kill reads to the next person as a guard that may be deleted, which is the
+reading the negative-control harness ledger records as the most expensive way to
+be wrong. Its two cases (`Infinity` from a 400-digit `"spans"` run, and a count
+one above the contract's maximum) both remain, now under the one control that
+does kill. `isCanonicalizableNumber` was removed from `packages/integrity` in the
+same change rather than left as an unused export.
+
+Recorded because the brief asked for anything that failed on its first attempt,
+and because this is the campaign doing exactly what it is for — on this
+package's own new code, hours after it was written.
 
 ## 6. Decision 5 — the unexercised production path in CI, decided rather than deferred
 

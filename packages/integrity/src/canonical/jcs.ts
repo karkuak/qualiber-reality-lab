@@ -100,23 +100,6 @@ export function isCanonicalizableString(value: string): boolean {
   }
 }
 
-/**
- * The same question for a number: finite, and safe if it is an integer.
- *
- * Reachable from parsed subject-influenced text — `Number.parseInt` over a
- * long enough digit run yields `Infinity`, which the canonicalizer refuses
- * fail-closed exactly as it refuses a non-NFC string.
- */
-export function isCanonicalizableNumber(value: number): boolean {
-  try {
-    canonicalNumber(value);
-    return true;
-  } catch (cause) {
-    if (cause instanceof CanonicalizationError) return false;
-    throw cause;
-  }
-}
-
 function canonicalNumber(value: number): string {
   if (!Number.isFinite(value)) {
     throw new CanonicalizationError(`non-finite number rejected: ${String(value)}`);
