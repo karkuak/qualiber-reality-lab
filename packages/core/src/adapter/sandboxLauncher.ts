@@ -1,8 +1,14 @@
 /**
- * The core-owned sandbox supervisor.
+ * The core-owned **local-process** sandbox supervisor.
  *
- * This module is never imported: the adapter host executes it as the direct
- * child of a synchronous `spawnSync`, and it in turn launches the adapter
+ * Its *runtime* is never imported — the adapter host executes it as the direct
+ * child of a synchronous `spawnSync`, and the guard at the bottom of this file
+ * is what keeps that true. The host and `containerSupervisor.ts` do read
+ * `SUPERVISOR_PREFIX` and `SupervisorReport` from here, because both supervisors
+ * speak the same one-line report protocol and there must be exactly one
+ * definition of it.
+ *
+ * It launches the adapter
  * **detached, in its own process group**. That indirection is what makes
  * process-*tree* termination real — killing the negative pid reaches every
  * descendant the adapter forked, so a subject that spawns a helper cannot
