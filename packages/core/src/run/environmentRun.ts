@@ -131,9 +131,8 @@ import { freezeResourceFrontier } from "../environment/frontier.js";
 import {
   attributableTelemetryDeclared,
   attributableTelemetryGatePassed,
-  MAX_TELEMETRY_EXCERPT_CHARS,
+  retainAttributableTelemetryObservation,
   supportsAttributableTelemetry,
-  type AttributableTelemetryObserver,
 } from "../environment/telemetryObservation.js";
 import { buildEnvironmentRestoration, buildTeardownVerification, type TeardownCheck } from "../cleanup/cleanup.js";
 import {
@@ -2656,10 +2655,11 @@ export class EnvironmentRun {
    * declaring an evidence source of kind `metric` — and nowhere else: on every
    * other run, including every fake-driver golden, the artifact's absence
    * means *never produced* (ADR-ERL2-033 §2). Where the observation could not
-   * be made, an `absent` record with a typed reason is retained instead, so
+   * be made, or where what the collector emitted is not something the Lab can
+   * freeze, an `absent` record with a typed reason is retained instead, so
    * absence of observation is a fact the gate can refuse on, not a missing
-   * file. The excerpt is frozen before the observation that references it, and
-   * both before the lifecycle event that anchors them.
+   * file. The excerpt rides inside the observation, and the observation is
+   * frozen before the lifecycle event that anchors it.
    */
   private retainAttributableTelemetry(): readonly {
     readonly artifact_role: string;
@@ -2668,24 +2668,16 @@ export class EnvironmentRun {
   }[] {
     if (!supportsAttributableTelemetry(this.driver)) return [];
     if (!this.archetype.evidence_sources.some((source) => source.kind === "metric")) return [];
-    const observationPath = `${RETAINED}/attributable-telemetry-observation.json`;
-
-    // The freeze precedes the event that anchors it, so a crash between the two
-    // leaves a retained byte the lifecycle never reached — and a re-observation
-    // on resume would carry a fresh `observed_at` over a collector log that may
-    // have grown, wedging the run on `ARTIFACT_ALREADY_FROZEN` forever. The run
-    // already observed; the honest thing on resume is to read what it wrote,
-    // exactly as `retainedSubstrateBinding` does for the same class of window.
-    // The excerpt rides *inside* this artifact for the other half of the same
-    // reason: two files cannot be frozen atomically, and a crash between them
-    // would leave either an excerpt nothing references or a reference to absent
-    // bytes — each of which the offline accounting refuses.
-    const observation = this.ws.store.isFrozen(observationPath)
-      ? assertContract<AttributableTelemetryObservationV1>(
-          "AttributableTelemetryObservationV1",
-          this.ws.store.readJson(observationPath),
-        )
-      : this.freezeTelemetryObservation(observationPath);
+    // Every failure of retention leaves this call as a routable `TEARDOWN_FAILED`
+    // (ADR-ERL2-034 §4); the boundary lives with the retention itself so it can
+    // be measured without a substrate.
+    const observation = retainAttributableTelemetryObservation({
+      store: this.ws.store,
+      observationPath: `${RETAINED}/attributable-telemetry-observation.json`,
+      observer: this.driver,
+      runId: this.runId,
+      observedAt: () => this.now(),
+    });
     return [
       {
         artifact_role: "attributable-telemetry-observation",
@@ -2693,61 +2685,6 @@ export class EnvironmentRun {
         artifact_schema_version: "attributable-telemetry-observation/v1",
       },
     ];
-  }
-
-  /** Observes, validates and freezes the telemetry observation exactly once. */
-  private freezeTelemetryObservation(
-    observationPath: string,
-  ): AttributableTelemetryObservationV1 {
-    const material = (this.driver as unknown as AttributableTelemetryObserver)
-      .observeAttributableTelemetry(this.runId);
-    const observedAt = this.now();
-    // A collector output past the retention bound is refused as an honest
-    // `absent`, never truncated: an excerpt cut short derives counts that are
-    // not this run's, and a count nobody can reproduce is worse than none.
-    const overBound =
-      material.evidence === "observed" && material.excerpt.length > MAX_TELEMETRY_EXCERPT_CHARS;
-    const base =
-      material.evidence === "observed" && !overBound
-        ? {
-            schema_version: "attributable-telemetry-observation/v1" as const,
-            run_id: this.runId,
-            marker: material.marker,
-            evidence: "observed" as const,
-            observed_at: observedAt,
-            collector: {
-              service_id: material.collector.serviceId,
-              container_name: material.collector.containerName,
-              // Schema constants, not observations of convenience: the driver
-              // refuses to read an unverified container's logs, so reaching
-              // this branch at all is the proof.
-              ownership_verified: true as const,
-              image_id: material.collector.imageId,
-              observed_image_repo_digests: material.collector.observedImageRepoDigests,
-              image_matches_locked_digest: true as const,
-            },
-            trace_batches: material.counts.traceBatches,
-            spans: material.counts.spans,
-            service_names: material.counts.serviceNames,
-            run_attributed_records: material.counts.runAttributedRecords,
-            log_excerpt: material.excerpt,
-          }
-        : {
-            schema_version: "attributable-telemetry-observation/v1" as const,
-            run_id: this.runId,
-            marker: material.marker,
-            evidence: "absent" as const,
-            observed_at: observedAt,
-            reason_code: overBound
-              ? "telemetry_excerpt_exceeds_retention_bound"
-              : (material as { readonly reasonCode: string }).reasonCode,
-          };
-    const observation = assertContract<AttributableTelemetryObservationV1>(
-      "AttributableTelemetryObservationV1",
-      { ...base, core_hash: coreHash(base) },
-    );
-    this.ws.store.freezeJson(observationPath, observation, "INTERNAL");
-    return observation;
   }
 
   // -- 12. validity and the generic index ------------------------------------

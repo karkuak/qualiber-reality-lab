@@ -142,11 +142,15 @@ export {
   excerptCollectorTelemetry,
   MAX_TELEMETRY_EXCERPT_CHARS,
   parseCollectorTelemetry,
+  retainAttributableTelemetryObservation,
   supportsAttributableTelemetry,
+  TELEMETRY_RETENTION_REASONS,
+  telemetryRetentionRefusal,
   type AttributableTelemetryMaterial,
   type AttributableTelemetryObserver,
   type CollectorTelemetryCounts,
   type ObservedCollectorIdentity,
+  type TelemetryObservationStore,
 } from "./environment/telemetryObservation.js";
 export {
   assertSubstrateBinding,
