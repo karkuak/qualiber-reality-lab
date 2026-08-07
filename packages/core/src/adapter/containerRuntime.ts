@@ -67,6 +67,25 @@ const RUNTIME_ENVIRONMENT_ALLOWLIST: readonly string[] = [
   "CONTAINER_HOST",
 ];
 
+/**
+ * The environment a Lab-owned process that must reach the runtime daemon gets.
+ *
+ * Shared with the container sandbox supervisor, which shells out to the same
+ * CLI. This is *not* the adapter's environment — the adapter's is the three
+ * allowlisted names the runtime injects into the container, and the whole point
+ * of the profile is that the two are on opposite sides of a namespace.
+ */
+export function runtimeCliEnvironment(): Record<string, string> {
+  return RUNTIME_ENVIRONMENT_ALLOWLIST.reduce<Record<string, string>>(
+    (env, name) => {
+      const value = process.env[name];
+      if (value !== undefined) env[name] = value;
+      return env;
+    },
+    { PATH: process.env["PATH"] ?? "/usr/bin:/bin:/usr/local/bin" },
+  );
+}
+
 const DEFAULT_TIMEOUT_MS = 60_000;
 /** Diagnostics bound; the `bounded-diagnostics` control is probed against it. */
 export const DEFAULT_PROBE_OUTPUT_BYTES = 64 * 1024;
@@ -97,11 +116,7 @@ export class CliContainerRuntime implements ContainerRuntime {
       // probes exist to check for, but passing *nothing* would silently
       // retarget the CLI at whatever default endpoint it can find, so the
       // evidence would describe a different daemon than the operator's.
-      env: RUNTIME_ENVIRONMENT_ALLOWLIST.reduce<Record<string, string>>((env, name) => {
-        const value = process.env[name];
-        if (value !== undefined) env[name] = value;
-        return env;
-      }, { PATH: process.env["PATH"] ?? "/usr/bin:/bin:/usr/local/bin" }),
+      env: runtimeCliEnvironment(),
       maxBuffer: maxBytes * 4,
       // SIGTERM is not a bound. A runtime CLI attached to a container forwards
       // SIGTERM to PID 1, and PID 1 has no default signal handlers, so a

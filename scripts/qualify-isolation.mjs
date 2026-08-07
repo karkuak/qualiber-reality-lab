@@ -24,6 +24,7 @@ import {
   buildIsolationProbeSigningManifest,
   buildIsolationQualificationReport,
   buildIsolationSubstrateLock,
+  containerRuntimeConfigurationInput,
   discoverSubstrate,
   probeSuiteDigest,
   reapProbeResidue,
@@ -72,20 +73,11 @@ const runId = "01890000-0000-7000-8000-0000000000aa";
 // qualifier from the in-effect configuration (they are not read from the runtime
 // binary), then handed to discoverSubstrate so the observed state — and the lock
 // derived from it — carry them as pinned fields.
-const runtimeConfigurationHashes = [
-  runtimeConfigurationHash({
-    hardened_flags: [
-      "--read-only",
-      "--user 65532:65532",
-      "--cap-drop=ALL",
-      "--security-opt no-new-privileges",
-      "--network=none",
-      "--pids-limit=64",
-      "--memory=64m",
-      "--cpus=0.5",
-    ],
-  }),
-];
+// Read from the shared constant rather than restated: the probes and the
+// container launcher apply the same vector, so the hash the lock pins is the
+// hash of the configuration an adapter will actually run under. Restating it
+// here is how a launcher could quietly diverge from the evidence.
+const runtimeConfigurationHashes = [runtimeConfigurationHash(containerRuntimeConfigurationInput())];
 const policyInputHashes = [runtimeConfigurationHash({ egress: "deny-by-default" })];
 
 console.log(`== discovering substrate via ${binary} ==`);
@@ -140,7 +132,21 @@ if (report.verdict !== "qualified") {
 // Publish evidence only for a qualified verdict. A not-qualified run must not
 // leave a lock behind that a later `erl2 doctor` could read as progress: the
 // honest state of an unqualified host is no retained lock at all.
-rmSync(outDir, { recursive: true, force: true });
+//
+// Exactly the four evidence artifacts, never the directory. This used to
+// `rmSync` the whole of `outDir`, which also deleted the directory's README and
+// — once ADR-ERL2-034 put it there — `runtime-image/Dockerfile`, the source of
+// the very substrate being qualified. Nothing failed; the files simply went
+// away, and the first run of this package deleted the README before anyone
+// noticed.
+for (const artifact of [
+  "substrate-lock.json",
+  "qualification-report.json",
+  "probe-signing-manifest.json",
+  "probes",
+]) {
+  rmSync(path.join(outDir, artifact), { recursive: true, force: true });
+}
 if (report.verdict === "qualified") {
   mkdirSync(path.join(outDir, "probes"), { recursive: true });
   writeFileSync(path.join(outDir, "substrate-lock.json"), `${JSON.stringify(lock, null, 2)}\n`);
