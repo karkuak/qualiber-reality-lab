@@ -22,17 +22,62 @@ import {
   type IsolationSubstrateLockV1,
 } from "./contractsFacade.js";
 import {
+  CliContainerRuntime,
   NOT_QUALIFIED_STATE,
   PROBE_SUITE_ID,
   REQUIRED_ISOLATION_CONTROLS,
   buildIsolationQualificationReport,
   deriveIsolationAuthenticity,
+  probeContainerLauncher,
   probeSuiteDigest,
   verifyIsolationLockSignature,
   verifyIsolationProbeManifest,
   type PinnedQualificationAuthority,
 } from "@erl2/core";
 import { coreHash } from "@erl2/integrity";
+
+/** Identifier of the launcher this build ships, whether or not it works here. */
+const LAUNCHER_IMPLEMENTATION = "erl2-container-sandbox-supervisor/v1";
+
+/**
+ * Observes the launcher, or says honestly that it was not observed.
+ *
+ * `not_probed` is the important value. Reporting `false` for a launcher nobody
+ * asked about would be indistinguishable from a launcher that was tried and
+ * failed, and those are different facts about a host.
+ */
+function observeLauncher(
+  lock: IsolationSubstrateLockV1 | undefined,
+  options: { readonly probeLauncher?: boolean; readonly runtimeBinary?: string },
+): IsolationStatus["launcher"] {
+  if (lock === undefined) {
+    return {
+      implementation: LAUNCHER_IMPLEMENTATION,
+      observed: "unavailable",
+      reason: "SUBSTRATE_LOCK_NOT_PINNED",
+    };
+  }
+  if (options.probeLauncher !== true) {
+    return {
+      implementation: LAUNCHER_IMPLEMENTATION,
+      observed: "not_probed",
+      reason: "LAUNCHER_NOT_PROBED: pass --probe-launcher to start a container and observe it",
+    };
+  }
+  const runtimeBinary = options.runtimeBinary ?? "docker";
+  const availability = probeContainerLauncher({
+    runtime: new CliContainerRuntime({ binary: runtimeBinary, runtimeId: lock.runtime_id }),
+    runtimeBinary,
+    imageReference: lock.image_reference,
+  });
+  return {
+    implementation: LAUNCHER_IMPLEMENTATION,
+    observed: availability.available ? "available" : "unavailable",
+    reason: availability.available
+      ? `observed the adapter runtime ${availability.observedRuntimeVersion ?? "?"} inside the locked image`
+      : (availability.reason ?? "LAUNCHER_UNAVAILABLE"),
+  };
+}
 
 /** Where a qualification run publishes its evidence, relative to the workspace. */
 export const ISOLATION_EVIDENCE_DIR = path.join("environments", "isolation");
@@ -53,7 +98,22 @@ export interface IsolationStatus {
    * `invalid` and forces `not_qualified`.
    */
   readonly probe_manifest: { readonly status: string; readonly signer: string; readonly reason: string };
-  readonly launcher_available: false;
+  /**
+   * Whether an adapter can actually be started inside the locked substrate.
+   *
+   * Two separate facts, because conflating them is what ADR-ERL2-017 called
+   * gate 1 versus gate 2: `implementation` says a container-backed launcher
+   * exists in this build, and `observed` says whether it was watched working
+   * *here*. Doctor does not start a container unless asked — a diagnostic
+   * command that silently pulls and runs an image is a surprise — so the
+   * default is `not_probed`, which is a refusal to guess rather than a `false`
+   * that would be indistinguishable from a real negative.
+   */
+  readonly launcher: {
+    readonly implementation: string;
+    readonly observed: "not_probed" | "available" | "unavailable";
+    readonly reason: string;
+  };
   readonly profile: "container";
   readonly required_controls: number;
   readonly observed_controls: number;
@@ -76,6 +136,7 @@ export interface IsolationStatus {
 export function isolationStatus(
   evidenceRoot: string,
   pinnedAuthorities: readonly PinnedQualificationAuthority[] = [],
+  options: { readonly probeLauncher?: boolean; readonly runtimeBinary?: string } = {},
 ): IsolationStatus {
   const lockPath = path.join(evidenceRoot, "substrate-lock.json");
   const probesDir = path.join(evidenceRoot, "probes");
@@ -136,11 +197,19 @@ export function isolationStatus(
     },
     probeManifest: probeManifestVerification,
   });
-  // The container-backed launcher is out of scope while OQ-008 is open, so even
-  // an authenticated substrate cannot execute an opaque subject.
+  // Observed only on request: the observation is a real container, and a
+  // diagnostic that starts one on every invocation is a surprise, not a
+  // diagnostic. Not probing is reported as not probed, never as unavailable.
+  const launcher = observeLauncher(lock, options);
+
+  // Closing gate 2 does not close ERL2-OQ-008. The retained lock is signed by a
+  // repo-derivable development key, so the evidence is self-reported whatever
+  // the launcher can do — and `authenticity` above is the field that says so.
+  // This string must stay descriptive of both gates, because the previous one
+  // ("...launcher_unavailable") is now capable of being false.
   const qualification =
     authenticity === "authenticated"
-      ? "authenticated_substrate_qualified_launcher_unavailable"
+      ? `authenticated_substrate_qualified_launcher_${launcher.observed}`
       : authenticity === "locally_observed_unauthenticated"
         ? "locally_observed_unauthenticated"
         : NOT_QUALIFIED_STATE;
@@ -169,7 +238,7 @@ export function isolationStatus(
       signer: probeManifestVerification.signerKeyId,
       reason: probeManifestVerification.reason ?? "-",
     },
-    launcher_available: false,
+    launcher,
     profile: "container",
     required_controls: REQUIRED_ISOLATION_CONTROLS.length,
     observed_controls: report.observed_controls.length,

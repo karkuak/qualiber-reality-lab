@@ -403,11 +403,18 @@ function doctor(argv: readonly string[]): CommandResult {
     { name: "profile", kind: "string" },
     { name: "isolation-evidence", kind: "string" },
     { name: "substrate-lock", kind: "string" },
+    { name: "probe-launcher", kind: "boolean" },
   ]);
   // The isolation section is *derived* from retained evidence on every call, so
   // doctor reports what is true rather than repeating a stored verdict.
+  // `--probe-launcher` additionally starts one container in the locked image and
+  // watches the adapter runtime answer, which is the only honest way to report
+  // gate 2. It is opt-in because a diagnostic should not run containers by
+  // surprise, and the default says `not_probed` rather than guessing.
   const isolation = isolationStatus(
     (flags["isolation-evidence"] as string | undefined) ?? ISOLATION_EVIDENCE_DIR,
+    [],
+    { probeLauncher: flags["probe-launcher"] === true },
   );
   // Derived on every call for the same reason the isolation section is: a
   // hardcoded "disabled_pending_erl2_oq_005" was accurate until OQ-005 was
@@ -443,7 +450,11 @@ function doctor(argv: readonly string[]): CommandResult {
       privilege_broker: "unprivileged_container_subjects_only_pending_erl2_oq_001",
       adapter_protocol_version: ADAPTER_PROTOCOL_VERSION,
       adapter_sandbox_profile: "local-process",
+      // The state of the container profile with nothing derived for this host,
+      // and — separately — what was observed about the launcher. Gate 1 and
+      // gate 2 stay two answers (ADR-ERL2-017 decision 3, ADR-ERL2-034).
       adapter_container_sandbox_profile: CONTAINER_PROFILE_STATE,
+      adapter_container_sandbox_launcher: isolation.launcher.observed,
       // The honest split: what the enabled profile decides and receipts, and
       // what a kernel would have to enforce and this host cannot.
       adapter_sandbox_controls_enforced: enforcedControls("local-process").length,
