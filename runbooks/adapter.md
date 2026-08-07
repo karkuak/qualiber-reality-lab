@@ -28,10 +28,10 @@ The host enforces, per operation:
 
 ## What it is *not*
 
-The only enabled sandbox profile is `local-process`. It is a real process
-boundary, not a container. `sandboxControlReport("local-process")` lists thirteen
-controls it enforces and thirteen it cannot, each with a reason code, and the
-certification receipt copies both lists. Read them before you claim isolation.
+The default sandbox profile is `local-process`. It is a real process boundary,
+not a container. `sandboxControlReport("local-process")` lists twelve controls it
+enforces and thirteen it cannot, each with a reason code, and the certification
+receipt copies both lists. Read them before you claim isolation.
 
 Specifically **not** enforced here: read-only root filesystem, numeric non-root
 user, capability drop, no-new-privileges, seccomp, PID/memory/CPU limits,
@@ -39,9 +39,16 @@ network-namespace isolation, kernel-enforced read-only mounts, and a kernel-leve
 block on sockets or on reading the operator's home directory. A same-user adapter
 process can read whatever the operator can read.
 
-**Therefore: run an untrusted subject on a disposable machine.** The container
-profile is declared and `disabled_no_qualified_adapter_substrate`; requesting it
-is a refusal, never a silent downgrade.
+**Therefore: run an untrusted subject on a disposable machine.**
+
+The `container` profile does enforce all thirteen — but only where it derives,
+and only for a subject this repository authored. It is
+`disabled_until_container_substrate_qualification_derived_on_this_host` unless
+`deriveContainerProfileActivation` has re-derived the qualification here
+(ADR-ERL2-034), and requesting it without that is a refusal, never a silent
+downgrade. It is not a route around the paragraph above for anything the Lab did
+not write: ERL2-OQ-008 is still open on authentication, so an `opaque_private` or
+`third_party` subject is refused the container profile explicitly.
 
 ## ERL2-OQ-001: privileged operations are refused
 
@@ -162,16 +169,35 @@ process boundary and adjudicates every capability, credential and egress the
 adapter declares — but the operator account's filesystem, sockets and
 credentials remain reachable in principle.
 
-| Subject trust | `local-process` | container / disposable VM |
-|---|---|---|
-| `trusted_reference` — source is in this repository and reviewed | permitted | permitted once qualified |
-| `opaque_private` — a supplied artifact whose source the Lab never sees | **refused** | permitted once qualified |
-| `third_party` — a neutrally selected OSS subject | **refused** | permitted once qualified |
+| Subject trust | `local-process` | `container` | disposable VM |
+|---|---|---|---|
+| `trusted_reference` — source is in this repository and reviewed | permitted | permitted where the qualification derives | permitted once qualified |
+| `opaque_private` — a supplied artifact whose source the Lab never sees | **refused** | **refused** — pending authentication | permitted once qualified |
+| `third_party` — a neutrally selected OSS subject | **refused** | **refused** — pending authentication | permitted once qualified |
 
-`assertSubjectMayRunUnderProfile` enforces this. Today the container and
-disposable-VM profiles are `disabled_no_qualified_adapter_substrate`
-(ERL2-OQ-008): no substrate is pinned on this host and no enforcement probe has
-been observed.
+`assertSubjectMayRunUnderProfile` and `deriveContainerProfileActivation` both
+enforce this. The second column is the one that changed: the container profile
+now works, and the two refusals in it are an explicit subject-trust gate rather
+than a side effect of the profile being unusable. They stay because ERL2-OQ-008
+is open on **gate 1b** — the substrate lock and probe manifest are signed by a
+repo-derivable development key, so the qualification licensing the profile is
+self-reported, and `erl2 doctor` reports
+`locally_observed_unauthenticated`. The disposable-VM profile is undeclared and
+unimplemented.
+
+To use the container profile you must derive it on the host that will execute
+the adapter:
+
+```
+node scripts/build-adapter-runtime-image.mjs
+npm run qualify:isolation -- --image <the digest-pinned reference it prints>
+npm run erl2 -- doctor --probe-launcher
+```
+
+Nothing about that sequence grants anything by itself. `doctor` re-derives from
+the retained bytes on every call, and `deriveContainerProfileActivation` re-runs
+the whole derivation — drift, probe suite, lock binding, twenty observed
+controls, an observed launcher, subject trust — before any adapter starts.
 
 ### Qualifying a stronger profile
 

@@ -645,12 +645,17 @@ test("COMPENSATION: an undeclared mutation and an unreconciled one are both refu
 test("ADAPTER-CERT: the container sandbox profile is disabled, not silently downgraded", () => {
   const error = refusalOf(() => assertSandboxProfileEnabled("container"));
   assert.equal(error?.code, "ADAPTER_SANDBOX_CONTROL_UNSUPPORTED");
-  // The refusal names the launcher gate, not the substrate gate. Once a
-  // substrate qualifies (ERL2-OQ-008), "no qualified substrate" stops being
-  // true while the profile is still unusable — and a refusal that cited a
-  // reason which had become false would be the first step toward the profile
-  // quietly enabling itself.
-  assert.match(error?.message ?? "", /disabled_no_container_adapter_launcher_pending_erl2_oq_008/);
+  // The refusal names the gate that is actually shut. It has now moved twice
+  // for the same reason: "no qualified substrate" stopped being true when one
+  // qualified (ADR-ERL2-017), and "no container adapter launcher" stopped being
+  // true when one landed (ADR-ERL2-034). A refusal citing a reason which had
+  // become false would be the first step toward the profile quietly enabling
+  // itself. What is shut here is that no qualification has been *derived for
+  // this host* — no activation was supplied to this call.
+  assert.match(
+    error?.message ?? "",
+    /disabled_until_container_substrate_qualification_derived_on_this_host/,
+  );
   // ...and it still says the profile is not downgraded, because a refusal that
   // fell back to `local-process` would put an opaque subject on the operator's
   // own account.

@@ -7,10 +7,10 @@
   "platform": "linux",
   "architecture": "arm64",
   "kernel_version": "6.12.76-linuxkit",
-  "image_reference": "alpine@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce",
-  "image_digest": "sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce",
+  "image_reference": "erl2-adapter-runtime@sha256:cc3808ff40b19dd58f341019b0ddd827402346c657e05b1d7e95be90044a4440",
+  "image_digest": "sha256:cc3808ff40b19dd58f341019b0ddd827402346c657e05b1d7e95be90044a4440",
   "runtime_configuration_hashes": [
-    "sha256:fe1dbc994f5e9094c06775446f9b94ceb451971876e7529a0c3a4b5fff9e6b57"
+    "sha256:9858fa390ad9ebcaffe2e16d13ef95ebb526eee9782ca4db6a83d8cb95f7a5a1"
   ],
   "required_security_profile": {
     "seccomp": "builtin",
@@ -23,12 +23,12 @@
     "sha256:6d318068666e29a5a8c8f2c75771428561b278c51e6e63167e23913a8ef265f3"
   ],
   "pinned": true,
-  "recorded_at": "2026-07-23T16:57:19Z",
-  "core_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
+  "recorded_at": "2026-08-07T14:44:53Z",
+  "core_hash": "sha256:e333ce56d921702479ec6784a65c821b18c257d90eafc402288e23a5079f88b5",
   "signature": {
     "algorithm": "Ed25519",
     "key_id": "erl2-dev-environment-governor-ed25519-1",
-    "signed_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
-    "signature_base64": "xn7tFHvXR+bpR7two8GaRIs+YugwgwTz9YqTSMtNPuxS+n9DHQmSg4gfxRz6r3c9GUq+wNKIxrWqD2FXc/NPDg=="
+    "signed_hash": "sha256:e333ce56d921702479ec6784a65c821b18c257d90eafc402288e23a5079f88b5",
+    "signature_base64": "3U+5pAaoJ2D3XRSVZWnJZWK+9zX1OrZA6eIiK8bI/AI3MHxMTGFweD2QQ8JD+gARjMkKZZOAzAH03UzraU5BDQ=="
   }
 }

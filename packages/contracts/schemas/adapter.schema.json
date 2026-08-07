@@ -1192,6 +1192,17 @@
         "writable_output_path": {
           "$ref": "erl2:common#/$defs/LogicalPath"
         },
+        "sandbox_profile": {
+          "$comment": "The profile this invocation ran under. Absent means `local-process`, which is what every manifest frozen before the container-backed launcher existed described; the `enforced_controls` list is the discriminator either way.",
+          "enum": [
+            "local-process",
+            "container"
+          ]
+        },
+        "isolation_substrate_lock_hash": {
+          "$comment": "Core hash of the `IsolationSubstrateLockV1` whose observed enforcement evidence licenses this invocation's control report. Required when `sandbox_profile` is `container`: a container manifest that named no substrate would claim kernel-prevented controls with nothing behind them.",
+          "$ref": "erl2:common#/$defs/Hash"
+        },
         "environment_variable_names": {
           "$comment": "Allowlisted names only. Values are never recorded, so this contract cannot become a secret channel.",
           "$ref": "erl2:common#/$defs/ShortStringArray"
@@ -1327,7 +1338,29 @@
         "core_hash": {
           "$ref": "erl2:common#/$defs/Hash"
         }
-      }
+      },
+      "allOf": [
+        {
+          "$comment": "A container-profile manifest must name the substrate lock whose observed evidence licenses its control report; there is no representable container invocation that claims kernel-prevented controls without one.",
+          "if": {
+            "type": "object",
+            "properties": {
+              "sandbox_profile": {
+                "const": "container"
+              }
+            },
+            "required": [
+              "sandbox_profile"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "isolation_substrate_lock_hash"
+            ]
+          }
+        }
+      ]
     },
     "SandboxInvocationResultV1": {
       "type": "object",
@@ -1416,6 +1449,65 @@
         "refusal_code": {
           "type": "string",
           "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        },
+        "container_termination": {
+          "$comment": "What the runtime was *observed* to report about the container after the invocation ended. Present only for the container profile. `process_tree_terminated` above is the verdict; this is the measurement it was derived from, so an offline reader can disagree with the verdict. Identity is the full container id read at create time — never a bare pid, which the NC-PROCTREE negative control caught being reused.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "container_id",
+            "image_digest",
+            "namespace_processes_at_termination",
+            "running_after_termination",
+            "runtime_pid_after_termination",
+            "removed",
+            "residue_after_removal",
+            "deadline_span_ms",
+            "deadline_enforced",
+            "oom_killed"
+          ],
+          "properties": {
+            "container_id": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "image_digest": {
+              "$ref": "erl2:common#/$defs/Hash"
+            },
+            "namespace_processes_at_termination": {
+              "$comment": "Processes the runtime listed inside the container's pid namespace at the moment termination was ordered. Zero for a container that had already exited.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "running_after_termination": {
+              "type": "boolean"
+            },
+            "runtime_pid_after_termination": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4194304
+            },
+            "removed": {
+              "type": "boolean"
+            },
+            "residue_after_removal": {
+              "$comment": "True when the runtime still knows the container id after removal was ordered; a residue failure, not a cleanup detail.",
+              "type": "boolean"
+            },
+            "deadline_span_ms": {
+              "$comment": "Real elapsed milliseconds from arming the deadline to observing the container not running. The measurement the ADR-ERL2-017 §Evidence defect would have failed on: a deadline that took the container's full run to take effect bounded nothing.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "deadline_enforced": {
+              "type": "boolean"
+            },
+            "oom_killed": {
+              "type": "boolean"
+            }
+          }
         },
         "started_at": {
           "$ref": "erl2:common#/$defs/Instant"

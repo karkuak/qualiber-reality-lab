@@ -434,6 +434,8 @@ export type SandboxInvocationManifestV1 = {
     readonly read_only: true;
   })[];
   readonly writable_output_path: LogicalPath;
+  readonly sandbox_profile?: "local-process" | "container";
+  readonly isolation_substrate_lock_hash?: Hash;
   readonly environment_variable_names: ShortStringArray;
   readonly enforced_controls: readonly ({
     readonly control_id: SandboxControlId;
@@ -473,6 +475,18 @@ export type SandboxInvocationResultV1 = {
   readonly stderr_bytes: number;
   readonly wall_clock_ms: number;
   readonly refusal_code?: string;
+  readonly container_termination?: {
+    readonly container_id: string;
+    readonly image_digest: Hash;
+    readonly namespace_processes_at_termination: number;
+    readonly running_after_termination: boolean;
+    readonly runtime_pid_after_termination: number;
+    readonly removed: boolean;
+    readonly residue_after_removal: boolean;
+    readonly deadline_span_ms: number;
+    readonly deadline_enforced: boolean;
+    readonly oom_killed: boolean;
+  };
   readonly started_at: Instant;
   readonly ended_at: Instant;
   readonly core_hash: Hash;

@@ -2,7 +2,7 @@
   "schema_version": "isolation-enforcement-probe-result/v1",
   "probe_id": "run-scoped-identity",
   "control_id": "run-scoped-resource-identity",
-  "substrate_lock_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
+  "substrate_lock_hash": "sha256:e333ce56d921702479ec6784a65c821b18c257d90eafc402288e23a5079f88b5",
   "evidence": "observed",
   "enforced": true,
   "method": "create a named container and volume, then confirm the runtime reports names that embed this run id and that a foreign name is not ours",
@@ -12,7 +12,7 @@
     "expectation": "every created resource name embeds this run id and a foreign name does not match"
   },
   "resources_cleaned_up": true,
-  "started_at": "2026-07-23T16:57:32Z",
-  "ended_at": "2026-07-23T16:57:33Z",
-  "core_hash": "sha256:bd114e9ccfb2889c3770954721a9b06bb57bdf9971e4719d12b332b0f972e9bf"
+  "started_at": "2026-08-07T14:45:01Z",
+  "ended_at": "2026-08-07T14:45:02Z",
+  "core_hash": "sha256:129f261a42fe7d62e35d566411e2e812a75925c0df2a32724ef00e00004ad53f"
 }

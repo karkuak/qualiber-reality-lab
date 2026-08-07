@@ -46,12 +46,18 @@ function throwsCode(fn: () => unknown, code: string, label = ""): void {
 test("ISOLATION: the container profile is disabled and cannot be silently downgraded", () => {
   // Two independent gates, deliberately not collapsed into one state:
   // `NOT_QUALIFIED_STATE` answers "does a substrate enforce the twenty
-  // controls?", while `CONTAINER_PROFILE_STATE` answers "can the Lab launch an
-  // adapter inside one?". A qualified substrate does not make the profile
-  // usable, because no container-backed launcher exists.
+  // controls?", while `CONTAINER_PROFILE_STATE` answers "may the Lab launch an
+  // adapter inside one *here*?". A qualified substrate does not make the
+  // profile usable.
+  //
+  // The state string moved with ADR-ERL2-034, for the reason the original
+  // comment gave: a launcher now exists, so a state asserting one does not
+  // would be a refusal citing a false reason — the first step toward the
+  // profile quietly enabling itself. What is still true, and is what this
+  // string now says, is that nothing has been *derived for this host*.
   assert.equal(
     CONTAINER_PROFILE_STATE,
-    "disabled_no_container_adapter_launcher_pending_erl2_oq_008",
+    "disabled_until_container_substrate_qualification_derived_on_this_host",
   );
   assert.notEqual(CONTAINER_PROFILE_STATE, NOT_QUALIFIED_STATE);
   throwsCode(

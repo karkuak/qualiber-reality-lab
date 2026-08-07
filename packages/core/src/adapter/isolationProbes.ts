@@ -38,6 +38,7 @@ import {
 } from "@erl2/contracts";
 import { coreHash } from "@erl2/integrity";
 import type { Clock } from "../runtime/seams.js";
+import { HARDENED_CONTAINER_RUN_FLAGS } from "./containerHardening.js";
 import {
   DEFAULT_PROBE_OUTPUT_BYTES,
   type ContainerRuntime,
@@ -99,24 +100,15 @@ interface ProbeWorkspace {
   readonly root: string;
 }
 
-/** Base flags every probe container runs with, so each probe tests one delta. */
+/**
+ * Base flags every probe container runs with, so each probe tests one delta.
+ *
+ * Read from `containerHardening.ts` rather than restated here: the launcher
+ * applies the same vector and the substrate lock pins its hash, so a probe
+ * cannot end up measuring a configuration no adapter will ever run under.
+ */
 function hardenedFlags(name: string): string[] {
-  return [
-    "run",
-    "--rm",
-    "--name",
-    name,
-    "--read-only",
-    "--user",
-    "65532:65532",
-    "--cap-drop=ALL",
-    "--security-opt",
-    "no-new-privileges",
-    "--network=none",
-    "--pids-limit=64",
-    "--memory=64m",
-    "--cpus=0.5",
-  ];
+  return ["run", "--rm", "--name", name, ...HARDENED_CONTAINER_RUN_FLAGS];
 }
 
 /** A run-scoped container name; the `run-scoped-resource-identity` probe checks it. */
