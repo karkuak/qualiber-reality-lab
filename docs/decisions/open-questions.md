@@ -232,6 +232,21 @@ changed.
 at exactly that width and continues to forbid any claim inside the evidence
 window; the claim ceiling is unchanged at T1.
 
+**Known limitation, recorded 2026-08-07 (ADR-ERL2-035 §6).** No CI run has ever
+driven a live Compose journey. `.github/workflows/pr.yml` fetches no substrate
+archive and sets no `ERL2_REQUIRE_LIVE_DOCKER`, so `COMPOSE-E2E` and
+`EXTERNAL-SUBJECT-E2E` skip on every runner. The remediation for EQ-L-004 moved
+the producer's *retention* path (observe → validate → demote-or-freeze, and its
+re-entry branch) into code CI executes on every `npm test`; what remains
+unexercised is `ComposeEnvironmentDriver.observeAttributableTelemetry` — the
+Docker verification of the collector container and the reading of its logs —
+whose only coverage is `composeSubstrate.test.ts` over a stand-in daemon.
+**Consequence: a defect that lives in the driver's interaction with a real
+Docker daemon is not discoverable by this repository's CI, and would be found
+only by an operator run or by review.** EQ-L-004 was reachable by one accented
+character and survived a green 1140-test suite and three green CI runs for
+exactly this reason.
+
 The qualification procedure is in `environments/otel-demo/README.md`.
 
 ## ERL2-OQ-008 in detail — stronger subject isolation

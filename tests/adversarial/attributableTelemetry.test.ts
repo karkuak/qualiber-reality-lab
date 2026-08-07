@@ -27,16 +27,24 @@ import path from "node:path";
 import {
   assertContract,
   CODES,
+  Erl2Error,
   type AttributableTelemetryObservationV1,
+  type Instant,
   type LabLifecycleEventV1,
 } from "@erl2/contracts";
-import { coreHash, hashBytes } from "@erl2/integrity";
+import { ArtifactStore, coreHash, hashBytes } from "@erl2/integrity";
 import {
   attributableTelemetryDeclared,
   attributableTelemetryGatePassed,
   excerptCollectorTelemetry,
+  MAX_TELEMETRY_EXCERPT_CHARS,
   parseCollectorTelemetry,
+  retainAttributableTelemetryObservation,
   supportsAttributableTelemetry,
+  TELEMETRY_RETENTION_REASONS,
+  type AttributableTelemetryMaterial,
+  type CollectorTelemetryCounts,
+  type ObservedCollectorIdentity,
 } from "@erl2/core";
 import { ArtifactIndex, deriveAttributableTelemetry } from "@erl2/public-verifier";
 import { ownedTempDir } from "../support/tempDirs.js";
@@ -571,6 +579,288 @@ test("ATTR-TELEM-VERIFY: an observed record whose excerpt the index never valida
   assert.equal(
     refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
     CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+  );
+});
+
+// -- 4b. the retention path: what freezes, and what is demoted instead -------
+
+/**
+ * `retainAttributableTelemetryObservation` is the production retention path —
+ * the same function `EnvironmentRun.destroy` calls before `teardown_started`,
+ * over a real `ArtifactStore` and a stand-in observer.
+ *
+ * It is driven here rather than through a run because the properties that
+ * matter are reachable with no substrate at all, and the reason EQ-L-004
+ * survived a green suite and three green CI runs is that nothing without a
+ * Docker daemon had ever executed this code. Two of those properties:
+ *
+ * 1. **re-entry reads what it wrote.** Deleting that branch reintroduces the
+ *    `ARTIFACT_ALREADY_FROZEN` wedge `d803e66` closed — the condition the
+ *    telemetry ledger names as why the original defect went unnoticed.
+ * 2. **collector bytes the Lab cannot freeze demote, never throw.** One
+ *    decomposed accent on one retained line used to leave `destroy` through an
+ *    untyped `CanonicalizationError`, before any lifecycle event, with the
+ *    containers still live.
+ */
+
+/** A collector's material, `observed` and retainable unless a case says otherwise. */
+function material(
+  overrides: {
+    readonly counts?: Partial<CollectorTelemetryCounts>;
+    readonly excerpt?: string;
+    readonly collector?: Partial<ObservedCollectorIdentity>;
+    readonly marker?: string;
+  } = {},
+): AttributableTelemetryMaterial {
+  const excerpt = overrides.excerpt ?? excerptCollectorTelemetry(collectorLog(RUN_ID), RUN_ID);
+  return {
+    evidence: "observed",
+    marker: overrides.marker ?? RUN_ID,
+    excerpt,
+    counts: { ...parseCollectorTelemetry(excerpt, RUN_ID), ...overrides.counts },
+    collector: {
+      serviceId: "otel-collector",
+      containerName: `erl2-${RUN_ID}-otel-collector`,
+      imageId: `sha256:${"a".repeat(64)}`,
+      observedImageRepoDigests: [`example/collector@sha256:${"b".repeat(64)}`],
+      ...overrides.collector,
+    },
+  };
+}
+
+const OBSERVATION_PATH = "retained/environment/attributable-telemetry-observation.json";
+
+/**
+ * Retains `materials[0]`, then `materials[1]`, … against one store, exactly as
+ * a run and its resumed successor would — with the clock moving between calls,
+ * which is what makes a second observation's bytes differ from the first's.
+ */
+function retainAll(
+  materials: readonly AttributableTelemetryMaterial[],
+): readonly AttributableTelemetryObservationV1[] {
+  const store = new ArtifactStore(ownedTempDir("erl2-attr-retain-"));
+  let tick = 0;
+  return materials.map((current) =>
+    retainAttributableTelemetryObservation({
+      store,
+      observationPath: OBSERVATION_PATH,
+      observer: { observeAttributableTelemetry: () => current },
+      runId: RUN_ID,
+      observedAt: () => `2026-08-03T00:00:${String(10 + tick++).padStart(2, "0")}Z` as Instant,
+    }),
+  );
+}
+
+/** The single retained record for one material. */
+function retain(current: AttributableTelemetryMaterial): AttributableTelemetryObservationV1 {
+  return retainAll([current])[0] as AttributableTelemetryObservationV1;
+}
+
+/** The record a demoting case must produce: absent, with exactly this reason. */
+function assertDemoted(current: AttributableTelemetryMaterial, reasonCode: string): void {
+  const observation = retain(current);
+  assert.equal(observation.evidence, "absent", "retainable bytes were expected to demote");
+  assert.equal(observation.reason_code, reasonCode);
+  // The demotion is only honest if the run can still reach a terminal on it:
+  // the gate refuses it where declared, and the record itself is frozen.
+  assert.equal(
+    attributableTelemetryGatePassed({ declared: true, runId: RUN_ID, observations: [observation] }),
+    false,
+    "a demoted observation must fail the gate of a run that declared one",
+  );
+}
+
+test("ATTR-TELEM-RETAIN: ordinary collector material freezes as observed and passes the gate", () => {
+  const observation = retain(material());
+  assert.equal(observation.evidence, "observed");
+  assert.equal(observation.log_excerpt, excerptCollectorTelemetry(collectorLog(RUN_ID), RUN_ID));
+  assert.equal(observation.run_attributed_records, 1);
+  assert.equal(
+    attributableTelemetryGatePassed({ declared: true, runId: RUN_ID, observations: [observation] }),
+    true,
+  );
+});
+
+test("ATTR-TELEM-RETAIN: a re-entered retention reads what it wrote instead of observing again", () => {
+  // The crash window `d803e66` closed: the freeze precedes the lifecycle event
+  // that anchors it, so a resumed `destroy` finds the artifact already frozen.
+  // Re-observing would take a fresh `observed_at` over a collector log that has
+  // moved on, and freezing those bytes at the same path is
+  // `ARTIFACT_ALREADY_FROZEN` — a wedge no retry can clear.
+  const moved = material({
+    excerpt: excerptCollectorTelemetry(
+      `${collectorLog(RUN_ID)}\n\tTraces\t{"spans": 11}`,
+      RUN_ID,
+    ),
+  });
+  const [first, second] = retainAll([material(), moved]);
+  assert.ok(first !== undefined && second !== undefined);
+  assert.equal(second.core_hash, first.core_hash, "a resumed retention re-froze different bytes");
+  assert.equal(second.observed_at, first.observed_at);
+  assert.equal(second.spans, first.spans);
+});
+
+test("ATTR-TELEM-RETAIN: an excerpt past the retention bound demotes rather than truncating", () => {
+  // An excerpt cut short derives counts that are not this run's.
+  const line = `\t${RUN_ID}\t`;
+  assertDemoted(
+    material({ excerpt: `${line}\n`.repeat(Math.ceil(MAX_TELEMETRY_EXCERPT_CHARS / line.length)) }),
+    TELEMETRY_RETENTION_REASONS.excerptOverBound,
+  );
+});
+
+test("ATTR-TELEM-RETAIN: an excerpt the canonicalizer refuses demotes rather than throwing", () => {
+  // EQ-L-004, in one character. macOS stores filenames decomposed, so a subject
+  // serving a URL derived from an accented filename emits NFD with no adversary
+  // anywhere — and the marker rides on that very line, which is why the excerpt
+  // retains it. Every `service_names` value here is plain ASCII.
+  const decomposed = [
+    '2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"spans": 3}',
+    "     -> service.name: Str(quote)",
+    `     -> url.full: Str(http://127.0.0.1:8090/café?erl2_run=${RUN_ID})`,
+  ].join("\n");
+  const excerpt = excerptCollectorTelemetry(decomposed, RUN_ID);
+  assert.notEqual(excerpt.normalize("NFC"), excerpt, "the case must actually be non-NFC");
+  assert.deepEqual(parseCollectorTelemetry(excerpt, RUN_ID).serviceNames, ["quote"]);
+
+  const observation = retain(material({ excerpt }));
+  assert.equal(observation.evidence, "absent");
+  assert.equal(observation.reason_code, TELEMETRY_RETENTION_REASONS.excerptNotCanonicalizable);
+  // Never normalized into hashability: the excerpt is meant to be what the
+  // collector emitted, and no retained field carries a rewritten copy of it.
+  assert.equal(observation.log_excerpt, undefined);
+  assert.equal(
+    attributableTelemetryGatePassed({ declared: true, runId: RUN_ID, observations: [observation] }),
+    false,
+  );
+});
+
+test("ATTR-TELEM-RETAIN: more distinct service names than the contract retains demotes", () => {
+  assertDemoted(
+    material({ counts: { serviceNames: Array.from({ length: 257 }, (_, i) => `svc-${i}`).sort() } }),
+    TELEMETRY_RETENTION_REASONS.serviceNamesOverCardinality,
+  );
+});
+
+test("ATTR-TELEM-RETAIN: a service name past the contract's length bound demotes", () => {
+  assertDemoted(
+    material({ counts: { serviceNames: ["s".repeat(257)] } }),
+    TELEMETRY_RETENTION_REASONS.serviceNameOverLength,
+  );
+});
+
+test("ATTR-TELEM-RETAIN: a service name the canonicalizer refuses demotes", () => {
+  // `OTEL_SERVICE_NAME` is the subject's to choose, and a decomposed accent in
+  // it reaches the canonicalizer with no excerpt involved at all. An empty
+  // name is retainable — `Str()` parses to `""` — and must not demote.
+  assertDemoted(
+    material({ counts: { serviceNames: ["café"] } }),
+    TELEMETRY_RETENTION_REASONS.serviceNameNotCanonicalizable,
+  );
+  assert.equal(retain(material({ counts: { serviceNames: [""] } })).evidence, "observed");
+});
+
+test("ATTR-TELEM-RETAIN: a count the canonicalizer cannot represent demotes", () => {
+  // A count is parsed out of the collector's text, so a long enough digit run
+  // reaches `Infinity` before it reaches any bound the schema states — and a
+  // subject writes the text a `Traces` line is matched in.
+  const injected = parseCollectorTelemetry(`\tTraces\t{"spans": ${"9".repeat(400)}}`, RUN_ID);
+  assert.equal(Number.isFinite(injected.spans), false);
+  assertDemoted(
+    material({ counts: { spans: injected.spans } }),
+    TELEMETRY_RETENTION_REASONS.countNotRepresentable,
+  );
+});
+
+test("ATTR-TELEM-RETAIN: a count outside the contract's range demotes", () => {
+  assertDemoted(
+    material({ counts: { spans: 100_000_001 } }),
+    TELEMETRY_RETENTION_REASONS.countNotRepresentable,
+  );
+});
+
+test("ATTR-TELEM-RETAIN: a collector service id the contract refuses demotes", () => {
+  assertDemoted(
+    material({ collector: { serviceId: "Otel_Collector" } }),
+    TELEMETRY_RETENTION_REASONS.collectorIdentityOverBound,
+  );
+});
+
+test("ATTR-TELEM-RETAIN: more observed repo digests than the contract retains demotes", () => {
+  assertDemoted(
+    material({
+      collector: {
+        observedImageRepoDigests: Array.from({ length: 17 }, (_, i) => `example/c${i}@sha256:${"b".repeat(64)}`),
+      },
+    }),
+    TELEMETRY_RETENTION_REASONS.collectorIdentityOverBound,
+  );
+});
+
+test("ATTR-TELEM-RETAIN: a collector identity string past its bound demotes", () => {
+  assertDemoted(
+    material({ collector: { containerName: "c".repeat(257) } }),
+    TELEMETRY_RETENTION_REASONS.collectorIdentityOverBound,
+  );
+});
+
+test("ATTR-TELEM-RETAIN: a collector identity string the canonicalizer refuses demotes", () => {
+  assertDemoted(
+    material({ collector: { containerName: "erl2-café-otel-collector" } }),
+    TELEMETRY_RETENTION_REASONS.collectorIdentityNotCanonicalizable,
+  );
+});
+
+test("ATTR-TELEM-RETAIN: a driver's own absent material is retained with the driver's reason", () => {
+  const observation = retain({
+    evidence: "absent",
+    marker: RUN_ID,
+    reasonCode: "collector_not_verified",
+  });
+  assert.equal(observation.evidence, "absent");
+  assert.equal(observation.reason_code, "collector_not_verified");
+});
+
+test("ATTR-TELEM-RETAIN: a retention failure nothing anticipated still leaves as a routable teardown failure", () => {
+  // The invariant EQ-L-004 broke: `destroy` routes exactly `TEARDOWN_FAILED`
+  // (`environmentCommands.ts`), and this call runs before `teardown_started`.
+  // Anything that leaves here in another class is rethrown by the CLI, so the
+  // run reaches no terminal and the substrate is never destroyed. The marker
+  // rides both branches, so an unretainable one is a failure no demotion can
+  // absorb — and it must still arrive as a code the caller can classify.
+  for (const cause of [
+    (): AttributableTelemetryMaterial => material({ marker: "café" }),
+    (): AttributableTelemetryMaterial => {
+      throw new TypeError("the driver read something that was not there");
+    },
+  ]) {
+    const store = new ArtifactStore(ownedTempDir("erl2-attr-retain-"));
+    assert.throws(
+      () =>
+        retainAttributableTelemetryObservation({
+          store,
+          observationPath: OBSERVATION_PATH,
+          observer: { observeAttributableTelemetry: cause },
+          runId: RUN_ID,
+          observedAt: () => "2026-08-03T00:00:10Z" as Instant,
+        }),
+      (error: unknown) =>
+        error instanceof Erl2Error &&
+        error.code === CODES.TEARDOWN_FAILED &&
+        error.owner === "lab",
+    );
+  }
+});
+
+test("ATTR-TELEM-RETAIN: a demoted observation is refused offline, not quietly accepted", () => {
+  // Invalid-with-cleanup is the correct outcome, and the offline verifier must
+  // reach it independently: a demotion the producer records and the verifier
+  // shrugs at would be a pass engineered out of a refusal.
+  const observation = retain(material({ counts: { serviceNames: ["café"] } }));
+  const tree = syntheticTree({ observation });
+  assert.equal(
+    refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
+    CODES.ENV_TELEMETRY_NOT_ATTRIBUTED,
   );
 });
 

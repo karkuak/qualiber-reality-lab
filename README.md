@@ -109,13 +109,21 @@ but the lock is signed by this repository's own development governor key, so it
 is a self-qualification and `erl2 doctor` reports
 `independently_qualified: false`. The fake driver remains the default; a run
 selects its driver once with `--environment-driver` and may not substitute it.
-A Compose run **retains the attributable-telemetry observation** — the run's
-own collector received records carrying the run's id, frozen with the log lines
-the counts derive from before teardown begins — and an offline bundle attests
-received telemetry exactly that far: the validity gate and the offline verifier
-each refuse a declared run whose observation is missing or unattributed
-(ADR-ERL2-033, discharging the ERL2-OQ-005 deferred obligation; the evidence
-window and the T1 ceiling are unchanged).
+A **valid** Compose-driver run **whose archetype declares a metric evidence
+source** and **whose exercising journey step succeeded** retains the
+**attributable-telemetry observation** — the run's own collector received
+records carrying the run's id, frozen with the log lines the counts derive from
+before teardown begins — and an offline bundle attests received telemetry
+exactly that far: the validity gate and the offline verifier each refuse such a
+run whose observation is missing or unattributed. All three conditions are
+load-bearing and none may be dropped: a Compose run that fails any of them
+declares nothing, and its retained observation — which may honestly report zero,
+or report `absent` with a reason code — supports **no** receipt claim at all.
+Read [`docs/claims/permitted-claims.md`](docs/claims/permitted-claims.md) for
+the statement at exactly its width, including what it still may not say
+(ADR-ERL2-033, discharging the ERL2-OQ-005 deferred obligation; ADR-ERL2-035 for
+what happens to collector bytes the Lab cannot freeze; the evidence window and
+the T1 ceiling are unchanged).
 **Held-out and blind execution is refused** because ERL2-OQ-007
 is unresolved, so the journey runs at `development` tier. **Privileged subject
 operations are refused** because ERL2-OQ-001 is unresolved, so the platform
