@@ -1300,6 +1300,10 @@
     {
       "id": "ADR-ERL2-033",
       "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-034",
+      "status": "accepted"
     }
   ],
   "normative_conflicts": [
