@@ -292,7 +292,7 @@ evaluator workspace instead.
 
 | Check | Result |
 | --- | --- |
-| `npm install && npm run build && npm test` | **1156 tests, 1151 pass, 0 fail, 5 skipped** (the substrate-dependent E2E cases, which skip loudly when no archive is fetched) |
+| `npm install && npm run build && npm test`, **with a live Docker daemon and the pinned archive present** | **1156 tests, 1153 pass, 0 fail, 3 skipped.** `COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compose substrate` **passed** — the ordinary live path is unchanged by this package: a collector emitting ASCII still freezes `evidence: "observed"` and the run still reaches a valid terminal |
 | `npm run evidence:verify` | **green — 832 files pinned, 7 excluded**, byte-identical to the goldens |
 | `git diff -- fixtures/golden` | empty. **No golden changed**, as expected: a fake-driver run produces no observation, so no golden ever carried one |
 | `git diff 2e943a6 HEAD -- packages/contracts` | empty. `ERL2-C-160` and every schema are byte-identical |
@@ -300,10 +300,13 @@ evaluator workspace instead.
 | negative-control campaign | 12 of 120 selected, **12 agreed, 0 harness errors**, tree byte-identical afterwards (§4) |
 | live Compose confirmation | **made** — §7 |
 
-The `npm test` figures above are from a run in which the pinned OpenTelemetry
-Demo archive was not present, so `COMPOSE-E2E` and `EXTERNAL-SUBJECT-E2E`
-skipped loudly. The live Compose path was exercised separately and is reported
-at its own width in §7 rather than folded into a suite total.
+The three skips are the two `EXTERNAL-SUBJECT-E2E` cases (no external adapter
+entry was configured) and `COMPOSE-ADV: the RENDERED configuration publishes one
+loopback port and nothing else`, which needs the *extracted* upstream tree rather
+than the archive; `environments/otel-demo/upstream/` is git-ignored, and the
+disposable worktree this package was built in carried only the archive. All three
+skip loudly and none of them is evidence. An earlier run of the same suite with
+no archive at all was also green at 1156 / 1151 / 0 / 5.
 
 ## 9. What stays open
 
