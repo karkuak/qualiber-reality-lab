@@ -80,6 +80,43 @@ function canonicalString(value: string): string {
   return `${out}"`;
 }
 
+/**
+ * Whether the canonicalizer will accept `value`, answered by asking it.
+ *
+ * A caller that must decide *before* hashing whether subject-influenced bytes
+ * can enter a hash needs this precondition, and a second copy of "NFC, no
+ * unpaired surrogate" would be free to drift from the copy that actually
+ * decides. So the predicate runs `canonicalString` and reads its refusal: the
+ * answer is the canonicalizer's own, by construction. Anything that is not a
+ * `CanonicalizationError` is not a statement about this string and is rethrown.
+ */
+export function isCanonicalizableString(value: string): boolean {
+  try {
+    canonicalString(value);
+    return true;
+  } catch (cause) {
+    if (cause instanceof CanonicalizationError) return false;
+    throw cause;
+  }
+}
+
+/**
+ * The same question for a number: finite, and safe if it is an integer.
+ *
+ * Reachable from parsed subject-influenced text — `Number.parseInt` over a
+ * long enough digit run yields `Infinity`, which the canonicalizer refuses
+ * fail-closed exactly as it refuses a non-NFC string.
+ */
+export function isCanonicalizableNumber(value: number): boolean {
+  try {
+    canonicalNumber(value);
+    return true;
+  } catch (cause) {
+    if (cause instanceof CanonicalizationError) return false;
+    throw cause;
+  }
+}
+
 function canonicalNumber(value: number): string {
   if (!Number.isFinite(value)) {
     throw new CanonicalizationError(`non-finite number rejected: ${String(value)}`);
