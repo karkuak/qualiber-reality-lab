@@ -5,7 +5,7 @@
  * Depends only on `@erl2/contracts` (implementation plan §4.1).
  */
 
-export { jcs, jcsBytes, CanonicalizationError } from "./canonical/jcs.js";
+export { jcs, jcsBytes, CanonicalizationError, isCanonicalizableString } from "./canonical/jcs.js";
 export {
   HASH_DOMAINS,
   SIGNATURE_DOMAINS,
