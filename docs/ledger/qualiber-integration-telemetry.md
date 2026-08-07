@@ -73,7 +73,9 @@ contract count 226 → **227**. **No frozen schema changes shape or meaning.**
 Discriminated evidence in the ADR-ERL2-016 sense: `evidence: "observed"` is
 required to carry the counts, the Docker-proven collector identity
 (`ownership_verified` and `image_matches_locked_digest` are schema constants
-`true`) and the excerpt `ArtifactRef`; anything else must carry a
+`true`) and the `log_excerpt` — a bounded inline string
+(`maxLength: 262144`), not a reference to a second file; §7 below records why
+the first shape was abandoned. Anything else must carry a
 `reason_code` and can carry none of them. **No field stores a verdict** —
 "attributable telemetry was received" is derivable only, by the gate and the
 verifier independently.
@@ -205,7 +207,12 @@ across every golden. Campaign: `npm run negative-control -- telemetry`, **9 of 1
 agreed** — the seven kills above, the one unmeasured rule below, and the
 pre-existing `lab-telemetry-oracle-scan`, which the substring filter selects
 and which still kills as declared (9 pass / 3 fail). Scored against commit
-`2c69e9c` in a disposable worktree; the working tree was proven byte-identical
+`2c69e9c` in a disposable worktree — that commit is not reachable from `main`,
+because the pre-merge rebase replayed it as
+[`a5ad6e6`](https://github.com/karkuak/qualiber-reality-lab/commit/a5ad6e6);
+the campaign ran at `2c69e9c` and only its identity moved, so both are recorded
+rather than one substituted for the other (the full remap is in the correction
+comment on PR #10). The working tree was proven byte-identical
 afterward, and the results were rewritten to
 [`negative-controls.json`](negative-controls.json) per the harness's overwrite
 convention. The standing `NC-CAMPAIGN` test re-proves all 108 controls'
@@ -219,6 +226,12 @@ external-subject E2E cases, which skip loudly (`EXTERNAL SUBJECT UNPROVEN: no
 external adapter entry was supplied`) — their new retained-observation
 assertion is therefore **untested on this host**, stated plainly rather than
 implied.
+
+> Later, and not a rewrite of the measurement above: that assertion did
+> subsequently execute against a configured external adapter on a live
+> substrate, reported in the second comment on PR #10. This ledger records what
+> was true when it was written; the pointer is added because the record it
+> supports carries no date of its own.
 
 `COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compose
 substrate` passed with this package's new assertions: the retained
