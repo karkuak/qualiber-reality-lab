@@ -40,7 +40,14 @@ export const LAB_VALIDITY_GATES = {
   ],
   selection_integrity: ["selection-chain-closed", "selection-reveal-order-respected"],
   environment_control: ["environment-baseline-clean", "environment-not-contaminated"],
-  evidence_completeness: ["evidence-cutoff-realized", "evidence-sources-accounted"],
+  evidence_completeness: [
+    "evidence-cutoff-realized",
+    "evidence-sources-accounted",
+    // ADR-ERL2-033: passes wherever the attributable-telemetry observation was
+    // never declared obtainable; refuses where it was declared and is missing,
+    // not observed, not this run's, or unattributed.
+    "attributable-telemetry-retained",
+  ],
   adapter_compliance: ["adapter-certified", "adapter-authority-respected"],
   output_freeze: ["subject-output-frozen-before-reveal", "no-execution-after-output-freeze"],
   result_join: ["precleanup-result-join-closed"],
@@ -82,6 +89,10 @@ export const ENVIRONMENT_GATE_IDS: readonly string[] = [
   ...LAB_VALIDITY_GATES.selection_integrity,
   ...LAB_VALIDITY_GATES.environment_control,
   "evidence-cutoff-realized",
+  // ADR-ERL2-033: evaluated on every environment terminal; vacuous where the
+  // observation was never declared obtainable, so fake-driver runs are
+  // untouched and the gate is still measured rather than skipped.
+  "attributable-telemetry-retained",
   "restoration-verified",
   "teardown-verified",
   "exposure-state-recorded",

@@ -36,6 +36,7 @@ import {
   type AdapterStepRequestV1,
   type AdapterTranslationReceiptV1,
   type ArtifactRef,
+  type AttributableTelemetryObservationV1,
   type CancellationRequestV1,
   type ChallengeActivationReceiptV1,
   type ChallengeManifestV1,
@@ -127,6 +128,13 @@ import {
   type ExpectedRevertedMutation,
 } from "../environment/restorationProbe.js";
 import { freezeResourceFrontier } from "../environment/frontier.js";
+import {
+  attributableTelemetryDeclared,
+  attributableTelemetryGatePassed,
+  MAX_TELEMETRY_EXCERPT_CHARS,
+  supportsAttributableTelemetry,
+  type AttributableTelemetryObserver,
+} from "../environment/telemetryObservation.js";
 import { buildEnvironmentRestoration, buildTeardownVerification, type TeardownCheck } from "../cleanup/cleanup.js";
 import {
   assertTelemetryOracleClean,
@@ -2558,6 +2566,11 @@ export class EnvironmentRun {
     assertOperationSupported(this.driver.manifest, "destroy");
     const restorationHash = this.ws.requireHashForRole("environment-restoration");
     const declared = this.inventory().resources;
+    // ADR-ERL2-033: observe and freeze the attributable telemetry before the
+    // event that begins teardown — freeze first, anchor second — so the
+    // produced entry on `teardown_started` is itself the proof the collector
+    // was read while this run's containers provably still lived.
+    const telemetryProduced = this.retainAttributableTelemetry();
     this.ws.lifecycle.append({
       eventType: "teardown_started",
       stateTo: "teardown_started",
@@ -2565,6 +2578,7 @@ export class EnvironmentRun {
       commandId: "destroy",
       operationId: "op-teardown-start",
       requiredHashes: [restorationHash],
+      produced: telemetryProduced,
     });
 
     const result = this.driverOperation<DestroyResult>({
@@ -2632,6 +2646,108 @@ export class EnvironmentRun {
     });
     this.intents.settle("op-destroy", result.receipt.core_hash);
     return { teardown, residue: remaining.size };
+  }
+
+  /**
+   * The retained attributable-telemetry observation (ADR-ERL2-033).
+   *
+   * Produced exactly where the capability and a declared metric source coexist
+   * — a driver that can observe attributable telemetry and an archetype
+   * declaring an evidence source of kind `metric` — and nowhere else: on every
+   * other run, including every fake-driver golden, the artifact's absence
+   * means *never produced* (ADR-ERL2-033 §2). Where the observation could not
+   * be made, an `absent` record with a typed reason is retained instead, so
+   * absence of observation is a fact the gate can refuse on, not a missing
+   * file. The excerpt is frozen before the observation that references it, and
+   * both before the lifecycle event that anchors them.
+   */
+  private retainAttributableTelemetry(): readonly {
+    readonly artifact_role: string;
+    readonly artifact_core_hash: Hash;
+    readonly artifact_schema_version: string;
+  }[] {
+    if (!supportsAttributableTelemetry(this.driver)) return [];
+    if (!this.archetype.evidence_sources.some((source) => source.kind === "metric")) return [];
+    const observationPath = `${RETAINED}/attributable-telemetry-observation.json`;
+
+    // The freeze precedes the event that anchors it, so a crash between the two
+    // leaves a retained byte the lifecycle never reached — and a re-observation
+    // on resume would carry a fresh `observed_at` over a collector log that may
+    // have grown, wedging the run on `ARTIFACT_ALREADY_FROZEN` forever. The run
+    // already observed; the honest thing on resume is to read what it wrote,
+    // exactly as `retainedSubstrateBinding` does for the same class of window.
+    // The excerpt rides *inside* this artifact for the other half of the same
+    // reason: two files cannot be frozen atomically, and a crash between them
+    // would leave either an excerpt nothing references or a reference to absent
+    // bytes — each of which the offline accounting refuses.
+    const observation = this.ws.store.isFrozen(observationPath)
+      ? assertContract<AttributableTelemetryObservationV1>(
+          "AttributableTelemetryObservationV1",
+          this.ws.store.readJson(observationPath),
+        )
+      : this.freezeTelemetryObservation(observationPath);
+    return [
+      {
+        artifact_role: "attributable-telemetry-observation",
+        artifact_core_hash: observation.core_hash,
+        artifact_schema_version: "attributable-telemetry-observation/v1",
+      },
+    ];
+  }
+
+  /** Observes, validates and freezes the telemetry observation exactly once. */
+  private freezeTelemetryObservation(
+    observationPath: string,
+  ): AttributableTelemetryObservationV1 {
+    const material = (this.driver as unknown as AttributableTelemetryObserver)
+      .observeAttributableTelemetry(this.runId);
+    const observedAt = this.now();
+    // A collector output past the retention bound is refused as an honest
+    // `absent`, never truncated: an excerpt cut short derives counts that are
+    // not this run's, and a count nobody can reproduce is worse than none.
+    const overBound =
+      material.evidence === "observed" && material.excerpt.length > MAX_TELEMETRY_EXCERPT_CHARS;
+    const base =
+      material.evidence === "observed" && !overBound
+        ? {
+            schema_version: "attributable-telemetry-observation/v1" as const,
+            run_id: this.runId,
+            marker: material.marker,
+            evidence: "observed" as const,
+            observed_at: observedAt,
+            collector: {
+              service_id: material.collector.serviceId,
+              container_name: material.collector.containerName,
+              // Schema constants, not observations of convenience: the driver
+              // refuses to read an unverified container's logs, so reaching
+              // this branch at all is the proof.
+              ownership_verified: true as const,
+              image_id: material.collector.imageId,
+              observed_image_repo_digests: material.collector.observedImageRepoDigests,
+              image_matches_locked_digest: true as const,
+            },
+            trace_batches: material.counts.traceBatches,
+            spans: material.counts.spans,
+            service_names: material.counts.serviceNames,
+            run_attributed_records: material.counts.runAttributedRecords,
+            log_excerpt: material.excerpt,
+          }
+        : {
+            schema_version: "attributable-telemetry-observation/v1" as const,
+            run_id: this.runId,
+            marker: material.marker,
+            evidence: "absent" as const,
+            observed_at: observedAt,
+            reason_code: overBound
+              ? "telemetry_excerpt_exceeds_retention_bound"
+              : (material as { readonly reasonCode: string }).reasonCode,
+          };
+    const observation = assertContract<AttributableTelemetryObservationV1>(
+      "AttributableTelemetryObservationV1",
+      { ...base, core_hash: coreHash(base) },
+    );
+    this.ws.store.freezeJson(observationPath, observation, "INTERNAL");
+    return observation;
   }
 
   // -- 12. validity and the generic index ------------------------------------
@@ -3821,6 +3937,35 @@ export class EnvironmentRun {
         passed:
           this.ws.hashesForRole("source-snapshot").length === baseline.evidence_source_states.length,
         evidence_refs: [baselineHash],
+      },
+      // ADR-ERL2-033: binds to declaration, not to every run. A run that never
+      // declared the observation obtainable — a fake driver, an archetype with
+      // no metric source, a journey that never reached a succeeded exercising
+      // step — passes vacuously; a run that declared it and retained no
+      // observed, run-attributed observation of its own fails, and the failing
+      // gate freezes a finding like every other environment gate.
+      {
+        gate_id: "attributable-telemetry-retained",
+        passed: attributableTelemetryGatePassed({
+          declared: attributableTelemetryDeclared({
+            driverKind: this.driver.manifest.driver_kind,
+            evidenceSources: this.archetype.evidence_sources,
+            outcomes: this.ws.derivedStepOutcomes(),
+          }),
+          runId: this.runId,
+          observations: this.ws
+            .hashesForRole("attributable-telemetry-observation")
+            .map((hash) =>
+              this.ws.artifact<AttributableTelemetryObservationV1>(
+                hash,
+                "AttributableTelemetryObservationV1",
+              ),
+            ),
+        }),
+        evidence_refs:
+          this.ws.hashesForRole("attributable-telemetry-observation").length > 0
+            ? [...this.ws.hashesForRole("attributable-telemetry-observation")]
+            : [coreHash(this.driver.manifest)],
       },
       { gate_id: "adapter-certified", passed: true, evidence_refs: [this.ws.requireHashForRole("adapter-manifest")] },
       {

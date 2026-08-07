@@ -487,25 +487,41 @@ The one claim this slice earns, stated at exactly its width:
   `sandboxControlReport` still reports `deny-by-default-egress` as
   `unsupported_on_this_host`, and the egress control that *is* enforced is
   adjudication, not a kernel block.
-- **No retained-telemetry claim, and the two statements are not the same.** Keep
-  these apart in any wording that mentions OTel:
-  - **What the live acceptance test observed.** `tests/e2e/composeEnvironmentRun.test.ts`
-    drives the reference adapter against the real endpoint and then reads the
-    collector's own output, asserting both that spans arrived and that they carry
-    this run's marker. That is a real observation of attributable telemetry, made
-    by a test, on a host with a daemon.
-  - **What an offline bundle attests.** Not that. No retained artifact carries the
-    telemetry observation: the archetype's `service-metric` source is recorded
-    `complete` because the collector reported its OTLP pipelines started, and every
-    source snapshot in this archetype freezes `records: 0`. Pipeline readiness is
-    reachability of the metric path, **not** the receipt of a service metric, and
-    `complete` here means "the source was served and returned nothing".
-  So a permitted statement is "the acceptance test observed attributable telemetry
-  at the collector"; a statement that the retained evidence *attests* received
-  telemetry is not permitted, and neither is describing collector startup as a
-  service metric. Retaining and gating on attributable telemetry is deferred to the
-  first Qualiber integration package (ERL2-OQ-005 detail in
-  `docs/decisions/open-questions.md`); until that lands, nothing above widens.
+- **The retained-telemetry claim, at exactly its width (ADR-ERL2-033).** The
+  deferred ERL2-OQ-005 obligation is discharged: the observation the live
+  acceptance test used to make alone is now retained into the run's evidence
+  and gated. What may now be said: *a valid Compose-driver run whose archetype
+  declares a metric evidence source and whose exercising journey step succeeded
+  retains an attributable-telemetry observation reporting at least one record
+  that names the run's own id — read from the run's own collector,
+  Docker-verified by its three ownership labels and the locked image digest,
+  and frozen before `teardown_started` so the lifecycle chain itself proves the
+  collector was read while the containers lived. The producer's
+  `attributable-telemetry-retained` validity gate refuses such a run when that
+  observation is missing, not an observation, not this run's, or names the run
+  in no record; the offline verifier's `deriveAttributableTelemetry` refuses
+  the same run on the same grounds and additionally recomputes every count from
+  the observation's own retained log excerpt, refusing any disagreement.* Read
+  the three conjuncts as load-bearing: a Compose run whose exercising step did
+  not succeed declares nothing, and its retained observation — which may
+  honestly report zero — supports **no** receipt claim at all. The statement is
+  bounded to the development tier, the development-signed self-qualified
+  substrate, non-blind selection and T1: no component of the claim ceiling
+  moves. What may still **not** be said:
+  - that any telemetry record lies **inside the frozen evidence window**. The
+    exercising step runs after the cutoff is realized, and the observation is
+    stamped post-cutoff: it attests receipt *during the run, before teardown*,
+    never a record inside the window. Every source snapshot still freezes
+    `records: 0`, and `complete` on `service-metric` still means the metric
+    path was reachable — nothing more. Describing collector pipeline startup
+    as a service metric remains forbidden.
+  - that the telemetry evidence is **independently qualified**. The substrate
+    lock is development-signed, and the observation is unsigned by design: its
+    integrity is the hash-chained lifecycle plus the byte-recomputable
+    excerpt, not an authority's signature.
+  - that telemetry receipt says anything about **subject quality or an
+    ecosystem**: one archetype, two services, one request path, a marker in a
+    query string.
 - **No robustness claim from the environment branch.** One archetype
   (clean-greenfield), one driver, one journey shape. Failure paths are reached by
   scripted driver faults, not by an environment that failed on its own.

@@ -69,6 +69,10 @@ export {
   type SubstrateBindingReport,
 } from "./library/environmentDerivation.js";
 export {
+  deriveAttributableTelemetry,
+  type AttributableTelemetryReport,
+} from "./library/telemetryDerivation.js";
+export {
   assertCutoffOrderingFromLifecycle,
   deriveEvidenceCutoff,
   type CutoffDerivation,

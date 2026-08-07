@@ -106,6 +106,13 @@ const ENVIRONMENT_OPTIONAL_ROLES = [
   // traffic drop its commitment and still verify — the shape review P2 found for
   // the activation receipt.
   "evidence-window-commitment",
+  // ADR-ERL2-033, on the same terms again: optional as a *role* because a run
+  // whose driver cannot observe telemetry, or whose archetype declares no
+  // metric source, never produces one; required as soon as the retained bytes
+  // declare it obtainable, which `deriveAttributableTelemetry` enforces. A
+  // supporting-schema entry instead would admit an observation no lifecycle
+  // event produced — the activation-receipt regression, again (review P2).
+  "attributable-telemetry-observation",
   // The adapter host's per-dispatch adjudication. Optional as a group because a
   // run driven by the development fake port produces none; every one that *is*
   // produced must be retained, and is derived here rather than exempted.

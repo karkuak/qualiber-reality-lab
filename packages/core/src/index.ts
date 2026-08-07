@@ -136,6 +136,19 @@ export {
   type ResidueProbeVerdict,
 } from "./environment/residueProbe.js";
 export {
+  attributableTelemetryDeclared,
+  attributableTelemetryGatePassed,
+  contributesToTelemetryCounts,
+  excerptCollectorTelemetry,
+  MAX_TELEMETRY_EXCERPT_CHARS,
+  parseCollectorTelemetry,
+  supportsAttributableTelemetry,
+  type AttributableTelemetryMaterial,
+  type AttributableTelemetryObserver,
+  type CollectorTelemetryCounts,
+  type ObservedCollectorIdentity,
+} from "./environment/telemetryObservation.js";
+export {
   assertSubstrateBinding,
   buildSubstrateBinding,
   reservationNamespaceHash,

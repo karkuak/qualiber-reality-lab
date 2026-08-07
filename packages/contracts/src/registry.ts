@@ -153,6 +153,14 @@ export const CONTRACTS: readonly ContractDescriptor[] = [
   // exactly why the independent post-cleanup observation needs its own identity
   // rather than an optional field on a frozen schema.
   d("ERL2-C-158", "CleanupResidueProbeV1", "environment", "cleanup-residue-probe/v1"),
+  // ADR-ERL2-033: additive. The telemetry the run's own collector received —
+  // observed by the driver before teardown begins — was previously observed by
+  // the live acceptance test and retained by nothing, which is why the claim
+  // boundary forbade saying an offline bundle attests received telemetry. The
+  // observation gets its own identity rather than a field on any frozen
+  // capture schema because it post-dates the realized cutoff: it is a
+  // statement about receipt during the run, never about the evidence window.
+  d("ERL2-C-160", "AttributableTelemetryObservationV1", "environment", "attributable-telemetry-observation/v1"),
   // ADR-ERL2-031: additive, and the reason it is a new identity rather than two
   // fields on `ObservationBundleV2` is ordering, not migration cost. The bundle is
   // frozen *after* capture, so durations carried there would be a post-hoc

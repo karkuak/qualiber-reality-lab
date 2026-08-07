@@ -163,15 +163,21 @@ image or a missing locked config invalidates the run *before* provisioning.
   `independently_authenticated: false`) rather than cryptographically. That is the
   strongest available check, and it is weaker than the SBOM index's, which *is*
   hash-bound by the lock.
-- **Telemetry is observed live and is not retained.** The live acceptance test
-  reads the collector's own output and asserts that spans arrived carrying the
-  run's marker. No run artifact retains that observation: the archetype's
-  `service-metric` source is `complete` because the collector reported its OTLP
-  pipelines started, and every source snapshot in this archetype freezes
-  `records: 0`. Pipeline readiness is reachability of the metric path, not the
-  receipt of a service metric. Do not cite an offline bundle as attesting received
-  telemetry; retention and gating are the first Qualiber integration package's
-  obligation (ERL2-OQ-005).
+- **Telemetry is retained, and it is not a source snapshot.** A run whose
+  archetype declares a metric evidence source retains an
+  `attributable-telemetry-observation/v1` (ADR-ERL2-033): the counts its own
+  Docker-verified collector's output supports, the exact log lines they derive
+  from, and the container identity they were read out of — frozen before
+  `teardown_started`, so the lifecycle chain proves the collector was read while
+  the containers lived. The offline verifier recomputes every count from that
+  excerpt and refuses a declared run whose observation is missing or carries no
+  record naming the run's marker. What is unchanged: the archetype's
+  `service-metric` source is still `complete` because the collector reported its
+  OTLP pipelines started, and every source snapshot in this archetype still
+  freezes `records: 0` — pipeline readiness is reachability of the metric path,
+  not the receipt of a service metric. The observation also post-dates the
+  realized cutoff, so it attests receipt *during the run, before teardown* and
+  never a record inside the frozen evidence window.
 - **ERL2-OQ-008 remains open.** The subject that exercises this environment is a
   trusted, repository-owned reference adapter running under the `local-process`
   sandbox profile. Nothing here is evidence about an opaque, private or

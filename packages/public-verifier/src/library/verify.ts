@@ -41,6 +41,7 @@ import {
   deriveEnvironmentSemantics,
   deriveInvalidEnvironmentSemantics,
 } from "./environmentDerivation.js";
+import { deriveAttributableTelemetry } from "./telemetryDerivation.js";
 import { verifySignerInventoryCompleteness } from "./inventoryCompleteness.js";
 import { verifySubjectOutputPayloads } from "./payloadAccounting.js";
 import { verifyReferencedBytes } from "./referencedBytes.js";
@@ -669,6 +670,19 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
   // teardown `passed` and the emergency safe/unsafe classification stop being
   // believed and start being recomputed.
   deriveEnvironmentSemantics({
+    index,
+    lifecycle: options.lifecycle,
+    runId: attestation.run_id,
+  });
+
+  // -- ADR-ERL2-033: the attributable-telemetry obligation, re-derived -------
+  //
+  // The declaration predicate (compose driver, declared metric source, a
+  // succeeded exercising step) is recomputed from retained bytes, and where it
+  // holds the retained observation's every count is recomputed from its own
+  // retained log excerpt. The retained record stores no verdict, so nothing
+  // here is believed — only re-derived.
+  deriveAttributableTelemetry({
     index,
     lifecycle: options.lifecycle,
     runId: attestation.run_id,

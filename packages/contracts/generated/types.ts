@@ -882,6 +882,29 @@ export type RestorationProbeV1 = {
   readonly signature: Signature;
 };
 
+export type AttributableTelemetryObservationV1 = {
+  readonly schema_version: "attributable-telemetry-observation/v1";
+  readonly run_id: RunId;
+  readonly marker: string;
+  readonly evidence: "observed" | "absent";
+  readonly observed_at: Instant;
+  readonly collector?: {
+    readonly service_id: Id;
+    readonly container_name: string;
+    readonly ownership_verified: true;
+    readonly image_id: string;
+    readonly observed_image_repo_digests: readonly string[];
+    readonly image_matches_locked_digest: true;
+  };
+  readonly trace_batches?: number;
+  readonly spans?: number;
+  readonly service_names?: readonly string[];
+  readonly run_attributed_records?: number;
+  readonly log_excerpt?: string;
+  readonly reason_code?: string;
+  readonly core_hash: Hash;
+};
+
 // ---- erl2:evaluation : ERL2 data-only evaluation pack, metric definition and metric result contracts ----
 
 export type MetricThresholdClass = "measurement" | "information" | "ordinary_gate" | "hard_safety";
