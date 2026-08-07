@@ -206,7 +206,7 @@ export function attributableTelemetryDeclared(input: {
  * canonicalizer refuses, because those say different things about the run.
  *
  * `reason_code` on ERL2-C-160 is an open `string` (`minLength: 1`,
- * `maxLength: 128`), not an enum — see ADR-ERL2-034 §3. Adding values here is
+ * `maxLength: 128`), not an enum — see ADR-ERL2-035 §3. Adding values here is
  * therefore not a contract change at all, compatible or otherwise: no
  * already-written artifact's validity depends on the set, and the offline
  * verifier reports the code without enumerating it.
@@ -277,7 +277,7 @@ export function telemetryRetentionRefusal(material: AttributableTelemetryMateria
   // `[0, MAX_TELEMETRY_COUNT]` is finite and safe by arithmetic, so a separate
   // `isCanonicalizableNumber` call here would be a guard nothing could kill —
   // it was written, measured as non-load-bearing by the campaign, and removed
-  // (ADR-ERL2-034 §5.1).
+  // (ADR-ERL2-035 §5.1).
   for (const count of [
     material.counts.traceBatches,
     material.counts.spans,
@@ -338,7 +338,7 @@ export interface TelemetryObservationStore {
  * reason code instead of an untyped throw. The excerpt is never normalized to
  * make it hashable: it is meant to be what the collector emitted, and
  * rewriting it to fit the hash would substitute a convenient artifact for an
- * observed one (ADR-ERL2-034 §2).
+ * observed one (ADR-ERL2-035 §2).
  */
 export function retainAttributableTelemetryObservation(input: {
   readonly store: TelemetryObservationStore;
@@ -350,7 +350,7 @@ export function retainAttributableTelemetryObservation(input: {
   try {
     return retainObservation(input);
   } catch (cause) {
-    // Defence in depth, and the third of ADR-ERL2-034's decisions. This runs
+    // Defence in depth, and the third of ADR-ERL2-035's decisions. This runs
     // inside `destroy` and strictly before `teardown_started`, so anything
     // thrown from here that the CLI's `destroy` catch cannot classify strands
     // the run with no terminal at all and the substrate still live — the

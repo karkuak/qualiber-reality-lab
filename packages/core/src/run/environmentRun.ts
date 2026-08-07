@@ -2669,7 +2669,7 @@ export class EnvironmentRun {
     if (!supportsAttributableTelemetry(this.driver)) return [];
     if (!this.archetype.evidence_sources.some((source) => source.kind === "metric")) return [];
     // Every failure of retention leaves this call as a routable `TEARDOWN_FAILED`
-    // (ADR-ERL2-034 §4); the boundary lives with the retention itself so it can
+    // (ADR-ERL2-035 §4); the boundary lives with the retention itself so it can
     // be measured without a substrate.
     const observation = retainAttributableTelemetryObservation({
       store: this.ws.store,

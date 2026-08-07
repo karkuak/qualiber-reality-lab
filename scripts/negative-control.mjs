@@ -530,7 +530,7 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-excerpt-canonicalizable",
-    what: "an excerpt the canonicalizer refuses demotes to absent rather than throwing before teardown begins (ADR-ERL2-034, EQ-L-004)",
+    what: "an excerpt the canonicalizer refuses demotes to absent rather than throwing before teardown begins (ADR-ERL2-035, EQ-L-004)",
     file: "packages/core/src/environment/telemetryObservation.ts",
     find: "  if (!isCanonicalizableString(material.excerpt)) return R.excerptNotCanonicalizable;",
     replace: "  if (!isCanonicalizableString(material.excerpt) && String(1) === \"2\") return R.excerptNotCanonicalizable;",
@@ -543,7 +543,7 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-service-name-cardinality",
-    what: "more distinct service names than the contract retains demotes to absent (ADR-ERL2-034)",
+    what: "more distinct service names than the contract retains demotes to absent (ADR-ERL2-035)",
     file: "packages/core/src/environment/telemetryObservation.ts",
     find: "  if (names.length > MAX_SERVICE_NAMES) return R.serviceNamesOverCardinality;",
     replace: "  if (names.length > MAX_SERVICE_NAMES && String(1) === \"2\") return R.serviceNamesOverCardinality;",
@@ -556,7 +556,7 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-service-name-length",
-    what: "a service name past the contract's length bound demotes to absent (ADR-ERL2-034)",
+    what: "a service name past the contract's length bound demotes to absent (ADR-ERL2-035)",
     file: "packages/core/src/environment/telemetryObservation.ts",
     find: "    if (name.length > MAX_SERVICE_NAME_CHARS) return R.serviceNameOverLength;",
     replace: "    if (name.length > MAX_SERVICE_NAME_CHARS && String(1) === \"2\") return R.serviceNameOverLength;",
@@ -569,7 +569,7 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-service-name-canonicalizable",
-    what: "a service name the canonicalizer refuses demotes to absent (ADR-ERL2-034)",
+    what: "a service name the canonicalizer refuses demotes to absent (ADR-ERL2-035)",
     file: "packages/core/src/environment/telemetryObservation.ts",
     find: "    if (!isCanonicalizableString(name)) return R.serviceNameNotCanonicalizable;",
     replace: "    if (!isCanonicalizableString(name) && String(1) === \"2\") return R.serviceNameNotCanonicalizable;",
@@ -582,7 +582,7 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-count-representable",
-    what: "a telemetry count outside the range the contract and the canonicalizer both represent demotes to absent, rather than reaching the hash (ADR-ERL2-034)",
+    what: "a telemetry count outside the range the contract and the canonicalizer both represent demotes to absent, rather than reaching the hash (ADR-ERL2-035)",
     file: "packages/core/src/environment/telemetryObservation.ts",
     find: "    if (!Number.isInteger(count) || count < 0 || count > MAX_TELEMETRY_COUNT) {\n      return R.countNotRepresentable;\n    }",
     replace: "    if (String(1) === \"2\") {\n      return R.countNotRepresentable;\n    }",
@@ -596,7 +596,7 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-collector-service-id",
-    what: "a collector service id the contract's identifier pattern refuses demotes to absent (ADR-ERL2-034)",
+    what: "a collector service id the contract's identifier pattern refuses demotes to absent (ADR-ERL2-035)",
     file: "packages/core/src/environment/telemetryObservation.ts",
     find: "  if (!SERVICE_ID.test(collector.serviceId)) return R.collectorIdentityOverBound;",
     replace: "  if (!SERVICE_ID.test(collector.serviceId) && String(1) === \"2\") return R.collectorIdentityOverBound;",
@@ -609,7 +609,7 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-collector-digest-cardinality",
-    what: "more observed repo digests than the contract retains demotes to absent (ADR-ERL2-034)",
+    what: "more observed repo digests than the contract retains demotes to absent (ADR-ERL2-035)",
     file: "packages/core/src/environment/telemetryObservation.ts",
     find: "  if (collector.observedImageRepoDigests.length > MAX_REPO_DIGESTS) {\n    return R.collectorIdentityOverBound;\n  }",
     replace: "  if (String(1) === \"2\") {\n    return R.collectorIdentityOverBound;\n  }",
@@ -622,7 +622,7 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-collector-identity-bound",
-    what: "a collector identity string past the contract's bound demotes to absent (ADR-ERL2-034)",
+    what: "a collector identity string past the contract's bound demotes to absent (ADR-ERL2-035)",
     file: "packages/core/src/environment/telemetryObservation.ts",
     find: "    if (verdict === \"over_bound\") return R.collectorIdentityOverBound;",
     replace: "    if (verdict === \"over_bound\" && String(1) === \"2\") return R.collectorIdentityOverBound;",
@@ -635,7 +635,7 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-collector-identity-canonicalizable",
-    what: "a collector identity string the canonicalizer refuses demotes to absent (ADR-ERL2-034)",
+    what: "a collector identity string the canonicalizer refuses demotes to absent (ADR-ERL2-035)",
     file: "packages/core/src/environment/telemetryObservation.ts",
     find: "    if (verdict === \"not_canonicalizable\") return R.collectorIdentityNotCanonicalizable;",
     replace: "    if (verdict === \"not_canonicalizable\" && String(1) === \"2\") return R.collectorIdentityNotCanonicalizable;",
@@ -648,7 +648,7 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-retention-failures-routable",
-    what: "every failure of the retention path leaves as a code the caller's terminal can route, never as an uncatalogued throw before teardown_started (ADR-ERL2-034, EQ-L-004)",
+    what: "every failure of the retention path leaves as a code the caller's terminal can route, never as an uncatalogued throw before teardown_started (ADR-ERL2-035, EQ-L-004)",
     file: "packages/core/src/environment/telemetryObservation.ts",
     find: "    if (cause instanceof Erl2Error && cause.code === CODES.TEARDOWN_FAILED) throw cause;",
     replace: "    if (String(1) === String(1)) throw cause;",

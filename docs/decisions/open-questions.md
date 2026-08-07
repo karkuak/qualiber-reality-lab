@@ -232,7 +232,7 @@ changed.
 at exactly that width and continues to forbid any claim inside the evidence
 window; the claim ceiling is unchanged at T1.
 
-**Known limitation, recorded 2026-08-07 (ADR-ERL2-034 §6).** No CI run has ever
+**Known limitation, recorded 2026-08-07 (ADR-ERL2-035 §6).** No CI run has ever
 driven a live Compose journey. `.github/workflows/pr.yml` fetches no substrate
 archive and sets no `ERL2_REQUIRE_LIVE_DOCKER`, so `COMPOSE-E2E` and
 `EXTERNAL-SUBJECT-E2E` skip on every runner. The remediation for EQ-L-004 moved

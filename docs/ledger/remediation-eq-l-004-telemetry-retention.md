@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-07 · **Branch:** `codex/telemetry-canonicalization-refusals`
 off `main` at `2e943a6` · **Findings:** [issue #12](https://github.com/karkuak/qualiber-reality-lab/issues/12)
-· **ADR:** [ADR-ERL2-034](../adr/ADR-ERL2-034.md)
+· **ADR:** [ADR-ERL2-035](../adr/ADR-ERL2-035.md)
 
 This is a remediation. It removes a defect and **adds no claim**: the ceiling
 stays T1, development tier, non-blind selection, development-signed
@@ -76,11 +76,11 @@ signed. The run could reach no terminal at all and the substrate leaked.
 | Negative controls on it | **none** | 12, one per guard, every one of them killing |
 | `ERL2-C-160`, every schema, every golden | — | byte-identical |
 
-The eight reason codes, and what each says, are tabulated in ADR-ERL2-034 §2.
+The eight reason codes, and what each says, are tabulated in ADR-ERL2-035 §2.
 
 **The excerpt is never normalized.** A demoted record carries no excerpt at all,
 so no retained field holds a rewritten copy of the collector's bytes. The
-argument is in ADR-ERL2-034 §2 and §10, made rather than assumed, because the
+argument is in ADR-ERL2-035 §2 and §10, made rather than assumed, because the
 alternative — quietly NFC-normalizing to make the hash succeed — is the exact
 move this repository's review history exists to prevent.
 
@@ -90,7 +90,7 @@ call `canonicalString` / `canonicalNumber` and read the refusal, so the
 precondition cannot drift from the function it guards. Restating "NFC, no
 unpaired surrogate" in `packages/core` was rejected for that reason.
 
-### 2.1 The contract question, decided (ADR-ERL2-034 §3)
+### 2.1 The contract question, decided (ADR-ERL2-035 §3)
 
 `reason_code` is `{"type": "string", "minLength": 1, "maxLength": 128}` on
 ERL2-C-160 — **not an enum**. Nothing in the schema, the producer, the gate or
@@ -177,14 +177,14 @@ ledger records that reading as the most expensive way to be wrong. Both of its
 cases survive under `telemetry-count-representable`, which kills — the two-fail
 row above is those two cases. `isCanonicalizableNumber` was removed from
 `packages/integrity` in the same change rather than left as an unused export
-(ADR-ERL2-034 §5.1).
+(ADR-ERL2-035 §5.1).
 
 ## 5. Documentation findings
 
 | Finding | Disposition |
 | --- | --- |
 | **EQ-L-006** — `README.md` states the receipt claim with none of the three load-bearing conjuncts | Restated bounded: a **valid** Compose-driver run, **whose archetype declares a metric evidence source**, **whose exercising journey step succeeded**. Says the conditions are load-bearing and that a run failing any of them supports no receipt claim at all, and points at `permitted-claims.md` for the statement at its width rather than paraphrasing it again. |
-| **EQ-L-007** — ADR-ERL2-033 §4 asserts coverage the ledger says it does not have | Corrected in **ADR-ERL2-034 §7**, which supersedes that one parenthetical and states the replacement in full. The ADR is accepted, and this repository supersedes accepted ADRs rather than rewriting them (ADR-ERL2-017 supersedes ADR-ERL2-016 §Consequences only). Correcting it in the ledger alone was considered and rejected: a reader who opens the ADR without the ledger beside them — which is the reading the finding is *about* — would still meet the overclaim. |
+| **EQ-L-007** — ADR-ERL2-033 §4 asserts coverage the ledger says it does not have | Corrected in **ADR-ERL2-035 §7**, which supersedes that one parenthetical and states the replacement in full. The ADR is accepted, and this repository supersedes accepted ADRs rather than rewriting them (ADR-ERL2-017 supersedes ADR-ERL2-016 §Consequences only). Correcting it in the ledger alone was considered and rejected: a reader who opens the ADR without the ledger beside them — which is the reading the finding is *about* — would still meet the overclaim. |
 | **EQ-L-008** — the telemetry ledger §3 still calls the excerpt an `ArtifactRef` | §3 fixed to describe the inline bounded string it is, pointing at §7 for why the first shape was abandoned. §7's line 150 is **left alone**: it narrates the original shape historically and is correct. |
 | **EQ-L-009** — the campaign anchor `2c69e9c` is unreachable from `main` | **Both** recorded: run at `2c69e9c`, replayed by the pre-merge rebase as `a5ad6e6`, with a pointer to the PR #10 correction comment's full remap. Substituting the new hash would misstate what was measured where. |
 | **EQ-L-009, related** — §9's "untested on this host" reads as current | A dated note appended, not a rewrite: the assertion did later execute, reported in the second PR #10 comment. The ledger records what was true when written. |
@@ -193,7 +193,7 @@ row above is those two cases. `isCanonicalizableNumber` was removed from
 
 The evaluator verified from run `31178507421` that **no CI run has ever executed
 the producer's retention path**. The decision is recorded in full in
-ADR-ERL2-034 §6 and is **both halves**:
+ADR-ERL2-035 §6 and is **both halves**:
 
 1. **The path is now exercised in CI**, without a substrate. The
    observe/validate/demote/freeze sequence and its re-entry branch run on every
@@ -207,7 +207,7 @@ ADR-ERL2-034 §6 and is **both halves**:
    interaction with a real Docker daemon is not discoverable by this
    repository's CI, and would be found only by an operator run or by review.**
 
-A substrate-bearing CI lane was **not** added here, and ADR-ERL2-034 §6 records
+A substrate-bearing CI lane was **not** added here, and ADR-ERL2-035 §6 records
 why it is a package of its own rather than a line in this one. What is not
 acceptable, and what this decision ends, is documents describing that path as
 verified while nothing verified it.
@@ -312,7 +312,7 @@ no archive at all was also green at 1156 / 1151 / 0 / 5.
 
 - **The producer gate's *wiring* is still unmeasured.** `telemetry-producer-gate-wiring`
   remains `expect: "pass"` / `no_kill_as_declared`. Nothing in this package
-  changed that, and ADR-ERL2-034 §7 now states it in the ADR as well as the
+  changed that, and ADR-ERL2-035 §7 now states it in the ADR as well as the
   ledger. Driving it needs a live Compose substrate whose collector receives
   nothing, which the ordinary suite must never require.
 - **No live Compose journey runs in CI.** §6.2, with its consequence stated.

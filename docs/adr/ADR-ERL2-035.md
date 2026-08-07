@@ -1,4 +1,4 @@
-# ADR-ERL2-034 — collector bytes the Lab cannot freeze demote to an honest `absent`; retention failures are routable
+# ADR-ERL2-035 — collector bytes the Lab cannot freeze demote to an honest `absent`; retention failures are routable
 
 - **Status:** accepted
 - **Date:** 2026-08-07

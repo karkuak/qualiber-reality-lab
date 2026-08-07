@@ -121,7 +121,7 @@ declares nothing, and its retained observation — which may honestly report zer
 or report `absent` with a reason code — supports **no** receipt claim at all.
 Read [`docs/claims/permitted-claims.md`](docs/claims/permitted-claims.md) for
 the statement at exactly its width, including what it still may not say
-(ADR-ERL2-033, discharging the ERL2-OQ-005 deferred obligation; ADR-ERL2-034 for
+(ADR-ERL2-033, discharging the ERL2-OQ-005 deferred obligation; ADR-ERL2-035 for
 what happens to collector bytes the Lab cannot freeze; the evidence window and
 the T1 ceiling are unchanged).
 **Held-out and blind execution is refused** because ERL2-OQ-007
