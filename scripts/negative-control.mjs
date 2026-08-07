@@ -1699,6 +1699,184 @@ export const CONTROLS = [
     expect: "fail",
     note: "the overlay is a locked configuration file, so this control also moves a config hash; the topology assertion is what it measures",
   },
+
+  // -- the container-backed sandbox launcher (ERL2-OQ-008 gate 2, ADR-ERL2-034)
+  //
+  // The launcher's risk is that it makes an overclaim cheap: before it,
+  // `sandboxControlReport("container")` threw and there was nothing to get
+  // wrong; now thirteen entries can read `enforced`. Each control below removes
+  // one of the things standing between that and a false attestation.
+
+  {
+    id: "container-profile-requires-derivation",
+    what: "the container profile is refused until a qualification is derived for this host (ADR-ERL2-034)",
+    file: "packages/core/src/adapter/sandbox.ts",
+    // Lets any caller use the profile with no activation at all, which is the
+    // pre-derivation state of every host that never ran the probe suite.
+    find: [
+      "  if (activation === undefined || activation.state !== CONTAINER_PROFILE_ENABLED_STATE) {",
+      "    throw new Erl2Error(",
+      "      CODES.ADAPTER_SANDBOX_CONTROL_UNSUPPORTED,",
+      "      `sandbox profile ${profile} is ${CONTAINER_PROFILE_STATE}: no qualification was derived for this host, so nothing has established that the substrate enforces anything or that an adapter could be started inside it. It cannot be silently downgraded to local-process.`,",
+      "    );",
+      "  }",
+    ].join("\n"),
+    // Returns instead of throwing, keeping `assertQualified(activation)` below
+    // reachable and type-correct: the control removes the refusal, not the
+    // whole function.
+    replace: ["  if (activation === undefined) {", "    return;", "  }"].join("\n"),
+    tests: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFail: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    // Only the first case: with the guard gone the host constructor still
+    // refuses, because it has no adapter package to mount — a different
+    // refusal for a different reason, and naming it here would credit this
+    // control with a kill it did not make.
+    mustFailCases: [
+      "CONTAINER-PROFILE: with nothing derived, the profile is refused and reports why",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "container-profile-substrate-qualification",
+    what: "the profile re-derives the qualification — drift, suite digest, lock binding and twenty observed controls — before it activates (ADR-ERL2-034)",
+    file: "packages/core/src/adapter/sandbox.ts",
+    // The single call that carries substrate drift, probe-suite drift,
+    // probe-to-lock binding and the observed-not-mocked rule. `void` keeps the
+    // import used so the patched tree still compiles.
+    find: [
+      "  assertQualifiedForExecution({",
+      '    profile: "container",',
+      "    lock: input.lock,",
+      "    observed: input.observed,",
+      "    probeResults: input.probeResults,",
+      "  });",
+    ].join("\n"),
+    replace: "  void assertQualifiedForExecution;",
+    tests: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFail: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFailCases: [
+      "CONTAINER-PROFILE: a drifted substrate is refused before anything executes",
+      "CONTAINER-PROFILE: mocked probes qualify nothing, launcher or no launcher",
+      "CONTAINER-PROFILE: probe evidence frozen against another lock licenses nothing",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "container-profile-subject-trust",
+    what: "an opaque-private or third-party subject is refused the container profile even when it is fully working (ADR-ERL2-016 §5, re-affirmed by -017 and -034)",
+    file: "packages/core/src/adapter/sandbox.ts",
+    find: '  if (input.subjectTrust !== "trusted_reference") {',
+    replace:
+      '  if (input.subjectTrust !== "trusted_reference" && String(1) === "2") {',
+    tests: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFail: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFailCases: [
+      "CONTAINER-PROFILE: an opaque or third-party subject is refused a fully working profile",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "container-profile-launcher-observed",
+    what: "a qualified substrate with no working launcher is still refused; gate 1 and gate 2 stay two questions (ADR-ERL2-017 decision 3)",
+    file: "packages/core/src/adapter/sandbox.ts",
+    find: "  if (!input.launcher.available) {",
+    replace: '  if (!input.launcher.available && String(1) === "2") {',
+    tests: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFail: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFailCases: [
+      "CONTAINER-PROFILE: a qualified substrate with no launcher is still refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "container-control-report-derived-per-control",
+    what: "each kernel-prevented control reads `enforced` only because a probe observed *that* control on this lock (ADR-ERL2-034)",
+    file: "packages/core/src/adapter/sandbox.ts",
+    // Returns all thirteen regardless of what the probe results say, which is
+    // the difference between a derived report and a second hard-coded table.
+    find: [
+      "  return CONTAINER_CONTROL_PROOFS.filter((control) => {",
+      "    const probe = byControl.get(control);",
+      '    return probe !== undefined && probe.evidence === "observed" && probe.enforced;',
+      "  });",
+    ].join("\n"),
+    replace: ["  void byControl;", "  return CONTAINER_CONTROL_PROOFS;"].join("\n"),
+    tests: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFail: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFailCases: [
+      "CONTAINER-PROFILE: the control report is derived per control, from the probe bytes",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "container-activation-rederived-from-evidence",
+    what: "an activation is re-derived from the evidence it carries on every use, so the structural type cannot be forged into a permission (ADR-ERL2-034 §7)",
+    file: "packages/core/src/adapter/sandbox.ts",
+    // Trusts the `state` label the object arrived with. `ContainerProfileActivation`
+    // is a structural type, so without this line the profile opens to any object
+    // literal — which is how the type looked before the evidence-carrying
+    // rewrite, and why it was rewritten.
+    find: "  assertQualified(activation);\n}",
+    replace: "  void assertQualified;\n}",
+    tests: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFail: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFailCases: [
+      "CONTAINER-PROFILE: an activation is re-derived from its evidence on every use",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "container-manifest-names-its-substrate",
+    what: "a container invocation manifest must name the substrate lock whose evidence licenses its control report (ADR-ERL2-034)",
+    file: "packages/core/src/adapter/sandbox.ts",
+    find: [
+      "  if (",
+      '    profile === "container" &&',
+      "    (activation === undefined ||",
+      "      manifest.isolation_substrate_lock_hash !== containerSubstrateLockHash(activation))",
+      "  ) {",
+    ].join("\n"),
+    replace: [
+      "  void containerSubstrateLockHash;",
+      "  if (",
+      '    profile === "container" &&',
+      "    activation === undefined",
+      "  ) {",
+    ].join("\n"),
+    tests: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFail: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
+    mustFailCases: [
+      "CONTAINER-PROFILE: a container manifest that names no substrate lock is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "container-deadline-kills-the-container",
+    what: "the deadline SIGKILLs the container, not the runtime CLI — the exact defect ADR-ERL2-017 §Evidence recorded (ADR-ERL2-034 §2)",
+    file: "packages/core/src/adapter/containerSupervisor.ts",
+    // Reproduces the original defect faithfully: signal the CLI and hope. The
+    // CLI forwards SIGTERM to PID 1, PID 1 has no default signal handlers
+    // because it is PID 1, and the container runs to its own natural end. The
+    // probe that did this reported `enforced: true` for a 4 s deadline after
+    // 608 s.
+    find: [
+      '    if (control(["kill", "--signal", "KILL", containerId]).status !== 0) {',
+      '      removedByKill = control(["rm", "--force", containerId]).status === 0;',
+      "    }",
+    ].join("\n"),
+    replace: [
+      "    void removedByKill;",
+      '    child.kill("SIGTERM");',
+    ].join("\n"),
+    tests: ["tests/dist/adversarial/containerDeadlineEnforcement.test.js"],
+    mustFail: ["tests/dist/adversarial/containerDeadlineEnforcement.test.js"],
+    mustFailCases: [
+      "CONTAINER-DEADLINE: a subject that ignores every signal is bounded by its deadline",
+      "CONTAINER-DEADLINE: termination is observed — the whole pid namespace, keyed on container id",
+    ],
+    expect: "fail",
+    note: "Needs a container daemon. On a host without one the deadline tests take their announced skip branch and this control kills nothing — which the campaign will record as `no_test_failed`, and which must be read as UNMEASURED HERE rather than as a guard that is not load-bearing. The ordinary gate must never require a daemon; this control is the one place that reading has to be made explicitly.",
+  },
 ];
 
 // -- result classification ---------------------------------------------------
