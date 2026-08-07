@@ -2,7 +2,7 @@
   "schema_version": "isolation-enforcement-probe-result/v1",
   "probe_id": "no-secret-roots",
   "control_id": "no-vault-truth-judge-or-selection-access",
-  "substrate_lock_hash": "sha256:b1d8260e6392e217a3898e60ffa531bec11d56ae2ece749a71f957ad0d2ba95c",
+  "substrate_lock_hash": "sha256:e333ce56d921702479ec6784a65c821b18c257d90eafc402288e23a5079f88b5",
   "evidence": "observed",
   "enforced": true,
   "method": "seed a canary in each real vault/truth/judge/selection root and prove neither the path nor the canary is reachable from the container",
@@ -13,7 +13,7 @@
     "exit_code": 0
   },
   "resources_cleaned_up": true,
-  "started_at": "2026-07-23T16:57:31Z",
-  "ended_at": "2026-07-23T16:57:32Z",
-  "core_hash": "sha256:be3286b341a7ce3d3441b22936770a34420d7e34e778f9f02adaeb0f08159e3d"
+  "started_at": "2026-08-07T14:45:01Z",
+  "ended_at": "2026-08-07T14:45:01Z",
+  "core_hash": "sha256:13954ef135f845ac54d2d3f81ea2f07eefb1892b12ca949c0145c47bc6715640"
 }

@@ -17,11 +17,33 @@ like, and the derivation then returns `not_qualified` with
 | `substrate-lock.json` | `IsolationSubstrateLockV1` | The immutable pin: runtime, version, platform, architecture, kernel, digest-pinned image, runtime configuration hashes, required security profile, probe-suite digest and policy inputs |
 | `probes/<control>.json` | `IsolationEnforcementProbeResultV1` | One per required control: what the probe attempted, what it observed, what it expected, and whether the evidence is `observed` / `declared` / `mocked` / `absent` |
 | `qualification-report.json` | `IsolationQualificationReportV1` | The derived verdict. Verifier output; never an input |
+| `probe-signing-manifest.json` | `IsolationProbeSigningManifestV1` | Binds the ordered probe-result hashes to the lock and suite, signed. Dev-signed here, so the evidence stays `locally_observed_unauthenticated` |
+| `runtime-image/Dockerfile` | — | The adapter runtime image. Not evidence: it is the *source* of the substrate the evidence is about. See below |
+
+## The runtime image
+
+The substrate the adapter actually runs in has to host the adapter protocol,
+which speaks over a Node child process. `alpine` cannot — ADR-ERL2-017 qualified
+it and the profile still could not start anything, which is why ERL2-OQ-008 had
+two gates.
+
+`runtime-image/Dockerfile` derives a Node-capable image from a digest-pinned
+`node:22-alpine`, and removes `/home/node` because `node:22-alpine` **fails**
+the `no-ambient-home-directory` probe without that (it observes
+`POPULATED=/home`). The probe was left alone; the image was changed. Editing a
+probe so a chosen image passes is the failure mode this whole directory exists
+to prevent.
+
+The build is not bit-reproducible: two builds of the same Dockerfile from the
+same base digest produce different image ids here. That is recorded rather than
+papered over — a rebuilt image is `ENV_ISOLATION_SUBSTRATE_DRIFT` until the
+twenty controls have been observed against *its* bytes.
 
 ## Running a qualification
 
 ```bash
-npm run qualify:isolation -- --image <reference@sha256:...>
+node scripts/build-adapter-runtime-image.mjs
+npm run qualify:isolation -- --image <the digest-pinned reference it prints>
 ```
 
 The image reference **must** be digest-pinned. A tag can move, and enforcement
@@ -87,12 +109,19 @@ is a different substrate, whatever the lock says.
 Qualifying a substrate answers one question — "is this strong enough to contain
 an adversarial subject?". It does not:
 
-- **enable the sandbox profile.** `sandboxLauncher.ts` supervises a local child
-  process and has no container backend, so no adapter can be started inside the
-  qualified substrate. `CONTAINER_PROFILE_STATE` is
-  `disabled_no_container_adapter_launcher_pending_erl2_oq_008` and
-  `assertSandboxProfileEnabled("container")` refuses. This is why ERL2-OQ-008
-  remains open (ADR-ERL2-017).
+- **enable the sandbox profile.** A qualification is evidence about a substrate;
+  it is not permission. `deriveContainerProfileActivation` is the only thing that
+  grants the profile, and it re-runs this whole derivation, additionally requires
+  an *observed* launcher, and refuses any subject that is not
+  `trusted_reference`. Without it `CONTAINER_PROFILE_STATE` is
+  `disabled_until_container_substrate_qualification_derived_on_this_host` and
+  `assertSandboxProfileEnabled("container")` refuses (ADR-ERL2-034).
+- **authenticate anything.** The lock and the probe manifest here are signed by
+  the repo-derivable **development** governor key, not a pinned qualification
+  authority, so this evidence is self-reported: `erl2 doctor` reports
+  `locally_observed_unauthenticated`, never `authenticated`. This is what keeps
+  ERL2-OQ-008 open, and why an `opaque_private` or `third_party` subject is
+  refused the container profile even though the profile works.
 - **activate a privilege broker.** ERL2-OQ-001 is untouched and still
   fail-closed; `assertQualificationGrantsNoNewAuthority` enforces it.
 - **open egress.** The deny-by-default policy is unchanged.
