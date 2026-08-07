@@ -268,8 +268,11 @@ already reports as `independently_qualified: false`. That is a package of its
 own, with its own failure modes (flaky pulls read as red suites) and its own
 decision about what a green run there would mean. What is *not* acceptable — and
 what this decision ends — is documents describing that path as verified while
-nothing verified it. §6 of the remediation ledger states exactly what a live
-confirmation on one operator host does and does not establish.
+nothing verified it. §7 of the remediation ledger states exactly what the live
+confirmation on one operator host did and did not establish — including that the
+shipped reference subject's own instrumentation percent-encodes the request
+target, so it cannot reach EQ-L-004 through `url.full` even though other
+attributes and `OTEL_SERVICE_NAME` still can.
 
 ## 7. What replaces ADR-ERL2-033 §4's coverage sentence (EQ-L-007)
 
