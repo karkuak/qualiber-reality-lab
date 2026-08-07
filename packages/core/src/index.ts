@@ -355,17 +355,49 @@ export {
 } from "./adapter/outputFreezer.js";
 export {
   ALLOWED_ENVIRONMENT_VARIABLE_NAMES,
+  CONTAINER_PROFILE_ENABLED_STATE,
   CONTAINER_PROFILE_STATE,
   assertControlReportMatchesProfile,
   assertEnvironmentAllowlisted,
   assertMountPermitted,
   assertSandboxProfileEnabled,
+  containerObservedControls,
+  containerSubstrateLockHash,
+  deriveContainerProfileActivation,
   enforcedControls,
   sandboxControlReport,
   unsupportedControls,
+  type ContainerProfileActivation,
   type SandboxControlReport,
   type SandboxProfileId,
+  type SubjectTrust,
 } from "./adapter/sandbox.js";
+export {
+  CONTAINER_ADAPTER_ROOT,
+  CONTAINER_APP_ROOT,
+  CONTAINER_DIAGNOSTICS_ROOT,
+  CONTAINER_MODULES_ROOT,
+  CONTAINER_MOUNTS_ROOT,
+  CONTAINER_NUMERIC_USER,
+  CONTAINER_OUTPUT_ROOT,
+  HARDENED_CONTAINER_RUN_FLAGS,
+  containerRuntimeConfigurationInput,
+} from "./adapter/containerHardening.js";
+export {
+  CONTAINER_ADAPTER_USER,
+  containerInvocationName,
+  probeContainerLauncher,
+  resolveAdapterModuleClosure,
+  type AdapterModuleDirectory,
+  type ContainerLauncherAvailability,
+} from "./adapter/containerLauncher.js";
+export {
+  CONTAINER_DEADLINE_NOT_ENFORCED,
+  type ContainerSupervisorMount,
+  type ContainerSupervisorReport,
+  type ContainerSupervisorSpec,
+  type ContainerTerminationObservation,
+} from "./adapter/containerSupervisor.js";
 export {
   NOT_QUALIFIED_STATE,
   REQUIRED_ISOLATION_CONTROLS,
@@ -382,6 +414,7 @@ export {
   CliContainerRuntime,
   DEFAULT_PROBE_OUTPUT_BYTES,
   assertRuntimeAvailable,
+  runtimeCliEnvironment,
   type ContainerRuntime,
   type RuntimeInvocation,
   type RuntimeResult,

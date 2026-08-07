@@ -22,7 +22,15 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -83,10 +91,27 @@ import {
   assertControlReportMatchesProfile,
   assertEnvironmentAllowlisted,
   assertMountPermitted,
+  assertSandboxProfileEnabled,
+  containerSubstrateLockHash,
   ALLOWED_ENVIRONMENT_VARIABLE_NAMES,
   sandboxControlReport,
+  type ContainerProfileActivation,
   type SandboxProfileId,
 } from "./sandbox.js";
+import {
+  CONTAINER_APP_ROOT,
+  CONTAINER_DIAGNOSTICS_ROOT,
+  CONTAINER_MODULES_ROOT,
+  CONTAINER_MOUNTS_ROOT,
+  CONTAINER_OUTPUT_ROOT,
+  HARDENED_CONTAINER_RUN_FLAGS,
+} from "./containerHardening.js";
+import { containerInvocationName, type AdapterModuleDirectory } from "./containerLauncher.js";
+import { runtimeCliEnvironment } from "./containerRuntime.js";
+import type {
+  ContainerSupervisorReport,
+  ContainerSupervisorSpec,
+} from "./containerSupervisor.js";
 import { SUPERVISOR_PREFIX, type SupervisorReport } from "./sandboxLauncher.js";
 
 export interface AdapterMount {
@@ -105,6 +130,29 @@ export interface AdapterHostOptions {
   readonly store: ArtifactStore;
   readonly clock: Clock;
   readonly profile?: SandboxProfileId;
+  /**
+   * The derived permission to use the `container` profile on this host.
+   *
+   * Required whenever `profile` is `container`, and produced only by
+   * `deriveContainerProfileActivation` from retained probe evidence, a
+   * drift-checked substrate and an observed launcher. There is no option that
+   * turns the profile on without it.
+   */
+  readonly containerActivation?: ContainerProfileActivation;
+  /**
+   * Where the adapter's code lives on the host, for the container profile.
+   *
+   * The package root is bind-mounted read-only and the declared module closure
+   * is laid out beneath it, so the container gets the adapter and its
+   * dependencies and nothing else. Resolve the closure with
+   * `resolveAdapterModuleClosure`; mounting a repository root instead would put
+   * the vault, truth, judge and selection roots inside a namespace the probes
+   * proved could not reach them.
+   */
+  readonly containerAdapterPackage?: {
+    readonly packageRoot: string;
+    readonly moduleDirectories: readonly AdapterModuleDirectory[];
+  };
   readonly bounds?: OutputBounds;
   readonly wallClockMs?: number;
   readonly maxRequestBytes?: number;
@@ -190,6 +238,8 @@ interface RawExchange {
   readonly wallClockMs: number;
   readonly refusalCode?: string;
   readonly stderrText: string;
+  /** Present only for the container profile; retained verbatim on the result. */
+  readonly containerTermination?: SandboxInvocationResultV1["container_termination"];
 }
 
 /**
@@ -252,6 +302,8 @@ export class AdapterHost {
   private readonly store: ArtifactStore;
   private readonly clock: Clock;
   private readonly profile: SandboxProfileId;
+  private readonly containerActivation: ContainerProfileActivation | undefined;
+  private readonly containerAdapterPackage: AdapterHostOptions["containerAdapterPackage"];
   private readonly bounds: OutputBounds;
   private readonly wallClockMs: number;
   private readonly maxRequestBytes: number;
@@ -272,6 +324,8 @@ export class AdapterHost {
     this.store = options.store;
     this.clock = options.clock;
     this.profile = options.profile ?? "local-process";
+    this.containerActivation = options.containerActivation;
+    this.containerAdapterPackage = options.containerAdapterPackage;
     this.bounds = options.bounds ?? DEFAULT_OUTPUT_BOUNDS;
     this.wallClockMs = options.wallClockMs ?? 30_000;
     this.maxRequestBytes = options.maxRequestBytes ?? 1024 * 1024;
@@ -291,6 +345,33 @@ export class AdapterHost {
     assertManifestCapabilitiesUnprivileged(this.manifest.required_broker_capabilities);
     for (const mount of this.mounts) {
       assertMountPermitted(path.resolve(mount.absolutePath), process.env["HOME"]);
+    }
+    // The profile is checked here rather than at dispatch: admission is where
+    // the subject-trust gate lives, and a host that cannot run its own profile
+    // must not exist long enough to be handed a request (ADR-ERL2-017's third
+    // rejected alternative).
+    assertSandboxProfileEnabled(this.profile, this.containerActivation);
+    if (this.profile === "container") {
+      if (this.containerAdapterPackage === undefined) {
+        throw new Erl2Error(
+          CODES.ADAPTER_SANDBOX_CONTROL_UNSUPPORTED,
+          "the container profile needs the adapter's package root and resolved module closure; without them there is nothing to mount and the adapter could not be started",
+          { owner: "lab" },
+        );
+      }
+      const packageRoot = path.resolve(this.containerAdapterPackage.packageRoot);
+      assertMountPermitted(packageRoot, process.env["HOME"]);
+      for (const module of this.containerAdapterPackage.moduleDirectories) {
+        assertMountPermitted(path.resolve(module.hostPath), process.env["HOME"]);
+      }
+      const relative = path.relative(packageRoot, this.entryPath);
+      if (relative.startsWith("..") || path.isAbsolute(relative)) {
+        throw new Erl2Error(
+          CODES.ADAPTER_IDENTITY_MISMATCH,
+          `adapter entry ${this.entryPath} is outside its declared package root ${packageRoot}, so it would not be inside the mounted namespace`,
+          { owner: "lab" },
+        );
+      }
     }
     if (!existsSync(this.entryPath)) {
       throw new Erl2Error(
@@ -358,6 +439,14 @@ export class AdapterHost {
     const diagnosticsDirectory = path.join(operationRoot, "diagnostics");
     mkdirSync(outputDirectory, { recursive: true, mode: 0o700 });
     mkdirSync(diagnosticsDirectory, { recursive: true, mode: 0o700 });
+    if (this.profile === "container") {
+      // The container runs as an unmapped numeric uid, so the two writable
+      // mounts have to be writable by it. They are run-scoped directories inside
+      // a 0700 workspace root — the parent is what confines them — and this is
+      // the same arrangement the `writable-output-only` probe observed.
+      chmodSync(outputDirectory, 0o777);
+      chmodSync(diagnosticsDirectory, 0o777);
+    }
     // Nothing may be pre-placed in the output tree. A prefilled output would
     // let bytes the adapter never produced be attributed to the subject, and it
     // is a route for a judge canary to arrive from outside the request.
@@ -379,7 +468,7 @@ export class AdapterHost {
       createdAt: now,
       capabilityIds: capabilityGrant.granted_capability_ids,
     });
-    assertControlReportMatchesProfile(sandboxManifest, this.profile);
+    assertControlReportMatchesProfile(sandboxManifest, this.profile, this.containerActivation);
 
     // Mounts are fingerprinted *and* scanned before the adapter can see them.
     const mountFingerprints = this.mounts.map((m) => ({
@@ -387,6 +476,11 @@ export class AdapterHost {
       before: treeFingerprint(path.resolve(m.absolutePath), { mountId: m.mountId }),
     }));
 
+    // Under the container profile the adapter is told **container-side** paths.
+    // The host paths it would otherwise be handed do not exist inside the
+    // namespace, and an adapter that wrote to one would be writing into a
+    // read-only rootfs rather than into the directory the host reads back.
+    const inContainer = this.profile === "container";
     const message: HostOperationMessage = {
       kind: "operation",
       protocol_version: ADAPTER_PROTOCOL_VERSION,
@@ -396,16 +490,23 @@ export class AdapterHost {
       request: input.request,
       mounts: this.mounts.map((m) => ({
         mount_id: m.mountId,
-        absolute_path: path.resolve(m.absolutePath),
+        absolute_path: inContainer
+          ? `${CONTAINER_MOUNTS_ROOT}/${m.mountId}`
+          : path.resolve(m.absolutePath),
         purpose: m.purpose,
       })),
-      output_directory: outputDirectory,
-      diagnostics_directory: diagnosticsDirectory,
+      output_directory: inContainer ? CONTAINER_OUTPUT_ROOT : outputDirectory,
+      diagnostics_directory: inContainer ? CONTAINER_DIAGNOSTICS_ROOT : diagnosticsDirectory,
       granted_capability_ids: capabilityGrant.granted_capability_ids,
       deadline,
     };
 
-    const exchange = this.exchange(message);
+    const exchange = this.exchange(message, {
+      operationRoot,
+      outputDirectory,
+      diagnosticsDirectory,
+      invocationId,
+    });
 
     // Read-only mounts are verified unchanged. On the process profile the
     // kernel does not prevent a write; this detects one and refuses the run.
@@ -884,8 +985,20 @@ export class AdapterHost {
         read_only: true as const,
       })),
       writable_output_path: `adapter-workspace/${input.operationId}/output`,
+      // Named only for the container profile: a manifest that omits them is a
+      // local-process manifest, which is what every one frozen before the
+      // container launcher existed was. The lock hash is what binds this
+      // invocation's control report to the evidence that licensed it.
+      ...(this.profile === "container"
+        ? {
+            sandbox_profile: "container" as const,
+            isolation_substrate_lock_hash: containerSubstrateLockHash(
+              this.containerActivation as ContainerProfileActivation,
+            ),
+          }
+        : {}),
       environment_variable_names: [...ALLOWED_ENVIRONMENT_VARIABLE_NAMES],
-      enforced_controls: sandboxControlReport(this.profile).map((c) => ({
+      enforced_controls: sandboxControlReport(this.profile, this.containerActivation).map((c) => ({
         control_id: c.control_id,
         state: c.state,
         ...(c.reason_code === undefined ? {} : { reason_code: c.reason_code }),
@@ -940,6 +1053,12 @@ export class AdapterHost {
       // enforced was `this.wallClockMs` against real time either way.
       wall_clock_ms: this.evidenceFixtureWallClockMs ?? exchange.wallClockMs,
       ...(exchange.refusalCode === undefined ? {} : { refusal_code: exchange.refusalCode }),
+      // Retained verbatim, so an offline reader can re-derive
+      // `process_tree_terminated` from what the runtime actually reported
+      // instead of taking the supervisor's word for it.
+      ...(exchange.containerTermination === undefined
+        ? {}
+        : { container_termination: exchange.containerTermination }),
       started_at: startedAt,
       ended_at: endedAt,
     };
@@ -960,7 +1079,7 @@ export class AdapterHost {
    * concurrent pipeline — and the supervisor is what makes that possible
    * without giving up process-tree termination.
    */
-  private exchange(message: HostOperationMessage): RawExchange {
+  private exchange(message: HostOperationMessage, context: ExchangeContext): RawExchange {
     const negotiateFrame = encodeFrame(
       {
         kind: "negotiate",
@@ -978,38 +1097,63 @@ export class AdapterHost {
 
     // The request is written to a run-scoped file rather than piped, so the
     // supervisor never has to buffer an unbounded stdin and the exact request
-    // bytes stay inspectable after a crash.
-    const inputPath = path.join(path.dirname(message.output_directory), "request.frames");
+    // bytes stay inspectable after a crash. It is written under the *host*
+    // operation root, which under the container profile is not where the
+    // adapter thinks its output directory is.
+    const inputPath = path.join(context.operationRoot, "request.frames");
     writeFileSync(inputPath, input, { mode: 0o600 });
 
-    const spawned = spawnSync(
-      this.nodeExecutable,
-      [
-        launcherPath(),
-        this.entryPath,
-        String(this.wallClockMs),
-        String(this.maxResponseBytes),
-        inputPath,
-      ],
-      {
-        cwd: path.dirname(message.output_directory),
-        // Deny by default: exactly the allowlisted names, nothing inherited.
-        env: this.childEnvironment(message),
-        // A hard ceiling above the supervisor's own deadline, so a wedged
-        // supervisor cannot hang the Lab either.
-        timeout: this.wallClockMs * 3 + 5_000,
-        maxBuffer: this.maxResponseBytes + 1024 * 1024,
-        killSignal: "SIGKILL",
-      },
-    );
+    const launch =
+      this.profile === "container"
+        ? this.containerLaunch(message, context, inputPath)
+        : {
+            args: [
+              launcherPath("sandboxLauncher.js"),
+              this.entryPath,
+              String(this.wallClockMs),
+              String(this.maxResponseBytes),
+              inputPath,
+            ],
+            // Deny by default: exactly the allowlisted names, nothing inherited.
+            env: this.childEnvironment(message),
+          };
+
+    const spawned = spawnSync(this.nodeExecutable, launch.args, {
+      cwd: context.operationRoot,
+      env: launch.env,
+      // A hard ceiling above the supervisor's own deadline, so a wedged
+      // supervisor cannot hang the Lab either. The container supervisor gets a
+      // larger constant because it makes five bounded control-plane calls the
+      // local one does not — create, top, kill, inspect and remove — and a
+      // ceiling that fired during teardown would abandon a live container.
+      timeout:
+        this.wallClockMs * 3 +
+        (this.profile === "container" ? CONTAINER_SUPERVISOR_CEILING_MS : SUPERVISOR_CEILING_MS),
+      maxBuffer: this.maxResponseBytes + 1024 * 1024,
+      killSignal: "SIGKILL",
+    });
 
     const stdout = spawned.stdout ?? Buffer.alloc(0);
     const stderrText = (spawned.stderr ?? Buffer.alloc(0)).toString("utf8");
     const report = parseSupervisorReport(stderrText);
 
     if (!report) {
-      // The supervisor itself did not report: treat it as a crash rather than
-      // guessing an outcome from an exit code the adapter may have influenced.
+      // The supervisor itself did not report, which under the container profile
+      // means it was killed before it could tear down — the host's own ceiling
+      // fires, `spawnSync` SIGKILLs it, and the container it created outlives
+      // it with nothing watching. The supervisor cannot clean that up, by
+      // definition, so the host reaps by the run-scoped name it chose. Without
+      // this, the profile's `teardown-and-residue-inspection` claim would hold
+      // on every path except the one where teardown was interrupted.
+      if (this.profile === "container") {
+        spawnSync(
+          (this.containerActivation as ContainerProfileActivation).launcher.runtimeBinary,
+          ["rm", "--force", containerInvocationName(this.runId, context.invocationId)],
+          { timeout: 30_000, killSignal: "SIGKILL", env: runtimeCliEnvironment() },
+        );
+      }
+      // Treat it as a crash rather than guessing an outcome from an exit code
+      // the adapter may have influenced.
       return {
         outcome: "crashed",
         processTreeTerminated: false,
@@ -1036,7 +1180,18 @@ export class AdapterHost {
       ...(report.termination_signal === null
         ? {}
         : { terminationSignal: report.termination_signal }),
+      ...(report.container_termination === undefined
+        ? {}
+        : { containerTermination: report.container_termination }),
     };
+
+    // A container the runtime still knows about after removal was ordered is
+    // residue, and residue is a refusal here rather than a cleanup note: the
+    // `teardown-and-residue-inspection` control is one of the twenty this
+    // profile claims, and a run that left something behind did not hold it.
+    if (report.container_termination?.residue_after_removal === true) {
+      return { ...common, outcome: "refused", refusalCode: CODES.RESIDUE_DETECTED };
+    }
 
     if (report.outcome === "timed_out") return { ...common, outcome: "timed_out" };
     if (report.outcome === "refused") {
@@ -1091,6 +1246,82 @@ export class AdapterHost {
       ...(response === undefined ? {} : { response }),
       outcome,
       ...(refusalCode === undefined ? {} : { refusalCode }),
+    };
+  }
+
+  /**
+   * Builds the container supervisor's invocation and its host-authored spec.
+   *
+   * Everything the supervisor will apply is decided here and written to a file
+   * it reads: the image, the flag vector, every mount, the adapter's
+   * container-side entry path, the deadline and the response bound. The
+   * supervisor adds nothing — that is what keeps it the same kind of thing as
+   * the local one, a courier with a stopwatch rather than a second place where
+   * the Lab decides what a subject may reach.
+   */
+  private containerLaunch(
+    message: HostOperationMessage,
+    context: ExchangeContext,
+    inputPath: string,
+  ): { readonly args: readonly string[]; readonly env: Record<string, string> } {
+    const activation = this.containerActivation as ContainerProfileActivation;
+    const adapterPackage = this.containerAdapterPackage as NonNullable<
+      AdapterHostOptions["containerAdapterPackage"]
+    >;
+    const packageRoot = path.resolve(adapterPackage.packageRoot);
+
+    const mounts: ContainerSupervisorSpec["mounts"] = [
+      { hostPath: packageRoot, containerPath: CONTAINER_APP_ROOT, readOnly: true },
+      ...adapterPackage.moduleDirectories.map((module) => ({
+        hostPath: path.resolve(module.hostPath),
+        containerPath: `${CONTAINER_MODULES_ROOT}/${module.name}`,
+        readOnly: true,
+      })),
+      ...this.mounts.map((mount) => ({
+        hostPath: path.resolve(mount.absolutePath),
+        containerPath: `${CONTAINER_MOUNTS_ROOT}/${mount.mountId}`,
+        readOnly: true,
+      })),
+      { hostPath: context.outputDirectory, containerPath: CONTAINER_OUTPUT_ROOT, readOnly: false },
+      {
+        hostPath: context.diagnosticsDirectory,
+        containerPath: CONTAINER_DIAGNOSTICS_ROOT,
+        readOnly: false,
+      },
+    ];
+
+    const spec: ContainerSupervisorSpec = {
+      runtimeBinary: activation.launcher.runtimeBinary,
+      imageReference: activation.lock.image_reference,
+      imageDigest: activation.lock.image_digest,
+      containerName: containerInvocationName(this.runId, context.invocationId),
+      hardenedFlags: [...HARDENED_CONTAINER_RUN_FLAGS],
+      mounts,
+      // The deny-by-default environment, applied by the runtime rather than by
+      // handing the adapter a scrubbed copy of this process's environment.
+      // Strictly stronger: there is no environment to scrub, because the
+      // adapter no longer shares one with anything on this host.
+      environment: this.childEnvironment(message),
+      entryPath: `${CONTAINER_APP_ROOT}/${path
+        .relative(packageRoot, this.entryPath)
+        .replaceAll("\\", "/")}`,
+      // Read-only on purpose: a writable working directory invites relative
+      // writes that land somewhere the host never reads back.
+      workingDirectory: CONTAINER_APP_ROOT,
+      deadlineMs: this.wallClockMs,
+      maxResponseBytes: this.maxResponseBytes,
+      inputPath,
+    };
+    const specPath = path.join(context.operationRoot, "container-spec.json");
+    writeFileSync(specPath, JSON.stringify(spec), { mode: 0o600 });
+
+    return {
+      args: [launcherPath("containerSupervisor.js"), specPath],
+      // The *supervisor* is Lab code and needs to reach the runtime daemon; the
+      // *adapter* gets the three allowlisted names above and nothing else. The
+      // two environments are separated by the container boundary, which is the
+      // point of the profile.
+      env: runtimeCliEnvironment(),
     };
   }
 
@@ -1153,19 +1384,39 @@ export function instantAfter(now: Instant, ms: number): Instant {
   return `${new Date(Date.parse(now) + ms).toISOString().slice(0, 19)}Z`;
 }
 
-/** Absolute path of the compiled supervisor, resolved from this module. */
-function launcherPath(): string {
-  return path.join(path.dirname(fileURLToPath(import.meta.url)), "sandboxLauncher.js");
+/** Absolute path of a compiled supervisor, resolved from this module. */
+function launcherPath(supervisor: "sandboxLauncher.js" | "containerSupervisor.js"): string {
+  return path.join(path.dirname(fileURLToPath(import.meta.url)), supervisor);
 }
 
 /** Extracts the single supervisor line from the captured stderr. */
-function parseSupervisorReport(stderrText: string): SupervisorReport | undefined {
+function parseSupervisorReport(stderrText: string): ContainerSupervisorReport | undefined {
   const index = stderrText.lastIndexOf(SUPERVISOR_PREFIX);
   if (index < 0) return undefined;
   const line = stderrText.slice(index + SUPERVISOR_PREFIX.length).split("\n")[0] ?? "";
   try {
-    return JSON.parse(line) as SupervisorReport;
+    return JSON.parse(line) as ContainerSupervisorReport;
   } catch {
     return undefined;
   }
+}
+
+/** Ceiling above the local supervisor's own deadline, for a wedged supervisor. */
+const SUPERVISOR_CEILING_MS = 5_000;
+
+/**
+ * The same ceiling for the container supervisor.
+ *
+ * Larger because five bounded control-plane calls sit between the adapter
+ * exiting and the report being written, and a ceiling that fired in the middle
+ * of teardown would leave a container running with nothing watching it.
+ */
+const CONTAINER_SUPERVISOR_CEILING_MS = 150_000;
+
+/** Host-side paths one dispatch needs, none of which the adapter is told about. */
+interface ExchangeContext {
+  readonly operationRoot: string;
+  readonly outputDirectory: string;
+  readonly diagnosticsDirectory: string;
+  readonly invocationId: string;
 }

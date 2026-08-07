@@ -31,7 +31,13 @@ import { ArtifactStore, coreHash, hashBytes, sealSigned, type SigningKey } from 
 import type { Clock } from "../runtime/seams.js";
 import { AdapterHost } from "./host.js";
 import { isPrivilegedCapability } from "./capabilities.js";
-import { enforcedControls, unsupportedControls } from "./sandbox.js";
+import type { AdapterModuleDirectory } from "./containerLauncher.js";
+import {
+  enforcedControls,
+  unsupportedControls,
+  type ContainerProfileActivation,
+  type SandboxProfileId,
+} from "./sandbox.js";
 
 export interface CertifyAdapterOptions {
   readonly adapterManifest: SubjectAdapterManifestV1;
@@ -41,6 +47,24 @@ export interface CertifyAdapterOptions {
   readonly certifierId: string;
   readonly certifierKey?: SigningKey;
   readonly runId?: string;
+  /**
+   * The sandbox profile every check runs under; defaults to `local-process`.
+   *
+   * ADR-ERL2-017 §Decision 4 named "the certification suite passes under the
+   * qualified profile" as the §5.5 exit gate that had never been met, because
+   * no launcher could place an adapter there. Running the suite under
+   * `container` is what meets it — and the receipt then records the controls
+   * *that* profile enforced, not the process profile's, so a container
+   * certification cannot be read off a local one or the reverse.
+   */
+  readonly profile?: SandboxProfileId;
+  /** Required when `profile` is `container`; see `AdapterHostOptions`. */
+  readonly containerActivation?: ContainerProfileActivation;
+  /** Required when `profile` is `container`; see `AdapterHostOptions`. */
+  readonly containerAdapterPackage?: {
+    readonly packageRoot: string;
+    readonly moduleDirectories: readonly AdapterModuleDirectory[];
+  };
 }
 
 type Finding = AdapterCertificationFindingV1;
@@ -153,6 +177,13 @@ function newHost(
     store: new ArtifactStore(storeRoot),
     clock: options.clock,
     wallClockMs,
+    ...(options.profile === undefined ? {} : { profile: options.profile }),
+    ...(options.containerActivation === undefined
+      ? {}
+      : { containerActivation: options.containerActivation }),
+    ...(options.containerAdapterPackage === undefined
+      ? {}
+      : { containerAdapterPackage: options.containerAdapterPackage }),
   });
 }
 
@@ -590,8 +621,16 @@ function build(
     refusal_codes: refusalCodes,
     certifier_id: options.certifierId,
     certifier_is_adapter_owner: false as const,
-    enforced_controls: [...enforcedControls("local-process")],
-    unsupported_controls: [...unsupportedControls("local-process")],
+    // The controls of the profile the suite actually ran under. Hard-coding
+    // `local-process` here would have made a container certification claim the
+    // process profile's thirteen `unsupported_on_this_host` entries — and, worse,
+    // let a local certification be read as covering the container profile.
+    enforced_controls: [
+      ...enforcedControls(options.profile ?? "local-process", options.containerActivation),
+    ],
+    unsupported_controls: [
+      ...unsupportedControls(options.profile ?? "local-process", options.containerActivation),
+    ],
     certified_at: options.clock.now(),
   };
   const sealed =
