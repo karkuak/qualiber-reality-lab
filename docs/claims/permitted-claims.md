@@ -419,7 +419,12 @@ The one claim this slice earns, stated at exactly its width:
   reference adapters, which exist to exercise the platform. Certification
   permits an adapter version and digest; it says nothing about the quality of
   the subject behind it, and no real product has been run.
-- **No OS-level or container isolation claim.** The only enabled sandbox profile
+- **No OS-level or container isolation claim for any subject the Lab did not
+  author.** A `container` profile now exists and can be derived on a host whose
+  substrate qualifies, but it is available to **trusted, repository-owned
+  reference subjects only** (ADR-ERL2-034); see the strong-isolation entry below
+  for exactly what that does and does not license. For every other subject, and
+  on every host without a derived qualification, the only usable profile
   is `local-process`. It genuinely enforces a separate process, process-tree
   termination, a wall-clock deadline, bounded request/response frames, a
   deny-by-default environment allowlist, bounded diagnostics, a single writable
@@ -558,8 +563,10 @@ The one claim this slice earns, stated at exactly its width:
   unresolved, but the reason has narrowed and the claim boundary must be stated
   precisely, because half of it is now earned and half is not.
 
-  *What is earned:* a container substrate has been pinned by digest and probed,
-  and all twenty required controls returned `observed` / `enforced`. The
+  *What is earned:* a container substrate — a Node-capable image built by
+  `environments/isolation/runtime-image/Dockerfile` and pinned by digest — has
+  been probed, and all twenty required controls returned `observed` /
+  `enforced`. The
   permitted claim is exactly this and no more, and it is a **self-reported**
   claim: **"on the host and lock recorded in
   `environments/isolation/substrate-lock.json`, the twenty controls in
@@ -580,14 +587,37 @@ The one claim this slice earns, stated at exactly its width:
   on any other host, or after any drift, or if the lock or probe-manifest
   signature does not verify, the derivation returns `not_qualified`.
 
-  *What is not earned:* no claim that an opaque subject has been contained, or
-  could be. The Lab has **no launcher that can start an adapter inside the
-  qualified substrate**, so nothing has ever run there. The container sandbox
-  profile stays `disabled_no_container_adapter_launcher_pending_erl2_oq_008`,
-  the adapter certification suite has not run under it, and every
-  opaque-private and third-party subject is still refused. Trusted reference
-  subjects continue to run under `local-process` with the limitations recorded
-  above. See ADR-ERL2-017.
+  *What is newly earned, and only this:* a container-backed launcher exists, and
+  `ADAPTER-CERT-V1` has passed under the `container` profile against the correct
+  reference adapter. The permitted claim widens by exactly one sentence: **"a
+  trusted, repository-owned reference adapter has been certified while executing
+  inside the digest-pinned substrate above, on the host that qualified it, with
+  a control report in which each of the thirteen kernel-prevented controls reads
+  `enforced` because a probe observed that control on that lock."** Two
+  measurements support the parts a reader is most likely to over-read: the
+  deadline was observed bounding a subject that ignores every signal (4063 ms
+  against a 4000 ms bound, where the ADR-ERL2-017 defect took 608 s), and
+  process-tree termination was observed as the runtime reporting an empty pid
+  namespace under a container id read at create time, not inferred from having
+  ordered a kill.
+
+  *What is not earned:* no claim that an **opaque or third-party** subject has
+  been contained, or could be. Gate 1b is untouched: the lock and the probe
+  manifest are still development-signed, so the qualification licensing the
+  profile is self-reported, and a subject the Lab did not author is refused the
+  profile by an explicit subject-trust gate in
+  `deriveContainerProfileActivation` — not by the profile being unusable.
+  ERL2-OQ-008 remains open at
+  `open_substrate_qualified_launcher_available_authentication_missing`. Nothing
+  here is evidence about a host other than the one that qualified: the profile
+  is refused as
+  `disabled_until_container_substrate_qualification_derived_on_this_host`
+  wherever a qualification has not been derived, and the runtime image is not
+  bit-reproducible, so a rebuilt image is drift until re-qualified. Slice 7 must
+  still not execute an opaque package and Slice 9 must still not execute a
+  third-party OSS subject. Trusted reference subjects continue to run under
+  `local-process` with the limitations recorded above wherever the container
+  profile does not derive. See ADR-ERL2-034.
 
   A mocked probe harness still cannot qualify a profile, by construction:
   `fakeEnforcementProbes()` returns every control as `mocked`, and the

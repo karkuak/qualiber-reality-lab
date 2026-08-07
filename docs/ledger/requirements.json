@@ -1162,10 +1162,15 @@
       "decision": "container or disposable-VM substrate qualified for opaque subjects",
       "owner": "security + core",
       "deadline": "before slice 7 executes an opaque package",
-      "fail_closed": "substrate qualified with twenty observed controls, but no container adapter launcher exists; the container sandbox profile stays disabled and every opaque-private or third-party subject is refused",
-      "status": "open_substrate_qualified_launcher_missing",
-      "resolution_adr": "ADR-ERL2-017",
-      "evidence": "environments/isolation/"
+      "fail_closed": "substrate qualified with twenty observed controls against a Node-capable, digest-pinned image, and a container-backed launcher now starts adapters inside it — but the lock and probe manifest are development-signed, so the qualification is self-reported. Only a trusted_reference subject may use the container profile; every opaque-private or third-party subject is refused under it by an explicit subject-trust gate, and erl2 doctor still reports locally_observed_unauthenticated",
+      "status": "open_substrate_qualified_launcher_available_authentication_missing",
+      "resolution_adr": "ADR-ERL2-034",
+      "evidence": "environments/isolation/",
+      "prior_resolution_adrs": [
+        "ADR-ERL2-016",
+        "ADR-ERL2-017"
+      ],
+      "note": "ADR-ERL2-034 (2026-08-07) closes gate 2 only. The runtime image changed to erl2-adapter-runtime@sha256:cc3808ff40b19dd58f341019b0ddd827402346c657e05b1d7e95be90044a4440, built from node@sha256:c610fcdf (node:22-alpine) by environments/isolation/runtime-image/Dockerfile, because the alpine substrate ADR-ERL2-017 qualified has no Node runtime and cannot host the adapter protocol; the twenty controls were re-observed against the new image and the alpine evidence is superseded, not reused. node:22-alpine itself failed no-ambient-home-directory (it creates /home/node) and the image was changed rather than the probe — the probe-suite digest is unchanged. ADAPTER-CERT-V1 passes under the container profile against reference-correct, meeting the §5.5 exit gate ADR-ERL2-017 decision 4 recorded as never met. What remains is gate 1b: a pinned, verifier-controlled qualification authority signing the lock and the probe-signing manifest. The claim ceiling is unchanged at T1."
     }
   ],
   "adrs": [
@@ -1299,6 +1304,10 @@
     },
     {
       "id": "ADR-ERL2-033",
+      "status": "accepted"
+    },
+    {
+      "id": "ADR-ERL2-034",
       "status": "accepted"
     }
   ],

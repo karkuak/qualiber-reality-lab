@@ -12,7 +12,7 @@ below is executable, not aspirational: the linked check refuses the unsafe path.
 | ERL2-OQ-004 | Evaluation pack executable format | Evaluation + Security | before slice 6 | **Data-only DSL only.** A pack is a closed `EvaluationPackBodyV1` whose every predicate, input selector, measure, ordering key and finding category is drawn from a closed vocabulary the Lab implements; there is no pack runtime to sandbox | `packages/evaluation-sdk` exposes declarative data and `certifyPack` only; `bindDomainPack` reads a pack solely through the frozen contract; `tests/architecture/evaluationBoundary.test.ts` proves the contract has no code, I/O, clock, randomness, validity or threshold member |
 | ERL2-OQ-005 | OpenTelemetry Demo release and per-platform image digest lock | Environment Governor | before slice 3 | **Qualified, development-signed.** A two-service subset of release `3.0.0` is pinned by archive digest, source commit, per-platform image digests (`linux/amd64` + `linux/arm64`), five config hashes, SBOM and provenance, and the Compose driver is enabled by it. The lock is signed by the repo-derivable **development** governor key, so this is a self-qualification: no independent-qualification claim may be derived, and the claim ceiling is unaffected (tier and blindness still cap at T1). The deferred obligation is discharged: the attributable-telemetry observation is retained into the run's evidence and gated on where declared obtainable (ADR-ERL2-033) | `assertSubstrateQualified` accepts the retained lock; `verifySubstrateLockSignature` classifies the signer `signerIsDevelopmentKey`; `composeDriverManifestBody` emits `enabled: true`; `assertObservedMatchesLock` re-observes archive, config and both platforms' digests at `provision`; `erl2 doctor` derives `compose_substrate` from the lock on every call; `retainAttributableTelemetry` freezes the observation before `teardown_started`, the `attributable-telemetry-retained` validity gate refuses a declared run without an attributed observation, and `deriveAttributableTelemetry` re-derives it offline from the retained excerpt |
 | ERL2-OQ-006 | Seven-year retention legal approval | Privacy/Legal | before slice 11 | No held-out production release | no held-out release path exists |
-| ERL2-OQ-008 | Container or disposable-VM substrate for opaque subjects | Security + Core | before slice 7 execution of an opaque package | **Controls locally observed but unauthenticated; profile still disabled.** The twenty controls were `observed` against a digest-pinned container substrate, but the substrate lock is signed by the repo-derivable **development** governor key — not a pinned qualification authority — so the evidence is self-reported: `erl2 doctor` reports `locally_observed_unauthenticated`, **never** the producer-assertable `authenticated`/`qualified`. And no launcher can start an adapter inside the substrate, so `local-process` remains the only usable profile and every opaque-private or third-party subject is still refused (ADR-ERL2-017, review P2-1/6R-E) | `verifyIsolationLockSignature` verifies the lock's Ed25519 signature and classifies the signer; `deriveIsolationAuthenticity` returns `locally_observed_unauthenticated` for a valid dev-signed lock and `not_qualified` for a tampered/forged one; `qualifyIsolationProfile` returns `qualified` only as the *content* verdict (twenty *observed* controls) which the authenticity layer then downgrades; `assertQualifiedForExecution` re-derives and refuses on substrate drift; `assertSandboxProfileEnabled` refuses the container profile with `disabled_no_container_adapter_launcher_pending_erl2_oq_008`; `erl2 doctor` reports the lock signature, signer, per-control probe status and the distinguished authenticity outcome under `subject_isolation` |
+| ERL2-OQ-008 | Container or disposable-VM substrate for opaque subjects | Security + Core | before slice 7 execution of an opaque package | **Controls locally observed but unauthenticated; a launcher now exists; opaque and third-party subjects still refused.** The twenty controls are `observed` against a digest-pinned, Node-capable container substrate and `ADAPTER-CERT-V1` passes under the `container` profile — but the substrate lock and the probe manifest are signed by the repo-derivable **development** governor key, not a pinned qualification authority, so the evidence is self-reported: `erl2 doctor` reports `locally_observed_unauthenticated`, **never** the producer-assertable `authenticated`/`qualified`. Only a **trusted reference** subject may use the profile; every opaque-private or third-party subject is refused *under the container profile too*, by an explicit gate rather than by the profile being unusable (ADR-ERL2-017, ADR-ERL2-034, review P2-1/6R-E) | `verifyIsolationLockSignature` verifies the lock's Ed25519 signature and classifies the signer; `deriveIsolationAuthenticity` returns `locally_observed_unauthenticated` for a valid dev-signed lock and `not_qualified` for a tampered/forged one; `qualifyIsolationProfile` returns `qualified` only as the *content* verdict (twenty *observed* controls) which the authenticity layer then downgrades; `deriveContainerProfileActivation` is the only route to the profile and applies four refusals in order — substrate (`assertQualifiedForExecution`, drift `ENV_ISOLATION_SUBSTRATE_DRIFT`), observed launcher, subject trust, and per-control observation; `assertSandboxProfileEnabled` refuses an underived profile with `disabled_until_container_substrate_qualification_derived_on_this_host`; `erl2 doctor` reports the lock signature, signer, per-control probe status, the launcher observation and the distinguished authenticity outcome under `subject_isolation` |
 | ERL2-OQ-007 | External beacon, locally pinned source registry entry, custodian roster, and any future audited threshold-VRF construction | Security + Environment Governor | before slice 2 selection freeze | **Non-blind `development` selection only.** Threshold VRF always fails with `THRESHOLD_VRF_NOT_ACTIVATED` | `assertDevelopmentTierOnly` refuses a held-out or blind tier against the development beacon; `assertActiveRandomnessVariant` refuses every threshold-VRF policy |
 | ERL2-OQ-009 | Externally supplied environment: a lock-driven Compose service graph, external substrate qualification, and whether an archetype admission seam mirrors the external-adapter one (issue #8, EQ-L-002/EQ-L-003) | Environment Governor + Core | decide at slice 10 entry, before any brownfield archetype parameter set freezes (with ERL2-OQ-002) | **No external environment admission; the interim path is adapter-served-on-loopback.** The driver enum is closed and bound once per run; the Compose service graph is a code constant with, deliberately, no mechanism for describing a different environment; a run's archetype must be in its selected challenge's admissible set; and the environment mount plus loopback egress grant derive only from the run's own provisioned, lock-pinned, live container — access is withdrawn, not inherited. An externally authored subject runs against the qualified subset, and may serve its own application on loopback inside the `local-process` claim boundary, where the Lab's provisioning, baseline, restoration-observation, residue and egress guarantees extend to the Lab's environment and **not** to that application | `resolveDriverKind` refuses an unknown driver and any mid-run substitution; `OTEL_DEMO_SERVICES` is a constant (`composeSubstrate.ts`); `assertArchetypeAdmissible` refuses an archetype outside the selected challenge's set; `readComposeEndpoint` authorizes only the run's own live, lock-pinned endpoint; `tests/e2e/externalSubjectComposeRun.test.ts` pins the external-subject shape and its stated claim boundary |
 
@@ -240,13 +240,19 @@ Slice 6's parallel safety track asked one question: *can this host enforce a
 container or disposable-VM profile strong enough for an opaque private or
 third-party subject?*
 
-**Outcome: the controls were locally observed but the evidence is
-unauthenticated, and the question stays open.**
+**Outcome: the controls are locally observed, a launcher exists and the
+certification suite passes under the profile — but the evidence is
+unauthenticated, so the question stays open.**
 
-Two gates have to pass before an opaque subject may run, and **neither** passes
-in the authenticated sense the safety claim requires.
+Current state:
+**`open_substrate_qualified_launcher_available_authentication_missing`**
+(narrowed from `open_substrate_qualified_launcher_missing` on 2026-08-07 by
+ADR-ERL2-034).
 
-### Gate 1 — does a substrate enforce the twenty controls? **Locally observed, not authenticated.**
+Three gates have to pass before an opaque subject may run. Gate 1a and gate 2
+now pass; **gate 1b does not**, and it is the one the safety claim rests on.
+
+### Gate 1a — does a substrate enforce the twenty controls? **Yes, locally observed.** Gate 1b — is that evidence authenticated? **No.**
 
 A container runtime was pinned by digest and probed with real enforcement
 probes. All twenty controls returned `observed` / `enforced` — but the substrate
@@ -264,12 +270,22 @@ now requires BOTH the lock AND this manifest to be signed by a pinned authority;
 a present-but-broken manifest (bad signature, wrong lock, or a hash set that does
 not cover the evaluated results) forces `not_qualified`. On this checkout the
 manifest is dev-signed, so it reads `valid_development` and the outcome stays
-`locally_observed_unauthenticated`. The observed profile was:
+`locally_observed_unauthenticated`. The currently observed profile is:
 
 - runtime `docker` 29.5.3 on `linux/arm64`, kernel `6.12.76-linuxkit`;
-- image `alpine@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce`;
+- image `erl2-adapter-runtime@sha256:cc3808ff40b19dd58f341019b0ddd827402346c657e05b1d7e95be90044a4440`,
+  built from `node@sha256:c610fcdf…` (`node:22-alpine`) by
+  `environments/isolation/runtime-image/Dockerfile`;
 - seccomp `builtin`, cgroup v2, default runtime `runc`;
-- probe suite `erl2-container-enforcement-probes-v1`.
+- probe suite `erl2-container-enforcement-probes-v1` (digest unchanged).
+
+The image changed on 2026-08-07 and the twenty controls were re-observed against
+it, because the alpine substrate ADR-ERL2-017 qualified has no Node runtime and
+therefore cannot host the adapter protocol. Re-qualification is mandatory when
+the image digest moves, and the alpine evidence is superseded rather than reused
+— reusing it is the substitution `assertObservedMatchesIsolationLock` exists to
+refuse. See ADR-ERL2-034 §3, including the `no-ambient-home-directory` failure
+`node:22-alpine` produced and why the image, not the probe, was changed.
 
 Evidence is retained in `environments/isolation/`: the signed
 `IsolationSubstrateLockV1`, one `IsolationEnforcementProbeResultV1` per control,
@@ -291,29 +307,55 @@ whole security profile — and `assertProbeSuiteMatchesLock` refuses a suite who
 digest is not the one the lock pinned, so a weakened suite invalidates the lock
 that licensed the old one.
 
-### Gate 2 — can the Lab start an adapter inside it? **No.**
+### Gate 2 — can the Lab start an adapter inside it? **Yes, for trusted reference subjects.**
 
-`packages/core/src/adapter/sandboxLauncher.ts` supervises a local child process.
-It has no container backend, so there is no code path that could execute an
-adapter under the `container` profile. `CONTAINER_PROFILE_STATE` is therefore
-`disabled_no_container_adapter_launcher_pending_erl2_oq_008` and
-`assertSandboxProfileEnabled("container")` still refuses.
+`packages/core/src/adapter/containerSupervisor.ts` is a container-backed
+launcher behind the same seam as the local one: the host executes it, it
+supervises a container the way the other supervises a process group, and it
+emits the same single `ERL2-SUPERVISOR` report line. `ADAPTER-CERT-V1` passes
+under the `container` profile against the correct reference adapter — the §5.5
+exit gate ADR-ERL2-017 §Decision 4 recorded as never having been met.
 
-The two gates are kept as separate states deliberately. A qualified substrate
-with nothing running inside it protects nothing, and reporting one state would
-let a reader conclude an opaque subject could now be run.
+The profile is **derived per host**, never declared.
+`deriveContainerProfileActivation` is the only way to obtain permission to use
+it, and it refuses in four places: substrate drift or a short qualification
+(`assertQualifiedForExecution`), a launcher that was not observed working, a
+subject that is not `trusted_reference`, and any control the probes did not
+observe on *this* lock. `CONTAINER_PROFILE_STATE` is therefore
+`disabled_until_container_substrate_qualification_derived_on_this_host`: the
+launcher existing in the source tree says nothing about whether a runtime is
+answering on the host about to execute something.
+
+The gates are kept as separate states deliberately. A qualified substrate with
+nothing running inside it protects nothing; a running launcher over
+self-reported evidence protects only as far as the party that signed the
+evidence is trusted.
+
+### Gate 1b is what remains
+
+The substrate lock and the probe manifest are dev-signed, so the qualification
+is self-reported. Until a pinned qualification authority signs both,
+`deriveIsolationAuthenticity` returns `locally_observed_unauthenticated` and no
+opaque-private or third-party subject may execute — **including under the
+container profile**, where the refusal is now an explicit subject-trust gate
+rather than a side effect of the profile being unusable.
 
 `tests/adversarial/isolationQualification.test.ts`,
-`tests/adversarial/isolationSubstrate.test.ts` and
-`tests/integration/isolationRetainedEvidence.test.ts` prove each refusal.
+`tests/adversarial/isolationSubstrate.test.ts`,
+`tests/adversarial/containerSandboxProfile.test.ts`,
+`tests/adversarial/containerDeadlineEnforcement.test.ts`,
+`tests/integration/isolationRetainedEvidence.test.ts` and
+`tests/integration/containerAdapterCertification.test.ts` prove each refusal.
+The container-dependent files announce themselves loudly and assert the
+fail-closed behaviour when no daemon is present; the ordinary gate never
+requires one.
 
 **Readiness consequence.** Unchanged: Slice 7 must not execute an opaque
 package and Slice 9 must not execute a third-party OSS subject.
 
-**What remains** is now bounded rather than open-ended: a container-backed
-sandbox launcher, a digest-pinned runtime image able to host the adapter
-protocol, and a passing `ADAPTER-CERT-V1` run under that profile. See
-ADR-ERL2-017.
+**What remains** is a single named thing: a **pinned, verifier-controlled
+qualification authority** signing the substrate lock and the probe-signing
+manifest. See ADR-ERL2-034 §10.
 
 ## ERL2-OQ-009 in detail — externally supplied environments
 

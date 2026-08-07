@@ -119,18 +119,22 @@ window and the T1 ceiling are unchanged).
 **Held-out and blind execution is refused** because ERL2-OQ-007
 is unresolved, so the journey runs at `development` tier. **Privileged subject
 operations are refused** because ERL2-OQ-001 is unresolved, so the platform
-supports unprivileged operations only and the container sandbox profile is
-disabled — read [`runbooks/adapter.md`](runbooks/adapter.md) for exactly which
-isolation controls the enabled profile does and does not enforce. **Opaque and
-third-party subjects are refused** because ERL2-OQ-008 is unresolved. A container
-substrate has been pinned and its twenty controls were observed enforcing
-(ADR-ERL2-017), with the results authenticated by a signed probe manifest — but
-both the lock and that manifest are signed only by a repo-derivable development
-governor key, not a pinned qualification authority — so `erl2 doctor` reports it
-as **`locally_observed_unauthenticated`** (self-reported), never `authenticated`,
-and the container-backed launcher does not exist. Opaque execution therefore
-stays refused and only trusted reference subjects may run, under `local-process`
-only. See
+supports unprivileged operations only — read
+[`runbooks/adapter.md`](runbooks/adapter.md) for exactly which isolation
+controls each profile does and does not enforce. **Opaque and third-party
+subjects are refused** because ERL2-OQ-008 is unresolved. A Node-capable
+container substrate is pinned by digest, its twenty controls were observed
+enforcing, a container-backed launcher starts adapters inside it, and
+`ADAPTER-CERT-V1` passes under the `container` profile against a reference
+adapter (ADR-ERL2-034). What has **not** changed is who signed the evidence:
+both the substrate lock and the probe manifest are signed only by a
+repo-derivable development governor key, not a pinned qualification authority,
+so `erl2 doctor` reports the qualification as
+**`locally_observed_unauthenticated`** (self-reported), never `authenticated`.
+The container profile is therefore available to **trusted, repository-owned
+reference subjects only**, and only on a host where the qualification derives;
+every opaque-private and third-party subject is refused under it by an explicit
+subject-trust gate. See
 [`docs/ledger/requirements.json`](docs/ledger/requirements.json)
 for per-requirement status and [`docs/claims/permitted-claims.md`](docs/claims/permitted-claims.md)
 for what the current evidence does and does not support.
