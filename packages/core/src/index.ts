@@ -309,6 +309,25 @@ export {
   type CertifyAdapterOptions,
 } from "./adapter/certification.js";
 export {
+  BOOTSTRAP_RECEIPT_SENTINEL,
+  EXTERNAL_ADAPTER_DIR,
+  assertAdmissionPermittedForTier,
+  assertEntryDigestUnchanged,
+  deriveAdapterCertifiedGate,
+  deriveCertificationAuthenticity,
+  retainAdmittedAdapter,
+  verifyAdapterCertification,
+  verifyReceiptSignature,
+  type AdapterAdmission,
+  type AdapterCertifiedGate,
+  type CertificationAuthenticity,
+  type PinnedCertificationAuthority,
+  type ReceiptLinkage,
+  type ReceiptSignatureVerification,
+  type RetainedAdmission,
+  type VerifyAdapterCertificationInput,
+} from "./adapter/admission.js";
+export {
   UNPRIVILEGED_CAPABILITIES,
   PRIVILEGED_CAPABILITIES,
   PRIVILEGE_BROKER_STATE,

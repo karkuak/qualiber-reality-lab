@@ -667,6 +667,7 @@ const SUPPORTING_SCHEMAS: ReadonlySet<string> = new Set([
   "trust-verification-report/v2",
   "acquisition-preregistration-verification-receipt/v1",
   "subject-adapter-manifest/v1",
+  "subject-adapter-certification-receipt/v1",
   "generic-run-policy/v1",
   "subject-visible-journey-step/v1",
   "journey-step-commitment/v1",

@@ -66,6 +66,7 @@ import {
   type PreEnvironmentValidityResultV1,
   type PreSelectionJourneyResultV1,
   type SubjectAcquisitionRecordV1,
+  type SubjectAdapterCertificationReceiptV1,
   type SubjectAdapterManifestV1,
   type SubjectPackageManifestV1,
   type SubjectPackageVerificationRecordV1,
@@ -119,6 +120,11 @@ import {
   type SubjectPort,
 } from "../journey/subjectPort.js";
 import { AdmissionRegistry } from "../registry/admission.js";
+import {
+  deriveAdapterCertifiedGate,
+  verifyAdapterCertification,
+  type AdapterAdmission,
+} from "../adapter/admission.js";
 import { TimestampLog } from "../timestamps/log.js";
 import type { Clock } from "../runtime/seams.js";
 import { SteppingClock } from "../runtime/seams.js";
@@ -437,16 +443,35 @@ export class RunWorkspace {
     readonly packageVerificationStepCommitmentHash: Hash;
     readonly limitsHash: Hash;
     readonly expiresAt: string;
+    /**
+     * The admitted certification receipt for this adapter.
+     *
+     * Required for every run that will dispatch a real out-of-process adapter.
+     * The development fake port executes no adapter bytes and so has nothing to
+     * certify; it is the one case that may omit this (LIVE-001,
+     * ADR-ERL2-036).
+     */
+    readonly adapterCertificationReceiptHash?: Hash;
   }): AcquisitionPreregistrationV1 {
     // Every referenced artifact must already be admitted.
     this.registry.require<AcquisitionSourceManifestV1>(
       input.sourceManifestHash,
       "AcquisitionSourceManifestV1",
     );
-    this.registry.require<SubjectAdapterManifestV1>(
+    const adapterManifestForCertification = this.registry.require<SubjectAdapterManifestV1>(
       input.adapterManifestHash,
       "SubjectAdapterManifestV1",
     );
+    // The receipt is validated *here*, against the manifest this run is binding,
+    // rather than trusted because `admit-adapter` once said so: a registry is a
+    // directory, and a directory can be edited between two commands.
+    const admission =
+      input.adapterCertificationReceiptHash === undefined
+        ? undefined
+        : this.admitAdapterCertification(
+            adapterManifestForCertification,
+            input.adapterCertificationReceiptHash,
+          );
     this.registry.require<GenericRunPolicyV1>(input.genericRunPolicyHash, "GenericRunPolicyV1");
     this.registry.require<JourneyStepCommitmentV1>(
       input.acquisitionStepCommitmentHash,
@@ -521,6 +546,20 @@ export class RunWorkspace {
       "SubjectAdapterManifestV1",
     );
     this.store.freezeJson("retained/adapter-manifest.json", adapterManifest, "INTERNAL");
+    // The receipt is mirrored into the run for the same reason the adapter
+    // manifest is: the `adapter-certified` gate and an offline reader must be
+    // able to re-derive certification from the run alone, without the governor
+    // registry that admitted it.
+    if (admission !== undefined) {
+      this.store.freezeJson(
+        "retained/adapter-certification-receipt.json",
+        this.registry.require<SubjectAdapterCertificationReceiptV1>(
+          admission.receiptHash,
+          "SubjectAdapterCertificationReceiptV1",
+        ),
+        "INTERNAL",
+      );
+    }
     const runPolicy = this.registry.require<GenericRunPolicyV1>(
       input.genericRunPolicyHash,
       "GenericRunPolicyV1",
@@ -562,6 +601,15 @@ export class RunWorkspace {
           artifact_core_hash: input.adapterManifestHash,
           artifact_schema_version: "subject-adapter-manifest/v1",
         },
+        ...(admission === undefined
+          ? []
+          : [
+              {
+                artifact_role: "adapter-certification-receipt",
+                artifact_core_hash: admission.receiptHash,
+                artifact_schema_version: "subject-adapter-certification-receipt/v1",
+              },
+            ]),
         {
           artifact_role: "generic-run-policy",
           artifact_core_hash: input.genericRunPolicyHash,
@@ -570,6 +618,73 @@ export class RunWorkspace {
       ],
     });
     return preregistration;
+  }
+
+  /**
+   * Resolves an admitted certification receipt and re-validates it against the
+   * adapter manifest this run is binding.
+   *
+   * Resolution goes through `registry.require`, so an unknown hash is
+   * `ADMISSION_ARTIFACT_UNKNOWN` and a receipt whose bytes do not produce its
+   * declared `core_hash` never gets indexed in the first place.
+   */
+  private admitAdapterCertification(
+    manifest: SubjectAdapterManifestV1,
+    receiptHash: Hash,
+  ): AdapterAdmission {
+    const receipt = this.registry.require<SubjectAdapterCertificationReceiptV1>(
+      receiptHash,
+      "SubjectAdapterCertificationReceiptV1",
+    );
+    return verifyAdapterCertification({ manifest, receipt, tier: this.tier });
+  }
+
+  /**
+   * The certification this run bound, re-derived from its own retained
+   * evidence — never a stored verdict.
+   *
+   * Returns `undefined` when the run bound none, which is the fake-port case.
+   */
+  adapterCertification(): AdapterAdmission | undefined {
+    const receiptHash = this.hashForRole("adapter-certification-receipt");
+    if (receiptHash === undefined) return undefined;
+    const manifest = this.artifact<SubjectAdapterManifestV1>(
+      this.requireHashForRole("adapter-manifest"),
+      "SubjectAdapterManifestV1",
+    );
+    const receipt = this.artifact<SubjectAdapterCertificationReceiptV1>(
+      receiptHash,
+      "SubjectAdapterCertificationReceiptV1",
+    );
+    return verifyAdapterCertification({ manifest, receipt, tier: this.tier });
+  }
+
+  /**
+   * {@link adapterCertification}, but a re-validation failure is an answer
+   * rather than a throw.
+   *
+   * Finalization must be able to record "this run's certification no longer
+   * holds" as a failed gate. Letting the refusal escape would abort the
+   * terminal instead, and a run that cannot finalize produces no validity
+   * report at all — which is the one outcome a tamper must not be able to buy.
+   */
+  derivedAdapterCertification(): AdapterAdmission | undefined {
+    try {
+      return this.adapterCertification();
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Whether this run ever dispatched a real out-of-process adapter.
+   *
+   * Read from the invocation manifests the host freezes, so it answers what
+   * happened rather than what was configured. A run that executed adapter bytes
+   * has one; the development fake port produces none.
+   */
+  dispatchedRealAdapter(): boolean {
+    return this.hashesForRole("adapter-sandbox-invocation-manifest").length > 0;
   }
 
   // -- 2. measured acquisition ---------------------------------------------
@@ -2748,7 +2863,15 @@ export class RunWorkspace {
         passed: true,
         evidence_refs: [outputHash],
       },
-      { gate_id: "adapter-certified", passed: true, evidence_refs: [adapterHash] },
+      {
+        gate_id: "adapter-certified",
+        ...deriveAdapterCertifiedGate({
+          adapterManifestHash: adapterHash,
+          certification: this.derivedAdapterCertification(),
+          boundCertificationHash: this.hashForRole("adapter-certification-receipt"),
+          dispatchedRealAdapter: this.dispatchedRealAdapter(),
+        }),
+      },
       { gate_id: "adapter-authority-respected", passed: true, evidence_refs: [adapterHash] },
       {
         gate_id: "subject-output-frozen-before-reveal",

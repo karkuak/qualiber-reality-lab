@@ -159,6 +159,7 @@ import {
   assertSubjectOutputContentClean,
   assertSubjectOutputWithinDeclaredBytes,
 } from "../adapter/outputFreezer.js";
+import { deriveAdapterCertifiedGate } from "../adapter/admission.js";
 import {
   CANONICAL_JOURNEY_INTENTS,
   JOURNEY_PREREQUISITES,
@@ -3904,7 +3905,15 @@ export class EnvironmentRun {
             ? [...this.ws.hashesForRole("attributable-telemetry-observation")]
             : [coreHash(this.driver.manifest)],
       },
-      { gate_id: "adapter-certified", passed: true, evidence_refs: [this.ws.requireHashForRole("adapter-manifest")] },
+      {
+        gate_id: "adapter-certified",
+        ...deriveAdapterCertifiedGate({
+          adapterManifestHash: this.ws.requireHashForRole("adapter-manifest"),
+          certification: this.ws.derivedAdapterCertification(),
+          boundCertificationHash: this.ws.hashForRole("adapter-certification-receipt"),
+          dispatchedRealAdapter: this.ws.dispatchedRealAdapter(),
+        }),
+      },
       {
         gate_id: "adapter-authority-respected",
         passed: true,
