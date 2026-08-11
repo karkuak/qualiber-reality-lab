@@ -229,3 +229,59 @@ timeout/failure shape and PID emission. Termination is proven in
 `tests/dist/adversarial/adapterModeBinding.test.js` to fail. The campaign has
 **129** controls after this addition, discovered from the harness rather than
 assumed.
+
+## 8. Second corrective package — the independent review of `90a0039`
+
+The corrective package above was reviewed independently and approved:
+**CORRECTIVE IMPLEMENTATION APPROVED — CAMPAIGN HARNESS FIX REQUIRED**. The
+review is preserved at
+[`docs/evidence/independent-review-90a0039/`](../evidence/independent-review-90a0039/README.md).
+It recomputed the preregistration core hash and watched it move when either
+frozen field is altered, so §7's P1 closure is proven rather than asserted, and
+it confirmed exact receipt equality across preregistration, retained artifact and
+failure finding in the hostile golden.
+
+It raised exactly one new finding against this package, and one campaign-harness
+defect that is **not** a receipt-admission defect.
+
+### P3 — the applicability rule was enforced nowhere it was used
+
+Removing *both* production calls to `assertAdapterCertificationApplicability` —
+from `buildPreEnvironmentValidity` and `buildEnvironmentValidity` — left the
+affected suite at 144/144 and the whole repository at 1,209 tests with zero
+failures.
+
+The reason is worth recording, because §7's own P2 entry above is what created
+it. The control written there calls `assertAdapterCertificationApplicability`
+**directly**, so deleting the wiring cannot break it: the helper still works, it
+is simply never reached. And the one sub-case that *is* independently enforced —
+an external run omitting the gate — belongs to `assertRequiredGatesPresent`,
+which is why suppressing the producer did fail a test and hid the gap.
+
+What was uncovered is everything the applicability rule uniquely says: the gate
+appearing more than once, citing manifest-only evidence, citing the manifest's
+bootstrap/prior receipt instead of the current one, or a fake-port run emitting
+it at all. None is a missing gate, so nothing else objects — and each is a false
+certification claim in retained evidence, the exact shape LIVE-001 was.
+
+`tests/adversarial/adapterCertificationApplicability.test.ts` closes it by
+driving `buildPreEnvironmentValidity` and `buildEnvironmentValidity` — the real
+entry points that carry the call sites — with each malformed shape, asserting a
+typed refusal **and** that no validity result was emitted. A baseline control
+proves the honest shape of both modes still builds; a final control proves each
+malformed shape is well-formed in every other respect, so the refusal is
+uniquely applicability's rather than another guard firing first.
+
+Re-measured with the reviewer's own mutation (`replacedCount=2`): **four of six
+controls fail**, and the previously blind affected suite still passes 64/64 —
+which is the point. No production behaviour changed.
+
+### The campaign disagreement was not this package
+
+`substrate-loopback-only-rendered` was the campaign's single recorded
+disagreement. It is a pre-existing fixture-provisioning defect with a
+classification defect behind it, identical at `e9718e0` and `90a0039`, and fully
+load-bearing once the pinned upstream fixture is provisioned. It is fixed in the
+harness, not here; see
+[`negative-control-harness.md`](negative-control-harness.md) §8. Nothing in the
+receipt-admission implementation was changed for it.

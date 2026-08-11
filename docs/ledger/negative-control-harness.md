@@ -62,6 +62,8 @@ git — that decides what a patch *would* do before anything is written.
 | `expectedMatches` | no — **defaults to exactly one** | how many occurrences the control means |
 | `anchor` | no | a string occurring exactly once, after which `find` is searched |
 | `mustFail` | no | a subset of `tests`; a failure outside it is not this control's kill |
+| `mustFailCases` | no | the exact case names that must be among the failures |
+| `requiresPrerequisite` | no | a host input the control needs — `otel-demo-upstream` or `docker-daemon`; see §8 |
 | `uniquePostimage` | no | also require the postimage not to already occur elsewhere |
 | `note` | no | why an `expect: "pass"` control is kept |
 
@@ -125,6 +127,8 @@ share one column.
 | `named_tests_failed` | yes | the kill; the guard is load-bearing |
 | `no_kill_as_declared` | yes | an `expect: "pass"` control, agreeing |
 | `tests_passed_unexpectedly` | yes | a control that expected a kill and got none |
+| `unmeasured_here` | **neither** | the control declared a prerequisite this host cannot supply, and the designated case skipped itself; see §8 |
+| `designated_case_skipped` | **no** | a designated case skipped with no prerequisite declared — fail-closed, because nobody said it might |
 | `patch_not_applicable` | **no** | the preimage is gone |
 | `ambiguous_patch_target` | **no** | the preimage is not unique |
 | `anchor_not_found` / `anchor_ambiguous` | **no** | the window cannot be established |
@@ -343,3 +347,132 @@ Two rows are worth reading twice:
 `git worktree list` shows only the repository; no `erl2-negative-control-*` temp
 directory remains; no `node --test` or harness process survives; `git status
 --short` is empty and `git diff --check` is clean.
+
+## 8. Declared prerequisites, and the third column they need
+
+Added by the validation-harness closure that answers the independent review of
+`90a0039` ([`docs/evidence/independent-review-90a0039/`](../evidence/independent-review-90a0039/README.md)).
+
+### 8.1 The defect: one control spent a full campaign being a false disagreement
+
+The campaign at `90a0039` discovered 129 controls, agreed 128, and reported one
+disagreement: `substrate-loopback-only-rendered`, recorded as
+`tests_passed_unexpectedly`, `harnessError: false`, `replacedCount: 1`, 28 pass /
+0 fail.
+
+It was not a disagreement. Two independent defects produced it, and the review
+proved both.
+
+**The fixture was never in the worktree.** Controls are applied to a `git
+worktree` checked out at HEAD, and a worktree carries tracked files only.
+`environments/otel-demo/upstream/` is git-ignored — it is a 3 MB third-party
+release archive and its extraction — so it is absent from every campaign
+worktree that has ever run. The designated case, `COMPOSE-ADV: the RENDERED
+configuration publishes one loopback port and nothing else`, renders the real
+merged Compose configuration and skips itself, announcing `RENDERED TOPOLOGY
+UNPROVEN`, when that extraction is missing. It did exactly what it says it does.
+
+The review's four-cell matrix settled what that meant:
+
+| revision | fixture | designated case | classification |
+|---|---|---|---|
+| `e9718e0` | absent | skipped | `tests_passed_unexpectedly` → disagreed |
+| `90a0039` | absent | skipped | `tests_passed_unexpectedly` → disagreed |
+| `e9718e0` | provisioned | ran | baseline passes, mutation fails → agreed |
+| `90a0039` | provisioned | ran | baseline passes, mutation fails → agreed |
+
+Identical at both revisions, so **not a receipt-admission regression**; and fully
+load-bearing once provisioned — the unmodified baseline passes, the mutated
+overlay fails the intended loopback assertion, and reverting restores the pass.
+
+**The classifier could not say "not measured".** It parsed `tests`, `pass`,
+`fail` and `cancelled`, and never `skipped`. With the designated case skipped and
+the other 28 passing, it reached `fail === 0` and — for an `expect: "fail"`
+control — returned `tests_passed_unexpectedly`. Worse, that short-circuit sits
+*above* the `mustFailCases` check written to catch precisely "the declared case
+did not fail", so the one mechanism that could have noticed never ran.
+
+### 8.2 Provisioning: the pin decides, not the directory
+
+`scripts/lib/campaignFixtures.mjs` provisions the fixture once per worktree, for
+the controls that declare it.
+
+The rule it exists to enforce is that the prerequisite can never be satisfied by
+bytes nobody verified:
+
+- the digest is **read** from the repository's own committed
+  `environments/otel-demo/qualification/provenance.json`, not restated, so a
+  re-pin cannot leave the campaign provisioning the previous release;
+- the extraction directory is **derived** from that digest
+  (`extracted-<first 16 hex>`), which is the same derivation
+  `qualify-otel-demo.mjs` performs and the exact directory
+  `composeSubstrate.test.ts` reads;
+- only the qualifier's own three config paths are extracted;
+- a pre-existing extraction is reused **only when complete**, and re-made from
+  the verified archive when not — a half-extracted root is the case a bare
+  `existsSync` would pass and `docker compose config` would then fail inside,
+  where it looks like a substrate fault;
+- a canonical ignored directory is **never copied**. Extraction is always from an
+  archive that matched the pin;
+- fetching is opt-in through `ERL2_CAMPAIGN_ALLOW_FETCH=1`. Absent that, a
+  missing archive is an unavailable prerequisite, not a silent download of
+  whatever the URL serves today.
+
+Provisioned state lives inside the worktree, so `release()` removes it with
+everything else, and the destination is git-ignored, so `restore()`'s `git status
+--porcelain` cannot see it and the byte-identical-tree certification is
+unaffected.
+
+Two prerequisites exist, deliberately. `otel-demo-upstream` is *provisioned* —
+the campaign can make it true. `docker-daemon` is only *detected*; nothing the
+campaign does conjures a daemon, and pretending otherwise would turn a host fact
+into a harness failure. `container-deadline-kills-the-container` has carried a
+note since it was written asking readers to read its no-daemon result as
+UNMEASURED HERE by hand; it now declares the prerequisite and the harness says it.
+
+### 8.3 Why a skip needs its own column
+
+A skip is neither a result nor a fault, and both existing columns lie about it.
+Scoring it as a result claims the campaign learned something about a guard it
+never ran. Scoring it as a harness error claims something broke when the only
+fact is that this host is not the host.
+
+| condition | result | agreement |
+|---|---|---|
+| designated case skipped, prerequisite **declared** | `unmeasured_here` | neither — `agreed: null` |
+| designated case skipped, **no** prerequisite declared | `designated_case_skipped` | harness error |
+| designated case failed | `named_tests_failed` | agreement |
+| nothing skipped, nothing failed, kill expected | `tests_passed_unexpectedly` | disagreement |
+
+The asymmetry is the point. A declared prerequisite is a claim made in advance
+and reviewable; an undeclared skip is a designated case that vanished with nobody
+having said it might, and that stays fail-closed. A typo in
+`requiresPrerequisite` would otherwise buy a control a permanent, silent
+`unmeasured_here`, so the name is validated against the registry before any
+worktree exists.
+
+The campaign summary now reconciles **discovered = agreements + disagreements +
+unmeasured + harness errors** and refuses to finish if they do not add up. The
+zero-disagreement rule is untouched: an unmeasured control is not an acceptable
+disagreement, it is an absent measurement, and the summary says so in its own
+section rather than folding it into a total.
+
+Sixteen table-driven cases in `tests/integration/negativeControlHarness.test.ts`
+pin the truth table, including the exact recorded defect (28 pass / 0 fail with
+the designated case skipped), the undeclared variant, cancellation, truncated
+output, multiple skips where the designated case still failed, and both
+`container-deadline-kills-the-container` hosts. One control asserts the single
+property the whole correction exists to guarantee: **a skipped designated case is
+never an agreement, under any declaration.**
+
+### 8.4 Targeted reproduction
+
+Run through the real campaign path, one control, before any full campaign.
+
+| fixture | outcome |
+|---|---|
+| available | `· prerequisite otel-demo-upstream: satisfied (provisioned …/extracted-1bf3ef8fbaffc049, archive sha256:1bf3ef8f…c051c)`; **28 pass / 1 fail**, `named_tests_failed`, **agreed**; accounting `1 = 1 + 0 + 0 + 0` |
+| unavailable | prerequisite refused with the reason and no fallback; **not patched, not built, not run**; `unmeasured_here`; accounting `1 = 0 + 0 + 1 + 0` |
+
+Both left the working tree byte-identical, no worktree registered, and no temp
+root behind.
