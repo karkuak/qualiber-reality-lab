@@ -134,6 +134,25 @@ export const CONTROLS = [
     expect: "fail",
   },
   {
+    id: "adapter-mode-binding",
+    what: "a run cannot change the subject seam or the current receipt it froze at preregistration",
+    file: "packages/cli/src/journeyCommands.ts",
+    // The LIVE-001 P1 the independent review of `e9718e0` reproduced: a run
+    // preregistered without an adapter could later supply a real entrypoint and
+    // authorize receipt A on one command and receipt B on the next, with
+    // neither inside the frozen boundary. Removing this single call restores
+    // exactly that bypass — `adapterCertificationReceiptHash` then falls back to
+    // whatever flag the command carries, because no binding contradicts it.
+    //
+    // `void` rather than deletion: the function must stay referenced or the
+    // patched tree fails to compile on an unused declaration, and a control that
+    // cannot build is a harness error rather than evidence.
+    find: "  assertSubjectModeUnchanged(flags, runRoot);",
+    replace: "  void assertSubjectModeUnchanged;",
+    tests: ["tests/dist/adversarial/adapterModeBinding.test.js"],
+    expect: "fail",
+  },
+  {
     id: "restore-receipt-status",
     what: "a driver-reported failed restore is a restoration failure, drift or not",
     file: "packages/core/src/run/environmentRun.ts",

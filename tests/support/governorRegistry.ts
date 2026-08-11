@@ -73,6 +73,8 @@ export interface GovernorRegistry {
   readonly externalAdapterHashes: Readonly<Record<string, Hash>>;
   /** Admitted certification receipt hashes for external adapters, by adapter id. */
   readonly externalAdapterCertificationHashes: Readonly<Record<string, Hash>>;
+  /** The external adapter manifests themselves, by adapter id. */
+  readonly externalAdapterManifestsById: Readonly<Record<string, SubjectAdapterManifestV1>>;
   /**
    * Manifest and certification hashes for each admitted sabotage fixture,
    * keyed by fixture name. Empty unless `certifiedSabotageAdapters` was given.
@@ -480,6 +482,10 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
   // Sabotage fixtures that are legitimately admitted and then misbehave. None
   // is admitted unless a caller asks for it, so a default registry's bytes are
   // unchanged by this seam existing.
+  const externalAdapterManifestsById: Record<string, SubjectAdapterManifestV1> = {};
+  for (const manifest of options.externalAdapterManifests ?? []) {
+    externalAdapterManifestsById[manifest.adapter_id] = manifest;
+  }
   const externalAdapterCertificationHashes: Record<string, Hash> = {};
   for (const receipt of options.externalAdapterCertifications ?? []) {
     externalAdapterCertificationHashes[receipt.adapter_id] = admit(
@@ -884,6 +890,7 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
     referenceLimitedCertificationHash,
     referenceOtelDemoCertificationHash,
     externalAdapterCertificationHashes,
+    externalAdapterManifestsById,
     sabotageAdapterHashes,
     externalAdapterHashes,
     genericRunPolicyHash,

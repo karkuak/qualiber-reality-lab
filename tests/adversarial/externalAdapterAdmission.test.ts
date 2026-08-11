@@ -45,7 +45,11 @@ import {
 } from "@erl2/integrity";
 import {
   BOOTSTRAP_RECEIPT_SENTINEL,
+  PRE_ENVIRONMENT_GATE_IDS,
+  adapterCertifiedGateResults,
+  assertAdapterCertificationApplicability,
   deriveAdapterCertifiedGate,
+  requiredGateIds,
   retainAdmittedAdapter,
   verifyAdapterCertification,
   verifyReceiptSignature,
@@ -496,53 +500,57 @@ test("ADMISSION: retention into a missing registry root refuses without creating
 
 // -- 17/20. the gate itself --------------------------------------------------
 
-test("GATE: adapter-certified is derived, and a manifest alone never satisfies it", () => {
+test("GATE: adapter-certified is applicable only to a real adapter, and always names the receipt", () => {
   const manifestHash = `sha256:${"a".repeat(64)}` as Hash;
   const receiptHash = `sha256:${"b".repeat(64)}` as Hash;
+  const admission = {
+    adapterId: ADAPTER_ID,
+    adapterVersion: "0.1.0",
+    manifestHash,
+    receiptHash,
+    adapterArtifactHash: `sha256:${"c".repeat(64)}` as Hash,
+    certifierId: CERTIFIER_ID,
+    certifierIsAdapterOwner: false as const,
+    certifiedOperations: [...OPERATIONS],
+    certifiedPackageKinds: [...PACKAGE_KINDS],
+    authenticity: "locally_observed_unauthenticated" as const,
+    receiptLinkage: "bootstrap_no_prior_receipt" as const,
+    tier: "development" as const,
+  };
 
-  // A run that dispatched a real adapter with no certification fails the gate.
-  const uncertified = deriveAdapterCertifiedGate({
-    adapterManifestHash: manifestHash,
-    certification: undefined,
-    boundCertificationHash: undefined,
-    dispatchedRealAdapter: true,
-  });
-  assert.equal(uncertified.passed, false, "a dispatched adapter with no receipt must fail");
-  assert.deepEqual(uncertified.evidence_refs, [manifestHash]);
-
-  // A run that bound certification which no longer re-validates fails too, even
-  // though it dispatched nothing — it is held to what it bound.
+  // A real run whose certification no longer validates fails — it is held to
+  // what it froze.
   const tampered = deriveAdapterCertifiedGate({
     adapterManifestHash: manifestHash,
+    subjectExecutionMode: "external_adapter",
     certification: undefined,
     boundCertificationHash: receiptHash,
     dispatchedRealAdapter: false,
   });
-  assert.equal(tampered.passed, false, "a bound-then-broken certification must fail");
+  assert.equal(tampered?.passed, false, "a bound-then-broken certification must fail");
+
+  // A real run with no binding at all also fails; there is no vacuous pass on
+  // this branch any more.
+  const unbound = deriveAdapterCertifiedGate({
+    adapterManifestHash: manifestHash,
+    subjectExecutionMode: "external_adapter",
+    certification: undefined,
+    boundCertificationHash: undefined,
+    dispatchedRealAdapter: true,
+  });
+  assert.equal(unbound?.passed, false, "a dispatched adapter with no receipt must fail");
 
   // The passing case names the receipt, not only the manifest.
   const certified = deriveAdapterCertifiedGate({
     adapterManifestHash: manifestHash,
-    certification: {
-      adapterId: ADAPTER_ID,
-      adapterVersion: "0.1.0",
-      manifestHash,
-      receiptHash,
-      adapterArtifactHash: `sha256:${"c".repeat(64)}`,
-      certifierId: CERTIFIER_ID,
-      certifierIsAdapterOwner: false,
-      certifiedOperations: [...OPERATIONS],
-      certifiedPackageKinds: [...PACKAGE_KINDS],
-      authenticity: "locally_observed_unauthenticated",
-      receiptLinkage: "bootstrap_no_prior_receipt",
-      tier: "development",
-    },
+    subjectExecutionMode: "external_adapter",
+    certification: admission,
     boundCertificationHash: receiptHash,
     dispatchedRealAdapter: true,
   });
-  assert.equal(certified.passed, true);
+  assert.equal(certified?.passed, true);
   assert.ok(
-    certified.evidence_refs.includes(receiptHash),
+    certified?.evidence_refs.includes(receiptHash),
     "a passing adapter-certified gate must cite the certification receipt",
   );
 });
@@ -618,33 +626,152 @@ test("REGRESSION LIVE-001: no validity path emits an unconditional passing adapt
   ];
   for (const source of sources) {
     const text = readFileSync(source, "utf8");
-    const index = text.indexOf('gate_id: "adapter-certified"');
-    assert.ok(index >= 0, `${source} no longer emits an adapter-certified gate at all`);
-    const following = text.slice(index, index + 400);
     assert.ok(
-      !/passed:\s*true/.test(following),
-      `${source} emits a constant passing adapter-certified gate again`,
+      !/gate_id:\s*"adapter-certified"/.test(text),
+      `${source} emits an adapter-certified gate literal again instead of deriving it`,
     );
     assert.ok(
-      following.includes("deriveAdapterCertifiedGate"),
+      text.includes("adapterCertifiedGateResults"),
       `${source} does not derive adapter-certified from retained evidence`,
     );
+    // …and it must pass the run's own frozen mode, not assume one.
+    assert.ok(
+      /subjectExecutionMode:\s*this\.(ws\.)?subjectExecutionMode\(\)/.test(text),
+      `${source} does not derive adapter-certified applicability from the frozen mode`,
+    );
   }
+
+  // The single place the gate id is now written must not be able to produce a
+  // pass without a validated certification.
+  const admissionSource = readFileSync(
+    path.join(repoRoot, "packages", "core", "src", "adapter", "admission.ts"),
+    "utf8",
+  );
+  const gateFn = admissionSource.slice(admissionSource.indexOf("export function deriveAdapterCertifiedGate"));
+  assert.ok(
+    gateFn.includes("input.certification !== undefined"),
+    "the derivation no longer requires a validated certification to pass",
+  );
 });
 
-// -- 24. bundled adapters keep their established rules -----------------------
-
-test("ADMISSION: the fake port needs no certification, and gains none", () => {
-  // A run that executes no adapter bytes has nothing to certify. It passes
-  // vacuously on the manifest — and, critically, its evidence does not name a
-  // certification receipt, so no reader can mistake it for a certified adapter.
+test("GATE: a fake-port run omits adapter-certified entirely — not applicable, not passed", () => {
+  // The review's P2: a boolean cannot say "no external adapter was selected".
+  // `passed: true` over manifest-only evidence reads as a certification claim,
+  // so the gate is absent instead — the same way the catalogue already omits
+  // the environment and selection gates on a run that reached neither.
   const manifestHash = `sha256:${"d".repeat(64)}` as Hash;
   const gate = deriveAdapterCertifiedGate({
     adapterManifestHash: manifestHash,
+    subjectExecutionMode: "development_fake_port",
     certification: undefined,
     boundCertificationHash: undefined,
     dispatchedRealAdapter: false,
   });
-  assert.equal(gate.passed, true);
-  assert.deepEqual(gate.evidence_refs, [manifestHash]);
+  assert.equal(gate, undefined, "a fake-port run must not emit an adapter-certified gate");
+
+  assert.deepEqual(
+    adapterCertifiedGateResults({
+      adapterManifestHash: manifestHash,
+      subjectExecutionMode: "development_fake_port",
+      certification: undefined,
+      boundCertificationHash: undefined,
+      dispatchedRealAdapter: false,
+    }),
+    [],
+    "the gate list must contain no adapter-certified entry for a fake-port run",
+  );
+
+  // And the validity catalogue agrees it is not required there.
+  assert.ok(
+    !requiredGateIds(PRE_ENVIRONMENT_GATE_IDS, { externalAdapter: false }).includes(
+      "adapter-certified",
+    ),
+  );
+  assert.ok(
+    requiredGateIds(PRE_ENVIRONMENT_GATE_IDS, { externalAdapter: true }).includes(
+      "adapter-certified",
+    ),
+  );
+});
+
+// -- the applicability truth table, enforced rather than assumed --------------
+
+test("GATE-APPLICABILITY: omitting adapter-certified for a fake run does not make it optional for a real one", () => {
+  const manifestHash = `sha256:${"a".repeat(64)}` as Hash;
+  const receiptHash = `sha256:${"b".repeat(64)}` as Hash;
+  const bootstrap = BOOTSTRAP_RECEIPT_SENTINEL;
+  const otherGates: readonly { gate_id: string; passed: boolean; evidence_refs: readonly Hash[] }[] =
+    [{ gate_id: "adapter-authority-respected", passed: true, evidence_refs: [manifestHash] }];
+
+  const check = (
+    gates: readonly { gate_id: string; passed: boolean; evidence_refs: readonly Hash[] }[],
+    mode: "development_fake_port" | "external_adapter",
+    receipt?: Hash,
+  ): (() => void) => () =>
+    assertAdapterCertificationApplicability([...otherGates, ...gates], {
+      subjectExecutionMode: mode,
+      ...(receipt === undefined ? {} : { currentReceiptHash: receipt }),
+    });
+
+  // Fake/internal: the gate must be absent.
+  check([], "development_fake_port")();
+  throwsCode(
+    check([{ gate_id: "adapter-certified", passed: true, evidence_refs: [manifestHash] }], "development_fake_port"),
+    CODES.EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED,
+    "a fake run emitting the gate",
+  );
+
+  // External with a valid current receipt: exactly one gate, citing it.
+  check(
+    [{ gate_id: "adapter-certified", passed: true, evidence_refs: [receiptHash, manifestHash] }],
+    "external_adapter",
+    receiptHash,
+  )();
+
+  // External with the gate omitted: refused.
+  throwsCode(
+    check([], "external_adapter", receiptHash),
+    CODES.GRAPH_CLOSURE_MISSING_ROLE,
+    "an external run omitting the gate",
+  );
+
+  // External with the gate duplicated: refused — "exactly one".
+  throwsCode(
+    check(
+      [
+        { gate_id: "adapter-certified", passed: true, evidence_refs: [receiptHash, manifestHash] },
+        { gate_id: "adapter-certified", passed: true, evidence_refs: [receiptHash, manifestHash] },
+      ],
+      "external_adapter",
+      receiptHash,
+    ),
+    CODES.GRAPH_CLOSURE_MISSING_ROLE,
+    "an external run emitting two gates",
+  );
+
+  // External with manifest-only evidence: refused.
+  throwsCode(
+    check(
+      [{ gate_id: "adapter-certified", passed: true, evidence_refs: [manifestHash] }],
+      "external_adapter",
+      receiptHash,
+    ),
+    CODES.GRAPH_CLOSURE_MISSING_ROLE,
+    "an external run citing only the manifest",
+  );
+
+  // External citing the manifest's bootstrap/prior receipt: refused.
+  throwsCode(
+    check(
+      [{ gate_id: "adapter-certified", passed: true, evidence_refs: [bootstrap, manifestHash] }],
+      "external_adapter",
+      receiptHash,
+    ),
+    CODES.GRAPH_CLOSURE_MISSING_ROLE,
+    "an external run citing the bootstrap sentinel",
+  );
+
+  // And the required-set still names it for external runs.
+  assert.ok(requiredGateIds(PRE_ENVIRONMENT_GATE_IDS, { externalAdapter: true }).includes("adapter-certified"));
+  assert.ok(!requiredGateIds(PRE_ENVIRONMENT_GATE_IDS, { externalAdapter: false }).includes("adapter-certified"));
 });

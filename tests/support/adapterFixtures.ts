@@ -220,11 +220,16 @@ export function certifiedSabotageAdapter(
 export function syntheticCertificationReceipt(
   manifest: SubjectAdapterManifestV1,
   entryPath: string,
+  options: {
+    readonly receiptId?: string;
+    readonly verdict?: "certified" | "refused";
+    readonly refusalCodes?: readonly string[];
+  } = {},
 ): SubjectAdapterCertificationReceiptV1 {
   const entryDigest = hashBytes(readFileSync(entryPath));
   const body = {
     schema_version: "subject-adapter-certification-receipt/v1" as const,
-    receipt_id: `cert-${manifest.adapter_id}`,
+    receipt_id: options.receiptId ?? `cert-${manifest.adapter_id}`,
     suite: "ADAPTER-CERT-V1" as const,
     adapter_manifest_hash: manifest.core_hash,
     adapter_artifact_hash: entryDigest,
@@ -240,8 +245,8 @@ export function syntheticCertificationReceipt(
         detail: "fixture receipt, certified by construction",
       },
     ],
-    verdict: "certified" as const,
-    refusal_codes: [] as string[],
+    verdict: (options.verdict ?? "certified") as "certified" | "refused",
+    refusal_codes: [...(options.refusalCodes ?? [])],
     certifier_id: "erl2-certifier",
     certifier_is_adapter_owner: false as const,
     enforced_controls: [],

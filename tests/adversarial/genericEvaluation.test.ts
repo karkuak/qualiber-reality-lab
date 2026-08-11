@@ -151,6 +151,7 @@ function validity(status: "valid" | "invalid" = "valid", runId = RUN_ID, policy 
           g.gate_id === "acquired-bytes-frozen" ? { ...g, passed: false } : g,
         );
   return buildPreEnvironmentValidity({
+    subjectExecutionMode: "development_fake_port",
     runId,
     terminalStage: "verify_package",
     genericRunPolicyHash: policy,
@@ -623,6 +624,7 @@ test("VALIDITY-COMPLETENESS: an omitted required gate is not a silent pass", () 
   throwsCode(
     () =>
       buildPreEnvironmentValidity({
+    subjectExecutionMode: "development_fake_port",
         runId: RUN_ID,
         terminalStage: "verify_package",
         genericRunPolicyHash: POLICY,
