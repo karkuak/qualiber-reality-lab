@@ -5,26 +5,26 @@
   "failed_phase": {
     "kind": "cancellation",
     "cancelled_during": "pre_environment",
-    "lifecycle_event_hash": "sha256:e9ff3fbcbee6b04db5a059f5f0526c6382a085b85a253380c95c825e5a6b2cae"
+    "lifecycle_event_hash": "sha256:86d860ba16625b466d8db4a8b81c950e8c65d3df63dae4a67682ffe2edce77db"
   },
   "terminal_reason": {
     "kind": "cancellation",
     "classification": "cancellation",
     "cancellation_request_hash": "sha256:785b42e72ff28624021497edfe349d95e767d9f19069ed7e43eca2bd9147e67f",
-    "cancellation_event_hash": "sha256:e9ff3fbcbee6b04db5a059f5f0526c6382a085b85a253380c95c825e5a6b2cae",
+    "cancellation_event_hash": "sha256:86d860ba16625b466d8db4a8b81c950e8c65d3df63dae4a67682ffe2edce77db",
     "requested_by_actor_hash": "sha256:4aebad5eca7f119419e59ae16b362b7b6b9feccad7ba4fa1e6ed2422809fa954",
     "reason_code": "OPERATOR_CANCELLED"
   },
   "available_evidence": [
     {
       "artifact_role": "acquisition-preregistration",
-      "artifact_hash": "sha256:fe13f8ddf1a61edbd9993a4b19aeff1de36b9a3ba64b7e2eb0296d521db99ae0",
-      "reached_event_hash": "sha256:a446e0a9850279ffe386e1830d6da568ca45206b7139191bb4c1e8280c85f25b"
+      "artifact_hash": "sha256:b9426f7948beecd71f8ed1a99b22d4db7a356108c974e4e2eeacbf3fcfbc8577",
+      "reached_event_hash": "sha256:a5daaa3b7f34e7eece23d40ca16df6be17d2d6145977dd2da39113a610c95ade"
     },
     {
       "artifact_role": "acquisition-source-manifest",
       "artifact_hash": "sha256:fa57383df86cc9071d64f8bf365328cadf0abeab833b2a032ca3ef1d0a6c1c34",
-      "reached_event_hash": "sha256:a446e0a9850279ffe386e1830d6da568ca45206b7139191bb4c1e8280c85f25b"
+      "reached_event_hash": "sha256:a5daaa3b7f34e7eece23d40ca16df6be17d2d6145977dd2da39113a610c95ade"
     }
   ],
   "cleanup": {
@@ -32,7 +32,7 @@
     "status": "not_required",
     "attempt_hashes": []
   },
-  "lifecycle_head_hash": "sha256:03b1814749b722a883bd44e15fd1742f4587147e4ce769858943e2f495ada364",
+  "lifecycle_head_hash": "sha256:deeb6973d756dde81abf8ab65e9552d12e5fd6515383cf2d79e97858c05396ed",
   "invalidated_at": "2026-07-01T00:00:07Z",
-  "core_hash": "sha256:207f4b32d9b3ddf1c84b3187885dfa2e31cb297db4e0f996c4d7de25bec97045"
+  "core_hash": "sha256:3d7c9ff2e1f42d46cf74c5965d52eb756af07107c3848476269b432f87bd5bac"
 }
