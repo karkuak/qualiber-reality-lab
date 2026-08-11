@@ -118,38 +118,109 @@ indistinguishable from a certified one.
 Everything is validated **before** the registry is touched, so a refusal leaves
 no partial mutation.
 
-### 5. The live path binds the receipt, and the gate derives from it
+### 5. The subject seam and the current receipt are frozen at preregistration
 
-`preregister-acquisition` requires `--adapter-certification HASH` whenever
-`--adapter-entry` is present, re-validates it against the manifest the run is
-binding — a registry is a directory, and a directory can be edited between two
-commands — retains it at `retained/adapter-certification-receipt.json`, and
-records the `adapter-certification-receipt` role in the lifecycle. Later
-commands read the retained receipt, so no flag can substitute a different
-certification mid-run.
+The first version of this decision bound the receipt only when a command
+happened to carry `--adapter-entry`. The independent review of `e9718e0` showed
+what that leaves open: a run preregistered *without* an adapter recorded nothing
+saying so, and later commands could introduce a real adapter and authorize
+receipt A on one command and receipt B on the next, with neither inside the
+frozen boundary.
 
-`adapter-certified` is now derived by `deriveAdapterCertifiedGate`:
+`AcquisitionPreregistrationV1` therefore carries two new members:
 
-- certification bound and still re-validating → **passed**, evidence names the
-  **receipt** and the manifest;
-- certification bound but no longer re-validating → **failed**;
-- a real adapter dispatched with no certification → **failed**;
-- no adapter bytes dispatched at all (the development fake port) → **passed
-  vacuously** on the manifest, the same shape
-  `attributable-telemetry-retained` uses for a run that never declared
-  telemetry.
+- `subject_execution_mode` — `development_fake_port` or `external_adapter`,
+  required;
+- `adapter_certification_receipt_hash` — the exact **current** receipt, present
+  if and only if the mode is `external_adapter`, and forbidden otherwise, so
+  "no adapter certification" cannot be confused with "certification omitted".
 
-"Dispatched a real adapter" is read from the `adapter-sandbox-invocation-manifest`
-artifacts the host freezes, so it answers what happened rather than what was
-configured.
+Both are inside the preregistrar's signature and the hash-chained lifecycle, so
+the binding survives process exit, a fresh command, recovery and replay. CLI
+memory never decides it.
 
-### 6. Time of check is not time of use
+`assertSubjectModeUnchanged` is the single authoritative enforcement point. A
+fake-port run refuses a later `--adapter-entry` and a later
+`--adapter-certification`; a real run refuses to run without its entrypoint,
+because omission would otherwise downgrade it to the fake port. The receipt is
+resolved **only** from the frozen field; a later flag must match it exactly or be
+absent, and can never replace it.
+
+The one moment the flag decides is preregistration itself, where no binding
+exists yet — and that is why the pre-host `verifyAdapterCertification` call is
+still load-bearing rather than redundant: the subject port constructs the host
+before the workspace validates, so without it an uncertified receipt would build
+a host. Every *later* command is answered by the binding alone. There are not
+two independent defenses here, and this ADR does not claim any.
+
+### 5a. `adapter-certified` applies only to a real adapter
+
+`deriveAdapterCertifiedGate`:
+
+- `development_fake_port` → the gate is **omitted entirely**. Not applicable, not
+  passed. `requiredGateIds` drops it from the required set for that mode, exactly
+  as `PRE_ENVIRONMENT_GATE_IDS` already omits the environment and selection gates
+  on a run that reached neither.
+- `external_adapter` with a certification that re-validates → **passed**, and the
+  evidence always names the receipt.
+- `external_adapter` otherwise → **failed**.
+
+`passed: true` is now reachable only from a validated retained receipt. The
+previous "vacuous pass on manifest-only evidence" was a certification claim
+wearing a boolean, which is what the review rejected.
+
+### 5b. Failure evidence names the receipt that authorized execution
+
+`AdapterFailureV1.certification_receipt_hash` was populated from the *manifest's*
+`certification_receipt_hash`, which is a bootstrap/prior reference — so the
+hostile golden recorded the all-zero sentinel while its real authorizing receipt
+was nonzero. It now comes from the frozen preregistration binding. An
+`external_adapter` failure with no retained current receipt fails closed rather
+than falling back; a fake-port failure carries the bootstrap sentinel, because
+there is genuinely no adapter certification, and manufacturing one would be the
+same lie in the other direction.
+
+The three references are distinct and are used distinctly:
+
+| Field | Means |
+|---|---|
+| manifest `certification_receipt_hash` | a **prior/bootstrap** receipt, unresolved |
+| receipt `adapter_manifest_hash` | the manifest this **current** certification covers |
+| preregistration `adapter_certification_receipt_hash` | the **current** receipt authorizing *this run* |
+| finding `certification_receipt_hash` | the current receipt that authorized the **failed execution** |
+
+### 6. Deterministic substitution detection — and what it is not
 
 `AdapterHost` takes the certified artifact digest and re-reads the entry before
 **every** dispatch, using the `executableDigest` it already computed rather than
 a second freeze mechanism. Admission hashes the bytes once; the host re-hashes
-them on each operation, before anything is spawned. Replacing the entry after
-admission cannot execute different bytes under the admitted certification.
+them on each operation, before anything is spawned.
+
+**The guarantee, stated exactly.** Under normal local-process operation, a
+*deterministic* post-admission replacement of the adapter entry — an overwrite
+at the same path, or a retargeted symlink — is detected before the next dispatch
+and refused with `ADAPTER_IDENTITY_MISMATCH`. Both cases are proven by
+`tests/adversarial/adapterModeBinding.test.ts`, which observes that the
+substituted adapter never executed rather than that a helper returned an error.
+
+**What this is not**, corrected from the first draft of this ADR, which claimed
+the implementation "cannot execute different bytes":
+
+- It is **not** atomic execution of frozen bytes. `host.ts` hashes a *path*,
+  other work happens, and the same mutable path is later handed to the launcher.
+  There is a window between the check and the spawn.
+- It is therefore **not** protection against a malicious same-user adversary who
+  races that window. Nothing here closes a check-to-use race.
+- It is **not** container or kernel isolation, and it does not change the
+  `local-process` profile's thirteen unsupported controls.
+- It is **not** authenticated certification. No certifier authority is pinned on
+  this checkout.
+
+That residual race sits outside the local-process threat model, which treats a
+trusted reference subject as a bug rather than an adversary (ADR-ERL2-016,
+`assertSubjectMayRunUnderProfile`). It is recorded here rather than implied
+away, and closing it would need an immutable file descriptor or an image-backed
+execution path — deliberately out of scope for this package.
 
 ## Consequences
 
@@ -163,13 +234,23 @@ suffices: an admitted manifest must name the digest of the file that really
 runs.
 
 That legitimately changes the three `fixtures/golden/adapter-platform/` runs and
-was regenerated once through `evidence:update`. The `hostile-adapter` fixture
-changes what it demonstrates: pairing `reference-correct`'s certified manifest
-with different bytes on disk is now caught *before* the adapter is spawned, so
-its refusal is an identity mismatch rather than a deadline. That is the stronger
-outcome and it is the point of §6 — but the runtime deadline and process-tree
-termination path is no longer covered by a golden, and remains covered by
-`tests/adversarial/adapterHost.test.ts` and `tests/e2e/adapterJourney.test.ts`.
+was regenerated through `evidence:update`.
+
+The `hostile-adapter` fixture keeps demonstrating what it always did. An earlier
+draft of this ADR said it had become an identity mismatch; that is wrong, and
+the generator, ledger and golden all disagree with it. The sabotage timeout
+fixture is admitted on a certified receipt over **its own** real bytes, so the
+run is legitimate right up to dispatch and the refusal that follows is the
+deadline — `ADAPTER_DEADLINE_EXCEEDED`, adapter-owned, with an invalid-run
+record. Certification is not a promise of good behaviour, and the fixture says
+so directly.
+
+What that golden proves, precisely: the timeout/failure shape, adapter
+ownership, and that a grandchild process was *spawned* (the retained PID). It
+does **not** prove process-tree termination — no independent post-kill liveness
+receipt is retained, so the PID is evidence of emission, not of death. Termination
+is proven directly by `tests/adversarial/adapterHost.test.ts`, and that is the
+only place this repository may cite for it.
 
 ### Bundled adapters keep their established rules
 

@@ -27,12 +27,13 @@ temporary directory and would otherwise have been lost.
 `report.md` is the run's own report, byte-identical to the original
 (`22134d7d3902367cf5d3a31ccbb3f44f77bbd4504f19e50be98d2ba35a386118`).
 `SHA256SUMS` is the original inventory, so the copy can still be checked against
-the four logs that stayed behind.
+the six artifacts that stayed behind.
 
-The four logs themselves — `admission-source-inspection.log`,
-`public-interface.log`, `preflight-coordinates.log`,
-`environment-inventory.log`, `cleanup-final-state.log` and
-`command-intervention-log.md` — are **not** copied. They are runtime output with
+The other six artifacts — five `.log` files
+(`admission-source-inspection.log`, `public-interface.log`,
+`preflight-coordinates.log`, `environment-inventory.log`,
+`cleanup-final-state.log`) and one Markdown intervention log
+(`command-intervention-log.md`) — are **not** copied. They are runtime output with
 absolute local paths, and the report quotes the load-bearing lines from each.
 Their digests are in `SHA256SUMS`, so a reader who still holds the original root
 can verify them; a reader who does not can still verify this report.

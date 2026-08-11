@@ -58,9 +58,10 @@ The reverse cannot exist: a manifest's `core_hash` covers its
 point. `certification_receipt_hash` is therefore a prior/bootstrap reference,
 classified and never resolved.
 
-No contract changed. The receipt is already ERL2-C-125; the run retains it by
-artifact role, the way every other retained artifact is bound, so
-`registeredContractCount()` and the generated types are untouched.
+No *new* contract was added. The receipt is already ERL2-C-125. The corrective
+package did extend `AcquisitionPreregistrationV1` with two members — see §7 —
+because the independent review showed the retained-role binding alone did not
+make the real/fake choice durable.
 
 ## 4. Evidence that legitimately changed, and why
 
@@ -87,6 +88,32 @@ Nothing outside `fixtures/golden/adapter-platform/` and the exclusion
 manifest's own counts was expected to move, and the published diff was reviewed
 against that prediction.
 
+**Exact counts, base → `e9718e0`** (established by the independent review; an
+earlier draft of this ledger said "148 regenerated goldens", which is not a
+figure Git produces):
+
+| Measure | Count |
+|---|---|
+| logical changed entries | 178 |
+| rename-aware `fixtures/golden/adapter-platform/**` entries | 147 |
+| adapter-platform pathnames, rename detection **disabled** | 149 |
+| `fixtures/golden/cli-transcript.json` | 1 |
+| all other entries | 30 |
+
+The two figures differ because two files were renamed, and a rename counts once
+with detection on and twice with it off. The name-status inventory is preserved
+at `docs/evidence/independent-review-e9718e0/changed-files.txt`.
+
+**The `cli-transcript.json` baseline refresh is accepted, not attributed to this
+package.** It is one of the seven byte-pin exclusions and had not been
+regenerated since 2026-08-04. Verified before accepting it: `registered_contracts`
+155 → 156 comes from `ERL2-C-160`, added 2026-08-06 in `9f22e30`; the
+container-launcher fields come from ADR-ERL2-034, 2026-08-07; this package did
+not touch `packages/contracts/src/registry.ts` in its first three commits; and no
+load-bearing claim rests on the transcript, precisely because it is excluded from
+the pin. Splitting it out would mean rewriting published candidate history,
+which is a worse trade than documenting it.
+
 No golden binds `reference-otel-demo`, and the `fake-subject` runs
 (`valid-pre-environment-run`, both `generic-finalization-*`, the three
 `invalid-run-*`, `journey-acquisition-to-frozen-output`) execute no adapter
@@ -94,14 +121,12 @@ bytes, so they are untouched.
 
 ## 5. What did not change
 
-`adapter-authority-respected` and every unrelated gate. The fake port's rules:
-it dispatches nothing, so it certifies nothing, passes the gate vacuously, and
-its evidence does not name a receipt — no reader can mistake it for a certified
-adapter.
+`adapter-authority-respected` and every unrelated gate. The fake port dispatches
+nothing and certifies nothing; after the correction in §7 its `adapter-certified`
+gate is **omitted** rather than passed, so no reader can mistake it for a
+certified adapter.
 
-B-129 and B-130 are untouched. The missing adapter-path campaign red control is
-not added; the receipt-bypass regression required by this remediation is, in
-`tests/adversarial/externalAdapterAdmission.test.ts`.
+B-129 and B-130 are untouched.
 
 ## 6. Honest limits
 
@@ -119,4 +144,88 @@ not added; the receipt-bypass regression required by this remediation is, in
 - This does not make Lab onboarding two commands. The governor registry,
   challenge admission, policies and limits are still prepared out of band.
 - The Docker-gated compose end-to-end tests were updated for the new admission
-  requirement but **not executed** — this package does not run Docker.
+  requirement but **not executed** in the first package — it did not run Docker.
+  They were executed in the corrective package; see §7.
+- The first package ran no **full negative-control campaign**. It did run 25 new
+  adversarial admission controls, which is a different thing, and the two are
+  not interchangeable.
+
+## 7. Corrective package — the independent review of `e9718e0`
+
+An independent security and evidence-boundary review of the candidate returned
+**CHANGES REQUIRED**, preserved at
+[`docs/evidence/independent-review-e9718e0/`](../evidence/independent-review-e9718e0/README.md).
+Its full-suite rerun was inconclusive and it ran no campaign; neither is cited
+here as evidence either way.
+
+### P1 — mode and receipt were not durable
+
+Reproduced by the reviewer: preregister with no `--adapter-entry`, then
+`acquire` with a real entry and receipt A, then `verify-package` with receipt B.
+Both succeeded. No receipt was ever retained.
+
+`AcquisitionPreregistrationV1` now carries `subject_execution_mode`
+(`development_fake_port` | `external_adapter`, required) and
+`adapter_certification_receipt_hash` (present **iff** the mode is
+`external_adapter`, forbidden otherwise). Both sit inside the preregistrar's
+signature and the hash-chained lifecycle, so the binding survives process exit,
+a fresh command, recovery and replay — the property CLI memory could not give.
+
+`assertSubjectModeUnchanged` is the single authoritative enforcement point. A
+fake run refuses a later entrypoint and a later receipt; a real run refuses to
+proceed without its entrypoint, because omission would be a silent downgrade;
+and the receipt resolves **only** from the frozen field.
+
+### P2 — failure evidence named the prior receipt
+
+`freezeAdapterFailureFinding` read the manifest's bootstrap/prior field. It now
+reads the frozen preregistration binding, and an `external_adapter` failure with
+no retained current receipt fails closed. A fake-port failure carries the
+bootstrap sentinel, because there genuinely is no adapter certification.
+
+### P2 — "not applicable" was represented as a pass
+
+`adapter-certified` is now **omitted** for a fake-port run, and `requiredGateIds`
+drops it from the required set for that mode — the same representation
+`PRE_ENVIRONMENT_GATE_IDS` already uses for the environment and selection gates
+on a run that reached neither. No validity-contract change was needed:
+`gate_results` is a list, and absence already meant "never exercised".
+`passed: true` is now reachable only from a validated retained receipt.
+
+### P2 — two enforcement points were not load-bearing
+
+Both survivors were re-measured with the same mutations and are now caught:
+
+| mutation | before | after |
+|---|---|---|
+| remove pre-host `verifyAdapterCertification` | survived 31 tests | **1 control fails** |
+| remove per-dispatch `assertEntryDigestUnchanged` | survived 71 tests | **2 controls fail** |
+
+The pre-host call was measured, not assumed, to be redundant for every *later*
+command once the binding exists — removing it changed nothing observable there.
+It is load-bearing at **preregistration**, the one moment no binding exists yet
+and the subject port builds the host before the workspace validates. That is the
+case the new control pins, and this ledger claims exactly one authoritative
+enforcement point rather than two independent defenses.
+
+The per-dispatch controls observe whether the substituted adapter *executed* —
+it writes `SUBSTITUTE-EXECUTED` — rather than whether a helper returned an
+error, and cover deterministic same-path replacement and symlink retargeting.
+
+### P3 — prose exceeded the retained proof
+
+ADR-ERL2-036 §6 now states the guarantee as deterministic post-admission
+substitution detection, and explicitly disclaims atomic frozen-byte execution,
+protection from a malicious same-user check-to-spawn race, container isolation
+and authenticated certification. The stale claim that the hostile golden became
+an identity mismatch is corrected — it remains a certified hostile timeout — and
+the golden is no longer cited as proof of process-tree termination, only of the
+timeout/failure shape and PID emission. Termination is proven in
+`tests/adversarial/adapterHost.test.ts`.
+
+### Campaign red control
+
+`adapter-mode-binding` removes `assertSubjectModeUnchanged` and requires
+`tests/dist/adversarial/adapterModeBinding.test.js` to fail. The campaign has
+**129** controls after this addition, discovered from the harness rather than
+assumed.
