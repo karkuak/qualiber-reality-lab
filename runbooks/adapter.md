@@ -122,6 +122,98 @@ const receipt = certifyAdapter({
 Any failed check makes the verdict `refused`, and a refused receipt certifies no
 operation and no package kind. There is no score and no override.
 
+## Admitting an external adapter
+
+A certified adapter is not yet an admissible one. The receipt has to be
+*admitted*, and a real adapter cannot be dispatched without it
+(ADR-ERL2-036). Admission takes three inputs and produces two hashes.
+
+```bash
+npm run erl2 -- admit-adapter --registry REGISTRY_DIR --adapter-manifest PATH/manifest.json --certification-receipt PATH/receipt.json --adapter-entry PATH/main.mjs
+```
+
+Then run the journey with the receipt hash it printed:
+
+```bash
+npm run erl2 -- preregister-acquisition --run-root RUN_DIR --registry REGISTRY_DIR --tier development --adapter-entry PATH/main.mjs --adapter ADAPTER_MANIFEST_HASH --adapter-certification CERTIFICATION_RECEIPT_HASH --acquisition-source HASH --acquisition-actor-script HASH --acquisition-actor-schema HASH --acquisition-step HASH --package-verification-step HASH --generic-policy HASH --trust-policy HASH --limits HASH --expires 2026-12-31T00:00:00Z
+```
+
+### The three inputs, and where the hashes come from
+
+| Input | What it is |
+|---|---|
+| `--adapter-manifest` | the adapter's signed `SubjectAdapterManifestV1` |
+| `--certification-receipt` | the `SubjectAdapterCertificationReceiptV1` `certifyAdapter` produced |
+| `--adapter-entry` | the entry module, whose bytes are re-hashed here and again before every dispatch |
+
+You do not compute any hash yourself. `admit-adapter` recomputes both
+`core_hash` values from the documents' own bytes and the entry's SHA-256 from
+the file, prints them, and refuses if any disagree. The
+`adapter_manifest_hash` and `certification_receipt_hash` it prints are the
+values `--adapter` and `--adapter-certification` take.
+
+### What it checks
+
+Both contracts; both core hashes; the entry's digest against the manifest and
+the receipt; that the receipt names this exact manifest; adapter id and version;
+the verdict is `certified` with no refusal codes and no failed check; that the
+certified operations and package kinds match the manifest's declarations
+exactly; that the certifier is not the adapter; and the trust-tier policy below.
+
+### Development versus scored
+
+| Tier | Unsigned or unverifiable receipt | Signed by a pinned authority |
+|---|---|---|
+| `development` (default, unscored) | admitted, labelled `locally_observed_unauthenticated` | admitted, `authenticated` |
+| `held_out`, `blind` (scored) | refused — `ADAPTER_CERTIFICATION_AUTHENTICATION_REQUIRED` | admitted |
+
+`locally_observed_unauthenticated` means the receipt is genuine evidence that
+nobody authenticated. No scored, blind or authenticated claim may be derived
+from a run admitted that way, and the run's `adapter-certified` gate cites the
+receipt so a reader can check for themselves.
+
+A signature that is *present but does not verify* — a wrong signed hash, an
+unpinned signer, or the all-zero development placeholder — is refused at **every**
+tier, development included. Absent evidence is honest; forged evidence is not.
+
+There is no `--allow-unsigned`. The development allowance comes from `--tier`,
+not from a flag that could be pointed at a scored run.
+
+### Where output goes, and how to clean it
+
+The pair is published atomically to
+`REGISTRY_DIR/external-adapters/<manifest-hash-without-prefix>/`, as
+`adapter-manifest.json` and `certification-receipt.json`. Both land or neither
+does. Re-admitting the identical pair is idempotent; a *different* receipt for
+the same manifest is refused rather than silently overwritten.
+
+Admission writes nothing else and starts no adapter. To undo it, delete that one
+directory.
+
+### Typed refusals
+
+| Code | Cause |
+|---|---|
+| `ADAPTER_CERTIFICATION_RECEIPT_REQUIRED` | `--adapter-entry` without `--adapter-certification` |
+| `ADMISSION_ARTIFACT_UNKNOWN` | the receipt hash is not in the registry |
+| `SCHEMA_VALIDATION_FAILED` | the document is not a valid contract — including a `certified` verdict carrying refusal codes |
+| `ARTIFACT_HASH_MISMATCH` | a document's bytes do not produce its declared `core_hash` |
+| `ADAPTER_NOT_CERTIFIED` | verdict `refused`, a failed check, or a signature that does not verify |
+| `ADAPTER_CERTIFICATION_IDENTITY_MISMATCH` | the receipt names a different manifest, id or version |
+| `ADAPTER_IDENTITY_MISMATCH` | the entry's bytes are not the certified bytes — at admission or before any dispatch |
+| `ADAPTER_CERTIFICATION_SCOPE_MISMATCH` | certified operations or package kinds differ from the manifest's |
+| `ADAPTER_SELF_CERTIFICATION_REFUSED` | the certifier is the adapter |
+| `ADAPTER_CERTIFICATION_AUTHENTICATION_REQUIRED` | unauthenticated certification at a scored tier |
+| `ADMISSION_RETENTION_FAILED` | the registry already holds a different admission for this manifest |
+
+### What still has to be done by hand
+
+This closes the adapter-admission blocker; it does not make Lab onboarding two
+commands. The governor registry, the challenge and journey commitments, the
+policies, the limits and the trust policy are still prepared out of band, and
+every `HASH` above other than the two admission outputs comes from that
+preparation.
+
 ## Running a journey through an adapter
 
 ```bash
@@ -133,6 +225,13 @@ Then `acquire`, `freeze-package`, `verify-package` with the same
 decides which adapter manifest is bound; passing a different `--adapter` is
 `ADMISSION_ARTIFACT_UNKNOWN`, and pointing `--adapter-entry` at a different
 adapter is `ADAPTER_IDENTITY_MISMATCH`.
+
+The run also durably retains the certification it was admitted on, so the same
+rule holds for it: a later `--adapter-certification` that differs from the
+retained receipt is `ADAPTER_CERTIFICATION_IDENTITY_MISMATCH`. The entry's
+digest is re-read and compared before **every** dispatch, not once at
+admission — replacing the file mid-run is refused before the adapter is
+spawned.
 
 `--fake-acquire` and `--fake-verify-package` script the development fake port
 only. Combining them with `--adapter-entry` is refused.
