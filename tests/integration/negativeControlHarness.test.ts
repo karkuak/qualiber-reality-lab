@@ -73,6 +73,7 @@ interface HarnessModule {
     readonly tests: readonly string[];
     readonly mustFail?: readonly string[];
     readonly mustFailCases?: readonly string[];
+    readonly requiresPrerequisite?: string;
     readonly expect: string;
   }[];
   readonly CONTROL_RESULT: Record<string, string>;
@@ -80,13 +81,22 @@ interface HarnessModule {
     readonly result: string;
     readonly pass: number;
     readonly fail: number;
+    readonly skipped?: number;
     readonly strayFiles?: readonly string[];
     readonly failingCases?: readonly string[];
     readonly missingCases?: readonly string[];
+    readonly skippedCases?: readonly string[];
+    readonly skippedDesignated?: readonly string[];
+    readonly skipReasons?: readonly string[];
+    readonly prerequisite?: string;
   };
   readonly parseFailingCases: (stdout: string) => readonly { readonly file: string; readonly name: string }[];
+  readonly parseSkippedCases: (
+    stdout: string,
+  ) => readonly { readonly name: string; readonly reason: string }[];
   readonly agreesWithExpectation: (result: string, expect: string) => boolean;
   readonly isHarnessError: (result: string) => boolean;
+  readonly isUnmeasured: (result: string) => boolean;
   readonly validateControlDeclarations: (controls: readonly unknown[]) => string[];
   readonly STAGE_TIMEOUT_MS: { readonly build: number; readonly suite: number };
   readonly STAGE_MAX_OUTPUT_BYTES: number;
@@ -1251,4 +1261,310 @@ test("NC-CAMPAIGN: every control names a suite file that exists in the source tr
     }
   }
   assert.deepEqual(missing, []);
+});
+
+// -- skipped cases, and the third column they need ---------------------------
+//
+// The defect the independent review of `90a0039` proved: `classifyTestRun` read
+// `tests`, `pass`, `fail` and `cancelled`, and never `skipped`. When the case a
+// control designates skips itself, the other cases in its file still pass, so
+// `fail === 0` was reached and — for a control expecting a kill — recorded as
+// `tests_passed_unexpectedly`. That is a disagreement manufactured out of a
+// measurement that never happened, and it short-circuited *above* the
+// `mustFailCases` check written to catch exactly "the declared case did not
+// fail".
+//
+// A skip is neither a result nor a fault. It needs its own column, and which
+// column it lands in depends on whether anybody declared it might happen.
+
+/** A spec-reporter summary with an explicit skipped count. */
+const SUMMARY_WITH_SKIPS = (pass: number, fail: number, skipped: number): string =>
+  `ℹ tests ${String(pass + fail + skipped)}\nℹ suites 0\nℹ pass ${String(pass)}\n` +
+  `ℹ fail ${String(fail)}\nℹ cancelled 0\nℹ skipped ${String(skipped)}\nℹ todo 0\n`;
+
+/** The exact line `node --test --test-reporter=spec` prints for a skipped case. */
+const skipLine = (name: string, reason: string): string => `﹣ ${name} (0.06ms) # ${reason}`;
+
+/** The two lines the reporter prints for a failing case in its trailing section. */
+const failBlock = (file: string, name: string): string =>
+  `\n✖ failing tests:\n\ntest at ${file}:12:1\n✖ ${name} (88.6ms)\n`;
+
+const RENDERED = "COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else";
+const RENDER_SKIP_REASON =
+  "RENDERED TOPOLOGY UNPROVEN: the extracted upstream configuration is absent";
+const COMPOSE_SUITE = "tests/dist/adversarial/composeSubstrate.test.js";
+const DEADLINE_SUITE = "tests/dist/adversarial/containerDeadlineEnforcement.test.js";
+const DEADLINE_CASES = [
+  "CONTAINER-DEADLINE: a subject that ignores every signal is bounded by its deadline",
+  "CONTAINER-DEADLINE: termination is observed — the whole pid namespace, keyed on container id",
+];
+
+test("NC-SKIP: the reporter's skip lines are read, with their reasons", () => {
+  const parsed = harness.parseSkippedCases(
+    `✔ ALPHA: ran (1ms)\n${skipLine(RENDERED, RENDER_SKIP_REASON)}\n${skipLine("BETA: no reason given", "")}\n`,
+  );
+  assert.deepEqual(
+    parsed.map((c) => c.name),
+    [RENDERED, "BETA: no reason given"],
+  );
+  assert.equal(parsed[0]?.reason, RENDER_SKIP_REASON);
+  // A pass line is not a skip line, and must not be read as one.
+  assert.equal(parsed.some((c) => c.name.startsWith("ALPHA")), false);
+});
+
+interface ClassifyCase {
+  readonly name: string;
+  readonly stdout: string;
+  readonly expect: string;
+  readonly tests: readonly string[];
+  readonly mustFail?: readonly string[];
+  readonly mustFailCases?: readonly string[];
+  readonly prerequisite?: string;
+  readonly result: string;
+  /** `true` agreement, `false` disagreement, `null` neither — the third column. */
+  readonly agrees: boolean | null;
+  readonly harnessError: boolean;
+  readonly unmeasured: boolean;
+}
+
+const CLASSIFY_TABLE: readonly ClassifyCase[] = [
+  {
+    name: "the designated case really failed — a kill, and an agreement",
+    stdout: `✖ ${RENDERED} (88.6ms)\n${SUMMARY_WITH_SKIPS(28, 1, 0)}${failBlock(COMPOSE_SUITE, RENDERED)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    prerequisite: "otel-demo-upstream",
+    result: "named_tests_failed",
+    agrees: true,
+    harnessError: false,
+    unmeasured: false,
+  },
+  {
+    name: "everything passed and nothing skipped — a real unexpected pass, still a disagreement",
+    stdout: SUMMARY_WITH_SKIPS(29, 0, 0),
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    prerequisite: "otel-demo-upstream",
+    result: "tests_passed_unexpectedly",
+    agrees: false,
+    harnessError: false,
+    unmeasured: false,
+  },
+  {
+    name: "the exact recorded defect: 28 pass, 0 fail, designated case skipped, prerequisite declared",
+    stdout: `${skipLine(RENDERED, RENDER_SKIP_REASON)}\n${SUMMARY_WITH_SKIPS(28, 0, 1)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    prerequisite: "otel-demo-upstream",
+    result: "unmeasured_here",
+    agrees: null,
+    harnessError: false,
+    unmeasured: true,
+  },
+  {
+    name: "the same run with no prerequisite declared stays fail-closed as a harness error",
+    stdout: `${skipLine(RENDERED, RENDER_SKIP_REASON)}\n${SUMMARY_WITH_SKIPS(28, 0, 1)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    result: "designated_case_skipped",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "a cancelled run is a crash, not a skip, even when something also skipped",
+    stdout:
+      `${skipLine(RENDERED, RENDER_SKIP_REASON)}\n` +
+      "ℹ tests 29\nℹ suites 0\nℹ pass 0\nℹ fail 0\nℹ cancelled 28\nℹ skipped 1\n",
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    prerequisite: "otel-demo-upstream",
+    result: "test_runner_failed",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "a harness crash with no parseable summary is never `nothing failed`",
+    stdout: "SyntaxError: Unexpected token\n",
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    prerequisite: "otel-demo-upstream",
+    result: "test_runner_failed",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "truncated output that lost its summary is a harness error, declared prerequisite or not",
+    stdout: `${skipLine(RENDERED, RENDER_SKIP_REASON)}\nℹ tests 29\nℹ suites 0\n`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    prerequisite: "otel-demo-upstream",
+    result: "test_runner_failed",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "many cases skipped but the designated one ran and failed — still a measured kill",
+    stdout:
+      `${skipLine("COMPOSE-ADV: some docker-gated case", "no daemon")}\n` +
+      `${skipLine("COMPOSE-ADV: another docker-gated case", "no daemon")}\n` +
+      `✖ ${RENDERED} (88.6ms)\n${SUMMARY_WITH_SKIPS(26, 1, 2)}${failBlock(COMPOSE_SUITE, RENDERED)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    prerequisite: "otel-demo-upstream",
+    result: "named_tests_failed",
+    agrees: true,
+    harnessError: false,
+    unmeasured: false,
+  },
+  {
+    name: "skips that are not the designated case do not make a control unmeasured",
+    stdout:
+      `${skipLine("COMPOSE-ADV: some docker-gated case", "no daemon")}\n` +
+      `✖ ${RENDERED} (88.6ms)\n${SUMMARY_WITH_SKIPS(27, 1, 1)}${failBlock(COMPOSE_SUITE, RENDERED)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    prerequisite: "otel-demo-upstream",
+    result: "named_tests_failed",
+    agrees: true,
+    harnessError: false,
+    unmeasured: false,
+  },
+  {
+    name: "container-deadline on a host with a daemon: both declared cases fail, agreement",
+    stdout:
+      `✖ ${DEADLINE_CASES[0] as string} (4001ms)\n✖ ${DEADLINE_CASES[1] as string} (4002ms)\n` +
+      `${SUMMARY_WITH_SKIPS(3, 2, 0)}\n✖ failing tests:\n\ntest at ${DEADLINE_SUITE}:12:1\n` +
+      `✖ ${DEADLINE_CASES[0] as string} (4001ms)\ntest at ${DEADLINE_SUITE}:40:1\n` +
+      `✖ ${DEADLINE_CASES[1] as string} (4002ms)\n`,
+    expect: "fail",
+    tests: [DEADLINE_SUITE],
+    mustFail: [DEADLINE_SUITE],
+    mustFailCases: DEADLINE_CASES,
+    prerequisite: "docker-daemon",
+    result: "named_tests_failed",
+    agrees: true,
+    harnessError: false,
+    unmeasured: false,
+  },
+  {
+    name: "container-deadline on a host without one: the note's UNMEASURED HERE, now machine-said",
+    stdout:
+      `${skipLine(DEADLINE_CASES[0] as string, "LIVE CONTAINER UNPROVEN: no container daemon")}\n` +
+      `${skipLine(DEADLINE_CASES[1] as string, "LIVE CONTAINER UNPROVEN: no container daemon")}\n` +
+      `${SUMMARY_WITH_SKIPS(3, 0, 2)}`,
+    expect: "fail",
+    tests: [DEADLINE_SUITE],
+    mustFail: [DEADLINE_SUITE],
+    mustFailCases: DEADLINE_CASES,
+    prerequisite: "docker-daemon",
+    result: "unmeasured_here",
+    agrees: null,
+    harnessError: false,
+    unmeasured: true,
+  },
+  {
+    name: "a control naming no case, expecting a kill, that skipped something cannot attribute it",
+    stdout: `${skipLine("SOME: gated case", "unavailable here")}\n${SUMMARY_WITH_SKIPS(4, 0, 1)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    prerequisite: "otel-demo-upstream",
+    result: "unmeasured_here",
+    agrees: null,
+    harnessError: false,
+    unmeasured: true,
+  },
+  {
+    name: "a control that declared no kill and skipped nothing is unaffected",
+    stdout: SUMMARY_WITH_SKIPS(4, 0, 0),
+    expect: "pass",
+    tests: [COMPOSE_SUITE],
+    result: "no_kill_as_declared",
+    agrees: true,
+    harnessError: false,
+    unmeasured: false,
+  },
+];
+
+for (const row of CLASSIFY_TABLE) {
+  test(`NC-CLASSIFY-SKIP: ${row.name}`, () => {
+    const classified = harness.classifyTestRun({
+      stdout: row.stdout,
+      expect: row.expect,
+      tests: row.tests,
+      ...(row.mustFail === undefined ? {} : { mustFail: row.mustFail }),
+      ...(row.mustFailCases === undefined ? {} : { mustFailCases: row.mustFailCases }),
+      ...(row.prerequisite === undefined ? {} : { prerequisite: row.prerequisite }),
+    });
+    assert.equal(classified.result, row.result, `classified as ${classified.result}`);
+    assert.equal(harness.isHarnessError(classified.result), row.harnessError);
+    assert.equal(harness.isUnmeasured(classified.result), row.unmeasured);
+    // The three columns are exclusive: an unmeasured control is neither an
+    // agreement nor a fault, and the campaign records `agreed: null` for it.
+    const agreed = harness.isUnmeasured(classified.result)
+      ? null
+      : harness.agreesWithExpectation(classified.result, row.expect);
+    assert.equal(agreed, row.agrees);
+    assert.equal(
+      harness.isUnmeasured(classified.result) && harness.isHarnessError(classified.result),
+      false,
+      "a result cannot be both unmeasured and a harness error",
+    );
+  });
+}
+
+test("NC-CLASSIFY-SKIP: a skipped designated case is never an agreement, under any declaration", () => {
+  // The single property the whole correction exists to guarantee. Whatever else
+  // changes, a case that did not run must never be reported as a guard proven
+  // load-bearing here.
+  for (const prerequisite of [undefined, "otel-demo-upstream", "docker-daemon"]) {
+    const classified = harness.classifyTestRun({
+      stdout: `${skipLine(RENDERED, RENDER_SKIP_REASON)}\n${SUMMARY_WITH_SKIPS(28, 0, 1)}`,
+      expect: "fail",
+      tests: [COMPOSE_SUITE],
+      mustFailCases: [RENDERED],
+      ...(prerequisite === undefined ? {} : { prerequisite }),
+    });
+    assert.equal(
+      harness.agreesWithExpectation(classified.result, "fail"),
+      false,
+      `a skipped designated case agreed with prerequisite=${String(prerequisite)}`,
+    );
+    assert.notEqual(
+      classified.result,
+      harness.CONTROL_RESULT["TESTS_PASSED_UNEXPECTEDLY"],
+      "a skipped designated case was still read as an unexpected pass",
+    );
+  }
+});
+
+test("NC-CLASSIFY-SKIP: the unmeasured result carries why, so an operator need not reproduce it", () => {
+  const classified = harness.classifyTestRun({
+    stdout: `${skipLine(RENDERED, RENDER_SKIP_REASON)}\n${SUMMARY_WITH_SKIPS(28, 0, 1)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    prerequisite: "otel-demo-upstream",
+  });
+  assert.equal(classified.skipped, 1);
+  assert.deepEqual(classified.skippedDesignated, [RENDERED]);
+  assert.deepEqual(classified.skipReasons, [RENDER_SKIP_REASON]);
+  assert.equal(classified.prerequisite, "otel-demo-upstream");
 });

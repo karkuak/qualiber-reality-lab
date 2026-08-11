@@ -61,6 +61,11 @@ import {
   treeDigest,
   worktreeResidue,
 } from "./lib/disposableWorktree.mjs";
+import {
+  CAMPAIGN_PREREQUISITES,
+  PREREQUISITE_STATUS,
+  ensurePrerequisite,
+} from "./lib/campaignFixtures.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -1872,6 +1877,13 @@ export const CONTROLS = [
     mustFailCases: [
       "COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else",
     ],
+    // The designated case renders the real merged Compose configuration, which
+    // needs upstream's `.env` and `compose.yaml`. `environments/otel-demo/upstream/`
+    // is git-ignored, so a worktree checked out at HEAD does not carry it and the
+    // case skips itself. Declaring the prerequisite is what lets the campaign
+    // provision it — and, when it genuinely cannot be provisioned, record
+    // `unmeasured_here` instead of the false disagreement the review reproduced.
+    requiresPrerequisite: "otel-demo-upstream",
     expect: "fail",
     note: "the overlay is a locked configuration file, so this control also moves a config hash; the topology assertion is what it measures",
   },
@@ -2050,8 +2062,13 @@ export const CONTROLS = [
       "CONTAINER-DEADLINE: a subject that ignores every signal is bounded by its deadline",
       "CONTAINER-DEADLINE: termination is observed — the whole pid namespace, keyed on container id",
     ],
+    // The reading this control's note has asked readers to perform by hand since
+    // it was written is now the harness's own: no daemon, no measurement,
+    // `unmeasured_here`. Nothing the campaign can do provisions a daemon, so this
+    // prerequisite is detected rather than satisfied.
+    requiresPrerequisite: "docker-daemon",
     expect: "fail",
-    note: "Needs a container daemon. On a host without one the deadline tests take their announced skip branch and this control kills nothing — which the campaign will record as `no_test_failed`, and which must be read as UNMEASURED HERE rather than as a guard that is not load-bearing. The ordinary gate must never require a daemon; this control is the one place that reading has to be made explicitly.",
+    note: "Needs a container daemon. On a host without one the deadline tests take their announced skip branch, the declared prerequisite is unavailable, and the campaign records `unmeasured_here` — which is neither agreement nor disagreement, and must not be read as a guard that is not load-bearing. The ordinary gate must never require a daemon; this control is where that reading is made explicit.",
   },
 ];
 
@@ -2073,6 +2090,8 @@ export const CONTROL_RESULT = Object.freeze({
   DECLARED_CASES_NOT_FAILED: "declared_cases_not_failed",
   TESTS_PASSED_UNEXPECTEDLY: "tests_passed_unexpectedly",
   NO_KILL_AS_DECLARED: "no_kill_as_declared",
+  UNMEASURED_HERE: "unmeasured_here",
+  DESIGNATED_CASE_SKIPPED: "designated_case_skipped",
   BUILD_FAILED: "build_failure",
   RUNNER_FAILED: "test_runner_failed",
   STAGE_TIMED_OUT: "stage_timed_out",
@@ -2088,9 +2107,37 @@ const MEASURED = new Set([
   CONTROL_RESULT.NO_KILL_AS_DECLARED,
 ]);
 
+/**
+ * Results that are neither a measurement nor a fault: the control declared a
+ * prerequisite, the host could not supply it, and the designated case said so
+ * itself by skipping.
+ *
+ * This is a third column, and it has to be, because the other two both lie about
+ * it. Scoring it as a result claims the campaign learned something about the
+ * guard when it ran nothing; scoring it as a harness error claims something
+ * broke when the only fact is that this host is not the host. The ledger has
+ * carried the phrase `UNMEASURED HERE` in prose since
+ * `container-deadline-kills-the-container` was written — the note on that
+ * control says a reader "must read" its result that way. This makes the harness
+ * say it instead of asking the reader to.
+ */
+const UNMEASURED = new Set([CONTROL_RESULT.UNMEASURED_HERE]);
+
 /** True when the result says something about the harness, not about the guard. */
 export function isHarnessError(result) {
-  return !MEASURED.has(result);
+  return !MEASURED.has(result) && !UNMEASURED.has(result);
+}
+
+/**
+ * True when the campaign ran nothing for a *declared* reason.
+ *
+ * Deliberately not the complement of `isHarnessError`: an undeclared skip is a
+ * harness error, because a designated case that vanished with nobody having said
+ * it might is exactly the shape this whole correction exists to stop being read
+ * as agreement.
+ */
+export function isUnmeasured(result) {
+  return UNMEASURED.has(result);
 }
 
 /**
@@ -2113,6 +2160,25 @@ export function parseFailingCases(stdout) {
 }
 
 /**
+ * Every case the spec reporter skipped, as `{ name, reason }` pairs.
+ *
+ * The reporter prints one line per skip, with `﹣` (U+FE63) rather than the `✔`
+ * of a pass, and the skip's own message after a `#`:
+ *
+ *     ﹣ COMPOSE-ADV: the RENDERED configuration … (0.06ms) # RENDERED TOPOLOGY UNPROVEN: …
+ *
+ * Reading the reason as well as the name is what lets a campaign record *why* a
+ * control was unmeasured, which is the difference between a line an operator can
+ * act on and one they have to go and reproduce.
+ */
+export function parseSkippedCases(stdout) {
+  return [...stdout.matchAll(/^\s*﹣ (.+?)(?: \([\d.]+ms\))?(?: # (.*))?[ \t]*$/gm)].map((m) => ({
+    name: m[1],
+    reason: m[2] ?? "",
+  }));
+}
+
+/**
  * Parse one `node --test` run and decide what it says about the control.
  *
  * The spec reporter names the file of every failing test in its trailing
@@ -2128,11 +2194,12 @@ export function parseFailingCases(stdout) {
  * evidence, and it is reported as a harness error rather than as a result,
  * because what the campaign measured is not what the control declared.
  */
-export function classifyTestRun({ stdout, expect, tests, mustFail, mustFailCases }) {
+export function classifyTestRun({ stdout, expect, tests, mustFail, mustFailCases, prerequisite }) {
   const tests_ = Number(/^ℹ tests (\d+)$/m.exec(stdout)?.[1] ?? "-1");
   const pass = Number(/^ℹ pass (\d+)$/m.exec(stdout)?.[1] ?? "-1");
   const fail = Number(/^ℹ fail (\d+)$/m.exec(stdout)?.[1] ?? "-1");
   const cancelled = Number(/^ℹ cancelled (\d+)$/m.exec(stdout)?.[1] ?? "0");
+  const skipped = Number(/^ℹ skipped (\d+)$/m.exec(stdout)?.[1] ?? "0");
 
   // No parseable summary means the runner never got far enough to have an
   // opinion — a module that would not load, a crash before the first test. That
@@ -2141,23 +2208,89 @@ export function classifyTestRun({ stdout, expect, tests, mustFail, mustFailCases
     return { result: CONTROL_RESULT.RUNNER_FAILED, pass, fail, tests: tests_, failingFiles: [] };
   }
 
-  // A summary that reports tests but no outcomes is the same thing wearing a
-  // number. `window-verifier-requires-commitment` produced exactly this on its
-  // first campaign: the patched verifier died on a TypeError instead of refusing,
+  // A cancelled case is a crash wearing a number.
+  // `window-verifier-requires-commitment` produced exactly this on its first
+  // campaign: the patched verifier died on a TypeError instead of refusing,
   // every case in the file was cancelled, and the run reported **0 pass / 0
   // fail** — which the classifier read as "the guard killed nothing".
   //
   // It measured nothing at all. A control that disables a guard and crashes the
   // process has not shown the guard is unnecessary; it has shown the patch was
-  // wrong. Cancellations are counted for the same reason.
-  if (pass + fail === 0 || cancelled > 0) {
+  // wrong. Checked before skips, because a cancellation is a fault and a skip is
+  // a decision; a run carrying both is the fault.
+  if (cancelled > 0) {
     return {
       result: CONTROL_RESULT.RUNNER_FAILED,
       pass,
       fail,
       tests: tests_,
       failingFiles: [],
-      ...(cancelled > 0 ? { cancelled } : {}),
+      cancelled,
+    };
+  }
+
+  // A case that skipped did not run, and a case that did not run cannot have
+  // agreed. This is the correction the independent review of `90a0039`
+  // required: `substrate-loopback-only-rendered` designates a case that skips
+  // itself when the extracted upstream configuration is absent, the other 28
+  // cases in its file passed, and the classifier reached `fail === 0` below and
+  // called it `tests_passed_unexpectedly` — a disagreement invented out of a
+  // measurement that never happened. The check has to sit *above* that
+  // short-circuit, and above `mustFailCases`, which only ever runs on a
+  // failure and so could never see a skip either.
+  const skippedCases = parseSkippedCases(stdout);
+  const skippedNames = skippedCases.map((c) => c.name);
+  // Substring in the same direction as the failing-case match, so one declared
+  // excerpt recognises the long descriptive name it was taken from.
+  const skippedDesignated =
+    mustFailCases === undefined
+      ? []
+      : mustFailCases.filter((declared) => skippedNames.some((n) => n.includes(declared)));
+  // A control that named no case cannot point at one, so the honest reading of
+  // "expected a kill, got none, and something skipped" is that the skip may be
+  // the kill that never ran.
+  const unattributableSkip =
+    mustFailCases === undefined && skipped > 0 && fail === 0 && expect === "fail";
+
+  if (skippedDesignated.length > 0 || unattributableSkip) {
+    const reasons = [
+      ...new Set(
+        skippedCases
+          .filter((c) => skippedDesignated.length === 0 || skippedDesignated.some((d) => c.name.includes(d)))
+          .map((c) => c.reason)
+          .filter((r) => r !== ""),
+      ),
+    ];
+    return {
+      // Declared: the control said this host might not be able to answer, and it
+      // could not. Undeclared: a designated case disappeared and nobody said it
+      // might, which stays fail-closed as a harness error rather than becoming
+      // an acceptable outcome by default.
+      result:
+        prerequisite === undefined
+          ? CONTROL_RESULT.DESIGNATED_CASE_SKIPPED
+          : CONTROL_RESULT.UNMEASURED_HERE,
+      pass,
+      fail,
+      tests: tests_,
+      skipped,
+      failingFiles: [],
+      skippedCases: skippedNames,
+      ...(skippedDesignated.length === 0 ? {} : { skippedDesignated }),
+      ...(prerequisite === undefined ? {} : { prerequisite }),
+      ...(reasons.length === 0 ? {} : { skipReasons: reasons }),
+    };
+  }
+
+  // A run that reports tests but produced no outcome at all, with nothing
+  // skipped to explain it, never got far enough to have an opinion.
+  if (pass + fail === 0) {
+    return {
+      result: CONTROL_RESULT.RUNNER_FAILED,
+      pass,
+      fail,
+      tests: tests_,
+      failingFiles: [],
     };
   }
 
@@ -2263,6 +2396,17 @@ export function validateControlDeclarations(controls) {
     }
     if (control.expectedMatches !== undefined && !Number.isSafeInteger(control.expectedMatches)) {
       problems.push(`${where}: \`expectedMatches\` must be an integer`);
+    }
+    if (control.requiresPrerequisite !== undefined) {
+      // Only a name the registry knows. A typo would otherwise buy the control a
+      // permanent, silent `unmeasured_here` — the one outcome that is neither
+      // agreement nor failure, and so the one a typo must never be able to reach.
+      if (CAMPAIGN_PREREQUISITES[control.requiresPrerequisite] === undefined) {
+        problems.push(
+          `${where}: \`requiresPrerequisite\` names \`${String(control.requiresPrerequisite)}\`, ` +
+            `which is not one of: ${Object.keys(CAMPAIGN_PREREQUISITES).join(", ")}`,
+        );
+      }
     }
     if (control.mustFail !== undefined) {
       const outside = control.mustFail.filter((t) => !control.tests.includes(t));
@@ -2612,6 +2756,13 @@ async function main() {
   });
 
   const results = [];
+  // Fetching is opt-in and loud. A campaign that silently reached the network
+  // would make its own result depend on what a URL served that afternoon, which
+  // is the opposite of what a pinned fixture is for.
+  const allowFetch = process.env["ERL2_CAMPAIGN_ALLOW_FETCH"] === "1";
+  const archiveOverride = process.env["ERL2_CAMPAIGN_OTEL_ARCHIVE"];
+  const prerequisiteCache = new Map();
+  const announcedPrerequisites = new Set();
   let aborted;
   try {
     console.log("installing dependencies in the worktree (once)…");
@@ -2621,6 +2772,53 @@ async function main() {
     }
 
     for (const control of selected) {
+      // Prerequisites first, and once. The campaign runs one reusable worktree,
+      // so a fixture belongs to the worktree rather than to each control that
+      // needs it; `ensurePrerequisite` memoises on `prerequisiteCache` and the
+      // second declaring control pays nothing. A control that declares nothing
+      // asks for nothing and never reaches this branch.
+      if (control.requiresPrerequisite !== undefined) {
+        const outcome = ensurePrerequisite(
+          control.requiresPrerequisite,
+          { repoRoot: root, worktree, allowFetch, ...(archiveOverride === undefined ? {} : { archiveOverride }) },
+          prerequisiteCache,
+        );
+        if (outcome.status !== PREREQUISITE_STATUS.SATISFIED) {
+          // Not patched, not built, not run. The campaign already knows it
+          // cannot measure this guard here, and spending ninety seconds proving
+          // that again would only produce a skip for the classifier to
+          // re-derive. `agreed: null` rather than `false`: the summary counts
+          // this in its own column, and a control that ran nothing has neither
+          // agreed nor disagreed.
+          results.push({
+            id: control.id,
+            what: control.what,
+            expected: control.expect,
+            result: CONTROL_RESULT.UNMEASURED_HERE,
+            harnessError: false,
+            unmeasured: true,
+            agreed: null,
+            prerequisite: control.requiresPrerequisite,
+            detail: outcome.reason,
+          });
+          console.log(
+            `  ⊘ ${control.id}: UNMEASURED HERE — ${CAMPAIGN_PREREQUISITES[control.requiresPrerequisite].describe} ` +
+              `is unavailable\n      ${String(outcome.reason ?? "")}`,
+          );
+          continue;
+        }
+        if (!announcedPrerequisites.has(control.requiresPrerequisite)) {
+          announcedPrerequisites.add(control.requiresPrerequisite);
+          console.log(
+            `  · prerequisite ${control.requiresPrerequisite}: satisfied` +
+              (outcome.extractionRoot === undefined
+                ? ""
+                : ` (${outcome.reused ? "reused" : "provisioned"} ${outcome.extractionRoot}` +
+                  `${outcome.archiveSha256 === undefined ? "" : `, archive ${outcome.archiveSha256}`})`),
+          );
+        }
+      }
+
       const target = path.join(worktree, control.file);
       const source = readFileSync(target, "utf8");
 
@@ -2794,8 +2992,16 @@ async function main() {
         tests: control.tests,
         ...(control.mustFail === undefined ? {} : { mustFail: control.mustFail }),
         ...(control.mustFailCases === undefined ? {} : { mustFailCases: control.mustFailCases }),
+        // A satisfied prerequisite can still leave the designated case skipped —
+        // the rendered-topology case needs a daemon as well as the fixture. The
+        // control declared that it might not be answerable here, so a skip is
+        // still `unmeasured_here` rather than a manufactured disagreement.
+        ...(control.requiresPrerequisite === undefined
+          ? {}
+          : { prerequisite: control.requiresPrerequisite }),
       });
-      const agreed = agreesWithExpectation(classified.result, control.expect);
+      const unmeasured = isUnmeasured(classified.result);
+      const agreed = unmeasured ? null : agreesWithExpectation(classified.result, control.expect);
       results.push({
         id: control.id,
         what: control.what,
@@ -2807,6 +3013,12 @@ async function main() {
         pass: classified.pass,
         fail: classified.fail,
         agreed,
+        ...(unmeasured ? { unmeasured: true } : {}),
+        ...(control.requiresPrerequisite === undefined
+          ? {}
+          : { prerequisite: control.requiresPrerequisite }),
+        ...(classified.skipped === undefined ? {} : { skipped: classified.skipped }),
+        ...(classified.skipReasons === undefined ? {} : { skipReasons: classified.skipReasons }),
         buildMs: build.elapsedMs,
         suiteMs: run.elapsedMs,
         stageTmpRemoved: build.stageTmpRemoved && run.stageTmpRemoved,
@@ -2825,8 +3037,10 @@ async function main() {
         );
       }
       console.log(
-        `  ${agreed ? "✔" : "✖"} ${control.id}: ${String(classified.pass)} pass / ${String(classified.fail)} fail ` +
-          `(expected ${control.expect}, ${classified.result})${control.note === undefined ? "" : ` — ${control.note}`}`,
+        `  ${unmeasured ? "⊘" : agreed ? "✔" : "✖"} ${control.id}: ${String(classified.pass)} pass / ` +
+          `${String(classified.fail)} fail${classified.skipped ? ` / ${String(classified.skipped)} skipped` : ""} ` +
+          `(expected ${control.expect}, ${classified.result})` +
+          `${unmeasured ? " — UNMEASURED HERE" : ""}${control.note === undefined ? "" : ` — ${control.note}`}`,
       );
 
       const residual = disposable.restore();
@@ -2862,6 +3076,24 @@ async function main() {
   }
   console.log("\nthe working tree is byte-identical to how the campaign started");
 
+  // Every discovered control lands in exactly one column, and the columns sum to
+  // the discovery count. A campaign that cannot show that has not accounted for
+  // its own controls — which is how one unmeasured control spent a full run
+  // being reported as a disagreement.
+  const measuredAgreements = results.filter((r) => r.agreed === true).length;
+  const disagreements = results.filter((r) => r.agreed === false && r.harnessError !== true).length;
+  const unmeasuredControls = results.filter((r) => r.unmeasured === true);
+  const harnessErrors = results.filter((r) => r.harnessError === true).length;
+  const accounting = {
+    discovered: selected.length,
+    measured_agreements: measuredAgreements,
+    disagreements,
+    unmeasured: unmeasuredControls.length,
+    harness_errors: harnessErrors,
+  };
+  const accounted = measuredAgreements + disagreements + unmeasuredControls.length + harnessErrors;
+  const reconciled = accounted === results.length && results.length === selected.length;
+
   writeFileSync(
     path.join(root, "docs", "ledger", "negative-controls.json"),
     `${JSON.stringify(
@@ -2869,12 +3101,37 @@ async function main() {
         generated_by: "scripts/negative-control.mjs",
         selected: selected.length,
         of: CONTROLS.length,
+        accounting,
+        reconciled,
         results,
       },
       null,
       2,
     )}\n`,
   );
+
+  console.log(
+    `\naccounting: ${String(accounting.discovered)} discovered = ` +
+      `${String(accounting.measured_agreements)} agreed + ${String(accounting.disagreements)} disagreed + ` +
+      `${String(accounting.unmeasured)} unmeasured + ${String(accounting.harness_errors)} harness error(s)`,
+  );
+  if (unmeasuredControls.length > 0) {
+    console.log("\nUNMEASURED HERE — declared prerequisite unavailable on this host:");
+    for (const r of unmeasuredControls) {
+      console.log(`  ⊘ ${r.id} (${String(r.prerequisite)}): ${String(r.detail ?? r.skipReasons?.join(" | ") ?? "")}`);
+    }
+    console.log(
+      "  These are neither agreements nor disagreements. The guards they name are\n" +
+        "  unproven on this host and must not be reported as load-bearing here.",
+    );
+  }
+  if (!reconciled) {
+    console.error(
+      `\nnegative-control FAILED: the summary does not account for every control ` +
+        `(${String(accounted)} accounted, ${String(results.length)} recorded, ${String(selected.length)} discovered)`,
+    );
+    process.exit(1);
+  }
 
   if (residue.length > 0) {
     console.error(`\nnegative-control FAILED: ${CONTROL_RESULT.RESIDUE_FAILED}`);
@@ -2913,7 +3170,12 @@ async function main() {
     for (const r of disagreed) console.error(`  ${r.id}: ${JSON.stringify(r)}`);
     process.exit(1);
   }
-  console.log(`all ${String(results.length)} control(s) matched their recorded expectation`);
+  console.log(
+    `all ${String(measuredAgreements)} measured control(s) matched their recorded expectation` +
+      (unmeasuredControls.length === 0
+        ? ""
+        : `; ${String(unmeasuredControls.length)} were UNMEASURED HERE and are claimed for nothing`),
+  );
 }
 
 // Importable for its own tests without starting a four-hour campaign.
