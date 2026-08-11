@@ -1054,7 +1054,15 @@ if (mode === "verify") {
   // `run/diagnostics/**` copies moved beneath `subject-output/` and two
   // content-addressed step-outcome names moved with their hashes. 57 files added,
   // 12 removed. Again: the exclusion manifest is unchanged and the pin grew.
-  const EXPECTED_PINNED = 832;
+  //
+  // 832 -> 838 when a real adapter stopped being dispatchable without its
+  // certification receipt (ADR-ERL2-036, closing LIVE-001): each of the three
+  // adapter-platform runs now retains `adapter-certification-receipt.json` and
+  // its `.frozen` marker, and two content-addressed step-outcome names in the
+  // reference-limited run moved with the manifest hash they cover. 10 files
+  // added, 4 removed. The exclusion manifest is unchanged — the pin grew, and
+  // no file became unpinned.
+  const EXPECTED_PINNED = 838;
   const EXPECTED_EXCLUDED = 7;
 
   const manifestDigest = createHash("sha256")

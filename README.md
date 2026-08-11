@@ -170,7 +170,7 @@ npm run evidence
 ```
 
 Byte-compare a deterministic generation against the pinned goldens without
-touching them (832 files pinned; 7 are excluded with a printed reason — the
+touching them (838 files pinned; 7 are excluded with a printed reason — the
 adapter `request.frames` bake an absolute workspace path, `grandchild.pid` is a
 real OS pid, and `cli-transcript.json` records absolute CLI paths):
 
