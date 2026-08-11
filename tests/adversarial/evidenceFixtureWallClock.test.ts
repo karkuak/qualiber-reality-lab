@@ -275,6 +275,7 @@ function preregister(run: ReturnType<typeof adapterRun>, evidenceClock?: string)
       "preregister-acquisition", ...run.base, "--run", run.runId,
       "--acquisition-source", run.registry.sourceManifestHash,
       "--adapter", run.registry.referenceCorrectAdapterHash,
+      "--adapter-certification", run.registry.referenceCorrectCertificationHash,
       "--acquisition-actor-script", run.registry.acquisitionActorScriptHash,
       "--acquisition-actor-schema", run.registry.acquisitionActorSchemaHash,
       "--acquisition-step", run.registry.acquisitionStep.commitmentHash,
@@ -387,7 +388,17 @@ test("EVIDENCE-CLOCK-CLI: the supervisor deadline stays real in evidence mode", 
   // The property that must hold in *both* modes, asserted through the CLI: a
   // hostile adapter that never responds is still timed out against real time
   // while the evidence clock is in force.
-  const registry = buildGovernorRegistry({});
+  // The timeout fixture is admitted with a certified receipt over its own real
+  // bytes, so the run is legitimate right up to dispatch and the refusal that
+  // follows is the *deadline* — not an admission or identity refusal standing
+  // in for it (ADR-ERL2-036).
+  const registry = buildGovernorRegistry({
+    certifiedSabotageAdapters: [{ name: "timeout", adapterId: "sabotage-timeout" }],
+  });
+  const sabotage = registry.sabotageAdapterHashes["timeout"] as {
+    manifestHash: string;
+    certificationHash: string;
+  };
   const runRoot = ownedRunRoot("erl2-evidence-clock-timeout-");
   const runId = "00000000-0000-7000-8000-0000000000ac";
   const base = [
@@ -400,7 +411,8 @@ test("EVIDENCE-CLOCK-CLI: the supervisor deadline stays real in evidence mode", 
     [
       "preregister-acquisition", ...base, "--run", runId,
       "--acquisition-source", registry.sourceManifestHash,
-      "--adapter", registry.referenceCorrectAdapterHash,
+      "--adapter", sabotage.manifestHash,
+      "--adapter-certification", sabotage.certificationHash,
       "--acquisition-actor-script", registry.acquisitionActorScriptHash,
       "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
       "--acquisition-step", registry.acquisitionStep.commitmentHash,

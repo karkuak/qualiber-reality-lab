@@ -3,7 +3,7 @@
     "schema_version": "subject-adapter-certification-receipt/v1",
     "receipt_id": "cert-reference-correct",
     "suite": "ADAPTER-CERT-V1",
-    "adapter_manifest_hash": "sha256:9b54e82999d6ca798f9abb54b6b01af2c4ed4a421d0769748f577ac667968aa6",
+    "adapter_manifest_hash": "sha256:293e06b7bbfa3a23b968fd98b01bbc275523eefefc4e9dd1e83750ae4d8a9e34",
     "adapter_artifact_hash": "sha256:2add85ff025d8188d878a1ca2b458a167140568b984760f6db5ca56e4f330ff3",
     "adapter_id": "reference-correct",
     "adapter_version": "0.1.0",
@@ -140,13 +140,13 @@
       "network-namespace-isolation"
     ],
     "certified_at": "2026-07-01T00:00:15Z",
-    "core_hash": "sha256:36b6d246789555f035a6f6ee42e747e4ff1bbd0f051d8ac5aa914e1d6fedf7ef"
+    "core_hash": "sha256:3f7fff9893e6d54a2a012cf35c9b2470d73b69dcc728e63dbd0eafbdb0c3aa02"
   },
   "reference-limited": {
     "schema_version": "subject-adapter-certification-receipt/v1",
     "receipt_id": "cert-reference-limited",
     "suite": "ADAPTER-CERT-V1",
-    "adapter_manifest_hash": "sha256:7ffd7ba0d4bf4d8c21d9ed5520739e788df32b49bae30ed7d79cb9284ee431ba",
+    "adapter_manifest_hash": "sha256:a723aa792488e7cfec5148c079ec75cd575f911daf2e5baca23eb5fb4447b68b",
     "adapter_artifact_hash": "sha256:88e72d8e746bf2c36d907bfa85e0e25039508578854808312968adb6c8d99412",
     "adapter_id": "reference-limited",
     "adapter_version": "0.1.0",
@@ -280,13 +280,13 @@
       "network-namespace-isolation"
     ],
     "certified_at": "2026-07-01T00:00:15Z",
-    "core_hash": "sha256:8e73f2741b525fe6a15e66369464242ab99817d0c9a59d03403b4321dc309686"
+    "core_hash": "sha256:7d1a5a371a8bb0f1a84d6cdcab2899cefc5c638067b08278cdd0d428d9d243d0"
   },
   "sabotage-protocol-mismatch": {
     "schema_version": "subject-adapter-certification-receipt/v1",
     "receipt_id": "cert-reference-correct",
     "suite": "ADAPTER-CERT-V1",
-    "adapter_manifest_hash": "sha256:9b54e82999d6ca798f9abb54b6b01af2c4ed4a421d0769748f577ac667968aa6",
+    "adapter_manifest_hash": "sha256:293e06b7bbfa3a23b968fd98b01bbc275523eefefc4e9dd1e83750ae4d8a9e34",
     "adapter_artifact_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
     "adapter_id": "reference-correct",
     "adapter_version": "0.1.0",
@@ -355,6 +355,6 @@
       "network-namespace-isolation"
     ],
     "certified_at": "2026-07-01T00:00:03Z",
-    "core_hash": "sha256:a02229ab07e48b3e00bdc9caa11bdb80c1f3fafe3ef9ace5e3831df0735294a2"
+    "core_hash": "sha256:24b944c1763fd9aa566099a9550de7ddc006ef1c5f427ca90d1675383cbbc187"
   }
 }

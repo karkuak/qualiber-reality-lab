@@ -238,6 +238,7 @@ function hostedTerminal(): { readonly runRoot: string; readonly sourceTrustPolic
     "preregister-acquisition", ...base,
     "--acquisition-source", registry.sourceManifestHash,
     "--adapter", registry.referenceLimitedAdapterHash,
+    "--adapter-certification", registry.referenceLimitedCertificationHash,
     "--acquisition-actor-script", registry.acquisitionActorScriptHash,
     "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
     "--acquisition-step", registry.acquisitionStep.commitmentHash,

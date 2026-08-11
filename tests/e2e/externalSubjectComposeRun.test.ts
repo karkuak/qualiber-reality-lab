@@ -48,9 +48,10 @@ import { chmodSync, cpSync, existsSync, readFileSync, readdirSync, rmSync, statS
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ArtifactRef, JourneyIntent, JourneyStepOutcomeV1 } from "@erl2/contracts";
-import { dockerAvailable, OTEL_DEMO_RELEASE_TAG } from "@erl2/core";
+import { BOOTSTRAP_RECEIPT_SENTINEL, dockerAvailable, OTEL_DEMO_RELEASE_TAG } from "@erl2/core";
 import { erl2, verifyBundle } from "../support/cliRun.js";
-import { adapterManifest } from "../support/adapterFixtures.js";
+import { hashBytes } from "@erl2/integrity";
+import { adapterManifest, syntheticCertificationReceipt } from "../support/adapterFixtures.js";
 import { buildGovernorRegistry, type GovernorRegistry } from "../support/governorRegistry.js";
 import { ownedRunRoot, ownedTempDir } from "../support/tempDirs.js";
 
@@ -216,13 +217,21 @@ interface ExternalRun {
  * bound by core hash exactly as a repository-owned one is.
  */
 function selectedExternalRun(subject: ExternalSubject): ExternalRun {
+  // The manifest names the real entry digest and is admitted with a matching
+  // certification, because a real adapter is never dispatched without one
+  // (ADR-ERL2-036). An externally authored subject goes through the same
+  // admission as a repository-owned one — that is the point of the seam.
+  const externalManifest = adapterManifest({
+    adapterId: subject.adapterId,
+    artifactHash: hashBytes(readFileSync(subject.entry)),
+    certificationReceiptHash: BOOTSTRAP_RECEIPT_SENTINEL,
+    operations: subject.operations,
+    packageKinds: ["archive"],
+  });
   const registry = buildGovernorRegistry({
-    externalAdapterManifests: [
-      adapterManifest({
-        adapterId: subject.adapterId,
-        operations: subject.operations,
-        packageKinds: ["archive"],
-      }),
+    externalAdapterManifests: [externalManifest],
+    externalAdapterCertifications: [
+      syntheticCertificationReceipt(externalManifest, subject.entry),
     ],
     // The one journey difference from the standard fixture, and the reason the
     // seam exists: `diagnose_decide` is the only intent that maps to the adapter
@@ -246,6 +255,7 @@ function selectedExternalRun(subject: ExternalSubject): ExternalRun {
     "preregister-acquisition", ...base0,
     "--acquisition-source", registry.sourceManifestHash,
     "--adapter", adapterHash,
+    "--adapter-certification", registry.externalAdapterCertificationHashes[subject.adapterId] as string,
     "--acquisition-actor-script", registry.acquisitionActorScriptHash,
     "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
     "--acquisition-step", registry.acquisitionStep.commitmentHash,
