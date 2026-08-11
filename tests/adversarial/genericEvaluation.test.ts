@@ -133,7 +133,11 @@ const LAB_GATES: readonly GateResult[] = [
   { gate_id: "acquired-bytes-frozen", passed: true, evidence_refs: [] },
   { gate_id: "package-integrity-policy-applied", passed: true, evidence_refs: [] },
   { gate_id: "evidence-sources-accounted", passed: true, evidence_refs: [] },
-  { gate_id: "adapter-certified", passed: true, evidence_refs: [] },
+  // No `adapter-certified`: this fixture is a development fake-port run, which
+  // selects no external adapter, so the gate is not applicable and the
+  // catalogue does not require it (ADR-ERL2-036 §5a). Including it here used to
+  // be harmless because the gate was an unconditional `true`; it is now the
+  // exact misrepresentation `assertAdapterCertificationApplicability` refuses.
   { gate_id: "adapter-authority-respected", passed: true, evidence_refs: [] },
   { gate_id: "subject-output-frozen-before-reveal", passed: true, evidence_refs: [] },
   { gate_id: "no-execution-after-output-freeze", passed: true, evidence_refs: [] },
