@@ -22,6 +22,7 @@ import {
   type Hash,
   type Instant,
   type PreEnvironmentValidityResultV1,
+  type SubjectExecutionMode,
   type ValidityResultV1,
 } from "@erl2/contracts";
 import { coreHash } from "@erl2/integrity";
@@ -106,6 +107,87 @@ export interface GateResult {
 }
 
 /**
+ * `adapter-certified` is required only of a run that selected a real external
+ * adapter (ADR-ERL2-036).
+ *
+ * A development fake-port run executes no adapter bytes, so there is nothing to
+ * certify — and the honest representation of that is the same one this catalogue
+ * already uses for the environment and selection gates on a run that reached
+ * neither: the gate is **absent**, not passed. Requiring it would force a
+ * boolean to answer a question about applicability, and the only value it could
+ * take, `true`, reads as a certification claim over manifest-only evidence.
+ * That is exactly what the independent review of the first LIVE-001 package
+ * rejected.
+ *
+ * `adapter-authority-respected` stays required in both modes: it is a statement
+ * about what the Lab let the subject seam do, which every run answers.
+ */
+export function requiredGateIds(
+  base: readonly string[],
+  options: { readonly externalAdapter: boolean },
+): readonly string[] {
+  if (options.externalAdapter) return base;
+  return base.filter((id) => id !== "adapter-certified");
+}
+
+/**
+ * The applicability rule for `adapter-certified`, enforced rather than assumed.
+ *
+ * Omitting the gate for a fake-port run is only safe if the *external* case
+ * stays strictly required — otherwise "not applicable" quietly becomes
+ * "optional", which is the same false-attestation shape in a new place. So this
+ * refuses, for an external-adapter run:
+ *
+ *   - the gate being absent;
+ *   - the gate appearing more than once;
+ *   - the gate citing manifest-only evidence, or the manifest's bootstrap/prior
+ *     receipt, instead of the **current** receipt the run was authorized on.
+ *
+ * And for a fake-port run it refuses the gate being present at all, so the old
+ * `passed: true` convention cannot creep back in through a producer that keeps
+ * emitting it.
+ */
+export function assertAdapterCertificationApplicability(
+  gates: readonly GateResult[],
+  options: {
+    readonly subjectExecutionMode: SubjectExecutionMode;
+    /** The current receipt the run froze, when it has one. */
+    readonly currentReceiptHash?: Hash;
+  },
+): void {
+  const found = gates.filter((g) => g.gate_id === "adapter-certified");
+  if (options.subjectExecutionMode !== "external_adapter") {
+    if (found.length > 0) {
+      throw new Erl2Error(
+        CODES.EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED,
+        "a run that selected no external adapter must omit adapter-certified; certification " +
+          "is not applicable, and a boolean cannot say so",
+        { owner: "lab" },
+      );
+    }
+    return;
+  }
+  if (found.length !== 1) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_MISSING_ROLE,
+      `an external-adapter run must evaluate exactly one adapter-certified gate; found ${String(found.length)}`,
+      { owner: "lab" },
+    );
+  }
+  const gate = found[0] as GateResult;
+  if (options.currentReceiptHash === undefined) return;
+  if (!gate.evidence_refs.includes(options.currentReceiptHash)) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_MISSING_ROLE,
+      "the adapter-certified gate does not cite the current certification receipt this run was " +
+        "authorized on; a manifest hash, or the manifest's bootstrap/prior receipt, is not " +
+        "certification evidence",
+      { owner: "lab" },
+    );
+  }
+}
+
+/**
  * Refuses any gate identifier the Lab does not own.
  *
  * This is the executable statement of "validity may inspect only Lab-owned
@@ -151,6 +233,10 @@ export function failedGateIds(gates: readonly GateResult[]): readonly string[] {
 
 export interface PreEnvironmentValidityInput {
   readonly runId: string;
+  /** Decides whether `adapter-certified` is applicable at all. */
+  readonly subjectExecutionMode: SubjectExecutionMode;
+  /** The current receipt an external run was authorized on, if it has one. */
+  readonly adapterCertificationReceiptHash?: Hash;
   readonly terminalStage: "acquire" | "verify_package";
   readonly genericRunPolicyHash: Hash;
   readonly gates: readonly GateResult[];
@@ -163,7 +249,18 @@ export function buildPreEnvironmentValidity(
   input: PreEnvironmentValidityInput,
 ): PreEnvironmentValidityResultV1 {
   assertGatesAreLabOwned(input.gates);
-  assertRequiredGatesPresent(input.gates, PRE_ENVIRONMENT_GATE_IDS);
+  assertRequiredGatesPresent(
+    input.gates,
+    requiredGateIds(PRE_ENVIRONMENT_GATE_IDS, {
+      externalAdapter: input.subjectExecutionMode === "external_adapter",
+    }),
+  );
+  assertAdapterCertificationApplicability(input.gates, {
+    subjectExecutionMode: input.subjectExecutionMode,
+    ...(input.adapterCertificationReceiptHash === undefined
+      ? {}
+      : { currentReceiptHash: input.adapterCertificationReceiptHash }),
+  });
   const status = statusOf(input.gates);
   if (status === "invalid" && input.invalidityFindingHashes.length === 0) {
     throw new Erl2Error(
@@ -195,6 +292,10 @@ export function buildPreEnvironmentValidity(
 
 export interface EnvironmentValidityInput {
   readonly runId: string;
+  /** Decides whether `adapter-certified` is applicable at all. */
+  readonly subjectExecutionMode: SubjectExecutionMode;
+  /** The current receipt an external run was authorized on, if it has one. */
+  readonly adapterCertificationReceiptHash?: Hash;
   readonly terminalStage: EnvironmentJourneyIntent;
   readonly genericRunPolicyHash: Hash;
   readonly gates: readonly GateResult[];
@@ -208,7 +309,18 @@ export function buildEnvironmentValidity(
   input: EnvironmentValidityInput,
 ): EnvironmentValidityResultV1 {
   assertGatesAreLabOwned(input.gates);
-  assertRequiredGatesPresent(input.gates, ENVIRONMENT_GATE_IDS);
+  assertRequiredGatesPresent(
+    input.gates,
+    requiredGateIds(ENVIRONMENT_GATE_IDS, {
+      externalAdapter: input.subjectExecutionMode === "external_adapter",
+    }),
+  );
+  assertAdapterCertificationApplicability(input.gates, {
+    subjectExecutionMode: input.subjectExecutionMode,
+    ...(input.adapterCertificationReceiptHash === undefined
+      ? {}
+      : { currentReceiptHash: input.adapterCertificationReceiptHash }),
+  });
   const status = statusOf(input.gates);
   if (status === "invalid" && input.invalidityFindingHashes.length === 0) {
     throw new Erl2Error(

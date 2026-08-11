@@ -23,6 +23,7 @@ import {
   type SelectionAssuranceV1,
   type SubjectAdapterCertificationReceiptV1,
   type SubjectAdapterManifestV1,
+  type SubjectExecutionMode,
   type Tier,
 } from "@erl2/contracts";
 import {
@@ -254,6 +255,9 @@ function subjectPort(
   clock: SystemClock,
   environmentAccess?: EnvironmentAccess,
 ): SubjectPort {
+  // The frozen binding decides, before anything is constructed. This is the
+  // single authoritative point at which a run's seam is enforced (ADR-ERL2-036).
+  assertSubjectModeUnchanged(flags, runRoot);
   const entry = flags["adapter-entry"] as string | undefined;
   if (entry === undefined) {
     // A certification supplied to a run that dispatches no adapter would be
@@ -453,26 +457,21 @@ function adapterManifestHash(flags: ParsedFlags, runRoot: string): Hash {
  * A real adapter with no receipt is refused here, before the host is built.
  */
 function adapterCertificationReceiptHash(flags: ParsedFlags, runRoot: string): Hash {
-  const retained = path.join(
-    path.resolve(runRoot),
-    "retained",
-    "adapter-certification-receipt.json",
-  );
   const supplied = flags["adapter-certification"] as string | undefined;
-  if (existsSync(retained)) {
-    const bound = (
-      parseStrictJson(readFileSync(retained, "utf8")) as { core_hash?: string }
-    ).core_hash;
-    if (typeof bound === "string") {
-      if (supplied !== undefined && supplied !== bound) {
-        throw new Erl2Error(
-          CODES.ADAPTER_CERTIFICATION_IDENTITY_MISMATCH,
-          "--adapter-certification does not match the certification this run bound; " +
-            "a run cannot substitute its adapter's certification",
-        );
-      }
-      return bound as Hash;
+  const frozen = frozenSubjectBinding(runRoot);
+  if (frozen?.receiptHash !== undefined) {
+    // Authoritative. The receipt comes from the signed preregistration, never
+    // from a flag: the independent review showed a run could otherwise
+    // authorize receipt A on one command and receipt B on the next, with
+    // neither inside the frozen boundary.
+    if (supplied !== undefined && supplied !== frozen.receiptHash) {
+      throw new Erl2Error(
+        CODES.ADAPTER_CERTIFICATION_IDENTITY_MISMATCH,
+        "--adapter-certification does not match the certification this run froze at " +
+          "preregistration; a run cannot substitute its adapter's certification",
+      );
     }
+    return frozen.receiptHash;
   }
   if (supplied === undefined) {
     throw new Erl2Error(
@@ -483,6 +482,77 @@ function adapterCertificationReceiptHash(flags: ParsedFlags, runRoot: string): H
     );
   }
   return supplied as Hash;
+}
+
+/**
+ * The subject seam and current receipt this run froze at preregistration.
+ *
+ * `undefined` only before preregistration — the one moment the run has not
+ * chosen yet, and the only moment a flag may decide. Read from the retained,
+ * signed `AcquisitionPreregistrationV1` rather than held in memory, so it
+ * survives process exit, a fresh command, recovery and replay.
+ */
+interface FrozenSubjectBinding {
+  readonly mode: SubjectExecutionMode;
+  readonly receiptHash?: Hash;
+}
+
+function frozenSubjectBinding(runRoot: string): FrozenSubjectBinding | undefined {
+  const preregPath = path.join(
+    path.resolve(runRoot),
+    "retained",
+    "acquisition-preregistration.json",
+  );
+  if (!existsSync(preregPath)) return undefined;
+  const prereg = parseStrictJson(readFileSync(preregPath, "utf8")) as {
+    subject_execution_mode?: unknown;
+    adapter_certification_receipt_hash?: unknown;
+  };
+  const mode = prereg.subject_execution_mode;
+  if (mode !== "development_fake_port" && mode !== "external_adapter") return undefined;
+  const receipt = prereg.adapter_certification_receipt_hash;
+  return {
+    mode,
+    ...(typeof receipt === "string" ? { receiptHash: receipt as Hash } : {}),
+  };
+}
+
+/**
+ * Refuses any later command that tries to change the seam the run froze.
+ *
+ * This is the **single authoritative enforcement point** for LIVE-001's P1: a
+ * fake-port run cannot acquire a real adapter, and a real run cannot quietly
+ * drop back to the fake port by omitting a flag. Removing it is what the
+ * campaign red control and `MODE-FROZEN` tests detect.
+ */
+function assertSubjectModeUnchanged(flags: ParsedFlags, runRoot: string): void {
+  const frozen = frozenSubjectBinding(runRoot);
+  if (frozen === undefined) return;
+  const entry = flags["adapter-entry"] as string | undefined;
+  if (frozen.mode === "development_fake_port") {
+    if (entry !== undefined) {
+      throw new Erl2Error(
+        CODES.ADMISSION_SUBJECT_EXECUTION_MODE_FROZEN,
+        "this run preregistered the development fake port, which executes no adapter bytes; " +
+          "--adapter-entry cannot introduce a real adapter into it",
+      );
+    }
+    if (flags["adapter-certification"] !== undefined) {
+      throw new Erl2Error(
+        CODES.ADMISSION_SUBJECT_EXECUTION_MODE_FROZEN,
+        "this run preregistered the development fake port and bound no certification; " +
+          "--adapter-certification cannot be added to it",
+      );
+    }
+    return;
+  }
+  if (entry === undefined) {
+    throw new Erl2Error(
+      CODES.ADMISSION_SUBJECT_EXECUTION_MODE_FROZEN,
+      "this run preregistered a real external adapter; omitting --adapter-entry would run it " +
+        "on the development fake port, which is a downgrade the frozen binding forbids",
+    );
+  }
 }
 
 /**
@@ -714,6 +784,8 @@ export function preregisterAcquisition(argv: readonly string[]): JourneyCommandO
     // Bound only when this run will drive a real adapter. The development fake
     // port executes no adapter bytes, so it has nothing to certify — and
     // binding a receipt it never uses would be a claim, not evidence.
+    subjectExecutionMode:
+      flags["adapter-entry"] === undefined ? "development_fake_port" : "external_adapter",
     ...(flags["adapter-entry"] === undefined
       ? {}
       : { adapterCertificationReceiptHash: adapterCertificationReceiptHash(flags, requireString(flags, "run-root")) }),

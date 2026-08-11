@@ -111,6 +111,7 @@
         "generic_run_policy_hash",
         "run_trust_policy_hash",
         "limits_hash",
+        "subject_execution_mode",
         "registered_at",
         "expires_at",
         "selected_case_identity",
@@ -154,6 +155,17 @@
         "limits_hash": {
           "$ref": "erl2:common#/$defs/Hash"
         },
+        "subject_execution_mode": {
+          "$comment": "ADR-ERL2-036. Which subject seam this run is permanently bound to. Frozen here so a later command cannot introduce a real adapter into a run that preregistered the development fake port, and cannot downgrade a real run to it.",
+          "enum": [
+            "development_fake_port",
+            "external_adapter"
+          ]
+        },
+        "adapter_certification_receipt_hash": {
+          "$comment": "The exact CURRENT certification receipt authorizing this run's adapter. Present if and only if subject_execution_mode is external_adapter. Distinct from the manifest's certification_receipt_hash, which is a bootstrap/prior reference (ADR-ERL2-036).",
+          "$ref": "erl2:common#/$defs/Hash"
+        },
         "registered_at": {
           "$ref": "erl2:common#/$defs/Instant"
         },
@@ -169,7 +181,37 @@
         "signature": {
           "$ref": "erl2:common#/$defs/Signature"
         }
-      }
+      },
+      "allOf": [
+        {
+          "$comment": "An external-adapter run must name the current receipt that authorized it; a development fake-port run must not carry one at all, so 'no adapter certification' cannot be confused with 'certification omitted'.",
+          "if": {
+            "type": "object",
+            "properties": {
+              "subject_execution_mode": {
+                "const": "external_adapter"
+              }
+            },
+            "required": [
+              "subject_execution_mode"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "adapter_certification_receipt_hash"
+            ]
+          },
+          "else": {
+            "type": "object",
+            "not": {
+              "required": [
+                "adapter_certification_receipt_hash"
+              ]
+            }
+          }
+        }
+      ]
     },
     "AcquisitionPreregistrationVerificationReceiptV1": {
       "type": "object",

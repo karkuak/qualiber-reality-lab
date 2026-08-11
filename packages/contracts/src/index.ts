@@ -7,6 +7,19 @@
  */
 
 export * from "../generated/types.js";
+
+import type { AcquisitionPreregistrationV1 } from "../generated/types.js";
+
+/**
+ * The subject seam a run is permanently bound to at preregistration
+ * (ADR-ERL2-036).
+ *
+ * Derived from the contract rather than restated, so the enum and the schema
+ * cannot drift apart: adding a mode to the schema is the only way to add one
+ * here.
+ */
+export type SubjectExecutionMode = AcquisitionPreregistrationV1["subject_execution_mode"];
+
 export * from "./registry.js";
 export * from "./validate.js";
 export * from "./errors.js";

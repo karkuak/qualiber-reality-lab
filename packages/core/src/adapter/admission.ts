@@ -60,6 +60,7 @@ import {
   type Hash,
   type SubjectAdapterCertificationReceiptV1,
   type SubjectAdapterManifestV1,
+  type SubjectExecutionMode,
   type Tier,
 } from "@erl2/contracts";
 import { coreHash, hashBytes, verifySignature, SIGNATURE_DOMAINS } from "@erl2/integrity";
@@ -498,6 +499,18 @@ export interface AdapterCertifiedGate {
  */
 export function deriveAdapterCertifiedGate(input: {
   readonly adapterManifestHash: Hash;
+  /**
+   * The seam this run froze at preregistration.
+   *
+   * `development_fake_port` makes the gate **not applicable**: no external
+   * adapter was selected, so there is nothing to certify and the gate is
+   * omitted entirely rather than passed. That is the Lab's existing way of
+   * saying a control was never exercised — `PRE_ENVIRONMENT_GATE_IDS` already
+   * omits the environment and selection gates on a run that reached neither —
+   * and it is what stops `passed: true` on manifest-only evidence from reading
+   * as a certification claim.
+   */
+  readonly subjectExecutionMode: SubjectExecutionMode;
   readonly certification: AdapterAdmission | undefined;
   /**
    * Whether the run *bound* a certification receipt at preregistration,
@@ -509,23 +522,47 @@ export function deriveAdapterCertifiedGate(input: {
    */
   readonly boundCertificationHash: Hash | undefined;
   readonly dispatchedRealAdapter: boolean;
-}): AdapterCertifiedGate {
+}): AdapterCertifiedGate | undefined {
+  if (input.subjectExecutionMode === "development_fake_port") {
+    // Not applicable. A fake-port run that somehow dispatched adapter bytes is
+    // a different problem and is refused long before here; it is not something
+    // this gate should paper over with a pass.
+    return undefined;
+  }
   if (input.certification !== undefined) {
     return {
       passed: true,
       evidence_refs: [input.certification.receiptHash, input.adapterManifestHash],
     };
   }
-  if (input.boundCertificationHash !== undefined) {
-    return {
-      passed: false,
-      evidence_refs: [input.boundCertificationHash, input.adapterManifestHash],
-    };
-  }
+  // An external-adapter run whose frozen certification no longer validates, or
+  // has gone missing, fails. `passed: true` is reserved for a validated
+  // retained receipt, and the evidence always names it.
   return {
-    passed: !input.dispatchedRealAdapter,
-    evidence_refs: [input.adapterManifestHash],
+    passed: false,
+    evidence_refs:
+      input.boundCertificationHash === undefined
+        ? [input.adapterManifestHash]
+        : [input.boundCertificationHash, input.adapterManifestHash],
   };
+}
+
+/**
+ * The `adapter-certified` gate as zero or one gate results.
+ *
+ * Zero for a development fake-port run — the gate is not applicable, and the
+ * validity catalogue does not require it there. One for an external-adapter
+ * run, always naming the receipt.
+ */
+export function adapterCertifiedGateResults(input: {
+  readonly adapterManifestHash: Hash;
+  readonly subjectExecutionMode: SubjectExecutionMode;
+  readonly certification: AdapterAdmission | undefined;
+  readonly boundCertificationHash: Hash | undefined;
+  readonly dispatchedRealAdapter: boolean;
+}): readonly { readonly gate_id: string; readonly passed: boolean; readonly evidence_refs: readonly Hash[] }[] {
+  const gate = deriveAdapterCertifiedGate(input);
+  return gate === undefined ? [] : [{ gate_id: "adapter-certified", ...gate }];
 }
 
 /**
