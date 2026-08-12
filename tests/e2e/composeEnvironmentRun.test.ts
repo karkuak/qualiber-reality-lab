@@ -29,7 +29,14 @@ import { dockerAvailable, OTEL_DEMO_RELEASE_TAG } from "@erl2/core";
 import { erl2, verifyBundle } from "../support/cliRun.js";
 import { referenceAdapterEntry } from "../support/adapterFixtures.js";
 import { buildGovernorRegistry, type GovernorRegistry } from "../support/governorRegistry.js";
-import { ownedRunRoot } from "../support/tempDirs.js";
+import { ownedRunRoot, ownedTempDir } from "../support/tempDirs.js";
+import {
+  awaitDurableTelemetry,
+  explainDurableTelemetry,
+  startCollectorCapture,
+  type CollectorCapture,
+  type DurableTelemetryObservation,
+} from "../support/durableTelemetry.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const ARCHIVE = path.join(
@@ -233,28 +240,20 @@ function retained<T>(run: ComposeRun, ...segments: readonly string[]): T {
 }
 
 /**
- * Telemetry the collector received, read from the run's own exact container.
+ * Telemetry the collector received, read from a durable copy of its output.
  *
- * Polled rather than sampled once: the emitting SDK batches, so "no spans yet" a
- * few hundred milliseconds after a request is a timing fact and not a telemetry
- * fact. Bounded, so a genuine absence still fails.
+ * This used to re-read `docker container logs` after the fact. The pinned
+ * collector rotates its `json-file` log (`max-size=5m`, `max-file=2`) and
+ * exports its own self-telemetry back through the detailed `debug` exporter, so
+ * a loaded run writes past the retention window in seconds: a diagnosed failure
+ * had three HTTP 200 `/getquote` responses, spans emitted, spans received and 63
+ * run-marked records, and still reported "telemetry was not actually emitted"
+ * because the console line carrying the count had already rotated away. The
+ * follower attached at `provision` copies the stream as it is produced, so
+ * rotation inside the container cannot evict what was already observed.
  */
-function telemetry(run: ComposeRun): { readonly spans: number; readonly runAttributed: number } {
-  const collector = `${run.project}-otel-collector`;
-  let spans = 0;
-  let runAttributed = 0;
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const result = spawnSync("docker", ["container", "logs", collector], { encoding: "utf8" });
-    const text = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-    spans = [...text.matchAll(/\tTraces\t.*"spans": (\d+)/g)].reduce(
-      (total, match) => total + Number(match[1]),
-      0,
-    );
-    runAttributed = text.split(`erl2_run=${run.runId}`).length - 1;
-    if (spans > 0 && runAttributed > 0) break;
-    spawnSync(process.execPath, ["-e", "setTimeout(() => undefined, 1000)"]);
-  }
-  return { spans, runAttributed };
+function telemetry(capture: CollectorCapture, run: ComposeRun): DurableTelemetryObservation {
+  return awaitDurableTelemetry({ capturePath: capture.capturePath, runId: run.runId });
 }
 
 test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compose substrate", SKIP, () => {
@@ -267,6 +266,10 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
   );
 
   const observed: Record<string, unknown> = {};
+  // Attached the moment the collector exists and detached in `finally`, so the
+  // durable copy spans the whole run and leaves nothing behind either way.
+  let capture: CollectorCapture | undefined;
+  try {
   for (const [name, argv] of composePlan(run)) {
     const result = erl2(argv);
     assert.equal(result.exitCode, 0, `${name}: ${JSON.stringify(result.body.errors)}`);
@@ -289,16 +292,29 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
         `the executed platform ${platform} is not one the lock pins`,
       );
       observed["platform"] = platform;
+      capture = startCollectorCapture({
+        containerName: `${run.project}-otel-collector`,
+        directory: ownedTempDir("erl2-collector-capture-"),
+      });
     }
 
     if (name === "execute-subject:exercise") {
-      const counts = telemetry(run);
-      assert.ok(counts.spans > 0, "the collector received no spans; telemetry was not actually emitted");
-      assert.ok(
-        counts.runAttributed > 0,
-        "no telemetry record carries this run's marker; the spans are not attributable to this run",
+      assert.ok(capture !== undefined, "the collector capture was never attached");
+      const telemetryObservation = telemetry(capture, run);
+      // One assertion, on the first missing transition. The previous pair could
+      // report "telemetry was not actually emitted" for a run whose telemetry was
+      // emitted, received and run-marked — the message named a conclusion the
+      // evidence did not support. `diagnosticCode` names what actually failed.
+      assert.equal(
+        telemetryObservation.diagnosticCode,
+        "CURRENT_RUN_SPANS_OBSERVED",
+        explainDurableTelemetry(telemetryObservation),
       );
-      observed["telemetry"] = counts;
+      assert.ok(
+        telemetryObservation.currentRunSpanCount > 0,
+        explainDurableTelemetry(telemetryObservation),
+      );
+      observed["telemetry"] = telemetryObservation;
     }
 
     if (name === "activate") {
@@ -481,6 +497,9 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
   // selection, and the ceiling is the weakest applicable component. Asking for
   // more than the evidence supports is reduced, never granted.
   assert.equal(observed["telemetry"] !== undefined, true);
+  } finally {
+    capture?.dispose();
+  }
 });
 
 test("COMPOSE-E2E: a run may not substitute its driver after it has bound one", SKIP, () => {
