@@ -99,8 +99,15 @@ const cases = [
     file: "packages/core/src/observation/localObservation.ts",
     test: "tests/dist/integration/localObservationReducer.test.js",
     mutate: (text) => once(text,
-      'if (existing.state === "ambiguous_not_replayed") {',
-      'if (false && existing.state === "ambiguous_not_replayed") {'),
+      '        if (existing.state === "ambiguous_not_replayed") {\n' +
+        '          throw new Erl2Error(\n' +
+        '            CODES.ADAPTER_LOCAL_AMBIGUOUS_REPLAY_REFUSED,\n' +
+        '            "an ambiguous local effect is never replayed blindly",\n' +
+        '          );\n' +
+        '        }',
+      '        if (existing.state === "ambiguous_not_replayed") {\n' +
+        '          return existing;\n' +
+        '        }'),
   },
   {
     id: "NC-V2-10",
