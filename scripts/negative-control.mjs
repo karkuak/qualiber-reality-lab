@@ -2110,6 +2110,206 @@ export const CONTROLS = [
     expect: "fail",
     note: "Needs a container daemon. On a host without one the deadline tests take their announced skip branch, the declared prerequisite is unavailable, and the campaign records `unmeasured_here` — which is neither agreement nor disagreement, and must not be read as a guard that is not load-bearing. The ordinary gate must never require a daemon; this control is where that reading is made explicit.",
   },
+
+  // -- subject-adapter/v2 local observation (ADR-ERL2-037) ------------------
+  //
+  // These twelve ran for a while in `scripts/subject-adapter-v2-negative-controls.mjs`,
+  // a second harness with its own runner, its own patcher and its own report
+  // shape. They killed what they claimed to kill, and `npm run negative-control`
+  // could not see any of them: the campaign counted 129 controls and published
+  // that number as its scope while twelve load-bearing guards sat outside it. A
+  // control the campaign cannot discover is a control the campaign does not have,
+  // so they live here now, under the same discovery, timeout, classification and
+  // durable-record path as every other row. The five after them close the gaps an
+  // independent review found in this package.
+  {
+    id: "v2-local-mode-accepts-v1",
+    what: "local observation may only be dispatched on subject-adapter/v2",
+    file: "packages/core/src/adapter/host.ts",
+    find: "if (isLocal !== (input.executionMode === ADAPTER_LOCAL_EXECUTION_MODE)) {",
+    replace: 'if (String(1) === "2" && isLocal !== (input.executionMode === ADAPTER_LOCAL_EXECUTION_MODE)) {',
+    tests: ["tests/dist/adversarial/localAdapterV2.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-receipt-version-guard",
+    what: "a v1 certification receipt never authorizes a v2 local profile",
+    file: "packages/core/src/adapter/admission.ts",
+    find: 'if (receipt.schema_version !== "subject-adapter-certification-receipt/v2") {',
+    replace: 'if (String(1) === "2") {',
+    tests: ["tests/dist/adversarial/localAdapterV2.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-local-context-closed",
+    what: "the local execution context admits no governed field",
+    file: "packages/contracts/schemas/adapter.schema.json",
+    // The def name is carried in the preimage rather than used as an anchor:
+    // an anchor only opens a window to end-of-file, and `additionalProperties`
+    // occurs seven times below this one.
+    find:
+      '"LocalObservationExecutionContextV2": {\n' +
+      '      "type": "object",\n' +
+      '      "additionalProperties": false,',
+    replace:
+      '"LocalObservationExecutionContextV2": {\n' +
+      '      "type": "object",\n' +
+      '      "additionalProperties": true,',
+    tests: ["tests/dist/contract/localObservationContracts.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-not-scored-constant",
+    what: "a local observation result cannot stop declaring itself unscored",
+    file: "packages/contracts/schemas/observation.schema.json",
+    anchor: '"LocalObservationResultV1": {',
+    find: '"not_scored": { "const": true },',
+    replace: '"not_scored": { "type": "boolean" },',
+    tests: ["tests/dist/contract/localObservationContracts.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-governed-consumer-firewall",
+    what: "a local observation result cannot satisfy a governed consumer contract",
+    file: "packages/contracts/src/validate.ts",
+    find: "export function validateContract(contractName: string, value: unknown): ValidationResult {",
+    replace:
+      "export function validateContract(contractName: string, value: unknown): ValidationResult {\n" +
+      '  if (contractName === "LabRunRecordV1" && (value as { schema_version?: string })?.schema_version === "local-observation-result/v1") return { valid: true, problems: [] };',
+    tests: ["tests/dist/adversarial/localObservationFirewall.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-receipt-operation-scope",
+    what: "the receipt's certified operations must equal the certified profile's",
+    file: "packages/core/src/adapter/admission.ts",
+    find: '  assertSameSet(receipt.certified_operations, certifiedProfile.operations, "certified operations", manifest.adapter_id);\n',
+    replace: "",
+    tests: ["tests/dist/adversarial/localAdapterV2.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-per-dispatch-digest",
+    what: "the adapter's entry bytes are re-verified on every dispatch",
+    file: "packages/core/src/adapter/host.ts",
+    find:
+      "      assertEntryDigestUnchanged({\n" +
+      "        entryPath: this.entryPath,\n" +
+      "        certifiedArtifactHash: this.certifiedArtifactHash,\n" +
+      "      });",
+    replace: "      void this.certifiedArtifactHash;",
+    tests: ["tests/dist/adversarial/localAdapterV2.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-local-output-bytes",
+    what: "the plan's output-byte ceiling, not the host default, bounds a local run",
+    file: "packages/core/src/adapter/host.ts",
+    find: "maxTotalBytes: limits.max_output_bytes,",
+    replace: "maxTotalBytes: hostBounds.maxTotalBytes,",
+    tests: ["tests/dist/adversarial/localAdapterV2.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-ambiguous-never-replayed",
+    what: "an ambiguous local effect is never replayed to make progress",
+    file: "packages/core/src/observation/localObservation.ts",
+    find:
+      '        if (existing.state === "ambiguous_not_replayed") {\n' +
+      "          throw new Erl2Error(\n" +
+      "            CODES.ADAPTER_LOCAL_AMBIGUOUS_REPLAY_REFUSED,\n" +
+      '            "an ambiguous local effect is never replayed blindly",\n' +
+      "          );\n" +
+      "        }",
+    replace:
+      '        if (existing.state === "ambiguous_not_replayed") {\n' +
+      "          return existing;\n" +
+      "        }",
+    tests: ["tests/dist/integration/localObservationReducer.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-post-freeze-dispatch",
+    what: "no local operation dispatches after the output freeze",
+    file: "packages/core/src/observation/localObservation.ts",
+    find: "if (this.outputFrozen) {",
+    replace: 'if (String(1) === "2" && this.outputFrozen) {',
+    tests: ["tests/dist/integration/localObservationReducer.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-cleanup-requires-evidence",
+    what: "cleanup is complete only when its evidence says so",
+    file: "packages/core/src/observation/localObservation.ts",
+    find: "    const complete =\n",
+    replace: "    const complete =\n      true ||\n",
+    tests: [
+      "tests/dist/integration/localObservationReducer.test.js",
+      "tests/dist/integration/localResidueTruth.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "v2-coordinator-delegates",
+    what: "the local coordinator holds no subprocess authority of its own",
+    file: "packages/core/src/observation/localObservation.ts",
+    find: 'import { coreHash } from "@erl2/integrity";\n',
+    replace: 'import { coreHash } from "@erl2/integrity";\nimport { spawnSync } from "node:child_process";\n',
+    tests: ["tests/dist/architecture/localObservationBoundary.test.js"],
+    expect: "fail",
+  },
+
+  // -- closures from the Package A independent review ------------------------
+  {
+    id: "v2-residue-requires-report",
+    what: "a clean substrate is read from the adapter's residue report, never inferred from an operation ending",
+    file: "packages/core/src/observation/localObservation.ts",
+    // The exact defect that was found: cleanliness derived from a completed
+    // operation rather than from what the adapter reported.
+    find: "      finalResidue === undefined\n        ? \"not_observed\"",
+    replace: "      finalResidue === undefined\n        ? (succeeded(\"report-residue\") ? \"observed_clean\" : \"not_observed\")",
+    tests: ["tests/dist/integration/localResidueTruth.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-residue-report-validated",
+    what: "an unusable or self-contradicting residue report is refused at the protocol boundary",
+    file: "packages/core/src/adapter/responseShape.ts",
+    find: '  if (record["status"] === "clean" && named > 0) {',
+    replace: '  if (String(1) === "2" && record["status"] === "clean" && named > 0) {',
+    tests: ["tests/dist/integration/localResidueTruth.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-governed-port-refusal",
+    what: "a v2 local-observation host cannot enter the governed SubjectPort",
+    file: "packages/core/src/adapter/hostedSubjectPort.ts",
+    // The mutation an independent review ran, which the suite did not notice.
+    find: '    if (host.manifest.schema_version !== "subject-adapter-manifest/v1") {',
+    replace: '    if (String(1) === "2") {',
+    tests: ["tests/dist/integration/governedPortRefusal.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-telemetry-follower-readiness",
+    what: "a follower that never attached is an unavailable observation, not an absent one",
+    file: "tests/support/durableTelemetry.ts",
+    find: "    if (!readiness.usable) {",
+    replace: '    if (String(1) === "2" && !readiness.usable) {',
+    tests: ["tests/dist/integration/durableTelemetryObservation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-telemetry-block-boundary",
+    what: "a trace batch is attributed only by the markers inside its own block",
+    file: "tests/support/durableTelemetry.ts",
+    // Never terminating a block is the direction that leaks one run's spans into
+    // another's total, and is the mutation that previously survived.
+    find: "      if (SIGNAL_SUMMARY_LINE.test(line)) break;",
+    replace: "      if (false) break;",
+    tests: ["tests/dist/integration/durableTelemetryObservation.test.js"],
+    expect: "fail",
+  },
 ];
 
 // -- result classification ---------------------------------------------------
@@ -2967,6 +3167,21 @@ async function main() {
     console.error("negative-control refuses to run: the control table is malformed\n");
     for (const problem of declarationProblems) console.error(`  ${problem}`);
     process.exit(2);
+  }
+
+  // `--list` answers "what would this campaign measure?" without measuring it.
+  //
+  // It exists because scope was silently wrong once: twelve `subject-adapter/v2`
+  // controls lived in a second script with its own runner, and the campaign went
+  // on reporting 129 as its scope while none of the twelve was discoverable here.
+  // Nothing was lying; there was simply no cheap way to ask. This is that way,
+  // and it deliberately mutates nothing, so it does not need a clean tree.
+  if (process.argv.includes("--list")) {
+    console.log(`negative-control discovery: ${String(CONTROLS.length)} control(s)\n`);
+    for (const control of CONTROLS) {
+      console.log(`  ${control.id}\t${control.file}\t${control.what}`);
+    }
+    process.exit(0);
   }
 
   const before = treeDigest(root);
