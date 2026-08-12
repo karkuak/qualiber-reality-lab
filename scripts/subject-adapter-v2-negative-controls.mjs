@@ -78,8 +78,11 @@ const cases = [
     file: "packages/core/src/adapter/host.ts",
     test: "tests/dist/adversarial/localAdapterV2.test.js",
     mutate: (text) => once(text,
-      "if (this.certifiedArtifactHash !== undefined) {",
-      "if (false && this.certifiedArtifactHash !== undefined) {"),
+      "      assertEntryDigestUnchanged({\n" +
+        "        entryPath: this.entryPath,\n" +
+        "        certifiedArtifactHash: this.certifiedArtifactHash,\n" +
+        "      });",
+      "      void this.certifiedArtifactHash;"),
   },
   {
     id: "NC-V2-08",
