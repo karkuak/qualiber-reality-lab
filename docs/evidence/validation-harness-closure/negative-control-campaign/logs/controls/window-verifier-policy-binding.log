@@ -1,0 +1,46 @@
+✔ WINDOW-BASELINE: a shipped environment terminal commits exactly one window and verifies (18466.363375ms)
+✔ WINDOW-HARNESS: re-sealing the whole chain unchanged still verifies (290.528292ms)
+✔ WINDOW-SHIFTED-WITHIN-BOUNDS: a window moved inside the bounds no longer escapes (283.135667ms)
+✔ WINDOW-SHIFTED-COMMITMENT: moving the commitment to match a shifted window is caught too (279.33675ms)
+✔ WINDOW-OBSERVATION-DURATION: an observation window shifted within bounds is caught (281.301ms)
+✔ WINDOW-BUNDLE-CUTOFF: an observation bundle whose cutoff disagrees with the commitment refuses (292.769125ms)
+✔ WINDOW-MISSING: a terminal that started traffic and dropped its commitment refuses (281.194625ms)
+✔ WINDOW-UNREACHED: a commitment retained but produced by no event refuses (266.311417ms)
+✔ WINDOW-LATE-COMMITMENT: a window committed after the capture it governs refuses (286.202417ms)
+✔ WINDOW-WRONG-SIGNER: a commitment signed by the traffic supervisor refuses (274.025667ms)
+✔ WINDOW-FOREIGN-RUN: a commitment naming another run refuses (277.288708ms)
+✖ WINDOW-POLICY-BINDING: a commitment naming a different cutoff policy refuses (296.311416ms)
+✔ WINDOW-PROCESS-BINDING: a commitment measured from a different process start refuses (286.69175ms)
+✔ WINDOW-CLOCK-BINDING: a commitment in a different clock domain refuses (279.154958ms)
+✔ WINDOW-OBSERVATION-BINDING: a commitment naming a different comparison policy refuses (280.159ms)
+✔ WINDOW-RULE-BINDING: a commitment declaring another instant rule refuses (283.059125ms)
+✔ WINDOW-INVENTORY: the commitment is an applicable signed member of the terminal (57.235041ms)
+✔ WINDOW-INVENTORY-OMITTED: dropping the commitment from an otherwise complete inventory refuses (270.078ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 17
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 23210.07225
+
+✖ failing tests:
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:513:1
+✖ WINDOW-POLICY-BINDING: a commitment naming a different cutoff policy refuses (296.311416ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:519:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,38 @@
+✖ NOOP-LIFECYCLE: fake valid pre-environment run verifies offline (795.693375ms)
+✔ INVALID-TERMINAL: cancellation freezes one invalid record and no bundle (285.57125ms)
+✔ INVALID-REASON-PHASE: classified lab failure retains its primary finding (222.763417ms)
+✖ VERIFY-RECORD: a public bundle is refused by verify-record (754.657708ms)
+✔ EMERGENCY-CLEANUP: restoration failure reaches the invalid record only through receipt-backed emergency cleanup (605.922375ms)
+✔ EMERGENCY-CLEANUP: bypassing emergency cleanup after a restoration failure is refused (534.915583ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 4
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3383.529709
+
+✖ failing tests:
+
+test at tests/dist/e2e/preEnvironmentRun.test.js:9:1
+✖ NOOP-LIFECYCLE: fake valid pre-environment run verifies offline (795.693375ms)
+  Error: fake pre-environment run: the signer inventory lists 1 member(s) but the fixture retains 7 applicable signed member(s). A fixture must contain the condition it claims.
+      at runFakeValidPreEnvironmentRun (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/support/fakeRun.js:740:15)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/preEnvironmentRun.test.js:10:17)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+
+test at tests/dist/e2e/preEnvironmentRun.test.js:52:1
+✖ VERIFY-RECORD: a public bundle is refused by verify-record (754.657708ms)
+  Error: fake pre-environment run: the signer inventory lists 1 member(s) but the fixture retains 7 applicable signed member(s). A fixture must contain the condition it claims.
+      at runFakeValidPreEnvironmentRun (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/support/fakeRun.js:740:15)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/preEnvironmentRun.test.js:53:17)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)

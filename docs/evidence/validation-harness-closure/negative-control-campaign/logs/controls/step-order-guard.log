@@ -1,0 +1,40 @@
+✔ ENV-CLI: a run advances from case_selected to a finalized environment terminal (19069.208458ms)
+✔ ENV-VERIFY: the environment public bundle verifies offline, as an external reader (16358.072291ms)
+✔ ENV-VERIFY: a verifier without the pinned beacon cannot authorize the selection chain (16511.61625ms)
+✔ ENV-CLI: the environment is really torn down and the reservations released (15876.884917ms)
+✔ ENV-CLI: the plan executes exactly the persona the selection opened (4365.992958ms)
+✔ ENV-CLI: an unsupported step is a retained outcome, never a removed case (16102.120167ms)
+✔ ENV-CLI-CRASH: every phase boundary resumes from retained evidence (325388.05375ms)
+✔ ENV-CLI: replaying a finished run adds nothing, whether the phase is idempotent or refused (21810.536625ms)
+✔ ENV-NO-WRITE: every refused environment command adds zero retained evidence (19282.212875ms)
+✖ ENV-ORDER: a named step command may not reorder the committed journey (4797.144ms)
+✔ ENV-SUBSTRATE: the driver's substrate lives outside the run root (4148.513708ms)
+✔ ENV-ORACLE: a canary in the subject's output bytes invalidates the run before it freezes (12338.4175ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 11
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 477600.574875
+
+✖ failing tests:
+
+test at tests/dist/e2e/environmentRun.test.js:355:1
+✖ ENV-ORDER: a named step command may not reorder the committed journey (4797.144ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentRun.test.js:362:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

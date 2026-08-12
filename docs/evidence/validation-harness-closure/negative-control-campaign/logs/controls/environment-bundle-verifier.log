@@ -1,0 +1,180 @@
+✖ MUT-ENV-BASELINE: the unmutated environment bundle verifies offline (22949.388166ms)
+✖ MUT-ENV: a bundle that omits selection verification is refused (16598.84875ms)
+✖ MUT-ENV: a bundle whose selection receipt names other bytes is refused (19074.055ms)
+✖ MUT-ENV: a wrong package binding — an attestation from another run — is refused (37012.178792ms)
+✖ MUT-ENV: a wrong source — the right source id pinned to the wrong keys — is refused (16119.064875ms)
+✔ ENV-CLI: a run advances from case_selected to a finalized environment terminal (22788.260584ms)
+✖ ENV-VERIFY: the environment public bundle verifies offline, as an external reader (16720.70975ms)
+✖ ENV-VERIFY: a verifier without the pinned beacon cannot authorize the selection chain (19113.230541ms)
+✔ ENV-CLI: the environment is really torn down and the reservations released (19099.779583ms)
+✔ ENV-CLI: the plan executes exactly the persona the selection opened (6252.053125ms)
+✔ ENV-CLI: an unsupported step is a retained outcome, never a removed case (15785.243667ms)
+✔ ENV-CLI-CRASH: every phase boundary resumes from retained evidence (316636.334167ms)
+✔ ENV-CLI: replaying a finished run adds nothing, whether the phase is idempotent or refused (21816.375791ms)
+✔ ENV-NO-WRITE: every refused environment command adds zero retained evidence (19429.973625ms)
+✔ ENV-ORDER: a named step command may not reorder the committed journey (4747.057541ms)
+✔ ENV-SUBSTRATE: the driver's substrate lives outside the run root (3835.162167ms)
+✔ ENV-ORACLE: a canary in the subject's output bytes invalidates the run before it freezes (12006.939875ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 10
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 479831.886375
+
+✖ failing tests:
+
+test at tests/dist/adversarial/environmentTerminalMutations.test.js:71:1
+✖ MUT-ENV-BASELINE: the unmutated environment bundle verifies offline (22949.388166ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"SCHEMA_VALIDATION_FAILED","message":"PreEnvironmentPublicVerificationBundleV2 failed validation at /: must have required property 'acquisition_timestamp_checkpoint_chain'"}]
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/environmentTerminalMutations.test.js:74:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/environmentTerminalMutations.test.js:77:1
+✖ MUT-ENV: a bundle that omits selection verification is refused (16598.84875ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /selection_verification_receipt/. Input:
+  
+  "PreEnvironmentPublicVerificationBundleV2 failed validation at /: must have required property 'acquisition_timestamp_checkpoint_chain'"
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/environmentTerminalMutations.test.js:91:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: "PreEnvironmentPublicVerificationBundleV2 failed validation at /: must have required property 'acquisition_timestamp_checkpoint_chain'",
+    expected: /selection_verification_receipt/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/environmentTerminalMutations.test.js:93:1
+✖ MUT-ENV: a bundle whose selection receipt names other bytes is refused (19074.055ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'SCHEMA_VALIDATION_FAILED'
+  - 'BUNDLE_MEMBER_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/environmentTerminalMutations.test.js:108:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SCHEMA_VALIDATION_FAILED',
+    expected: 'BUNDLE_MEMBER_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/environmentTerminalMutations.test.js:110:1
+✖ MUT-ENV: a wrong package binding — an attestation from another run — is refused (37012.178792ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'SCHEMA_VALIDATION_FAILED'
+  - 'GRAPH_CLOSURE_UNREACHABLE_ARTIFACT'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/environmentTerminalMutations.test.js:130:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SCHEMA_VALIDATION_FAILED',
+    expected: 'GRAPH_CLOSURE_UNREACHABLE_ARTIFACT',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/environmentTerminalMutations.test.js:132:1
+✖ MUT-ENV: a wrong source — the right source id pinned to the wrong keys — is refused (16119.064875ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'SCHEMA_VALIDATION_FAILED'
+  - 'RANDOMNESS_SOURCE_NOT_PINNED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/environmentTerminalMutations.test.js:160:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SCHEMA_VALIDATION_FAILED',
+    expected: 'RANDOMNESS_SOURCE_NOT_PINNED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:197:1
+✖ ENV-VERIFY: the environment public bundle verifies offline, as an external reader (16720.70975ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"SCHEMA_VALIDATION_FAILED","message":"PreEnvironmentPublicVerificationBundleV2 failed validation at /: must have required property 'acquisition_timestamp_checkpoint_chain'"}]
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentRun.test.js:206:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:214:1
+✖ ENV-VERIFY: a verifier without the pinned beacon cannot authorize the selection chain (19113.230541ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'SCHEMA_VALIDATION_FAILED'
+  - 'RANDOMNESS_SOURCE_NOT_PINNED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentRun.test.js:221:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SCHEMA_VALIDATION_FAILED',
+    expected: 'RANDOMNESS_SOURCE_NOT_PINNED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

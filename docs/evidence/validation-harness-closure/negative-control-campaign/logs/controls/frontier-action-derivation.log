@@ -1,0 +1,48 @@
+✔ EMERGENCY-ADV: a restoration failure reaches an emergency terminal that verifies (16566.056791ms)
+✔ EMERGENCY-ADV: every independently safe action is attempted, each with its own receipt (14017.687834ms)
+✔ EMERGENCY-ADV: an unsafe skip carries a reason and no receipt (13955.232458ms)
+✔ EMERGENCY-ADV: the unmutated cleanup derives cleanly (13693.056958ms)
+✔ EMERGENCY-ADV: an omitted safe action is refused by the verifier's own derivation (14123.860917ms)
+✔ EMERGENCY-ADV: a safe action relabelled as an unsafe skip is refused (13717.040375ms)
+✔ EMERGENCY-ADV: an attempted action with no receipt is refused (13877.00375ms)
+✔ EMERGENCY-ADV: a skip carrying a receipt is refused (13811.536167ms)
+✔ EMERGENCY-ADV: a cleanup citing a frontier the run never froze is refused (13842.024666ms)
+✖ EMERGENCY-ADV: a frontier whose actions its own resources do not imply is refused (13774.707209ms)
+✔ EMERGENCY-ADV: post-cleanup residue must account for every unresolved action (13894.050375ms)
+✔ EMERGENCY-ADV: an unsafe resource does not prevent safe cleanup of the run's own (14065.041875ms)
+✔ EMERGENCY-ADV: a mixed frontier still accounts for its residue (13649.512291ms)
+✔ EMERGENCY-ADV: a genuinely foreign resource does not abort the branch either (13977.5175ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 13
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 197727.402125
+
+✖ failing tests:
+
+test at tests/dist/adversarial/emergencyCleanupAdversarial.test.js:228:1
+✖ EMERGENCY-ADV: a frontier whose actions its own resources do not imply is refused (13774.707209ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'EMERGENCY_CLEANUP_INCOMPLETE'
+  - 'EMERGENCY_ACTION_SAFE_ACTION_SKIPPED'
+               ^
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/emergencyCleanupAdversarial.test.js:259:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'EMERGENCY_CLEANUP_INCOMPLETE',
+    expected: 'EMERGENCY_ACTION_SAFE_ACTION_SKIPPED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

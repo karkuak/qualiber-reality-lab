@@ -1,0 +1,121 @@
+✖ COMPENSATION-ADV: a receipt reading `succeeded` over a mutation that is still applied is refused (16236.742708ms)
+✖ COMPENSATION-ADV: the refused run reaches the authorized invalid terminal, and it verifies (13914.404334ms)
+✔ COMPENSATION-ADV: a compensation that reverts unrelated state is refused too (13341.442959ms)
+✖ COMPENSATION-ADV: a genuine compensation passes, freezes its probe, and verifies offline (13621.056833ms)
+✖ COMPENSATION-ADV: the verifier refuses every way a probe can be about something else (13562.549958ms)
+✖ COMPENSATION-ADV: a terminal that omits the observation entirely is refused (13486.667708ms)
+✔ COMPENSATION-ADV: `reverted nothing` and `had nothing to revert` are different answers (0.580458ms)
+✔ COMPENSATION-ADV: a resumed compensation that already ran is not mistaken for a no-op (0.062625ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 3
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 84542.519917
+
+✖ failing tests:
+
+test at tests/dist/adversarial/compensationAdversarial.test.js:71:1
+✖ COMPENSATION-ADV: a receipt reading `succeeded` over a mutation that is still applied is refused (16236.742708ms)
+  AssertionError [ERR_ASSERTION]: a no-op compensation must not pass restoration
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/compensationAdversarial.test.js:74:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/compensationAdversarial.test.js:87:1
+✖ COMPENSATION-ADV: the refused run reaches the authorized invalid terminal, and it verifies (13914.404334ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/compensationAdversarial.test.js:89:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/compensationAdversarial.test.js:121:1
+✖ COMPENSATION-ADV: a genuine compensation passes, freezes its probe, and verifies offline (13621.056833ms)
+  AssertionError [ERR_ASSERTION]: restore: [{"code":"RESTORATION_NOT_INDEPENDENTLY_OBSERVED","message":"the compensation receipt reports success, but re-reading the bound substrate derives collateral (reverted without being asked to: activate-0294c227b0f4); the authorized route is receipt-backed emergency cleanup"}]
+  
+  9 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/support/environmentCli.js:109:16)
+      at finalizedRun (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/compensationAdversarial.test.js:67:18)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/compensationAdversarial.test.js:122:17)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 9,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/compensationAdversarial.test.js:140:1
+✖ COMPENSATION-ADV: the verifier refuses every way a probe can be about something else (13562.549958ms)
+  AssertionError [ERR_ASSERTION]: restore: [{"code":"RESTORATION_NOT_INDEPENDENTLY_OBSERVED","message":"the compensation receipt reports success, but re-reading the bound substrate derives collateral (reverted without being asked to: activate-919b96a6c926); the authorized route is receipt-backed emergency cleanup"}]
+  
+  9 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/support/environmentCli.js:109:16)
+      at finalizedRun (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/compensationAdversarial.test.js:67:18)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/compensationAdversarial.test.js:141:17)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 9,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/compensationAdversarial.test.js:197:1
+✖ COMPENSATION-ADV: a terminal that omits the observation entirely is refused (13486.667708ms)
+  AssertionError [ERR_ASSERTION]: restore: [{"code":"RESTORATION_NOT_INDEPENDENTLY_OBSERVED","message":"the compensation receipt reports success, but re-reading the bound substrate derives collateral (reverted without being asked to: activate-ce0b372506fb); the authorized route is receipt-backed emergency cleanup"}]
+  
+  9 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/support/environmentCli.js:109:16)
+      at finalizedRun (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/compensationAdversarial.test.js:67:18)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/compensationAdversarial.test.js:201:17)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 9,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

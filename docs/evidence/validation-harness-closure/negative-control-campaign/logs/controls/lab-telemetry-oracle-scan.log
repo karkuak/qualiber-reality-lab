@@ -1,0 +1,86 @@
+✔ EB-MOUNT: a canary in the mounted file's bytes refuses before the adapter is dispatched (7246.115792ms)
+✔ EB-MOUNT: the run cannot step past a refused mount by retrying it (5012.937875ms)
+✔ EB-MOUNT: a clean run publishes its mounts and the canonical entries are real files (8877.017791ms)
+✖ EB-TELEMETRY: a canary in the telemetry bytes refuses before the telemetry is retained (8405.606042ms)
+✖ EB-TELEMETRY: a refused capture cannot be stepped past by retrying observe (8393.383084ms)
+✖ EB-TELEMETRY: the run still reaches exactly one invalid terminal that verifies offline (8283.713334ms)
+✔ EB-OUTPUT: a secret canary in the subject's output bytes refuses before the freeze (12081.288958ms)
+✔ EB-OUTPUT: a forbidden identifier in the subject's output bytes refuses before the freeze (11884.653167ms)
+✔ EB-OUTPUT: a judge canary still refuses under its own rule, not the new one (11928.026458ms)
+✔ EB-OUTPUT: clean binary output freezes and the run finalizes (14905.621709ms)
+✔ EB-SIZE: one byte over the declared ceiling refuses before the manifest freezes (12615.435958ms)
+✔ EB-SIZE: exactly at the declared ceiling is admitted (12283.802667ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 9
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 122458.562
+
+✖ failing tests:
+
+test at tests/dist/e2e/environmentEvidenceBoundaries.test.js:149:1
+✖ EB-TELEMETRY: a canary in the telemetry bytes refuses before the telemetry is retained (8405.606042ms)
+  AssertionError [ERR_ASSERTION]: a canary in Lab telemetry must refuse
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentEvidenceBoundaries.test.js:158:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentEvidenceBoundaries.test.js:174:1
+✖ EB-TELEMETRY: a refused capture cannot be stepped past by retrying observe (8393.383084ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '-'
+  - 'JOURNEY_ORACLE_CANARY_LEAKED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentEvidenceBoundaries.test.js:177:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '-',
+    expected: 'JOURNEY_ORACLE_CANARY_LEAKED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentEvidenceBoundaries.test.js:181:1
+✖ EB-TELEMETRY: the run still reaches exactly one invalid terminal that verifies offline (8283.713334ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '-'
+  - 'JOURNEY_ORACLE_CANARY_LEAKED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentEvidenceBoundaries.test.js:187:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '-',
+    expected: 'JOURNEY_ORACLE_CANARY_LEAKED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

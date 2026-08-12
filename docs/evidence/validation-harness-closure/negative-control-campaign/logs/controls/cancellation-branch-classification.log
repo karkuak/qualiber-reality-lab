@@ -1,0 +1,63 @@
+✔ REFUSAL-ATOMIC: this is P1-10 — journey with a missing comparison policy freezes no cutoff policy (11083.633417ms)
+✔ REFUSAL-ATOMIC: every representative refusal cause leaves the run byte-identical (42867.819625ms)
+✔ REFUSAL-ATOMIC: a refused environment command creates no substrate or reservation directory (3942.672875ms)
+✔ REFUSAL-ATOMIC: nothing is written after the valid terminal, refused or replayed (16347.584334ms)
+✔ PREREQ-CLI: this is P1-9 — a committed post-capture step cannot run before activation (15805.424333ms)
+✔ CANCEL-BRANCH: a live environment never receives a pre-environment cleanup terminal (39580.563708ms)
+✖ CANCEL-BRANCH: the branch is not decided by one file's existence (4286.706083ms)
+✖ CANCEL-BRANCH: an unreadable binding refuses rather than answering pre-environment (4362.321625ms)
+✔ CANCEL-BRANCH: a pre-environment run still takes the pre-environment branch (3803.724209ms)
+✔ CANCEL-BRANCH: cancelling a cleanup interrupted mid-flight continues it, not restarts it (15030.734875ms)
+✔ CANCEL-BRANCH: cancelling after emergency cleanup completed returns its terminal (14826.406666ms)
+✔ CANCEL-BRANCH: cancelling a cancelled run returns the same record and writes nothing (5331.219667ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 10
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 178160.863375
+
+✖ failing tests:
+
+test at tests/dist/adversarial/lifecycleOrdering.test.js:230:1
+✖ CANCEL-BRANCH: the branch is not decided by one file's existence (4286.706083ms)
+  AssertionError [ERR_ASSERTION]: deleting the binding artifact must not downgrade the cancellation branch
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/lifecycleOrdering.test.js:243:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'not_required',
+    expected: 'not_required',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/lifecycleOrdering.test.js:246:1
+✖ CANCEL-BRANCH: an unreadable binding refuses rather than answering pre-environment (4362.321625ms)
+  AssertionError [ERR_ASSERTION]: an unreadable binding must be a typed refusal, got CANCELLATION_REQUESTED
+  + actual - expected
+  
+  + 'CANCELLATION_REQUESTED'
+  - 'ENV_SUBSTRATE_UNREADABLE'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/lifecycleOrdering.test.js:259:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'CANCELLATION_REQUESTED',
+    expected: 'ENV_SUBSTRATE_UNREADABLE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

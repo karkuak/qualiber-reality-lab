@@ -1,0 +1,36 @@
+✔ CLAIM-SCOPE: with no flag, an environment run derives T1 from its own evidence (17663.192875ms)
+✖ CLAIM-SCOPE: T2 and T3 are typed refusals naming what holds the ceiling down (14815.932875ms)
+✔ CLAIM-SCOPE: T1 is accepted, and an out-of-range or T4 request is a typed refusal (29820.122375ms)
+✔ CLAIM-SCOPE: the pre-environment terminal cannot be operator-upgraded either (3115.28975ms)
+✔ CLAIM-SCOPE: a direct library caller derives the same ceiling and cannot exceed it (15186.803459ms)
+✔ CLAIM-SCOPE: every component that holds this run at T1 does so independently (14940.79025ms)
+✔ CLAIM-SCOPE: the rule is a minimum, and no component can raise another (0.496709ms)
+✔ CLAIM-SCOPE: the offline verifier rejects a self-consistent T3 bundle, for exceeding the ceiling (15675.1895ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 7
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 111673.121958
+
+✖ failing tests:
+
+test at tests/dist/adversarial/claimScopeEscalation.test.js:67:1
+✖ CLAIM-SCOPE: T2 and T3 are typed refusals naming what holds the ceiling down (14815.932875ms)
+  AssertionError [ERR_ASSERTION]: --claim-scope T2 must be refused
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/claimScopeEscalation.test.js:71:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

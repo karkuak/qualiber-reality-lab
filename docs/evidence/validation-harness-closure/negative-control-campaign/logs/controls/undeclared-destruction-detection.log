@@ -1,0 +1,77 @@
+✔ FRONTIER-DERIVE: an empty frontier derives no action and authorizes nothing (6.069833ms)
+✔ FRONTIER-DERIVE: one owned destroyable resource derives one safe action (0.292125ms)
+✔ FRONTIER-DERIVE: many owned resources all derive safe actions, one each (0.255084ms)
+✔ FRONTIER-DERIVE: the attempt order is deterministic and dependency-shaped (0.642125ms)
+✔ FRONTIER-DERIVE: a shared resource is contained, with a reason and no action (0.11575ms)
+✔ FRONTIER-DERIVE: a foreign resource is contained as not provably ours (0.169375ms)
+✔ FRONTIER-DERIVE: a foreign resource makes no owned resource unsafe (0.241833ms)
+✔ FRONTIER-DERIVE: a resource whose identity does not derive from its name is not ours (0.10825ms)
+✔ FRONTIER-DERIVE: a resource the driver will not destroy is contained, not attempted (0.102583ms)
+✔ FRONTIER-DERIVE: an edited action set no longer derives from its own resources (0.419291ms)
+✔ RESIDUE-PROBE: everything authorized and gone is clean (0.114959ms)
+✔ RESIDUE-PROBE: an unauthorized survivor is residue, not a failure of authorization (0.061ms)
+✖ RESIDUE-PROBE: a resource that vanished without authorization is the integrity failure (0.476416ms)
+✖ RESIDUE-PROBE: an unauthorized destruction outranks leftover residue (0.123125ms)
+✔ RESIDUE-PROBE: an unobservable substrate is a refusal, never a clean sheet (0.041125ms)
+✔ RESIDUE-PROBE: an empty frontier that probes back empty is clean and still says so (2.495ms)
+✔ RESIDUE-PROBE: the frozen bytes do not depend on the driver's iteration order (0.355583ms)
+✔ PHASE-GATE: every environment failure phase maps to exactly one distinct gate (0.058ms)
+✔ PHASE-GATE: a teardown failure does not name the restoration gate (0.0435ms)
+✔ PHASE-GATE: a provisioning failure does not name a baseline gate it never evaluated (0.029125ms)
+✔ PHASE-GATE: an unmapped phase is refused rather than defaulted (0.0745ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 19
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 146.24275
+
+✖ failing tests:
+
+test at tests/dist/integration/cleanupDerivation.test.js:183:1
+✖ RESIDUE-PROBE: a resource that vanished without authorization is the integrity failure (0.476416ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'clean'
+  - 'undeclared_destruction'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/cleanupDerivation.test.js:193:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'clean',
+    expected: 'undeclared_destruction',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/cleanupDerivation.test.js:196:1
+✖ RESIDUE-PROBE: an unauthorized destruction outranks leftover residue (0.123125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'residual'
+  - 'undeclared_destruction'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/cleanupDerivation.test.js:203:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'residual',
+    expected: 'undeclared_destruction',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,68 @@
+✔ INV-ENV-BASELINE: an environment terminal lists every applicable signed member (18252.093792ms)
+✖ INV-ENV-MISSING: an environment inventory that omits external-beacon-randomness-receipt/v1 is refused (288.997125ms)
+✖ INV-ENV-MISSING: an environment inventory that omits trust-policy-manifest/v2 is refused (288.740459ms)
+✖ INV-ENV-MISSING: an environment inventory that omits exposure-event/v1 is refused (293.263792ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 1
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19298.02
+
+✖ failing tests:
+
+test at tests/dist/adversarial/signerInventoryEnvironment.test.js:143:5
+✖ INV-ENV-MISSING: an environment inventory that omits external-beacon-randomness-receipt/v1 is refused (288.997125ms)
+  AssertionError [ERR_ASSERTION]: omitting external-beacon-randomness-receipt/v1 must be refused
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/signerInventoryEnvironment.test.js:150:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/signerInventoryEnvironment.test.js:143:5
+✖ INV-ENV-MISSING: an environment inventory that omits trust-policy-manifest/v2 is refused (288.740459ms)
+  AssertionError [ERR_ASSERTION]: omitting trust-policy-manifest/v2 must be refused
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/signerInventoryEnvironment.test.js:150:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/signerInventoryEnvironment.test.js:143:5
+✖ INV-ENV-MISSING: an environment inventory that omits exposure-event/v1 is refused (293.263792ms)
+  AssertionError [ERR_ASSERTION]: omitting exposure-event/v1 must be refused
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/signerInventoryEnvironment.test.js:150:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

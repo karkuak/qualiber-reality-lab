@@ -1,0 +1,304 @@
+ss start refuses (270.696958ms)
+✖ WINDOW-CLOCK-BINDING: a commitment in a different clock domain refuses (269.80425ms)
+✖ WINDOW-OBSERVATION-BINDING: a commitment naming a different comparison policy refuses (272.846375ms)
+✔ WINDOW-RULE-BINDING: a commitment declaring another instant rule refuses (274.367333ms)
+✔ WINDOW-INVENTORY: the commitment is an applicable signed member of the terminal (56.604375ms)
+✖ WINDOW-INVENTORY-OMITTED: dropping the commitment from an otherwise complete inventory refuses (258.016333ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 5
+ℹ fail 13
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 22665.555625
+
+✖ failing tests:
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:348:1
+✖ WINDOW-BASELINE: a shipped environment terminal commits exactly one window and verifies (18033.753125ms)
+  AssertionError [ERR_ASSERTION]: {"schema_version":"erl2-cli-response/v1","command":"verify","ok":false,"exit_code":10,"authority_scope":"lab_orchestration_only","findings":[],"errors":[{"code":"TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE","message":"key erl2-dev-policy-author-ed25519-1 is not authorized for role traffic_supervisor"}]}
+  
+  10 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:368:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:370:1
+✖ WINDOW-HARNESS: re-sealing the whole chain unchanged still verifies (280.559042ms)
+  AssertionError [ERR_ASSERTION]: {"schema_version":"erl2-cli-response/v1","command":"verify","ok":false,"exit_code":10,"authority_scope":"lab_orchestration_only","findings":[],"errors":[{"code":"TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE","message":"key erl2-dev-policy-author-ed25519-1 is not authorized for role traffic_supervisor"}]}
+  
+  10 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:377:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:380:1
+✖ WINDOW-SHIFTED-WITHIN-BOUNDS: a window moved inside the bounds no longer escapes (274.571458ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE","message":"key erl2-dev-policy-author-ed25519-1 is not authorized for role traffic_supervisor"}]
+  + actual - expected
+  
+  + 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE'
+  - 'CUTOFF_BOUND_EXCEEDED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:394:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE',
+    expected: 'CUTOFF_BOUND_EXCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:397:1
+✖ WINDOW-SHIFTED-COMMITMENT: moving the commitment to match a shifted window is caught too (276.158042ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE","message":"key erl2-dev-policy-author-ed25519-1 is not authorized for role traffic_supervisor"}]
+  + actual - expected
+  
+  + 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE'
+  - 'CUTOFF_BOUND_EXCEEDED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:406:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE',
+    expected: 'CUTOFF_BOUND_EXCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:408:1
+✖ WINDOW-OBSERVATION-DURATION: an observation window shifted within bounds is caught (277.28425ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE","message":"key erl2-dev-policy-author-ed25519-1 is not authorized for role traffic_supervisor"}]
+  + actual - expected
+  
+  + 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE'
+  - 'CUTOFF_BOUND_EXCEEDED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:415:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE',
+    expected: 'CUTOFF_BOUND_EXCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:481:1
+✖ WINDOW-LATE-COMMITMENT: a window committed after the capture it governs refuses (275.091917ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE","message":"key erl2-dev-policy-author-ed25519-1 is not authorized for role traffic_supervisor"}]
+  + actual - expected
+  
+  + 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE'
+  - 'POLICY_CONFLICT'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:490:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE',
+    expected: 'POLICY_CONFLICT',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:492:1
+✖ WINDOW-WRONG-SIGNER: a commitment signed by the traffic supervisor refuses (292.301166ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:501:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:504:1
+✖ WINDOW-FOREIGN-RUN: a commitment naming another run refuses (269.57925ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE","message":"key erl2-dev-policy-author-ed25519-1 is not authorized for role traffic_supervisor"}]
+  + actual - expected
+  
+  + 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE'
+  - 'GRAPH_CLOSURE_TERMINAL_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:511:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE',
+    expected: 'GRAPH_CLOSURE_TERMINAL_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:513:1
+✖ WINDOW-POLICY-BINDING: a commitment naming a different cutoff policy refuses (275.8625ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE","message":"key erl2-dev-policy-author-ed25519-1 is not authorized for role traffic_supervisor"}]
+  + actual - expected
+  
+  + 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE'
+  - 'CUTOFF_MILESTONE_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:520:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE',
+    expected: 'CUTOFF_MILESTONE_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:522:1
+✖ WINDOW-PROCESS-BINDING: a commitment measured from a different process start refuses (270.696958ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE","message":"key erl2-dev-policy-author-ed25519-1 is not authorized for role traffic_supervisor"}]
+  + actual - expected
+  
+  + 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE'
+  - 'CUTOFF_MILESTONE_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:529:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE',
+    expected: 'CUTOFF_MILESTONE_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:531:1
+✖ WINDOW-CLOCK-BINDING: a commitment in a different clock domain refuses (269.80425ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE","message":"key erl2-dev-policy-author-ed25519-1 is not authorized for role traffic_supervisor"}]
+  + actual - expected
+  
+  + 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE'
+  - 'CUTOFF_CLOCK_DOMAIN_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:538:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE',
+    expected: 'CUTOFF_CLOCK_DOMAIN_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:540:1
+✖ WINDOW-OBSERVATION-BINDING: a commitment naming a different comparison policy refuses (272.846375ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE","message":"key erl2-dev-policy-author-ed25519-1 is not authorized for role traffic_supervisor"}]
+  + actual - expected
+  
+  + 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE'
+  - 'CUTOFF_MILESTONE_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:547:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE',
+    expected: 'CUTOFF_MILESTONE_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:568:1
+✖ WINDOW-INVENTORY-OMITTED: dropping the commitment from an otherwise complete inventory refuses (258.016333ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE","message":"key erl2-dev-policy-author-ed25519-1 is not authorized for role traffic_supervisor"}]
+  + actual - expected
+  
+  + 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE'
+  - 'INVENTORY_ENTRY_MISSING'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:622:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'TRUST_KEY_NOT_AUTHORIZED_FOR_ROLE',
+    expected: 'INVENTORY_ENTRY_MISSING',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

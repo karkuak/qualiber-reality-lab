@@ -1,0 +1,106 @@
+✖ ENV-INVALID: a restoration failure enters emergency cleanup and freezes one invalid record (16094.369667ms)
+✖ ENV-INVALID: every independently safe emergency action is attempted and receipted (13539.120542ms)
+✔ ENV-INVALID: a teardown failure takes the same authorized route (14366.183875ms)
+✔ ENV-INVALID: a contaminated baseline is Lab-owned and never a subject defect (4440.78ms)
+✔ ENV-INVALID: no attestation or public bundle descends from an invalid record (13834.627458ms)
+✖ ENV-INVALID: the run's substrate reservations are released (13562.884667ms)
+✔ ENV-INVALID: --fake-driver-fault is unreachable without the development profile (3675.856166ms)
+✖ ENV-INVALID: the invalid record verifies offline through the shipped verifier (13477.509208ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 4
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 93425.386167
+
+✖ failing tests:
+
+test at tests/dist/e2e/environmentInvalidTerminal.test.js:112:1
+✖ ENV-INVALID: a restoration failure enters emergency cleanup and freezes one invalid record (16094.369667ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'RESTORATION_NOT_INDEPENDENTLY_OBSERVED'
+  - 'RESTORATION_FAILED'
+                 ^
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentInvalidTerminal.test.js:117:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'RESTORATION_NOT_INDEPENDENTLY_OBSERVED',
+    expected: 'RESTORATION_FAILED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentInvalidTerminal.test.js:150:1
+✖ ENV-INVALID: every independently safe emergency action is attempted and receipted (13539.120542ms)
+  Error: ENOENT: no such file or directory, open '/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-nc-stage-suite-Knjps7/erl2-mid-ymdVv5/retained/emergency-cleanup-verification.json'
+      at readFileSync (node:fs:539:20)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentInvalidTerminal.test.js:154:34)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-nc-stage-suite-Knjps7/erl2-mid-ymdVv5/retained/emergency-cleanup-verification.json'
+  }
+
+test at tests/dist/e2e/environmentInvalidTerminal.test.js:211:1
+✖ ENV-INVALID: the run's substrate reservations are released (13562.884667ms)
+  AssertionError [ERR_ASSERTION]: a failed run must not hold its identities forever
+  + actual - expected
+  
+  + [
+  +   'bmV0d29yazplcmwyLW5ldHdvcmstMDE5ZmY0M2ItMWE5NS03MDk5LWEyOTYtNWM4NDRlOGU5Yjli.lease.json',
+  +   'cG9ydDplcmwyLXBvcnQtMDE5ZmY0M2ItMWE5NS03MDk5LWEyOTYtNWM4NDRlOGU5Yjli.lease.json',
+  +   'cHJvamVjdDplcmwyLXByb2plY3QtMDE5ZmY0M2ItMWE5NS03MDk5LWEyOTYtNWM4NDRlOGU5Yjli.lease.json',
+  +   'dm9sdW1lOmVybDItdm9sdW1lLTAxOWZmNDNiLTFhOTUtNzA5OS1hMjk2LTVjODQ0ZThlOWI5Yg.lease.json'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentInvalidTerminal.test.js:216:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 'bmV0d29yazplcmwyLW5ldHdvcmstMDE5ZmY0M2ItMWE5NS03MDk5LWEyOTYtNWM4NDRlOGU5Yjli.lease.json', 'cG9ydDplcmwyLXBvcnQtMDE5ZmY0M2ItMWE5NS03MDk5LWEyOTYtNWM4NDRlOGU5Yjli.lease.json', 'cHJvamVjdDplcmwyLXByb2plY3QtMDE5ZmY0M2ItMWE5NS03MDk5LWEyOTYtNWM4NDRlOGU5Yjli.lease.json', 'dm9sdW1lOmVybDItdm9sdW1lLTAxOWZmNDNiLTFhOTUtNzA5OS1hMjk2LTVjODQ0ZThlOWI5Yg.lease.json' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentInvalidTerminal.test.js:226:1
+✖ ENV-INVALID: the invalid record verifies offline through the shipped verifier (13477.509208ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"CFG_MISSING_REQUIRED","message":"invalid run record not found: /var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-nc-stage-suite-Knjps7/erl2-mid-99Gior/retained/invalid-run-record.json"}]
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentInvalidTerminal.test.js:231:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

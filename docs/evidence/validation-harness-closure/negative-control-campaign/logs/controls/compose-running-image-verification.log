@@ -1,0 +1,152 @@
+✔ COMPOSE-ADV: an unqualified lock never reaches a substrate (11.319917ms)
+✔ COMPOSE-ADV: a lock whose amd64 slot holds an arm64 manifest is refused (4.42175ms)
+✔ COMPOSE-ADV: a lock pinning an EXTRA service is refused (1.903ms)
+✔ COMPOSE-ADV: a lock MISSING one of the subset's images is refused (1.351834ms)
+✔ COMPOSE-ADV: a changed applied configuration file is refused before provisioning (1.620916ms)
+✔ COMPOSE-ADV: every discovery is an exact run-scoped name or label value (7.286541ms)
+✔ COMPOSE-ADV: a broad cleanup selector is refused by construction (0.096042ms)
+✔ COMPOSE-ADV: a foreign object wearing this run's project label stops the teardown (2.663875ms)
+✔ COMPOSE-ADV: a compensation that reverts nothing is receipted as failed (4.434833ms)
+✔ COMPOSE-ADV: a mutation the substrate did not apply is receipted as failed (2.981708ms)
+✔ COMPOSE-ADV: a teardown Compose reports as clean is re-inspected (2.796916ms)
+✔ COMPOSE-ADV: a failed `compose pull` refuses before anything is created (1.317ms)
+✔ COMPOSE-ADV: a partial provision is reported partial, with everything created (1.899667ms)
+✔ COMPOSE-ADV: a stored receipt is not adopted once the substrate contradicts it (2.21925ms)
+✖ COMPOSE-ADV: an expected container name running an image the lock does not pin is refused (5.931875ms)
+✖ COMPOSE-ADV: an expected container name whose image cannot be resolved at all is refused (2.490459ms)
+✔ COMPOSE-ADV: an expected container carrying another run's run_id label is refused (3.375792ms)
+✔ COMPOSE-ADV: an expected container carrying a foreign driver_id label is refused (3.007458ms)
+✔ COMPOSE-ADV: an expected container carrying a foreign Compose project label is refused (2.979292ms)
+✔ COMPOSE-ADV: an expected container MISSING an ownership label is refused (2.901042ms)
+✖ COMPOSE-ADV: two unproven containers are two inventory entries, not one (2.35825ms)
+✔ COMPOSE-ADV: the baseline observation records what Docker said, not what the lock says (2.8235ms)
+✖ COMPOSE-ADV: an activation observed on an unproven container is not this run's mutation (3.081791ms)
+﹣ COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else (0.024ms) # RENDERED TOPOLOGY UNPROVEN: the extracted upstream configuration is absent (environments/otel-demo/upstream/extracted-1bf3ef8fbaffc049/.env, environments/otel-demo/upstream/extracted-1bf3ef8fbaffc049/compose.yaml); `environments/otel-demo/upstream/` is git-ignored, so a fresh checkout does not carry it — run `node scripts/qualify-otel-demo.mjs --fetch-only` to materialise it
+✔ COMPOSE-ADV: the substrate identity changes when the daemon does (1.985167ms)
+✔ COMPOSE-ADV: telemetry the collector received is observed with the lines its counts derive from (2.36075ms)
+✖ COMPOSE-ADV: a collector that is not provably this run's yields an absent observation, not a zero (2.129333ms)
+✔ COMPOSE-ADV: a collector whose logs cannot be read is absent for a different, named reason (1.989625ms)
+✔ COMPOSE-ADV: a verified collector that received nothing this run is observed, honestly, as zero (1.953709ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 23
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 285.513916
+
+✖ failing tests:
+
+test at tests/dist/adversarial/composeSubstrate.test.js:471:1
+✖ COMPOSE-ADV: an expected container name running an image the lock does not pin is refused (5.931875ms)
+  AssertionError [ERR_ASSERTION]: the baseline probe must fail for a container that is not ours
+  
+  true !== false
+  
+      at assertRefusedAsNotOurs (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/composeSubstrate.test.js:421:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/composeSubstrate.test.js:474:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/composeSubstrate.test.js:476:1
+✖ COMPOSE-ADV: an expected container name whose image cannot be resolved at all is refused (2.490459ms)
+  AssertionError [ERR_ASSERTION]: the baseline probe must fail for a container that is not ours
+  
+  true !== false
+  
+      at assertRefusedAsNotOurs (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/composeSubstrate.test.js:421:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/composeSubstrate.test.js:481:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/composeSubstrate.test.js:509:1
+✖ COMPOSE-ADV: two unproven containers are two inventory entries, not one (2.35825ms)
+  AssertionError [ERR_ASSERTION]: both unproven containers must be inventoried
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/composeSubstrate.test.js:522:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/composeSubstrate.test.js:546:1
+✖ COMPOSE-ADV: an activation observed on an unproven container is not this run's mutation (3.081791ms)
+  AssertionError [ERR_ASSERTION]: a mutation must not be attributed to a container that is not provably ours
+  + actual - expected
+  
+  + [
+  +   'activate-adversarial'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/composeSubstrate.test.js:561:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 'activate-adversarial' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/composeSubstrate.test.js:722:1
+✖ COMPOSE-ADV: a collector that is not provably this run's yields an absent observation, not a zero (2.129333ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'observed'
+  - 'absent'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/composeSubstrate.test.js:731:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'observed',
+    expected: 'absent',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,162 @@
+✔ RUN-IDENTITY: a matching run id and run root operate normally (4363.0825ms)
+✖ RUN-IDENTITY: a wrong --run against another run's root is refused (1681.614833ms)
+✖ RUN-IDENTITY: the refusal precedes the run lease and writes no evidence (1613.1745ms)
+✖ RUN-IDENTITY: an environment command's refusal creates no substrate or reservation directory (1653.666584ms)
+✖ RUN-IDENTITY: a direct library caller is refused on the same terms (1450.143709ms)
+✖ RUN-IDENTITY: a mutating command may not bring a run root into being (1624.654959ms)
+✔ RUN-IDENTITY: repeated correct opens across fresh processes are stable (2010.904875ms)
+✖ RUN-IDENTITY: run A's id against run B's root refuses, and B is byte-identical afterwards (3076.2145ms)
+✖ RUN-IDENTITY: a snapshot that disagrees with the hash-chained first event is refused (1642.00925ms)
+✔ RUN-IDENTITY: a torn snapshot is tolerated; the chain stays authoritative (1665.954375ms)
+✔ RUN-IDENTITY: a partially initialized or corrupt workspace refuses rather than guessing (1947.09675ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 4
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 23001.840958
+
+✖ failing tests:
+
+test at tests/dist/adversarial/runIdentity.test.js:42:1
+✖ RUN-IDENTITY: a wrong --run against another run's root is refused (1681.614833ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/runIdentity.test.js:51:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/runIdentity.test.js:54:1
+✖ RUN-IDENTITY: the refusal precedes the run lease and writes no evidence (1613.1745ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'POLICY_RUN_IDENTITY_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/runIdentity.test.js:65:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'POLICY_RUN_IDENTITY_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/runIdentity.test.js:71:1
+✖ RUN-IDENTITY: an environment command's refusal creates no substrate or reservation directory (1653.666584ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"POLICY_CONFLICT","message":"provision departs from case_selected; this run is in step_outcome_frozen"}]
+  + actual - expected
+  
+  + 'POLICY_CONFLICT'
+  - 'POLICY_RUN_IDENTITY_MISMATCH'
+            ^
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/runIdentity.test.js:83:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'POLICY_CONFLICT',
+    expected: 'POLICY_RUN_IDENTITY_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/runIdentity.test.js:87:1
+✖ RUN-IDENTITY: a direct library caller is refused on the same terms (1450.143709ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/runIdentity.test.js:92:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/runIdentity.test.js:107:1
+✖ RUN-IDENTITY: a mutating command may not bring a run root into being (1624.654959ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"GRAPH_CLOSURE_MISSING_ROLE","message":"this run has not yet produced a acquisition-preregistration; the ordered journey forbids skipping it"}]
+  + actual - expected
+  
+  + 'GRAPH_CLOSURE_MISSING_ROLE'
+  - 'POLICY_RUN_IDENTITY_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/runIdentity.test.js:120:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'GRAPH_CLOSURE_MISSING_ROLE',
+    expected: 'POLICY_RUN_IDENTITY_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/runIdentity.test.js:139:1
+✖ RUN-IDENTITY: run A's id against run B's root refuses, and B is byte-identical afterwards (3076.2145ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/runIdentity.test.js:158:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/runIdentity.test.js:170:1
+✖ RUN-IDENTITY: a snapshot that disagrees with the hash-chained first event is refused (1642.00925ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/runIdentity.test.js:188:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

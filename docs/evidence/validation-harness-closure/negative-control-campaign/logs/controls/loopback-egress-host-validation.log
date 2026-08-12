@@ -1,0 +1,62 @@
+✔ COMPOSE-EGRESS-ADV: a record naming an arbitrary public host is refused (2.087333ms)
+✔ COMPOSE-EGRESS-ADV: a record naming a non-canonical loopback spelling is refused (1.418958ms)
+✔ COMPOSE-EGRESS-ADV: a record naming a different run is refused (0.28575ms)
+✔ COMPOSE-EGRESS-ADV: a record naming a different substrate is refused (0.273417ms)
+✔ COMPOSE-EGRESS-ADV: a record naming a different service is refused (0.2605ms)
+✔ COMPOSE-EGRESS-ADV: a record naming a different container is refused (0.67975ms)
+✔ COMPOSE-EGRESS-ADV: a malformed or out-of-range port is refused (2.005792ms)
+✔ COMPOSE-EGRESS-ADV: a record missing a required field is refused (1.385666ms)
+✔ COMPOSE-EGRESS-ADV: a well-formed record over a verified live container grants the endpoint (0.306833ms)
+✔ COMPOSE-EGRESS-ADV: a record whose container no longer exists grants nothing (0.547459ms)
+✔ COMPOSE-EGRESS-ADV: a stale record surviving teardown grants nothing (0.427875ms)
+✔ COMPOSE-EGRESS-ADV: a live container missing or misvaluing an ownership label grants nothing (2.202334ms)
+✔ COMPOSE-EGRESS-ADV: a container that is not running grants nothing (1.158541ms)
+✔ COMPOSE-EGRESS-ADV: a container now publishing a different port grants nothing (0.297791ms)
+✔ COMPOSE-EGRESS-ADV: a container publishing nothing grants nothing (0.295167ms)
+✔ COMPOSE-EGRESS-ADV: the recorded port published from the WRONG container port grants nothing (1.29575ms)
+✔ COMPOSE-EGRESS-ADV: a binding on any interface but 127.0.0.1 grants nothing (1.42175ms)
+✔ COMPOSE-EGRESS-ADV: an unrelated published binding does not stand in for the endpoint's (0.273666ms)
+✔ COMPOSE-EGRESS-ADV: the canonical binding — 8090/tcp on 127.0.0.1 at the recorded port — grants it (0.278917ms)
+✔ COMPOSE-EGRESS-ADV: the exact expected container running a substituted image grants nothing (0.260209ms)
+✔ COMPOSE-EGRESS-ADV: an unresolvable pinned image grants nothing (0.261792ms)
+✔ COMPOSE-EGRESS-ADV: image id and repository digest disagreeing grants nothing (0.476583ms)
+✔ COMPOSE-EGRESS-ADV: the exact locked image and endpoint mapping succeeds (0.272958ms)
+✔ COMPOSE-EGRESS-ADV: a foreign container that took over the port grants nothing (0.258125ms)
+✔ COMPOSE-EGRESS-ADV: no record at all grants nothing, and is not an error (0.095125ms)
+✔ COMPOSE-EGRESS-ADV: an unreadable record is a refusal, not an absence (0.421458ms)
+✖ COMPOSE-EGRESS-ADV: loopbackEgressPolicy refuses any host but 127.0.0.1 (2.818459ms)
+✔ COMPOSE-EGRESS-ADV: loopbackEgressPolicy refuses a port that is not a host port (0.122458ms)
+✔ COMPOSE-EGRESS-ADV: the granted policy is still one scheme, one host, one port (0.108458ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 28
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 176.133125
+
+✖ failing tests:
+
+test at tests/dist/adversarial/composeEndpointEgress.test.js:392:1
+✖ COMPOSE-EGRESS-ADV: loopbackEgressPolicy refuses any host but 127.0.0.1 (2.818459ms)
+  AssertionError [ERR_ASSERTION]: host "example.com" was allowlisted
+  + actual - expected
+  
+  + 'NO_REFUSAL'
+  - 'ADAPTER_EGRESS_HOST_NOT_ALLOWED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/composeEndpointEgress.test.js:394:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'NO_REFUSAL',
+    expected: 'ADAPTER_EGRESS_HOST_NOT_ALLOWED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

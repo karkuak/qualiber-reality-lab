@@ -1,0 +1,51 @@
+✔ CRASH-STEP: a subject step crashed at before_intent_freeze is never invoked twice (8152.787208ms)
+✖ CRASH-STEP: a subject step crashed at after_intent_freeze is never invoked twice (5233.382959ms)
+✔ CRASH-STEP: a subject step crashed at before_external_dispatch is never invoked twice (5419.672792ms)
+✔ CRASH-STEP: a subject step crashed at after_external_dispatch is never invoked twice (5751.563375ms)
+✔ CRASH-STEP: a subject step crashed at before_receipt_freeze is never invoked twice (5647.157583ms)
+✔ CRASH-STEP: a subject step crashed at after_receipt_freeze is never invoked twice (5529.44975ms)
+✔ CRASH-STEP: a subject step crashed at before_lifecycle_append is never invoked twice (5538.616291ms)
+✔ CRASH-STEP: a subject step crashed at after_lifecycle_append is never invoked twice (5207.248792ms)
+✔ CRASH-STEP: a step whose lifecycle append landed is not re-dispatched, and the walk continues (15857.698166ms)
+✔ CRASH-ACTIVATE: activation crashed at before_intent_freeze applies exactly one logical mutation (8180.5795ms)
+✔ CRASH-ACTIVATE: activation crashed at after_intent_freeze applies exactly one logical mutation (7928.560084ms)
+✔ CRASH-ACTIVATE: activation crashed at before_external_dispatch applies exactly one logical mutation (8168.345917ms)
+✔ CRASH-ACTIVATE: activation crashed at after_external_dispatch applies exactly one logical mutation (8342.001333ms)
+✔ CRASH-ACTIVATE: activation crashed at before_receipt_freeze applies exactly one logical mutation (7994.290458ms)
+✔ CRASH-ACTIVATE: activation crashed at after_receipt_freeze applies exactly one logical mutation (8101.403292ms)
+✔ CRASH-ACTIVATE: activation crashed at before_lifecycle_append applies exactly one logical mutation (8039.988875ms)
+✔ CRASH-ACTIVATE: activation crashed at after_lifecycle_append applies exactly one logical mutation (7868.776584ms)
+✔ CRASH-ACTIVATE: a reconstructed activation receipt is byte-stable, and the run still finalizes (15581.861042ms)
+✔ CRASH-SEAM: the crash and invocation-log flags are refused on the release surface (3771.455833ms)
+✔ CRASH-SEAM: an unknown boundary is refused rather than silently ignored (3673.215042ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 19
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 150632.011459
+
+✖ failing tests:
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:154:5
+✖ CRASH-STEP: a subject step crashed at after_intent_freeze is never invoked twice (5233.382959ms)
+  AssertionError [ERR_ASSERTION]: after_intent_freeze: exactly one subject invocation across both processes
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:194:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

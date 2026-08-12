@@ -1,0 +1,45 @@
+✔ SIGNER-DERIVE: an ordinary `signature` member is enumerated (0.589083ms)
+✔ SIGNER-DERIVE: a `root_signature` member is enumerated — the omission every run had (0.084ms)
+✔ SIGNER-DERIVE: a `wrapper_signature` member is enumerated — the review's finding (0.081ms)
+✔ SIGNER-DERIVE: an unsigned retained artifact is not a member (0.078875ms)
+✔ SIGNER-DERIVE: the public terminal types and the inventory itself are excluded, with reasons (0.429541ms)
+✔ SIGNER-DERIVE: the environment branch excludes two public terminal types (0.099041ms)
+✖ SIGNER-DERIVE: a signed contract with no declared producer role refuses (0.36725ms)
+✔ SIGNER-DERIVE: an authority field the contract does not declare refuses (0.207417ms)
+✔ SIGNER-DERIVE: two authority fields on one artifact refuse (0.109292ms)
+✔ SIGNER-DERIVE: a signature over a different core hash refuses (0.112583ms)
+✔ SIGNER-DERIVE: a malformed signature envelope refuses (0.135708ms)
+✔ SIGNER-DERIVE: two retained files claiming one core hash refuse (0.067708ms)
+✔ SIGNER-DERIVE: the applicable set is ordered by core hash, not by walk order (0.099375ms)
+✔ SIGNER-DERIVE: an empty applicable set is not complete (0.046917ms)
+✔ SIGNER-DERIVE: the projection carries the signer and the signed hash the artifact actually has (0.071042ms)
+✔ SIGNER-DERIVE: the builder refuses an inventory the derivation could not certify (5.910041ms)
+✔ SIGNER-DERIVE: a signed member that appears after the inventory is sealed is refused (0.191458ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 16
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 139.04975
+
+✖ failing tests:
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:152:1
+✖ SIGNER-DERIVE: a signed contract with no declared producer role refuses (0.36725ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception: an undeclared signed contract
+      at throwsCode (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:52:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:156:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }

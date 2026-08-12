@@ -1,0 +1,204 @@
+✔ CRASH-STEP: a subject step crashed at before_intent_freeze is never invoked twice (7721.5915ms)
+✔ CRASH-STEP: a subject step crashed at after_intent_freeze is never invoked twice (5331.937208ms)
+✖ CRASH-STEP: a subject step crashed at before_external_dispatch is never invoked twice (5061.925083ms)
+✖ CRASH-STEP: a subject step crashed at after_external_dispatch is never invoked twice (5012.933833ms)
+✖ CRASH-STEP: a subject step crashed at before_receipt_freeze is never invoked twice (5196.333458ms)
+✖ CRASH-STEP: a subject step crashed at after_receipt_freeze is never invoked twice (5253.425834ms)
+✖ CRASH-STEP: a subject step crashed at before_lifecycle_append is never invoked twice (5086.098625ms)
+✔ CRASH-STEP: a subject step crashed at after_lifecycle_append is never invoked twice (5151.972166ms)
+✔ CRASH-STEP: a step whose lifecycle append landed is not re-dispatched, and the walk continues (15276.393583ms)
+✔ CRASH-ACTIVATE: activation crashed at before_intent_freeze applies exactly one logical mutation (8036.703875ms)
+✔ CRASH-ACTIVATE: activation crashed at after_intent_freeze applies exactly one logical mutation (8108.687375ms)
+✔ CRASH-ACTIVATE: activation crashed at before_external_dispatch applies exactly one logical mutation (8119.566708ms)
+✖ CRASH-ACTIVATE: activation crashed at after_external_dispatch applies exactly one logical mutation (8060.55875ms)
+✖ CRASH-ACTIVATE: activation crashed at before_receipt_freeze applies exactly one logical mutation (8111.726917ms)
+✖ CRASH-ACTIVATE: activation crashed at after_receipt_freeze applies exactly one logical mutation (8016.963792ms)
+✖ CRASH-ACTIVATE: activation crashed at before_lifecycle_append applies exactly one logical mutation (8325.033583ms)
+✔ CRASH-ACTIVATE: activation crashed at after_lifecycle_append applies exactly one logical mutation (8588.22175ms)
+✔ CRASH-ACTIVATE: a reconstructed activation receipt is byte-stable, and the run still finalizes (16064.871208ms)
+✔ CRASH-SEAM: the crash and invocation-log flags are refused on the release surface (3984.54225ms)
+✔ CRASH-SEAM: an unknown boundary is refused rather than silently ignored (4062.32925ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 11
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 149349.60975
+
+✖ failing tests:
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:154:5
+✖ CRASH-STEP: a subject step crashed at before_external_dispatch is never invoked twice (5061.925083ms)
+  AssertionError [ERR_ASSERTION]: before_external_dispatch: an ambiguous step must refuse
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:174:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:154:5
+✖ CRASH-STEP: a subject step crashed at after_external_dispatch is never invoked twice (5012.933833ms)
+  AssertionError [ERR_ASSERTION]: after_external_dispatch: an ambiguous step must refuse
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:174:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:154:5
+✖ CRASH-STEP: a subject step crashed at before_receipt_freeze is never invoked twice (5196.333458ms)
+  AssertionError [ERR_ASSERTION]: before_receipt_freeze: an ambiguous step must refuse
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:174:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:154:5
+✖ CRASH-STEP: a subject step crashed at after_receipt_freeze is never invoked twice (5253.425834ms)
+  AssertionError [ERR_ASSERTION]: after_receipt_freeze: an ambiguous step must refuse
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:174:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:154:5
+✖ CRASH-STEP: a subject step crashed at before_lifecycle_append is never invoked twice (5086.098625ms)
+  AssertionError [ERR_ASSERTION]: before_lifecycle_append: an ambiguous step must refuse
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:174:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:220:5
+✖ CRASH-ACTIVATE: activation crashed at after_external_dispatch applies exactly one logical mutation (8060.55875ms)
+  AssertionError [ERR_ASSERTION]: after_external_dispatch: the activation mutation must be dispatched exactly once
+  
+  2 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:231:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:220:5
+✖ CRASH-ACTIVATE: activation crashed at before_receipt_freeze applies exactly one logical mutation (8111.726917ms)
+  AssertionError [ERR_ASSERTION]: before_receipt_freeze: the activation mutation must be dispatched exactly once
+  
+  2 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:231:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:220:5
+✖ CRASH-ACTIVATE: activation crashed at after_receipt_freeze applies exactly one logical mutation (8016.963792ms)
+  AssertionError [ERR_ASSERTION]: after_receipt_freeze: the activation mutation must be dispatched exactly once
+  
+  2 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:231:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:220:5
+✖ CRASH-ACTIVATE: activation crashed at before_lifecycle_append applies exactly one logical mutation (8325.033583ms)
+  AssertionError [ERR_ASSERTION]: before_lifecycle_append: the activation mutation must be dispatched exactly once
+  
+  2 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:231:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

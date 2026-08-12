@@ -1,0 +1,40 @@
+✔ ENV-CLI: a run advances from case_selected to a finalized environment terminal (17999.675667ms)
+✔ ENV-VERIFY: the environment public bundle verifies offline, as an external reader (15349.651667ms)
+✔ ENV-VERIFY: a verifier without the pinned beacon cannot authorize the selection chain (15219.220917ms)
+✔ ENV-CLI: the environment is really torn down and the reservations released (15129.092167ms)
+✔ ENV-CLI: the plan executes exactly the persona the selection opened (4329.5975ms)
+✔ ENV-CLI: an unsupported step is a retained outcome, never a removed case (15047.815917ms)
+✔ ENV-CLI-CRASH: every phase boundary resumes from retained evidence (316659.419042ms)
+✔ ENV-CLI: replaying a finished run adds nothing, whether the phase is idempotent or refused (21801.956375ms)
+✔ ENV-NO-WRITE: every refused environment command adds zero retained evidence (19167.828833ms)
+✔ ENV-ORDER: a named step command may not reorder the committed journey (4610.297542ms)
+✔ ENV-SUBSTRATE: the driver's substrate lives outside the run root (4010.203458ms)
+✖ ENV-ORACLE: a canary in the subject's output bytes invalidates the run before it freezes (12141.661ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 11
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 463019.711375
+
+✖ failing tests:
+
+test at tests/dist/e2e/environmentRun.test.js:402:1
+✖ ENV-ORACLE: a canary in the subject's output bytes invalidates the run before it freezes (12141.661ms)
+  AssertionError [ERR_ASSERTION]: a leaked canary must invalidate the run before output freezes
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentRun.test.js:413:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

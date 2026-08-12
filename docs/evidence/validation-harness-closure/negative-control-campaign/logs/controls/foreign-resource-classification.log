@@ -1,0 +1,152 @@
+✔ BOUNDED-CLEANUP: a frontier-unsafe resource survives, and is reported as skipped (7035.302666ms)
+✔ BOUNDED-CLEANUP: no whole-environment destroy is dispatched on the bounded route (4425.108458ms)
+✔ BOUNDED-CLEANUP: every safe action has exactly one receipt, and every skip none (4282.662125ms)
+✔ BOUNDED-CLEANUP: a foreign resource does not prevent the run reaching a terminal (4540.908459ms)
+✖ BOUNDED-CLEANUP: the owned resources are cleaned up around the foreign one (4335.112833ms)
+✔ BOUNDED-CLEANUP: a baseline failure's finding names the baseline gate (4350.982416ms)
+✔ BOUNDED-CLEANUP: the cleanup consequence never replaces the original cause (4369.031ms)
+✔ BOUNDED-CLEANUP: the unmutated bounded terminal derives cleanly (4395.680458ms)
+✔ BOUNDED-CLEANUP: a fabricated empty residue is refused as undeclared destruction (4351.107542ms)
+✔ BOUNDED-CLEANUP: a probe that authorizes what the frontier did not is refused (4326.982166ms)
+✔ BOUNDED-CLEANUP: a probe whose `before` is a post-destruction inventory is refused (4279.952167ms)
+✔ BOUNDED-CLEANUP: a probe belonging to another run or another substrate is refused (4378.99825ms)
+✔ BOUNDED-CLEANUP: an action claiming success over a resource that is still there is refused (4367.312083ms)
+✔ BOUNDED-CLEANUP: a residue the observation does not see is refused (4319.636334ms)
+✔ BOUNDED-CLEANUP: a finding naming another phase's gate is refused (4569.514416ms)
+✔ BOUNDED-CLEANUP: a subject-attributed finding on a Lab environment failure is refused (4309.870208ms)
+✔ BOUNDED-CLEANUP: the verifier's entry point requires the residue probe (4336.063458ms)
+✔ BOUNDED-CLEANUP: a cleanup status that disagrees with the residue is refused (4423.183958ms)
+✔ BOUNDED-CLEANUP: the verifier's entry point requires the pre-action frontier (4379.246166ms)
+✔ BOUNDED-CLEANUP: no attestation and no public bundle descend from a bounded terminal (4532.898292ms)
+✔ FRONTIER-DERIVE: an empty frontier derives no action and authorizes nothing (4.491167ms)
+✔ FRONTIER-DERIVE: one owned destroyable resource derives one safe action (0.644166ms)
+✔ FRONTIER-DERIVE: many owned resources all derive safe actions, one each (0.271541ms)
+✔ FRONTIER-DERIVE: the attempt order is deterministic and dependency-shaped (0.658458ms)
+✔ FRONTIER-DERIVE: a shared resource is contained, with a reason and no action (0.118375ms)
+✖ FRONTIER-DERIVE: a foreign resource is contained as not provably ours (0.550958ms)
+✖ FRONTIER-DERIVE: a foreign resource makes no owned resource unsafe (0.219584ms)
+✖ FRONTIER-DERIVE: a resource whose identity does not derive from its name is not ours (0.141375ms)
+✔ FRONTIER-DERIVE: a resource the driver will not destroy is contained, not attempted (0.109334ms)
+✖ FRONTIER-DERIVE: an edited action set no longer derives from its own resources (0.459375ms)
+✔ RESIDUE-PROBE: everything authorized and gone is clean (0.154458ms)
+✔ RESIDUE-PROBE: an unauthorized survivor is residue, not a failure of authorization (0.079292ms)
+✔ RESIDUE-PROBE: a resource that vanished without authorization is the integrity failure (0.060792ms)
+✔ RESIDUE-PROBE: an unauthorized destruction outranks leftover residue (0.071167ms)
+✔ RESIDUE-PROBE: an unobservable substrate is a refusal, never a clean sheet (0.038208ms)
+✔ RESIDUE-PROBE: an empty frontier that probes back empty is clean and still says so (4.399458ms)
+✔ RESIDUE-PROBE: the frozen bytes do not depend on the driver's iteration order (1.568542ms)
+✔ PHASE-GATE: every environment failure phase maps to exactly one distinct gate (0.083583ms)
+✔ PHASE-GATE: a teardown failure does not name the restoration gate (0.045917ms)
+✔ PHASE-GATE: a provisioning failure does not name a baseline gate it never evaluated (0.030458ms)
+✔ PHASE-GATE: an unmapped phase is refused rather than defaulted (0.163125ms)
+ℹ tests 41
+ℹ suites 0
+ℹ pass 36
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 91012.690459
+
+✖ failing tests:
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:202:1
+✖ BOUNDED-CLEANUP: the owned resources are cleaned up around the foreign one (4335.112833ms)
+  AssertionError [ERR_ASSERTION]: this fixture must observe exactly one foreign resource
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:206:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/cleanupDerivation.test.js:112:1
+✖ FRONTIER-DERIVE: a foreign resource is contained as not provably ours (0.550958ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/cleanupDerivation.test.js:115:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/cleanupDerivation.test.js:118:1
+✖ FRONTIER-DERIVE: a foreign resource makes no owned resource unsafe (0.219584ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/cleanupDerivation.test.js:125:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/cleanupDerivation.test.js:130:1
+✖ FRONTIER-DERIVE: a resource whose identity does not derive from its name is not ours (0.141375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/cleanupDerivation.test.js:137:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/cleanupDerivation.test.js:144:1
+✖ FRONTIER-DERIVE: an edited action set no longer derives from its own resources (0.459375ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/cleanupDerivation.test.js:154:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }

@@ -1,0 +1,157 @@
+✔ BOUNDED-CLEANUP: a frontier-unsafe resource survives, and is reported as skipped (7047.778208ms)
+✔ BOUNDED-CLEANUP: no whole-environment destroy is dispatched on the bounded route (4508.558875ms)
+✔ BOUNDED-CLEANUP: every safe action has exactly one receipt, and every skip none (4514.999417ms)
+✔ BOUNDED-CLEANUP: a foreign resource does not prevent the run reaching a terminal (4576.455583ms)
+✔ BOUNDED-CLEANUP: the owned resources are cleaned up around the foreign one (4370.444292ms)
+✔ BOUNDED-CLEANUP: a baseline failure's finding names the baseline gate (4290.385375ms)
+✔ BOUNDED-CLEANUP: the cleanup consequence never replaces the original cause (4328.259334ms)
+✔ BOUNDED-CLEANUP: the unmutated bounded terminal derives cleanly (4585.91675ms)
+✔ BOUNDED-CLEANUP: a fabricated empty residue is refused as undeclared destruction (4300.01625ms)
+✔ BOUNDED-CLEANUP: a probe that authorizes what the frontier did not is refused (4313.055167ms)
+✔ BOUNDED-CLEANUP: a probe whose `before` is a post-destruction inventory is refused (4395.276416ms)
+✔ BOUNDED-CLEANUP: a probe belonging to another run or another substrate is refused (4505.578958ms)
+✔ BOUNDED-CLEANUP: an action claiming success over a resource that is still there is refused (4378.253125ms)
+✔ BOUNDED-CLEANUP: a residue the observation does not see is refused (4249.79725ms)
+✖ BOUNDED-CLEANUP: a finding naming another phase's gate is refused (4350.292459ms)
+✔ BOUNDED-CLEANUP: a subject-attributed finding on a Lab environment failure is refused (4313.27325ms)
+✔ BOUNDED-CLEANUP: the verifier's entry point requires the residue probe (4256.712666ms)
+✔ BOUNDED-CLEANUP: a cleanup status that disagrees with the residue is refused (4312.875833ms)
+✔ BOUNDED-CLEANUP: the verifier's entry point requires the pre-action frontier (4374.715375ms)
+✔ BOUNDED-CLEANUP: no attestation and no public bundle descend from a bounded terminal (4430.245125ms)
+✔ FRONTIER-DERIVE: an empty frontier derives no action and authorizes nothing (5.339458ms)
+✔ FRONTIER-DERIVE: one owned destroyable resource derives one safe action (0.755ms)
+✔ FRONTIER-DERIVE: many owned resources all derive safe actions, one each (0.301125ms)
+✔ FRONTIER-DERIVE: the attempt order is deterministic and dependency-shaped (0.753375ms)
+✔ FRONTIER-DERIVE: a shared resource is contained, with a reason and no action (0.146ms)
+✔ FRONTIER-DERIVE: a foreign resource is contained as not provably ours (0.192542ms)
+✔ FRONTIER-DERIVE: a foreign resource makes no owned resource unsafe (0.311958ms)
+✔ FRONTIER-DERIVE: a resource whose identity does not derive from its name is not ours (0.137875ms)
+✔ FRONTIER-DERIVE: a resource the driver will not destroy is contained, not attempted (0.111542ms)
+✔ FRONTIER-DERIVE: an edited action set no longer derives from its own resources (0.62775ms)
+✔ RESIDUE-PROBE: everything authorized and gone is clean (0.138542ms)
+✔ RESIDUE-PROBE: an unauthorized survivor is residue, not a failure of authorization (0.070541ms)
+✔ RESIDUE-PROBE: a resource that vanished without authorization is the integrity failure (0.057875ms)
+✔ RESIDUE-PROBE: an unauthorized destruction outranks leftover residue (0.078042ms)
+✔ RESIDUE-PROBE: an unobservable substrate is a refusal, never a clean sheet (0.04125ms)
+✔ RESIDUE-PROBE: an empty frontier that probes back empty is clean and still says so (5.724584ms)
+✔ RESIDUE-PROBE: the frozen bytes do not depend on the driver's iteration order (0.405833ms)
+✖ PHASE-GATE: every environment failure phase maps to exactly one distinct gate (0.558458ms)
+✖ PHASE-GATE: a teardown failure does not name the restoration gate (0.086958ms)
+✖ PHASE-GATE: a provisioning failure does not name a baseline gate it never evaluated (0.0795ms)
+✖ PHASE-GATE: an unmapped phase is refused rather than defaulted (0.076292ms)
+ℹ tests 41
+ℹ suites 0
+ℹ pass 36
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 91091.337708
+
+✖ failing tests:
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:341:1
+✖ BOUNDED-CLEANUP: a finding naming another phase's gate is refused (4350.292459ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'INVALID_REASON_PHASE_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:352:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'INVALID_REASON_PHASE_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/cleanupDerivation.test.js:246:1
+✖ PHASE-GATE: every environment failure phase maps to exactly one distinct gate (0.558458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'environment-baseline-clean'
+  - 'mandatory-graph-closed'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/cleanupDerivation.test.js:250:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'environment-baseline-clean',
+    expected: 'mandatory-graph-closed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/cleanupDerivation.test.js:254:1
+✖ PHASE-GATE: a teardown failure does not name the restoration gate (0.086958ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'environment-baseline-clean'
+  - 'teardown-verified'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/cleanupDerivation.test.js:258:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'environment-baseline-clean',
+    expected: 'teardown-verified',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/cleanupDerivation.test.js:261:1
+✖ PHASE-GATE: a provisioning failure does not name a baseline gate it never evaluated (0.0795ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to:
+  
+  'environment-baseline-clean'
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/cleanupDerivation.test.js:265:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'environment-baseline-clean',
+    expected: 'environment-baseline-clean',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/cleanupDerivation.test.js:268:1
+✖ PHASE-GATE: an unmapped phase is refused rather than defaulted (0.076292ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/cleanupDerivation.test.js:273:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }

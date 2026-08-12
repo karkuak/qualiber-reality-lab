@@ -1,0 +1,53 @@
+✔ BOUNDED-CLEANUP: a frontier-unsafe resource survives, and is reported as skipped (6983.842625ms)
+✔ BOUNDED-CLEANUP: no whole-environment destroy is dispatched on the bounded route (4299.004791ms)
+✔ BOUNDED-CLEANUP: every safe action has exactly one receipt, and every skip none (4266.829625ms)
+✔ BOUNDED-CLEANUP: a foreign resource does not prevent the run reaching a terminal (4491.904166ms)
+✔ BOUNDED-CLEANUP: the owned resources are cleaned up around the foreign one (4168.104584ms)
+✔ BOUNDED-CLEANUP: a baseline failure's finding names the baseline gate (4369.742458ms)
+✔ BOUNDED-CLEANUP: the cleanup consequence never replaces the original cause (4440.768375ms)
+✔ BOUNDED-CLEANUP: the unmutated bounded terminal derives cleanly (4313.225083ms)
+✔ BOUNDED-CLEANUP: a fabricated empty residue is refused as undeclared destruction (4232.697292ms)
+✔ BOUNDED-CLEANUP: a probe that authorizes what the frontier did not is refused (4320.211834ms)
+✔ BOUNDED-CLEANUP: a probe whose `before` is a post-destruction inventory is refused (4370.611916ms)
+✔ BOUNDED-CLEANUP: a probe belonging to another run or another substrate is refused (4327.974542ms)
+✖ BOUNDED-CLEANUP: an action claiming success over a resource that is still there is refused (4297.598334ms)
+✔ BOUNDED-CLEANUP: a residue the observation does not see is refused (4306.983ms)
+✔ BOUNDED-CLEANUP: a finding naming another phase's gate is refused (4310.456542ms)
+✔ BOUNDED-CLEANUP: a subject-attributed finding on a Lab environment failure is refused (4269.776667ms)
+✔ BOUNDED-CLEANUP: the verifier's entry point requires the residue probe (4269.89625ms)
+✔ BOUNDED-CLEANUP: a cleanup status that disagrees with the residue is refused (4323.256667ms)
+✔ BOUNDED-CLEANUP: the verifier's entry point requires the pre-action frontier (4246.172ms)
+✔ BOUNDED-CLEANUP: no attestation and no public bundle descend from a bounded terminal (4539.278167ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 19
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 89804.625458
+
+✖ failing tests:
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:309:1
+✖ BOUNDED-CLEANUP: an action claiming success over a resource that is still there is refused (4297.598334ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'EMERGENCY_CLEANUP_INCOMPLETE'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:324:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'EMERGENCY_CLEANUP_INCOMPLETE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

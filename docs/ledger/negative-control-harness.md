@@ -681,3 +681,67 @@ commit, produced these numbers, and here is the output they were read from*.
 The ignored ledger JSON is still written, now marked `authoritative: false` and
 with the retained tails stripped. Targeted runs write wherever `--evidence-out`
 says, so they cannot overwrite a full-campaign record.
+
+## 10. The gate and campaign this closure rests on
+
+Both ran once, at the executable harness commit
+`76933408980c79e7787f14366073ab24c9ed2c88`, tree
+`e1d089e748bf80421e3cd289c30e7cf5881ee80d`, on a clean worktree — the gate
+first, the campaign only after it passed. Neither was rerun. The complete
+records, their logs and their checksum manifests are in
+`docs/evidence/validation-harness-closure/`, and
+`npm run evidence:validation` checks them.
+
+**Clean gate.** 1,301 tests, 1,299 passed, 0 failed, 0 cancelled, 2 skipped, in
+1,416 s. `verify:generated` current; `evidence:verify` 838 pinned / 7 excluded
+with no drift; `git diff --check` clean; all four steps exit 0. The two skips are
+`EXTERNAL SUBJECT UNPROVEN` — the gate supplies no external adapter entry and
+must not require one — and they are named in the record rather than counted. The
+total is the previous 1,246 plus the 55 controls this package adds.
+
+**Campaign.** 10,829 s (3 h 00 m 29 s).
+
+| | |
+|---|---|
+| discovered | **129** |
+| measured agreements | **129** (125 `named_tests_failed` + 4 `no_kill_as_declared`) |
+| disagreements | **0** |
+| unmeasured | **0** |
+| harness errors | **0** |
+| output truncation | **0 rows** |
+| termination signals | none |
+| working tree afterwards | byte-identical |
+| residue | none — worktree, temp root, process, container, network, volume, image |
+
+`substrate-loopback-only-rendered` measured the pinned fixture: prerequisite
+provisioned and *verified*, 28 pass / 1 fail, `replacedCount: 1`, the designated
+rendered-topology case running and failing. `adapter-mode-binding` 7 pass / 2
+fail, agreed. `container-deadline-kills-the-container` 0 pass / 2 fail, agreed,
+`docker-daemon` satisfied.
+
+And the answer to the question the previous record could not be asked: **three
+skips, all declared, none hidden.** `telemetry-driver-verified-collector`,
+`compose-ownership-label-verification` and `compose-running-image-verification`
+each skipped the rendered-topology case with `RENDERED TOPOLOGY UNPROVEN`, and
+each row now carries the case name, the reason and the declaration that permits
+it. They were skipping on every previous campaign; the difference is that the
+record says so.
+
+### Carry-forward
+
+The evidence is committed *after* the runs, in its own commit, and that ordering
+is the point rather than an accident: evidence produced by the same commit it
+certifies would be circular. So the executable head is
+`76933408980c79e7787f14366073ab24c9ed2c88` and the evidence commit sits directly
+on top of it, adding only files under
+`docs/evidence/validation-harness-closure/` and this section.
+
+It changes no production code, no test, no harness, no discovery metadata, no
+fixture, no designated command, no package script, no generated evidence and no
+generator input — so every executable input to the gate and the campaign is
+identical at the final head to what they measured. A search across `packages/`,
+`tests/`, `scripts/` and `adapters/` finds no executable reader of either
+`docs/evidence/validation-harness-closure/` or this ledger file, other than the
+verifier that exists to check the evidence and its own tests. Rerunning the gate
+or the campaign because the evidence for them was committed would measure the
+same tree twice.
