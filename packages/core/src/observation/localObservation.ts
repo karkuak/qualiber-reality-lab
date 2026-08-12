@@ -149,6 +149,21 @@ export class LocalObservationCoordinator {
       compensation_receipt_hashes: result.compensationReceipts.map((receipt) => receipt.core_hash),
       retained_input_refs: [...inputRefs],
       retained_output_refs: [...result.retained.outputRefs],
+      // The adapter's own verdict, kept distinct from the record state. A
+      // `completed` record means the exchange completed and its evidence froze;
+      // it has never meant the adapter succeeded, and cleanup must not read it
+      // that way.
+      response_status: result.envelope.status,
+      ...(result.residueObservation === undefined
+        ? {}
+        : {
+            residue_observation: {
+              checkpoint: result.residueObservation.checkpoint,
+              status: result.residueObservation.status,
+              residual_resource_count: result.residueObservation.residual_resources.length,
+              residual_path_count: result.residueObservation.residual_paths.length,
+            },
+          }),
       cleanup_eligible: dispatched.cleanup_eligible,
       started_at: startedAt,
       ended_at: endedAt,
@@ -255,50 +270,105 @@ export class LocalObservationCoordinator {
     this.outputFrozen = true;
   }
 
+  /**
+   * What the observation can actually establish about the world it left behind.
+   *
+   * Two rules carry this method, and both exist because an earlier version
+   * inferred a clean substrate from the fact that operations had ended:
+   *
+   * 1. An operation "succeeded" only when its record is `completed` *and* the
+   *    adapter's own envelope said `supported`. A stop the adapter reported as
+   *    failed is not a stop that happened, even though its record completed and
+   *    its evidence froze.
+   * 2. Residue state comes from the adapter's validated residue report and from
+   *    nowhere else. There is deliberately no branch that derives `observed_clean`
+   *    from an operation reaching a terminal state, because that is a statement
+   *    about the harness rather than about the machine.
+   *
+   * Everything unobserved, unavailable or contradictory resolves to
+   * `not_observed` and blocks `cleanup_complete`. Uncertainty is reported, never
+   * rounded down to clean.
+   */
   cleanupResult(): LocalCleanupResultV1 {
     const terminal = [...this.currentByOperation.values()].filter(isTerminal);
-    const completed = (operation: AdapterOperation): boolean =>
-      terminal.some((record) => record.operation === operation && record.state === "completed");
-    const failed = (operation: AdapterOperation): boolean =>
-      terminal.some((record) => record.operation === operation && record.state !== "completed");
-    const needsStop = completed("start");
-    const needsUninstall = completed("install");
+    const succeeded = (operation: AdapterOperation): boolean =>
+      terminal.some(
+        (record) =>
+          record.operation === operation &&
+          record.state === "completed" &&
+          record.response_status === "supported",
+      );
+    const unsuccessful = (operation: AdapterOperation): boolean =>
+      terminal.some(
+        (record) =>
+          record.operation === operation &&
+          (record.state !== "completed" || record.response_status !== "supported"),
+      );
+    const outcome = (
+      operation: AdapterOperation,
+      required: boolean,
+    ): LocalCleanupResultV1["stop"] => {
+      if (!required) return "not_applicable";
+      if (succeeded(operation)) return "completed";
+      const record = terminal.find((candidate) => candidate.operation === operation);
+      if (record === undefined) return "not_applicable";
+      if (record.state === "ambiguous_not_replayed") return "ambiguous";
+      if (record.state === "completed" && record.response_status === "unsupported") return "unsupported";
+      return "failed";
+    };
+
+    const needsStop = succeeded("start");
+    const needsUninstall = succeeded("install");
     const needsCompensation = terminal.some(
-      (record) => record.state === "completed" && record.mutation_receipt_hashes.length > 0,
+      (record) =>
+        record.state === "completed" &&
+        record.response_status === "supported" &&
+        record.mutation_receipt_hashes.length > 0,
     );
     const finalResiduePlanned = this.plan.operations.some(
       (spec) =>
         spec.operation === "report-residue" &&
         (spec.payload as { checkpoint?: string }).checkpoint === "final",
     );
-    const residueObserved = finalResiduePlanned && completed("report-residue");
+
+    // The one authoritative residue input: the final checkpoint's validated
+    // report. No report, an `unknown` report, or a report the host refused
+    // leaves this undefined, and undefined never becomes clean.
+    const finalResidue = terminal
+      .filter(
+        (record): record is Extract<TerminalRecord, { readonly state: "completed" }> =>
+          record.state === "completed",
+      )
+      .find(
+        (record) =>
+          record.operation === "report-residue" &&
+          record.response_status === "supported" &&
+          record.residue_observation?.checkpoint === "final",
+      )?.residue_observation;
+    const residue: LocalCleanupResultV1["residue"] =
+      finalResidue === undefined
+        ? "not_observed"
+        : finalResidue.status === "clean"
+          ? "observed_clean"
+          : finalResidue.status === "residue_detected"
+            ? "residue_detected"
+            : "not_observed";
+
     const complete =
-      (!needsStop || completed("stop")) &&
-      (!needsUninstall || completed("uninstall")) &&
-      (!needsCompensation || completed("compensate") || completed("uninstall")) &&
-      (!finalResiduePlanned || residueObserved) &&
+      (!needsStop || succeeded("stop")) &&
+      (!needsUninstall || succeeded("uninstall")) &&
+      (!needsCompensation || succeeded("compensate") || succeeded("uninstall")) &&
+      (!finalResiduePlanned || residue === "observed_clean") &&
       !terminal.some((record) => record.state === "ambiguous_not_replayed") &&
-      !(needsStop && failed("stop")) &&
-      !(needsUninstall && failed("uninstall"));
+      !(needsStop && unsuccessful("stop")) &&
+      !(needsUninstall && unsuccessful("uninstall"));
     const reasonCodes = complete ? [] : [CODES.ADAPTER_LOCAL_CLEANUP_INCOMPLETE];
     return {
       status: complete ? "cleanup_complete" : "cleanup_incomplete",
-      stop: needsStop ? (completed("stop") ? "completed" : failed("stop") ? "failed" : "not_applicable") : "not_applicable",
-      compensation: needsCompensation
-        ? completed("compensate")
-          ? "completed"
-          : failed("compensate")
-            ? "failed"
-            : "not_applicable"
-        : "not_applicable",
-      uninstall: needsUninstall
-        ? completed("uninstall")
-          ? "completed"
-          : failed("uninstall")
-            ? "failed"
-            : "not_applicable"
-        : "not_applicable",
-      residue: residueObserved ? "observed_clean" : "not_observed",
+      stop: outcome("stop", needsStop),
+      compensation: outcome("compensate", needsCompensation),
+      uninstall: outcome("uninstall", needsUninstall),
+      residue,
       reason_codes: reasonCodes,
     };
   }

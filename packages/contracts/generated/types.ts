@@ -2053,6 +2053,13 @@ export type ReportResiduePayloadV1 = {
   readonly checkpoint: "baseline" | "post_operation" | "final";
 };
 
+export type LocalResidueRecordV1 = {
+  readonly checkpoint: "baseline" | "post_operation" | "final";
+  readonly status: "clean" | "residue_detected" | "unknown";
+  readonly residual_resource_count: number;
+  readonly residual_path_count: number;
+};
+
 export type CompensatePayloadV1 = {
   readonly schema_version: "compensate-payload/v1";
   readonly mutation_receipt_hashes: readonly Hash[];
@@ -2171,6 +2178,8 @@ export type LocalObservationCompletedRecordV1 = {
   readonly compensation_receipt_hashes: HashArray;
   readonly retained_input_refs: readonly LocalInputArtifactRefV1[];
   readonly retained_output_refs: readonly ArtifactRef[];
+  readonly response_status: "supported" | "failed" | "unsupported";
+  readonly residue_observation?: LocalResidueRecordV1;
   readonly cleanup_eligible: boolean;
   readonly started_at: Instant;
   readonly ended_at: Instant;

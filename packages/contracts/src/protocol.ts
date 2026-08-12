@@ -302,6 +302,26 @@ export interface EgressAttemptDraft {
   readonly resolved_addresses: readonly string[];
 }
 
+/**
+ * What the adapter says it found at one residue checkpoint.
+ *
+ * A draft, like every other adapter-authored value: the adapter reports what it
+ * observed and never authors a core hash, an artifact ref or a cleanup verdict.
+ * The host validates it and the reducer decides what it means.
+ *
+ * `status` deliberately reuses the `ResidueReportV1` vocabulary so a local
+ * observation and a governed report say `clean` and `residue_detected` in the
+ * same words. `unknown` exists because "the adapter could not tell" is a real
+ * answer that must never be rounded to "clean".
+ */
+export interface LocalResidueObservationDraft {
+  readonly schema_version: "local-residue-observation/v1";
+  readonly checkpoint: "baseline" | "post_operation" | "final";
+  readonly status: "clean" | "residue_detected" | "unknown";
+  readonly residual_resources: readonly { readonly kind: string; readonly identity_hash: string }[];
+  readonly residual_paths: readonly string[];
+}
+
 /** The adapter's answer to one operation. */
 export interface AdapterResponseMessage {
   readonly kind: "response";

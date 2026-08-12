@@ -21,6 +21,7 @@ import {
   Erl2Error,
   type AdapterResponseMessage,
   type AdapterResponseMessageV2,
+  type LocalResidueObservationDraft,
 } from "@erl2/contracts";
 
 function refuse(detail: string): never {
@@ -256,4 +257,94 @@ export function assertAdapterResponseShapeV2(value: unknown): AdapterResponseMes
     refuse("unsupported_inputs do not match response status");
   }
   return value as AdapterResponseMessageV2;
+}
+
+const RESIDUE_KEYS = [
+  "schema_version", "checkpoint", "status", "residual_resources", "residual_paths",
+];
+
+/**
+ * Validates the adapter's residue draft for one `report-residue` operation.
+ *
+ * Refusals here are typed `ADAPTER_LOCAL_RESIDUE_REPORT_INVALID` rather than the
+ * generic frame code, because "the adapter's residue report is unusable" is a
+ * different fact from "the frame is malformed", and the cleanup reducer must be
+ * able to tell them apart without guessing.
+ *
+ * The consistency rules are the load-bearing part. A report is refused when it
+ * says `clean` while naming residual resources or paths, and when it says
+ * `residue_detected` while naming none. Without them an adapter could report
+ * fifty leftover artifacts under a `clean` status, or an empty
+ * `residue_detected`, and the reducer would faithfully propagate a contradiction.
+ * There is no "believe the status and ignore the evidence" path.
+ */
+export function assertLocalResidueObservationDraft(
+  value: unknown,
+  checkpoint: string,
+): LocalResidueObservationDraft {
+  const bad = (detail: string): never => {
+    throw new Erl2Error(
+      CODES.ADAPTER_LOCAL_RESIDUE_REPORT_INVALID,
+      `unusable local residue report: ${detail}`,
+      { owner: "adapter" },
+    );
+  };
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return bad("the report is not an object");
+  }
+  const record = value as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (!RESIDUE_KEYS.includes(key)) return bad(`unexpected field ${JSON.stringify(key)}`);
+  }
+  for (const key of RESIDUE_KEYS) {
+    if (record[key] === undefined) return bad(`missing field ${key}`);
+  }
+  if (record["schema_version"] !== "local-residue-observation/v1") {
+    return bad("schema_version is not local-residue-observation/v1");
+  }
+  if (!["baseline", "post_operation", "final"].includes(record["checkpoint"] as string)) {
+    return bad("checkpoint is not one of baseline|post_operation|final");
+  }
+  // The report must describe the checkpoint the host actually requested;
+  // otherwise a baseline observation could be retained as the final one.
+  if (record["checkpoint"] !== checkpoint) {
+    return bad(`report describes checkpoint ${String(record["checkpoint"])}, not the dispatched ${checkpoint}`);
+  }
+  if (!["clean", "residue_detected", "unknown"].includes(record["status"] as string)) {
+    return bad("status is not one of clean|residue_detected|unknown");
+  }
+  const resources = record["residual_resources"];
+  if (!Array.isArray(resources) || resources.length > 1024) return bad("residual_resources is not a bounded array");
+  resources.forEach((element, i) => {
+    if (element === null || typeof element !== "object" || Array.isArray(element)) {
+      return bad(`residual_resources[${String(i)}] is not an object`);
+    }
+    const entry = element as Record<string, unknown>;
+    for (const key of Object.keys(entry)) {
+      if (key !== "kind" && key !== "identity_hash") {
+        return bad(`residual_resources[${String(i)}] has unexpected field ${JSON.stringify(key)}`);
+      }
+    }
+    if (typeof entry["kind"] !== "string" || typeof entry["identity_hash"] !== "string") {
+      return bad(`residual_resources[${String(i)}] is not a kind/identity_hash pair`);
+    }
+    return undefined;
+  });
+  const paths = record["residual_paths"];
+  if (!Array.isArray(paths) || paths.length > 256) return bad("residual_paths is not a bounded array");
+  paths.forEach((element, i) => {
+    if (typeof element !== "string" || element.length === 0 || element.length > 256) {
+      return bad(`residual_paths[${String(i)}] is not a bounded non-empty string`);
+    }
+    return undefined;
+  });
+
+  const named = resources.length + paths.length;
+  if (record["status"] === "clean" && named > 0) {
+    return bad(`status clean contradicts ${String(named)} named residual item(s)`);
+  }
+  if (record["status"] === "residue_detected" && named === 0) {
+    return bad("status residue_detected names no residual item");
+  }
+  return value as LocalResidueObservationDraft;
 }

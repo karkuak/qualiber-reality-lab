@@ -241,6 +241,23 @@
         "checkpoint": { "enum": ["baseline", "post_operation", "final"] }
       }
     },
+    "LocalResidueRecordV1": {
+      "$comment": "What the host retained from a validated residue draft, carried on the completed operation record so the reducer reads observed data instead of inferring cleanliness from the fact that an operation ended.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checkpoint",
+        "status",
+        "residual_resource_count",
+        "residual_path_count"
+      ],
+      "properties": {
+        "checkpoint": { "enum": ["baseline", "post_operation", "final"] },
+        "status": { "enum": ["clean", "residue_detected", "unknown"] },
+        "residual_resource_count": { "type": "integer", "minimum": 0, "maximum": 1024 },
+        "residual_path_count": { "type": "integer", "minimum": 0, "maximum": 256 }
+      }
+    },
     "CompensatePayloadV1": {
       "type": "object",
       "additionalProperties": false,
@@ -452,7 +469,8 @@
         "sequence", "request_hash", "dispatched_record_hash", "response_envelope_hash",
         "sandbox_manifest_hash", "sandbox_result_hash", "mutation_receipt_hashes",
         "compensation_receipt_hashes", "retained_input_refs", "retained_output_refs",
-        "cleanup_eligible", "started_at", "ended_at", "evidence_authenticity", "core_hash"
+        "response_status", "cleanup_eligible", "started_at", "ended_at",
+        "evidence_authenticity", "core_hash"
       ],
       "properties": {
         "schema_version": { "const": "local-observation-operation-record/v1" },
@@ -477,6 +495,14 @@
         "retained_output_refs": {
           "type": "array", "maxItems": 100000,
           "items": { "$ref": "erl2:common#/$defs/ArtifactRef" }
+        },
+        "response_status": {
+          "$comment": "The adapter's own verdict for this operation, kept separate from the record state. `completed` means the exchange completed and its evidence froze; it never means the adapter succeeded.",
+          "enum": ["supported", "failed", "unsupported"]
+        },
+        "residue_observation": {
+          "$comment": "Present only for a report-residue operation the adapter supported. Absent means no residue was observed, which is not the same as observing none.",
+          "$ref": "erl2:observation#/$defs/LocalResidueRecordV1"
         },
         "cleanup_eligible": { "type": "boolean" },
         "started_at": { "$ref": "erl2:common#/$defs/Instant" },

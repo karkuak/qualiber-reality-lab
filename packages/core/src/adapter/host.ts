@@ -69,6 +69,7 @@ import {
   type SandboxInvocationManifestV2,
   type SandboxInvocationResultV1,
   type SubjectAdapterManifestV1,
+  type LocalResidueObservationDraft,
   type SubjectAdapterManifestV2,
   type SubjectAdapterCertificationReceiptV2,
   type LocalObservationLimitsV1,
@@ -96,7 +97,11 @@ import {
 import { CredentialBroker } from "./credentials.js";
 import { decideEgress, denyByDefaultEgressPolicy } from "./egress.js";
 import { MutationLedger } from "./mutations.js";
-import { assertAdapterResponseShape, assertAdapterResponseShapeV2 } from "./responseShape.js";
+import {
+  assertAdapterResponseShape,
+  assertAdapterResponseShapeV2,
+  assertLocalResidueObservationDraft,
+} from "./responseShape.js";
 import {
   adapterOutputPrefix,
   assertNoExecutionAfterOutputFreeze,
@@ -269,6 +274,12 @@ export interface LocalAdapterOperationResult {
   readonly mutationReceipts: readonly MutationReceiptV1[];
   readonly compensationReceipts: readonly CompensationReceiptV1[];
   readonly result: unknown;
+  /**
+   * The validated residue draft, present only for a `report-residue` operation
+   * the adapter supported. Undefined means no residue was observed — which is
+   * not the same fact as observing none, and the reducer must not conflate them.
+   */
+  readonly residueObservation: LocalResidueObservationDraft | undefined;
   readonly outputDirectory: string;
   readonly retained: LocalAdapterStepEvidence;
 }
@@ -889,6 +900,20 @@ export class AdapterHost {
       );
     }
 
+    // A supported `report-residue` operation must carry a usable residue report.
+    // Validated here, with the rest of the draft adjudication and before
+    // anything is derived or frozen, because an adapter that supported the
+    // operation and then said nothing intelligible about residue must be
+    // refused at the boundary rather than handed downstream as an absence the
+    // cleanup reducer has to interpret.
+    const residueObservation =
+      isLocal && input.operation === "report-residue" && response.status === "supported"
+        ? assertLocalResidueObservationDraft(
+            response.result,
+            residueCheckpointOf((input.request as AdapterRequestV2).operation_payload),
+          )
+        : undefined;
+
     const ledger = new MutationLedger({
       runId: this.runId,
       permittedTargetPrefixes: this.permittedMutationPrefixes,
@@ -1086,6 +1111,7 @@ export class AdapterHost {
       mutationReceipts,
       compensationReceipts,
       result: response.result,
+      residueObservation,
       outputDirectory,
       retained,
     };
@@ -1947,6 +1973,12 @@ function assertExactStringSet(
       { owner: "adapter" },
     );
   }
+}
+
+/** The checkpoint the host dispatched, which the adapter's report must repeat. */
+function residueCheckpointOf(payload: AdapterRequestV2["operation_payload"]): string {
+  const checkpoint = (payload as unknown as Record<string, unknown>)["checkpoint"];
+  return typeof checkpoint === "string" ? checkpoint : "";
 }
 
 function localPackageKind(

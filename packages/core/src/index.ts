@@ -313,6 +313,10 @@ export {
   type CertifyAdapterOptions,
   type CertifyAdapterV2ScopeOptions,
 } from "./adapter/certification.js";
+// Exported so the residue draft's refusal contract can be exercised directly.
+// A validator whose every branch is only reachable through a certified
+// subprocess is a validator whose branches are never really tested.
+export { assertLocalResidueObservationDraft } from "./adapter/responseShape.js";
 export {
   BOOTSTRAP_RECEIPT_SENTINEL,
   EXTERNAL_ADAPTER_DIR,

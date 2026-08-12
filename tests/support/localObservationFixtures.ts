@@ -289,6 +289,35 @@ export function localRequest(
   });
 }
 
+/**
+ * One neutral adapter per honest residue answer.
+ *
+ * These are separate entry files rather than one configurable adapter because
+ * the child environment is a closed four-name allowlist and the operation
+ * payload is a closed object: there is deliberately no channel through which a
+ * test could tell a running adapter what to report. Distinct behaviour needs
+ * distinct certified bytes, which is the property under test.
+ */
+export const RESIDUE_SHAPES = {
+  clean: "neutral-residue-clean-observer",
+  detected: "neutral-residue-detected-observer",
+  unknown: "neutral-residue-unknown-observer",
+  contradictory: "neutral-residue-contradictory-observer",
+} as const;
+
+export function residueShape(
+  kind: keyof typeof RESIDUE_SHAPES,
+  checkpoint: "baseline" | "post_operation" | "final" = "final",
+): LocalFixtureShape {
+  return {
+    adapterId: RESIDUE_SHAPES[kind],
+    operation: "report-residue",
+    packageKind: "archive",
+    payload: { schema_version: "report-residue-payload/v1", checkpoint },
+    entryName: `${RESIDUE_SHAPES[kind]}.mjs`,
+  };
+}
+
 export function localFixture(shape: LocalFixtureShape = ARCHIVE_SHAPE) {
   const manifest = localManifest(shape);
   const receipt = localReceipt(manifest, shape);
