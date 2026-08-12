@@ -1,0 +1,21 @@
+=== targeted validation, run in the fresh clone at b22e9fb ===
+--- new deterministic observation controls ---
+✔ DURABLE-TELEMETRY: current-run spans are observed and attributed (9.464209ms)
+✔ DURABLE-TELEMETRY: another run's spans never satisfy this run (8.462667ms)
+✔ DURABLE-TELEMETRY: no trace data at all is reported as not emitted (11.597875ms)
+✔ DURABLE-TELEMETRY: an unreadable capture claims nothing about telemetry (4.656541ms)
+✔ DURABLE-TELEMETRY: traces received but observation unavailable stays distinct from none received (0.116083ms)
+✔ DURABLE-TELEMETRY: a partial trailing write is read as a smaller observation, not a malformed one (3.7715ms)
+✔ DURABLE-TELEMETRY: malformed output yields no count rather than a wrong one (3.464958ms)
+✔ DURABLE-TELEMETRY: an unrepresentable span count is refused as a total (1.083042ms)
+✔ DURABLE-TELEMETRY: an oversized capture is bounded from the end (10.797791ms)
+✔ DURABLE-TELEMETRY: a flush that lands inside the deadline is observed (2.90125ms)
+✔ DURABLE-TELEMETRY: no flush before the deadline is a bounded, named absence (8.741667ms)
+✔ DURABLE-TELEMETRY: a previous project's capture never satisfies this run (7.686292ms)
+✔ DURABLE-TELEMETRY: dispose removes the task-owned capture file (4.289959ms)
+✔ DURABLE-TELEMETRY: rotation of the container log does not affect the durable observation (4.222375ms)
+✔ DURABLE-TELEMETRY: the capture directory is task-owned and holds only this run's stream (9.50825ms)
+ℹ tests 15
+ℹ pass 15
+ℹ fail 0
+ℹ skipped 0

@@ -1,0 +1,123 @@
+
+> erl2-workspace@0.1.0 evidence:verify
+> npm run build && node scripts/generate-evidence.mjs --verify
+
+
+> erl2-workspace@0.1.0 build
+> node scripts/build.mjs
+
+build ok
+wrote /private/tmp/claude-502/-Users-karthik-Developer-qualiber-reality-lab/2091fe6a-f8b1-4448-a58b-f3ddb06f4c9c/scratchpad/gate2-clone/.erl2-work/evidence-staging/______________________________stage-byokTd (91 CLI invocations, 11 expected refusals)
+  exit 0  erl2 doctor  -
+  exit 0  erl2 status  -
+  exit 0  erl2 verify  -
+  exit 10  erl2 verify  VERIFY_OFFLINE_REQUIRED
+  exit 0  erl2 verify-record  -
+  exit 0  erl2 verify-record  -
+  exit 0  erl2 verify-record  -
+  exit 10  erl2 verify-record  VERIFY_RECORD_ATTESTATION_PRESENT
+  exit 0  erl2 preregister-acquisition  -
+  exit 0  erl2 acquire  -
+  exit 0  erl2 freeze-package  -
+  exit 0  erl2 verify-package  -
+  exit 0  erl2 freeze-output  -
+  exit 0  erl2 preregister-acquisition  -
+  exit 0  erl2 acquire  -
+  exit 0  erl2 freeze-package  -
+  exit 0  erl2 verify-package  -
+  exit 10  erl2 freeze-output  GRAPH_CLOSURE_TERMINAL_MISMATCH
+  exit 0  erl2 preregister-acquisition  -
+  exit 0  erl2 acquire  -
+  exit 3  erl2 preregister-acquisition  ADMISSION_SUBJECT_PORT_NOT_DEVELOPMENT
+  exit 0  erl2 preregister-acquisition  -
+  exit 0  erl2 acquire  -
+  exit 0  erl2 freeze-package  -
+  exit 0  erl2 verify-package  -
+  exit 10  erl2 freeze-output  GRAPH_CLOSURE_TERMINAL_MISMATCH
+  exit 0  erl2 preregister-acquisition  -
+  exit 0  erl2 acquire  -
+  exit 0  erl2 freeze-package  -
+  exit 0  erl2 verify-package  -
+  exit 0  erl2 freeze-output  -
+  exit 0  erl2 preregister-acquisition  -
+  exit 6  erl2 acquire  ADAPTER_DEADLINE_EXCEEDED
+  exit 0  erl2 verify-record  -
+  exit 0  erl2 preregister-acquisition  -
+  exit 0  erl2 acquire  -
+  exit 0  erl2 freeze-package  -
+  exit 0  erl2 verify-package  -
+  exit 0  erl2 freeze-output  -
+  exit 0  erl2 reveal  -
+  exit 0  erl2 evaluate  -
+  exit 0  erl2 finalize-generic  -
+  exit 0  erl2 verify  -
+  exit 10  erl2 verify-record  VERIFY_RECORD_ATTESTATION_PRESENT
+  exit 0  erl2 preregister-acquisition  -
+  exit 0  erl2 acquire  -
+  exit 0  erl2 freeze-package  -
+  exit 0  erl2 verify-package  -
+  exit 0  erl2 freeze-output  -
+  exit 0  erl2 reveal  -
+  exit 0  erl2 evaluate  -
+  exit 0  erl2 finalize-generic  -
+  exit 0  erl2 verify  -
+  exit 10  erl2 verify-record  VERIFY_RECORD_ATTESTATION_PRESENT
+  exit 0  erl2 preregister-acquisition  -
+  exit 0  erl2 acquire  -
+  exit 0  erl2 freeze-package  -
+  exit 0  erl2 verify-package  -
+  exit 0  erl2 freeze-output  -
+  exit 0  erl2 reveal  -
+  exit 10  erl2 finalize-generic  GRAPH_CLOSURE_MISSING_ROLE
+  exit 0  erl2 preregister-acquisition  -
+  exit 0  erl2 acquire  -
+  exit 0  erl2 freeze-package  -
+  exit 0  erl2 verify-package  -
+  exit 0  erl2 preregister-challenge  -
+  exit 0  erl2 select  -
+  exit 0  erl2 provision  -
+  exit 0  erl2 baseline  -
+  exit 0  erl2 plan  -
+  exit 0  erl2 install  -
+  exit 0  erl2 configure  -
+  exit 0  erl2 authenticate  -
+  exit 0  erl2 connect  -
+  exit 0  erl2 execute-subject  -
+  exit 0  erl2 activate  -
+  exit 0  erl2 journey  -
+  exit 0  erl2 observe  -
+  exit 0  erl2 freeze-observation  -
+  exit 0  erl2 execute-subject  -
+  exit 0  erl2 execute-subject  -
+  exit 0  erl2 remove  -
+  exit 0  erl2 freeze-output  -
+  exit 0  erl2 reveal  -
+  exit 0  erl2 evaluate  -
+  exit 0  erl2 restore  -
+  exit 0  erl2 destroy  -
+  exit 0  erl2 finalize-generic  -
+  exit 0  erl2 verify  -
+  exit 3  erl2 verify  RANDOMNESS_SOURCE_NOT_PINNED
+  exit 2  erl2 select  CFG_UNKNOWN_FLAG
+
+doctor transcript gate OK — doctor exit 0, compose_substrate derived: qualified_development_signed / enabled_by_development_signed_lock, independently_qualified=false
+
+evidence:verify — pinned 838 files, excluded 7:
+  excluded adapter-platform/hostile-adapter/run/adapter-workspace/op-acquire/output/grandchild.pid — a real OS pid from the supervisor tree-kill fixture
+  excluded adapter-platform/hostile-adapter/run/adapter-workspace/op-acquire/request.frames — absolute adapter-workspace path baked into the frames
+  excluded adapter-platform/reference-correct/run/adapter-workspace/op-acquire/request.frames — absolute adapter-workspace path baked into the frames
+  excluded adapter-platform/reference-correct/run/adapter-workspace/op-verify-package/request.frames — absolute adapter-workspace path baked into the frames
+  excluded adapter-platform/reference-limited/run/adapter-workspace/op-acquire/request.frames — absolute adapter-workspace path baked into the frames
+  excluded adapter-platform/reference-limited/run/adapter-workspace/op-verify-package/request.frames — absolute adapter-workspace path baked into the frames
+  excluded cli-transcript.json — absolute CLI path arguments
+evidence:verify OK — deterministic evidence matches the pinned goldens byte-for-byte
+
+golden gate (fixtures/golden) — directly verifying 3 invalid golden(s):
+  ok   invalid-run-cancellation — exit 0, verdict valid
+  ok   invalid-run-classified-lab-failure — exit 0, verdict valid
+  ok   invalid-run-emergency-cleanup — exit 0, verdict valid
+golden gate OK (fixtures/golden) — all 3 invalid goldens verify at exit 0 / valid in a fresh process
+
+golden gate (fixtures/golden) — directly verifying 1 valid golden(s):
+  ok   valid-pre-environment-run — exit 0, verdict valid
+golden gate OK (fixtures/golden) — all 1 valid goldens verify at exit 0 / valid in a fresh process

@@ -1,0 +1,22 @@
+=== base compatibility: what the correction changed (b6fc61f -> b22e9fb) ===
+M	tests/e2e/composeEnvironmentRun.test.ts
+A	tests/integration/durableTelemetryObservation.test.ts
+A	tests/support/durableTelemetry.ts
+
+=== production trees changed by the correction ===
+packages/ adapters/ packs/ scripts/ fixtures/ environments/ docs/ : 0
+ file(s)
+
+=== substrate/pin files byte-identical to BOTH b6fc61f and origin/main ===
+environments/otel-demo/substrate-lock.json                     cand=0bd21d2f93cb7c1ded86ac5cb9d5126abe6ea4ca SAME_as_b6fc61f SAME_as_origin_main
+environments/otel-demo/compose/erl2-overlay.yaml               cand=3f90b89e24ca12b5124e24b724af59e351aba4b3 SAME_as_b6fc61f SAME_as_origin_main
+environments/otel-demo/compose/erl2-otelcol-extras.yaml        cand=318f5576a4af04e99d96f4f227fd7543b90404db SAME_as_b6fc61f SAME_as_origin_main
+packages/core/src/environment/composeSubstrate.ts              cand=0fa6a881ae7639cf25d6c2fd191537b844e30c07 SAME_as_b6fc61f SAME_as_origin_main
+packages/core/src/environment/composeDriver.ts                 cand=91c7ffac1b475081ce967e0987410496f092f18d SAME_as_b6fc61f SAME_as_origin_main
+packages/core/src/environment/telemetryObservation.ts          cand=bb24173283004696847f29ee56e9275949223c50 SAME_as_b6fc61f SAME_as_origin_main
+adapters/reference-otel-demo/src/adapter.ts                    cand=cb820544a8fb1cf7538e4d0f3653a3d58661caaa SAME_as_b6fc61f SAME_as_origin_main
+
+=== pinned OTel release unchanged ===
+release_tag: 3.0.0
+source_commit: 1755859a9de82c2e5e225be68abc401a5ebf2b4f
+archive_sha256: sha256:1bf3ef8fbaffc049919b497a9174637dbee74ec1797ce5ff85d3d12dc86c051c
