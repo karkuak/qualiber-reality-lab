@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /** Bounded Package-A negative controls. Never runs the repository-wide campaign. */
 import {
+  cpSync,
   mkdtempSync,
   readFileSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -130,7 +130,14 @@ try {
     const worktree = path.join(parent, item.id.toLowerCase());
     run("git", ["worktree", "add", "--detach", worktree, "HEAD"], repo);
     try {
-      symlinkSync(path.join(repo, "node_modules"), path.join(worktree, "node_modules"), "dir");
+      // Copy the small installed dependency tree so its relative workspace
+      // links resolve inside this disposable worktree. Symlinking the root
+      // node_modules directory would make @erl2/* resolve back to the clean
+      // source checkout and silently bypass the mutation under test.
+      cpSync(path.join(repo, "node_modules"), path.join(worktree, "node_modules"), {
+        recursive: true,
+        dereference: false,
+      });
       const target = path.join(worktree, item.file);
       if (item.mutateJson !== undefined) {
         const value = JSON.parse(readFileSync(target, "utf8"));
