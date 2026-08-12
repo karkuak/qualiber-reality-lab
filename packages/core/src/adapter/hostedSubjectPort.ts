@@ -107,6 +107,12 @@ export class HostedSubjectPort implements SubjectPort {
   readonly results: AdapterOperationResult[] = [];
 
   constructor(host: AdapterHost) {
+    if (host.manifest.schema_version !== "subject-adapter-manifest/v1") {
+      throw new Erl2Error(
+        CODES.ADAPTER_EXECUTION_MODE_UNSUPPORTED,
+        "the governed SubjectPort accepts only the unchanged subject-adapter/v1 host",
+      );
+    }
     this.host = host;
   }
 
@@ -171,7 +177,14 @@ export class HostedSubjectPort implements SubjectPort {
 
   step(request: AdapterStepRequestV1, intent: JourneyIntent): SubjectStepResponse {
     const operation = INTENT_OPERATION[intent];
-    if (!this.host.manifest.operations.includes(operation)) {
+    const manifest = this.host.manifest;
+    if (manifest.schema_version !== "subject-adapter-manifest/v1") {
+      throw new Erl2Error(
+        CODES.ADAPTER_EXECUTION_MODE_UNSUPPORTED,
+        "a local-observation adapter cannot enter the governed SubjectPort",
+      );
+    }
+    if (!manifest.operations.includes(operation)) {
       // An operation the adapter never declared is unsupported, not a failure:
       // an unsupported capability stays an admitted, retained result.
       return {

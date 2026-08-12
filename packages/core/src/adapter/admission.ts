@@ -59,7 +59,10 @@ import {
   assertContract,
   type Hash,
   type SubjectAdapterCertificationReceiptV1,
+  type SubjectAdapterCertificationReceiptV2,
   type SubjectAdapterManifestV1,
+  type SubjectAdapterManifestV2,
+  type CertifiedAdapterProfileV2,
   type SubjectExecutionMode,
   type Tier,
 } from "@erl2/contracts";
@@ -423,6 +426,172 @@ export function verifyAdapterCertification(
   };
 }
 
+/** Package-A admission result for the one executable V2 profile. */
+export interface LocalAdapterAdmissionV2 {
+  readonly adapterId: string;
+  readonly adapterVersion: string;
+  readonly manifestHash: Hash;
+  readonly receiptHash: Hash;
+  readonly adapterArtifactHash: Hash;
+  readonly profile: CertifiedAdapterProfileV2;
+  readonly authenticity: "locally_observed_unauthenticated" | "authenticated";
+}
+
+export interface VerifyLocalAdapterCertificationV2Input {
+  readonly manifest: SubjectAdapterManifestV2;
+  readonly receipt: SubjectAdapterCertificationReceiptV2;
+  readonly entryDigest?: Hash;
+  readonly pinnedAuthorities?: readonly PinnedCertificationAuthority[];
+}
+
+/**
+ * Verifies exact V2 local scope. This is intentionally separate from governed
+ * V1 tier admission: a local receipt cannot become a governed validity gate.
+ */
+export function verifyLocalAdapterCertificationV2(
+  input: VerifyLocalAdapterCertificationV2Input,
+): LocalAdapterAdmissionV2 {
+  const { manifest, receipt } = input;
+  if (manifest.schema_version !== "subject-adapter-manifest/v2") {
+    throw new Erl2Error(
+      CODES.ADAPTER_EXECUTION_MODE_UNSUPPORTED,
+      "local observation requires a SubjectAdapterManifestV2",
+      { owner: "adapter" },
+    );
+  }
+  if (receipt.schema_version !== "subject-adapter-certification-receipt/v2") {
+    throw new Erl2Error(
+      CODES.ADAPTER_CERTIFICATION_SCOPE_MISMATCH,
+      "a V1 certification receipt cannot authorize subject-adapter/v2",
+      { owner: "adapter" },
+    );
+  }
+  assertContract<SubjectAdapterManifestV2>("SubjectAdapterManifestV2", manifest);
+  assertContract<SubjectAdapterCertificationReceiptV2>(
+    "SubjectAdapterCertificationReceiptV2",
+    receipt,
+  );
+  const manifestHash = coreHash(manifest);
+  const receiptHash = coreHash(receipt);
+  if (manifestHash !== manifest.core_hash || receiptHash !== receipt.core_hash) {
+    throw new Erl2Error(CODES.ARTIFACT_HASH_MISMATCH, "V2 manifest or receipt core hash is stale");
+  }
+  if (
+    receipt.adapter_manifest_hash !== manifestHash ||
+    receipt.adapter_id !== manifest.adapter_id ||
+    receipt.adapter_version !== manifest.version
+  ) {
+    throw new Erl2Error(
+      CODES.ADAPTER_CERTIFICATION_IDENTITY_MISMATCH,
+      "the V2 receipt does not bind the exact manifest identity",
+      { owner: "adapter" },
+    );
+  }
+  if (
+    receipt.adapter_artifact_hash !== manifest.adapter_artifact_hash ||
+    (input.entryDigest !== undefined && input.entryDigest !== manifest.adapter_artifact_hash)
+  ) {
+    throw new Erl2Error(
+      CODES.ADAPTER_IDENTITY_MISMATCH,
+      "the V2 manifest, receipt and executable bytes do not have one digest",
+      { owner: "adapter" },
+    );
+  }
+  if (receipt.verdict !== "certified") {
+    throw new Erl2Error(
+      CODES.ADAPTER_NOT_CERTIFIED,
+      `ADAPTER-CERT-V2 refused this adapter (${receipt.refusal_codes.join(", ")})`,
+      { owner: "adapter" },
+    );
+  }
+  const manifestProfile = manifest.protocol_support.find(
+    (candidate) =>
+      candidate.protocol_version === "subject-adapter/v2" &&
+      candidate.execution_modes.includes("local_observation"),
+  );
+  const certifiedProfile = receipt.certified_profiles[0];
+  if (manifestProfile === undefined || certifiedProfile === undefined) {
+    throw new Erl2Error(
+      CODES.ADAPTER_EXECUTION_MODE_UNSUPPORTED,
+      "manifest and receipt do not share a certified V2 local-observation profile",
+      { owner: "adapter" },
+    );
+  }
+  assertSubset(certifiedProfile.execution_modes, manifestProfile.execution_modes, "execution modes", manifest.adapter_id);
+  assertSubset(certifiedProfile.operations, manifestProfile.operations, "operations", manifest.adapter_id);
+  assertSubset(
+    certifiedProfile.supported_package_kinds,
+    manifestProfile.supported_package_kinds,
+    "package kinds",
+    manifest.adapter_id,
+  );
+  assertSubset(certifiedProfile.required_controls, manifestProfile.required_controls, "controls", manifest.adapter_id);
+  assertSameSet(receipt.certified_modes, certifiedProfile.execution_modes, "certified modes", manifest.adapter_id);
+  assertSameSet(receipt.certified_operations, certifiedProfile.operations, "certified operations", manifest.adapter_id);
+  assertSameSet(
+    receipt.certified_package_kinds,
+    certifiedProfile.supported_package_kinds,
+    "certified package kinds",
+    manifest.adapter_id,
+  );
+  const reportedControls = [...receipt.enforced_controls, ...receipt.unsupported_controls];
+  const overlap = receipt.enforced_controls.filter((control) =>
+    receipt.unsupported_controls.includes(control),
+  );
+  if (overlap.length > 0 || receipt.certifier_id === manifest.adapter_id) {
+    throw new Erl2Error(
+      overlap.length > 0
+        ? CODES.ADAPTER_CERTIFICATION_SCOPE_MISMATCH
+        : CODES.ADAPTER_SELF_CERTIFICATION_REFUSED,
+      overlap.length > 0
+        ? `V2 receipt reports controls as both enforced and unsupported: ${overlap.join(", ")}`
+        : "a V2 adapter may not certify its own local profile",
+      { owner: "adapter" },
+    );
+  }
+  for (const control of certifiedProfile.required_controls) {
+    if (!reportedControls.includes(control)) {
+      throw new Erl2Error(
+        CODES.ADAPTER_CERTIFICATION_SCOPE_MISMATCH,
+        `V2 receipt omits required control ${control}`,
+        { owner: "adapter" },
+      );
+    }
+  }
+
+  let authenticity: LocalAdapterAdmissionV2["authenticity"];
+  if (receipt.signature_state === "unsigned") {
+    authenticity = "locally_observed_unauthenticated";
+  } else {
+    const signature = verifyReceiptSignature(
+      receipt as unknown as SubjectAdapterCertificationReceiptV1,
+      input.pinnedAuthorities,
+    );
+    if (!signature.signerIsPinnedAuthority) {
+      throw new Erl2Error(
+        CODES.ADAPTER_CERTIFICATION_AUTHENTICATION_REQUIRED,
+        "a signed V2 receipt was not verified against a pinned certification authority",
+      );
+    }
+    authenticity = "authenticated";
+  }
+  if (receipt.certification_authenticity !== authenticity) {
+    throw new Erl2Error(
+      CODES.ADAPTER_CERTIFICATION_AUTHENTICATION_REQUIRED,
+      "the V2 receipt's authenticity label does not match verification",
+    );
+  }
+  return {
+    adapterId: manifest.adapter_id,
+    adapterVersion: manifest.version,
+    manifestHash,
+    receiptHash,
+    adapterArtifactHash: manifest.adapter_artifact_hash,
+    profile: certifiedProfile,
+    authenticity,
+  };
+}
+
 /**
  * Classifies the manifest's prior-receipt reference.
  *
@@ -466,6 +635,22 @@ function assertSameSet(
   throw new Erl2Error(
     CODES.ADAPTER_CERTIFICATION_SCOPE_MISMATCH,
     `adapter ${adapterId} certified ${label} do not match its declared ${label} (${detail})`,
+    { owner: "adapter" },
+  );
+}
+
+function assertSubset(
+  certified: readonly string[],
+  declared: readonly string[],
+  label: string,
+  adapterId: string,
+): void {
+  const declaredSet = new Set(declared);
+  const outside = certified.filter((value) => !declaredSet.has(value)).sort();
+  if (outside.length === 0) return;
+  throw new Erl2Error(
+    CODES.ADAPTER_CERTIFICATION_SCOPE_MISMATCH,
+    `adapter ${adapterId} certifies undeclared ${label}: ${outside.join(", ")}`,
     { owner: "adapter" },
   );
 }

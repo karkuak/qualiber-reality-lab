@@ -15,12 +15,14 @@ export {
   assertExecutionPlan,
   assertNoOracleCanary,
   assertNoOracleFields,
+  assertLocalObservationRequestV2,
   phaseOfRequest,
   ORACLE_CANARY_PATTERN,
   SECRET_CANARY_PATTERN,
   FORBIDDEN_REQUEST_FIELDS,
   PHASE_REQUEST_SCHEMA,
   type AdapterRequestV1,
+  type AdapterRequest,
   type AdapterRequestPhase,
 } from "./ancestry.js";
 

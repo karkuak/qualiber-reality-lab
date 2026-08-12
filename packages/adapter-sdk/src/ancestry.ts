@@ -12,7 +12,11 @@
 import {
   CODES,
   Erl2Error,
+  assertContract,
+  assertLocalObservationClaimExclusions,
+  assertNoLocalObservationGovernedFields,
   type AcquisitionAdapterRequestV1,
+  type AdapterRequestV2,
   type AdapterOperation,
   type AdapterStepRequestV1,
   type PackageVerificationRequestV1,
@@ -22,6 +26,8 @@ export type AdapterRequestV1 =
   | AcquisitionAdapterRequestV1
   | PackageVerificationRequestV1
   | AdapterStepRequestV1;
+
+export type AdapterRequest = AdapterRequestV1 | AdapterRequestV2;
 
 /** The one request schema each phase uses. */
 export const PHASE_REQUEST_SCHEMA = {
@@ -243,4 +249,19 @@ export function assertNoOracleFields(what: string, value: unknown): void {
     }
   };
   walk(value, 0);
+}
+
+/** Strict local-v2 parser used before any adapter handler is selected. */
+export function assertLocalObservationRequestV2(request: unknown): AdapterRequestV2 {
+  const parsed = assertContract<AdapterRequestV2>("AdapterRequestV2", request);
+  const context = parsed.execution_context as Record<string, unknown>;
+  if (context["mode"] !== "local_observation") {
+    throw new Erl2Error(
+      CODES.ADAPTER_EXECUTION_MODE_UNSUPPORTED,
+      "the Package A SDK does not execute governed subject-adapter/v2 requests",
+    );
+  }
+  assertNoLocalObservationGovernedFields(parsed);
+  assertLocalObservationClaimExclusions(context);
+  return parsed;
 }

@@ -34,7 +34,11 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  ADAPTER_LOCAL_EXECUTION_MODE,
   ADAPTER_PROTOCOL_VERSION,
+  ADAPTER_PROTOCOL_VERSION_V2,
+  assertLocalObservationClaimExclusions,
+  assertNoLocalObservationGovernedFields,
   assertContract,
   CODES,
   decodeFrame,
@@ -44,8 +48,12 @@ import {
   type AdapterFailureReportV1,
   type AdapterOperation,
   type AdapterProtocolNegotiationV1,
+  type AdapterProtocolNegotiationV2,
+  type AdapterRequestV2,
   type AdapterResponseEnvelopeV1,
+  type AdapterResponseEnvelopeV2,
   type AdapterResponseMessage,
+  type AdapterResponseMessageV2,
   type ArtifactRef,
   type CompensationReceiptV1,
   type CredentialUseReceiptV1,
@@ -53,12 +61,18 @@ import {
   type EgressDecisionReceiptV1,
   type Hash,
   type HostOperationMessage,
+  type HostOperationMessageV2,
   type Instant,
   type MutationIntentV1,
   type MutationReceiptV1,
   type SandboxInvocationManifestV1,
+  type SandboxInvocationManifestV2,
   type SandboxInvocationResultV1,
   type SubjectAdapterManifestV1,
+  type SubjectAdapterManifestV2,
+  type SubjectAdapterCertificationReceiptV2,
+  type LocalObservationLimitsV1,
+  type LocalObservationPlanV1,
   type SubjectDiagnosticsManifestV1,
 } from "@erl2/contracts";
 import { ArtifactStore, coreHash, hashBytes } from "@erl2/integrity";
@@ -75,10 +89,14 @@ import {
   privilegedRefusal,
 } from "./capabilities.js";
 import { assertEntryDigestUnchanged } from "./admission.js";
+import {
+  verifyLocalAdapterCertificationV2,
+  type LocalAdapterAdmissionV2,
+} from "./admission.js";
 import { CredentialBroker } from "./credentials.js";
 import { decideEgress, denyByDefaultEgressPolicy } from "./egress.js";
 import { MutationLedger } from "./mutations.js";
-import { assertAdapterResponseShape } from "./responseShape.js";
+import { assertAdapterResponseShape, assertAdapterResponseShapeV2 } from "./responseShape.js";
 import {
   adapterOutputPrefix,
   assertNoExecutionAfterOutputFreeze,
@@ -95,6 +113,7 @@ import {
   assertSandboxProfileEnabled,
   containerSubstrateLockHash,
   ALLOWED_ENVIRONMENT_VARIABLE_NAMES,
+  LOCAL_OBSERVATION_ENVIRONMENT_VARIABLE_NAMES,
   sandboxControlReport,
   type ContainerProfileActivation,
   type SandboxProfileId,
@@ -124,7 +143,11 @@ export interface AdapterMount {
 
 export interface AdapterHostOptions {
   readonly runId: string;
-  readonly adapterManifest: SubjectAdapterManifestV1;
+  readonly adapterManifest: SubjectAdapterManifestV1 | SubjectAdapterManifestV2;
+  /** Required only for a V2 local-observation host. */
+  readonly certificationReceiptV2?: SubjectAdapterCertificationReceiptV2;
+  /** Frozen plan whose scope and concrete limits govern every local dispatch. */
+  readonly localObservationPlan?: LocalObservationPlanV1;
   /** Absolute path of the adapter's entry module. Its digest is pinned. */
   readonly adapterEntryPath: string;
   /**
@@ -226,6 +249,30 @@ export interface AdapterOperationResult {
   readonly retained: SubjectStepEvidence;
 }
 
+export interface LocalAdapterStepEvidence {
+  readonly artifactHashes: readonly Hash[];
+  readonly mutationReceiptHashes: readonly Hash[];
+  readonly compensationReceiptHashes: readonly Hash[];
+  readonly outputRefs: readonly ArtifactRef[];
+  readonly diagnosticRefs: readonly ArtifactRef[];
+}
+
+export interface LocalAdapterOperationResult {
+  readonly envelope: AdapterResponseEnvelopeV2;
+  readonly sandboxResult: SandboxInvocationResultV1;
+  readonly sandboxManifest: SandboxInvocationManifestV2;
+  readonly capabilityGrant: AdapterCapabilityGrantV1;
+  readonly diagnostics: SubjectDiagnosticsManifestV1;
+  readonly credentialUseReceipts: readonly CredentialUseReceiptV1[];
+  readonly egressReceipts: readonly EgressDecisionReceiptV1[];
+  readonly mutationIntents: readonly MutationIntentV1[];
+  readonly mutationReceipts: readonly MutationReceiptV1[];
+  readonly compensationReceipts: readonly CompensationReceiptV1[];
+  readonly result: unknown;
+  readonly outputDirectory: string;
+  readonly retained: LocalAdapterStepEvidence;
+}
+
 /** The retained root every host adjudication record for one operation lives under. */
 const HOST_EVIDENCE_LOGICAL_ROOT = "retained/adapter";
 
@@ -235,8 +282,8 @@ function ordinal(index: number): string {
 }
 
 interface RawExchange {
-  readonly negotiation?: AdapterProtocolNegotiationV1;
-  readonly response?: AdapterResponseMessage;
+  readonly negotiation?: AdapterProtocolNegotiationV1 | AdapterProtocolNegotiationV2;
+  readonly response?: AdapterResponseMessage | AdapterResponseMessageV2;
   readonly outcome: "completed" | "timed_out" | "crashed" | "refused";
   readonly exitStatus?: number;
   readonly terminationSignal?: string;
@@ -304,7 +351,7 @@ function treeFingerprint(root: string, scan: { readonly mountId: string } | unde
 
 export class AdapterHost {
   readonly runId: string;
-  readonly manifest: SubjectAdapterManifestV1;
+  readonly manifest: SubjectAdapterManifestV1 | SubjectAdapterManifestV2;
   readonly credentials = new CredentialBroker();
   readonly egressPolicy: EgressAllowlistPolicyV1;
 
@@ -325,6 +372,9 @@ export class AdapterHost {
   /** See `AdapterHostOptions.evidenceFixtureWallClockMs`. Undefined in production. */
   private readonly evidenceFixtureWallClockMs: number | undefined;
   private readonly certifiedArtifactHash: Hash | undefined;
+  private readonly protocolVersion: typeof ADAPTER_PROTOCOL_VERSION | typeof ADAPTER_PROTOCOL_VERSION_V2;
+  private localAdmission: LocalAdapterAdmissionV2 | undefined;
+  private readonly localPlan: LocalObservationPlanV1 | undefined;
   private outputFrozen = false;
   private invocationSequence = 0;
 
@@ -338,22 +388,67 @@ export class AdapterHost {
     this.profile = options.profile ?? "local-process";
     this.containerActivation = options.containerActivation;
     this.containerAdapterPackage = options.containerAdapterPackage;
-    this.bounds = options.bounds ?? DEFAULT_OUTPUT_BOUNDS;
-    this.wallClockMs = options.wallClockMs ?? 30_000;
-    this.maxRequestBytes = options.maxRequestBytes ?? 1024 * 1024;
-    this.maxResponseBytes = options.maxResponseBytes ?? 1024 * 1024;
+    const hostBounds = options.bounds ?? DEFAULT_OUTPUT_BOUNDS;
+    const hostWallClockMs = options.wallClockMs ?? 30_000;
+    const hostMaxRequestBytes = options.maxRequestBytes ?? 1024 * 1024;
+    const hostMaxResponseBytes = options.maxResponseBytes ?? 1024 * 1024;
     this.mounts = options.mounts ?? [];
     this.permittedMutationPrefixes = options.permittedMutationPrefixes ?? ["adapter-workspace/"];
     this.nodeExecutable = options.nodeExecutable ?? process.execPath;
     this.evidenceFixtureWallClockMs = options.evidenceFixtureWallClockMs;
-    this.certifiedArtifactHash = options.certifiedArtifactHash;
+    this.localPlan = options.localObservationPlan;
+    const isV2 = this.manifest.schema_version === "subject-adapter-manifest/v2";
+    this.protocolVersion = isV2 ? ADAPTER_PROTOCOL_VERSION_V2 : ADAPTER_PROTOCOL_VERSION;
+    this.localAdmission = undefined;
+    this.certifiedArtifactHash =
+      isV2 ? this.manifest.adapter_artifact_hash : options.certifiedArtifactHash;
 
-    if (this.manifest.protocol_version !== ADAPTER_PROTOCOL_VERSION) {
+    if (!isV2 && this.manifest.protocol_version !== ADAPTER_PROTOCOL_VERSION) {
       throw new Erl2Error(
         CODES.ADAPTER_PROTOCOL_VERSION_MISMATCH,
         `adapter manifest declares protocol ${this.manifest.protocol_version}`,
         { owner: "adapter" },
       );
+    }
+    if (isV2 && (options.certificationReceiptV2 === undefined || this.localPlan === undefined)) {
+      throw new Erl2Error(
+        CODES.ADAPTER_CERTIFICATION_RECEIPT_REQUIRED,
+        "a local V2 host requires its exact certification receipt and frozen observation plan",
+      );
+    }
+
+    const limits = isV2 ? this.localPlan?.resource_limits : undefined;
+    if (limits !== undefined) {
+      assertContract<LocalObservationLimitsV1>("LocalObservationLimitsV1", limits);
+      const over =
+        limits.wall_clock_ms > hostWallClockMs ||
+        limits.max_request_bytes > hostMaxRequestBytes ||
+        limits.max_response_bytes > hostMaxResponseBytes ||
+        limits.max_output_files > hostBounds.maxFiles ||
+        limits.max_output_bytes > hostBounds.maxTotalBytes ||
+        limits.max_output_path_depth > hostBounds.maxPathDepth ||
+        limits.max_diagnostic_bytes > hostBounds.maxDiagnosticBytes;
+      if (over) {
+        throw new Erl2Error(
+          CODES.ADAPTER_LOCAL_LIMIT_EXCEEDED,
+          "local observation limits exceed one or more host ceilings",
+        );
+      }
+      this.bounds = {
+        maxFiles: limits.max_output_files,
+        maxTotalBytes: limits.max_output_bytes,
+        maxPathDepth: limits.max_output_path_depth,
+        maxDiagnosticBytes: limits.max_diagnostic_bytes,
+        allowedMediaTypes: hostBounds.allowedMediaTypes,
+      };
+      this.wallClockMs = limits.wall_clock_ms;
+      this.maxRequestBytes = limits.max_request_bytes;
+      this.maxResponseBytes = limits.max_response_bytes;
+    } else {
+      this.bounds = hostBounds;
+      this.wallClockMs = hostWallClockMs;
+      this.maxRequestBytes = hostMaxRequestBytes;
+      this.maxResponseBytes = hostMaxResponseBytes;
     }
     assertManifestCapabilitiesUnprivileged(this.manifest.required_broker_capabilities);
     for (const mount of this.mounts) {
@@ -393,7 +488,79 @@ export class AdapterHost {
         { owner: "adapter" },
       );
     }
-    this.egressPolicy = options.egressPolicy ?? denyByDefaultEgressPolicy("adapter-default-deny");
+    if (isV2) {
+      const plan = assertContract<LocalObservationPlanV1>("LocalObservationPlanV1", this.localPlan);
+      if (coreHash(plan) !== plan.core_hash) {
+        throw new Erl2Error(CODES.ARTIFACT_HASH_MISMATCH, "local observation plan core hash is stale");
+      }
+      if (
+        coreHash(plan.resource_limits) !== plan.resource_limits.core_hash ||
+        coreHash(plan.egress_policy) !== plan.egress_policy.core_hash
+      ) {
+        throw new Erl2Error(
+          CODES.ARTIFACT_HASH_MISMATCH,
+          "local plan embeds stale limits or egress-policy identity",
+        );
+      }
+      const admission = verifyLocalAdapterCertificationV2({
+        manifest: this.manifest,
+        receipt: options.certificationReceiptV2 as SubjectAdapterCertificationReceiptV2,
+        entryDigest: this.executableDigest,
+      });
+      this.localAdmission = admission;
+      if (
+        plan.adapter_id !== admission.adapterId ||
+        plan.adapter_version !== admission.adapterVersion ||
+        plan.adapter_manifest_hash !== admission.manifestHash ||
+        plan.certification_receipt_hash !== admission.receiptHash ||
+        plan.adapter_artifact_hash !== admission.adapterArtifactHash ||
+        plan.certification_authenticity !== admission.authenticity
+      ) {
+        throw new Erl2Error(
+          CODES.ADAPTER_CERTIFICATION_IDENTITY_MISMATCH,
+          "the local plan is not bound to the admitted V2 manifest, receipt and artifact",
+        );
+      }
+      const profileOperations = new Set<string>(admission.profile.operations);
+      const manifestCapabilities = new Set<string>(this.manifest.required_broker_capabilities);
+      if (
+        plan.operations.some((operation) => !profileOperations.has(operation.operation)) ||
+        plan.allowed_capability_ids.some((capability) => !manifestCapabilities.has(capability))
+      ) {
+        throw new Erl2Error(
+          CODES.ADAPTER_CERTIFICATION_SCOPE_MISMATCH,
+          "local plan operation or capability scope exceeds the manifest/receipt intersection",
+        );
+      }
+      const actualControls = sandboxControlReport(this.profile, this.containerActivation);
+      for (const expectation of plan.resource_limits.control_expectations) {
+        const actual = actualControls.find((control) => control.control_id === expectation.control_id);
+        if (
+          actual === undefined ||
+          (expectation.required_state === "enforced" &&
+            (actual.state !== "enforced" ||
+              !(options.certificationReceiptV2 as SubjectAdapterCertificationReceiptV2)
+                .enforced_controls.includes(expectation.control_id)))
+        ) {
+          throw new Erl2Error(
+            CODES.ADAPTER_SANDBOX_CONTROL_UNSUPPORTED,
+            `local observation requires unavailable control ${expectation.control_id}`,
+          );
+        }
+      }
+      if (
+        options.egressPolicy !== undefined &&
+        options.egressPolicy.core_hash !== plan.egress_policy.core_hash
+      ) {
+        throw new Erl2Error(
+          CODES.ADAPTER_CERTIFICATION_SCOPE_MISMATCH,
+          "host egress policy differs from the frozen local observation plan",
+        );
+      }
+      this.egressPolicy = plan.egress_policy;
+    } else {
+      this.egressPolicy = options.egressPolicy ?? denyByDefaultEgressPolicy("adapter-default-deny");
+    }
     mkdirSync(this.workspaceRoot, { recursive: true, mode: 0o700 });
   }
 
@@ -417,8 +584,32 @@ export class AdapterHost {
     readonly operationId: string;
     readonly request: unknown;
     readonly requestedCapabilityIds?: readonly string[];
-  }): AdapterOperationResult {
+    readonly executionMode?: never;
+  }): AdapterOperationResult;
+  run(input: {
+    readonly operation: AdapterOperation;
+    readonly operationId: string;
+    readonly request: AdapterRequestV2;
+    readonly requestedCapabilityIds?: readonly string[];
+    readonly executionMode: typeof ADAPTER_LOCAL_EXECUTION_MODE;
+  }): LocalAdapterOperationResult;
+  run(input: {
+    readonly operation: AdapterOperation;
+    readonly operationId: string;
+    readonly request: unknown;
+    readonly requestedCapabilityIds?: readonly string[];
+    readonly executionMode?: typeof ADAPTER_LOCAL_EXECUTION_MODE;
+  }): AdapterOperationResult | LocalAdapterOperationResult {
     assertNoExecutionAfterOutputFreeze(this.outputFrozen, `adapter operation ${input.operation}`);
+    const isLocal = this.protocolVersion === ADAPTER_PROTOCOL_VERSION_V2;
+    if (isLocal !== (input.executionMode === ADAPTER_LOCAL_EXECUTION_MODE)) {
+      throw new Erl2Error(
+        CODES.ADAPTER_EXECUTION_MODE_UNSUPPORTED,
+        isLocal
+          ? "a V2 host accepts only explicitly local-observation dispatch"
+          : "a governed V1 host cannot dispatch a local-observation request",
+      );
+    }
     // Time of use. Admission hashed these bytes once; this re-hashes them on
     // every dispatch, before anything is spawned, so the window between
     // admission and execution — and between one operation and the next — is
@@ -429,18 +620,102 @@ export class AdapterHost {
         certifiedArtifactHash: this.certifiedArtifactHash,
       });
     }
-    if (!this.manifest.operations.includes(input.operation)) {
+    const declaredOperations = isLocal
+      ? this.localAdmission?.profile.operations ?? []
+      : (this.manifest as SubjectAdapterManifestV1).operations;
+    if (!declaredOperations.includes(input.operation)) {
       throw new Erl2Error(
         CODES.ADAPTER_OPERATION_UNSUPPORTED,
         `adapter ${this.manifest.adapter_id} does not declare operation ${input.operation}`,
         { owner: "adapter" },
       );
     }
+    if (isLocal) {
+      const request = assertContract<AdapterRequestV2>("AdapterRequestV2", input.request);
+      if (coreHash(request) !== request.core_hash) {
+        throw new Erl2Error(CODES.ARTIFACT_HASH_MISMATCH, "local AdapterRequestV2 core hash is stale");
+      }
+      if ((request.execution_context as { mode?: string }).mode !== ADAPTER_LOCAL_EXECUTION_MODE) {
+        throw new Erl2Error(
+          CODES.ADAPTER_EXECUTION_MODE_UNSUPPORTED,
+          "governed subject-adapter/v2 is structural-only and cannot be dispatched",
+        );
+      }
+      assertNoLocalObservationGovernedFields(request);
+      assertLocalObservationClaimExclusions(request.execution_context);
+      const plan = this.localPlan as LocalObservationPlanV1;
+      const localContext = request.execution_context as Extract<
+        AdapterRequestV2["execution_context"],
+        { readonly mode: "local_observation" }
+      >;
+      const spec = plan.operations.find((operation) => operation.operation_id === input.operationId);
+      if (
+        request.execution_id !== this.runId ||
+        request.operation_id !== input.operationId ||
+        request.operation !== input.operation ||
+        request.adapter_manifest_hash !== this.manifest.core_hash ||
+        localContext.observation_plan_hash !== plan.core_hash ||
+        spec === undefined ||
+        spec.operation !== input.operation ||
+        coreHash({ payload: spec.payload }) !== coreHash({ payload: request.operation_payload })
+      ) {
+        throw new Erl2Error(
+          CODES.ADAPTER_CERTIFICATION_SCOPE_MISMATCH,
+          "local request is outside its exact plan, manifest or operation scope",
+        );
+      }
+      if (
+        coreHash(localContext.resource_limits) !== plan.resource_limits.core_hash ||
+        coreHash(localContext.egress_policy) !== plan.egress_policy.core_hash ||
+        coreHash({ values: localContext.allowed_capability_ids }) !==
+          coreHash({ values: plan.allowed_capability_ids }) ||
+        coreHash({ values: localContext.allowed_credential_handle_ids }) !==
+          coreHash({ values: plan.allowed_credential_handle_ids }) ||
+        request.diagnostics_policy.max_total_bytes > plan.resource_limits.max_diagnostic_bytes ||
+        request.diagnostics_policy.max_line_bytes > plan.resource_limits.max_diagnostic_line_bytes
+      ) {
+        throw new Erl2Error(
+          CODES.ADAPTER_LOCAL_LIMIT_EXCEEDED,
+          "local request limits, policy or grants differ from the frozen plan",
+        );
+      }
+      if (
+        request.ancestry.sequence !== spec.sequence ||
+        (spec.sequence === 0) !== (request.ancestry.predecessor === null)
+      ) {
+        throw new Erl2Error(CODES.REQUEST_ANCESTRY_INVALID, "local request ancestry disagrees with plan sequence");
+      }
+      if (Date.parse(request.deadline) > Date.parse(plan.expires_at)) {
+        throw new Erl2Error(CODES.ADAPTER_DEADLINE_EXCEEDED, "local request deadline exceeds plan expiry");
+      }
+      const packageKind = localPackageKind(request.operation_payload);
+      if (
+        packageKind !== undefined &&
+        !this.localAdmission?.profile.supported_package_kinds.includes(packageKind)
+      ) {
+        throw new Erl2Error(
+          CODES.ADAPTER_PACKAGE_KIND_UNSUPPORTED,
+          `package kind ${packageKind} is outside the certified local profile`,
+          { owner: "adapter" },
+        );
+      }
+    }
     // The request never carries an oracle field, checked on the Lab side before
     // it can reach the process boundary.
     assertNoOracleFields(`${input.operation} adapter request`, input.request);
 
     const requested = input.requestedCapabilityIds ?? this.manifest.required_broker_capabilities;
+    if (isLocal) {
+      const allowed = new Set<string>(this.localPlan?.allowed_capability_ids ?? []);
+      for (const capability of requested) {
+        if (!allowed.has(capability)) {
+          throw new Erl2Error(
+            CODES.ADAPTER_CAPABILITY_NOT_GRANTED,
+            `capability ${capability} is outside the frozen local plan`,
+          );
+        }
+      }
+    }
     for (const capability of requested) {
       if (isPrivilegedCapability(capability)) throw privilegedRefusal(capability);
     }
@@ -481,7 +756,9 @@ export class AdapterHost {
       );
     }
 
-    const deadline = instantAfter(now, this.wallClockMs);
+    const deadline = isLocal
+      ? (input.request as AdapterRequestV2).deadline
+      : instantAfter(now, this.wallClockMs);
 
     const sandboxManifest = this.buildSandboxManifest({
       invocationId,
@@ -504,10 +781,7 @@ export class AdapterHost {
     // namespace, and an adapter that wrote to one would be writing into a
     // read-only rootfs rather than into the directory the host reads back.
     const inContainer = this.profile === "container";
-    const message: HostOperationMessage = {
-      kind: "operation",
-      protocol_version: ADAPTER_PROTOCOL_VERSION,
-      run_id: this.runId,
+    const messageCommon = {
       operation: input.operation,
       operation_id: input.operationId,
       request: input.request,
@@ -523,6 +797,21 @@ export class AdapterHost {
       granted_capability_ids: capabilityGrant.granted_capability_ids,
       deadline,
     };
+    const message: HostOperationMessage | HostOperationMessageV2 = isLocal
+      ? {
+          kind: "operation",
+          schema_version: "adapter-host-operation/v2",
+          protocol_version: ADAPTER_PROTOCOL_VERSION_V2,
+          execution_mode: ADAPTER_LOCAL_EXECUTION_MODE,
+          execution_id: this.runId,
+          ...messageCommon,
+        }
+      : {
+          kind: "operation",
+          protocol_version: ADAPTER_PROTOCOL_VERSION,
+          run_id: this.runId,
+          ...messageCommon,
+        };
 
     const exchange = this.exchange(message, {
       operationRoot,
@@ -582,10 +871,16 @@ export class AdapterHost {
       throw this.hostFailure(input.operationId, exchange, sandboxResult);
     }
     const response = exchange.response;
+    const responseExecutionId = "execution_id" in response ? response.execution_id : response.run_id;
     if (
-      response.run_id !== this.runId ||
+      responseExecutionId !== this.runId ||
       response.operation !== input.operation ||
-      response.operation_id !== input.operationId
+      response.operation_id !== input.operationId ||
+      (isLocal &&
+        (!("execution_mode" in response) ||
+          response.protocol_version !== ADAPTER_PROTOCOL_VERSION_V2 ||
+          response.execution_mode !== ADAPTER_LOCAL_EXECUTION_MODE)) ||
+      (!isLocal && "execution_mode" in response)
     ) {
       throw new Erl2Error(
         CODES.ADAPTER_PROTOCOL_RESPONSE_MISMATCH,
@@ -691,10 +986,7 @@ export class AdapterHost {
       );
     }
 
-    const envelopeBase = {
-      schema_version: "adapter-response-envelope/v1" as const,
-      protocol_version: ADAPTER_PROTOCOL_VERSION,
-      run_id: this.runId,
+    const envelopeOutcome = {
       operation_id: input.operationId,
       operation: input.operation,
       status: response.status,
@@ -713,10 +1005,33 @@ export class AdapterHost {
       active_operator_ms: response.active_operator_ms,
       responded_at: endedAt,
     };
-    const envelope = assertContract<AdapterResponseEnvelopeV1>("AdapterResponseEnvelopeV1", {
-      ...envelopeBase,
-      core_hash: coreHash(envelopeBase),
-    });
+    const envelope = isLocal
+      ? (() => {
+          const base = {
+            schema_version: "adapter-response-envelope/v2" as const,
+            protocol_version: ADAPTER_PROTOCOL_VERSION_V2,
+            execution_mode: ADAPTER_LOCAL_EXECUTION_MODE,
+            execution_id: this.runId,
+            request_core_hash: (input.request as AdapterRequestV2).core_hash,
+            ...envelopeOutcome,
+          };
+          return assertContract<AdapterResponseEnvelopeV2>("AdapterResponseEnvelopeV2", {
+            ...base,
+            core_hash: coreHash(base),
+          });
+        })()
+      : (() => {
+          const base = {
+            schema_version: "adapter-response-envelope/v1" as const,
+            protocol_version: ADAPTER_PROTOCOL_VERSION,
+            run_id: this.runId,
+            ...envelopeOutcome,
+          };
+          return assertContract<AdapterResponseEnvelopeV1>("AdapterResponseEnvelopeV1", {
+            ...base,
+            core_hash: coreHash(base),
+          });
+        })();
 
     // The adapter's output tree, admitted last and only once every other
     // adjudication has passed.
@@ -737,11 +1052,14 @@ export class AdapterHost {
     const output = freezeAdapterOutput({
       outputRoot: outputDirectory,
       store: this.store,
-      logicalPrefix: adapterOutputPrefix(input.operationId),
+      logicalPrefix: isLocal
+        ? `${(this.localPlan as LocalObservationPlanV1).resource_limits.output_root}/${input.operationId}`
+        : adapterOutputPrefix(input.operationId),
       bounds: this.bounds,
     });
 
     const retained = this.retainHostEvidence({
+      local: isLocal,
       operationId: input.operationId,
       envelope,
       sandboxManifest,
@@ -756,7 +1074,7 @@ export class AdapterHost {
       outputRefs: output.entries,
     });
 
-    return {
+    const resultBase = {
       envelope,
       sandboxResult,
       sandboxManifest,
@@ -771,6 +1089,9 @@ export class AdapterHost {
       outputDirectory,
       retained,
     };
+    return isLocal
+      ? (resultBase as LocalAdapterOperationResult)
+      : (resultBase as AdapterOperationResult);
   }
 
   /**
@@ -800,9 +1121,10 @@ export class AdapterHost {
    * chosen string does not belong in a path even behind path confinement.
    */
   private retainHostEvidence(input: {
+    readonly local: boolean;
     readonly operationId: string;
-    readonly envelope: AdapterResponseEnvelopeV1;
-    readonly sandboxManifest: SandboxInvocationManifestV1;
+    readonly envelope: AdapterResponseEnvelopeV1 | AdapterResponseEnvelopeV2;
+    readonly sandboxManifest: SandboxInvocationManifestV1 | SandboxInvocationManifestV2;
     readonly sandboxResult: SandboxInvocationResultV1;
     readonly capabilityGrant: AdapterCapabilityGrantV1;
     readonly diagnostics: SubjectDiagnosticsManifestV1;
@@ -812,8 +1134,8 @@ export class AdapterHost {
     readonly mutationReceipts: readonly MutationReceiptV1[];
     readonly compensationReceipts: readonly CompensationReceiptV1[];
     readonly outputRefs: readonly ArtifactRef[];
-  }): SubjectStepEvidence {
-    const root = `${HOST_EVIDENCE_LOGICAL_ROOT}/${input.operationId}`;
+  }): SubjectStepEvidence | LocalAdapterStepEvidence {
+    const root = `${input.local ? "retained/local-observation-adapter" : HOST_EVIDENCE_LOGICAL_ROOT}/${input.operationId}`;
     const produced: SubjectProducedArtifact[] = [];
     const detailRecordHashes: Hash[] = [];
 
@@ -836,14 +1158,14 @@ export class AdapterHost {
     detailRecordHashes.push(
       freeze(
         "response-envelope",
-        "adapter-response-envelope",
-        "adapter-response-envelope/v1",
+        input.local ? "local-adapter-response-envelope" : "adapter-response-envelope",
+        input.local ? "adapter-response-envelope/v2" : "adapter-response-envelope/v1",
         input.envelope,
       ),
       freeze(
         "sandbox-invocation-manifest",
-        "adapter-sandbox-invocation-manifest",
-        "sandbox-invocation-manifest/v1",
+        input.local ? "local-adapter-sandbox-invocation-manifest" : "adapter-sandbox-invocation-manifest",
+        input.local ? "sandbox-invocation-manifest/v2" : "sandbox-invocation-manifest/v1",
         input.sandboxManifest,
       ),
       freeze(
@@ -915,6 +1237,15 @@ export class AdapterHost {
       ),
     );
 
+    if (input.local) {
+      return {
+        artifactHashes: [...detailRecordHashes],
+        mutationReceiptHashes,
+        compensationReceiptHashes,
+        outputRefs: [...input.outputRefs],
+        diagnosticRefs: [...input.diagnostics.entries],
+      };
+    }
     return {
       produced,
       detailRecordHashes,
@@ -990,7 +1321,53 @@ export class AdapterHost {
     readonly deadline: Instant;
     readonly createdAt: Instant;
     readonly capabilityIds: readonly string[];
-  }): SandboxInvocationManifestV1 {
+  }): SandboxInvocationManifestV1 | SandboxInvocationManifestV2 {
+    if (this.protocolVersion === ADAPTER_PROTOCOL_VERSION_V2) {
+      const limits = (this.localPlan as LocalObservationPlanV1).resource_limits;
+      const base = {
+        schema_version: "sandbox-invocation-manifest/v2" as const,
+        execution_id: this.runId,
+        execution_mode: ADAPTER_LOCAL_EXECUTION_MODE,
+        operation_id: input.operationId,
+        invocation_id: input.invocationId,
+        adapter_manifest_hash: this.manifest.core_hash,
+        adapter_artifact_hash: this.manifest.adapter_artifact_hash,
+        executable_file_sha256: this.executableDigest,
+        protocol_version: ADAPTER_PROTOCOL_VERSION_V2,
+        working_directory_path: `${limits.workspace_root}/${input.operationId}`,
+        read_only_mounts: this.mounts.map((m) => ({
+          mount_id: m.mountId,
+          logical_path: m.logicalPath,
+          purpose: m.purpose,
+          read_only: true as const,
+        })),
+        writable_output_path: `${limits.output_root}/${input.operationId}`,
+        ...(this.profile === "container"
+          ? {
+              sandbox_profile: "container" as const,
+              isolation_substrate_lock_hash: containerSubstrateLockHash(
+                this.containerActivation as ContainerProfileActivation,
+              ),
+            }
+          : { sandbox_profile: "local-process" as const }),
+        environment_variable_names: [...LOCAL_OBSERVATION_ENVIRONMENT_VARIABLE_NAMES],
+        enforced_controls: sandboxControlReport(this.profile, this.containerActivation).map((c) => ({
+          control_id: c.control_id,
+          state: c.state,
+          ...(c.reason_code === undefined ? {} : { reason_code: c.reason_code }),
+        })),
+        resource_limits: limits,
+        egress_policy_hash: this.egressPolicy.core_hash,
+        capability_ids: [...input.capabilityIds] as never,
+        credential_handle_ids: this.credentials.issuedHandleIds() as string[],
+        deadline: input.deadline,
+        created_at: input.createdAt,
+      };
+      return assertContract<SandboxInvocationManifestV2>("SandboxInvocationManifestV2", {
+        ...base,
+        core_hash: coreHash(base),
+      });
+    }
     const base = {
       schema_version: "sandbox-invocation-manifest/v1" as const,
       run_id: this.runId,
@@ -1102,15 +1479,29 @@ export class AdapterHost {
    * concurrent pipeline — and the supervisor is what makes that possible
    * without giving up process-tree termination.
    */
-  private exchange(message: HostOperationMessage, context: ExchangeContext): RawExchange {
+  private exchange(
+    message: HostOperationMessage | HostOperationMessageV2,
+    context: ExchangeContext,
+  ): RawExchange {
+    const local = "execution_id" in message;
     const negotiateFrame = encodeFrame(
-      {
-        kind: "negotiate",
-        protocol_version: ADAPTER_PROTOCOL_VERSION,
-        run_id: this.runId,
-        max_request_bytes: this.maxRequestBytes,
-        max_response_bytes: this.maxResponseBytes,
-      },
+      local
+        ? {
+            kind: "negotiate",
+            schema_version: "adapter-host-negotiation-request/v2",
+            offered_protocol_versions: [ADAPTER_PROTOCOL_VERSION_V2],
+            required_execution_mode: ADAPTER_LOCAL_EXECUTION_MODE,
+            execution_id: this.runId,
+            max_request_bytes: this.maxRequestBytes,
+            max_response_bytes: this.maxResponseBytes,
+          }
+        : {
+            kind: "negotiate",
+            protocol_version: ADAPTER_PROTOCOL_VERSION,
+            run_id: this.runId,
+            max_request_bytes: this.maxRequestBytes,
+            max_response_bytes: this.maxResponseBytes,
+          },
       this.maxRequestBytes,
     );
     const operationFrame = encodeFrame(message, this.maxRequestBytes);
@@ -1225,8 +1616,8 @@ export class AdapterHost {
       };
     }
 
-    let negotiation: AdapterProtocolNegotiationV1 | undefined;
-    let response: AdapterResponseMessage | undefined;
+    let negotiation: AdapterProtocolNegotiationV1 | AdapterProtocolNegotiationV2 | undefined;
+    let response: AdapterResponseMessage | AdapterResponseMessageV2 | undefined;
     let refusalCode: string | undefined;
     try {
       let buffer = stdout;
@@ -1242,7 +1633,9 @@ export class AdapterHost {
           // before any field is read or any array iterated — a hostile adapter
           // that omits an array must yield a typed adapter refusal, never an
           // untyped `TypeError` on the production path (P2-6, §11.2).
-          response = assertAdapterResponseShape(value);
+          response = local
+            ? assertAdapterResponseShapeV2(value)
+            : assertAdapterResponseShape(value);
         } else {
           throw new Erl2Error(
             CODES.ADAPTER_PROTOCOL_FRAME_INVALID,
@@ -1283,7 +1676,7 @@ export class AdapterHost {
    * the Lab decides what a subject may reach.
    */
   private containerLaunch(
-    message: HostOperationMessage,
+    message: HostOperationMessage | HostOperationMessageV2,
     context: ExchangeContext,
     inputPath: string,
   ): { readonly args: readonly string[]; readonly env: Record<string, string> } {
@@ -1348,17 +1741,110 @@ export class AdapterHost {
     };
   }
 
-  private childEnvironment(message: HostOperationMessage): Record<string, string> {
-    const env: Record<string, string> = {
-      ERL2_ADAPTER_PROTOCOL_VERSION: ADAPTER_PROTOCOL_VERSION,
-      ERL2_RUN_ID: this.runId,
-      ERL2_OPERATION_ID: message.operation_id,
-    };
-    assertEnvironmentAllowlisted(env);
+  private childEnvironment(message: HostOperationMessage | HostOperationMessageV2): Record<string, string> {
+    const local = "execution_id" in message;
+    const env: Record<string, string> = local
+      ? {
+          ERL2_ADAPTER_PROTOCOL_VERSION: ADAPTER_PROTOCOL_VERSION_V2,
+          ERL2_EXECUTION_ID: this.runId,
+          ERL2_EXECUTION_MODE: ADAPTER_LOCAL_EXECUTION_MODE,
+          ERL2_OPERATION_ID: message.operation_id,
+        }
+      : {
+          ERL2_ADAPTER_PROTOCOL_VERSION: ADAPTER_PROTOCOL_VERSION,
+          ERL2_RUN_ID: this.runId,
+          ERL2_OPERATION_ID: message.operation_id,
+        };
+    assertEnvironmentAllowlisted(
+      env,
+      local ? LOCAL_OBSERVATION_ENVIRONMENT_VARIABLE_NAMES : ALLOWED_ENVIRONMENT_VARIABLE_NAMES,
+    );
     return env;
   }
 
-  private assertNegotiation(value: { kind?: string }): AdapterProtocolNegotiationV1 {
+  private assertNegotiation(
+    value: { kind?: string },
+  ): AdapterProtocolNegotiationV1 | AdapterProtocolNegotiationV2 {
+    if (this.protocolVersion === ADAPTER_PROTOCOL_VERSION_V2) {
+      const raw = value as unknown as {
+        kind?: string;
+        schema_version?: string;
+        selected_protocol_version?: string;
+        execution_mode?: string;
+        adapter_id?: string;
+        adapter_version?: string;
+        supported_operations?: string[];
+        supported_package_kinds?: string[];
+      };
+      const allowed = [
+        "kind", "schema_version", "selected_protocol_version", "execution_mode", "adapter_id",
+        "adapter_version", "supported_operations", "supported_package_kinds",
+      ];
+      const unknown = Object.keys(value).find((key) => !allowed.includes(key));
+      if (unknown !== undefined || raw.schema_version !== "adapter-negotiation-response/v2") {
+        throw new Erl2Error(
+          CODES.ADAPTER_PROTOCOL_FRAME_INVALID,
+          `malformed V2 negotiation${unknown === undefined ? "" : ` field ${unknown}`}`,
+          { owner: "adapter" },
+        );
+      }
+      if (raw.selected_protocol_version === ADAPTER_PROTOCOL_VERSION) {
+        throw new Erl2Error(
+          CODES.ADAPTER_PROTOCOL_DOWNGRADE_REFUSED,
+          "the adapter returned V1 to a V2-only local offer",
+          { owner: "adapter" },
+        );
+      }
+      if (raw.selected_protocol_version !== ADAPTER_PROTOCOL_VERSION_V2) {
+        throw new Erl2Error(
+          CODES.ADAPTER_PROTOCOL_VERSION_MISMATCH,
+          `adapter selected unknown protocol ${String(raw.selected_protocol_version).slice(0, 64)}`,
+          { owner: "adapter" },
+        );
+      }
+      if (raw.execution_mode !== ADAPTER_LOCAL_EXECUTION_MODE) {
+        throw new Erl2Error(
+          CODES.ADAPTER_EXECUTION_MODE_UNSUPPORTED,
+          `adapter selected unsupported mode ${String(raw.execution_mode).slice(0, 64)}`,
+          { owner: "adapter" },
+        );
+      }
+      if (raw.adapter_id !== this.manifest.adapter_id || raw.adapter_version !== this.manifest.version) {
+        throw new Erl2Error(
+          CODES.ADAPTER_IDENTITY_MISMATCH,
+          "the running V2 adapter does not match its certified manifest identity",
+          { owner: "adapter" },
+        );
+      }
+      const profile = (this.localAdmission as LocalAdapterAdmissionV2).profile;
+      assertExactStringSet(raw.supported_operations, profile.operations, "operations");
+      assertExactStringSet(
+        raw.supported_package_kinds,
+        profile.supported_package_kinds,
+        "package kinds",
+      );
+      const base = {
+        schema_version: "adapter-protocol-negotiation/v2" as const,
+        execution_id: this.runId,
+        adapter_manifest_hash: this.manifest.core_hash,
+        offered_protocol_versions: [ADAPTER_PROTOCOL_VERSION_V2] as const,
+        required_execution_mode: ADAPTER_LOCAL_EXECUTION_MODE,
+        selected_protocol_version: ADAPTER_PROTOCOL_VERSION_V2,
+        execution_mode: ADAPTER_LOCAL_EXECUTION_MODE,
+        adapter_id: this.manifest.adapter_id,
+        adapter_version: this.manifest.version,
+        adapter_artifact_hash: this.manifest.adapter_artifact_hash,
+        supported_operations: [...profile.operations],
+        supported_package_kinds: [...profile.supported_package_kinds],
+        max_request_bytes: this.maxRequestBytes,
+        max_response_bytes: this.maxResponseBytes,
+        negotiated_at: this.clock.now(),
+      };
+      return assertContract<AdapterProtocolNegotiationV2>("AdapterProtocolNegotiationV2", {
+        ...base,
+        core_hash: coreHash(base),
+      });
+    }
     const raw = value as unknown as {
       protocol_version?: string;
       adapter_id?: string;
@@ -1373,7 +1859,8 @@ export class AdapterHost {
         { owner: "adapter" },
       );
     }
-    if (raw.adapter_id !== this.manifest.adapter_id || raw.adapter_version !== this.manifest.version) {
+    const manifest = this.manifest as SubjectAdapterManifestV1;
+    if (raw.adapter_id !== manifest.adapter_id || raw.adapter_version !== manifest.version) {
       throw new Erl2Error(
         CODES.ADAPTER_IDENTITY_MISMATCH,
         "the running adapter does not match its certified manifest identity",
@@ -1383,12 +1870,12 @@ export class AdapterHost {
     const base = {
       schema_version: "adapter-protocol-negotiation/v1" as const,
       run_id: this.runId,
-      adapter_manifest_hash: this.manifest.core_hash,
+      adapter_manifest_hash: manifest.core_hash,
       host_protocol_version: ADAPTER_PROTOCOL_VERSION,
       adapter_protocol_version: ADAPTER_PROTOCOL_VERSION,
-      adapter_id: this.manifest.adapter_id,
-      adapter_version: this.manifest.version,
-      adapter_artifact_hash: this.manifest.adapter_artifact_hash,
+      adapter_id: manifest.adapter_id,
+      adapter_version: manifest.version,
+      adapter_artifact_hash: manifest.adapter_artifact_hash,
       supported_operations: (raw.supported_operations ?? []) as never,
       supported_package_kinds: (raw.supported_package_kinds ?? []) as never,
       max_request_bytes: this.maxRequestBytes,
@@ -1442,4 +1929,32 @@ interface ExchangeContext {
   readonly outputDirectory: string;
   readonly diagnosticsDirectory: string;
   readonly invocationId: string;
+}
+
+function assertExactStringSet(
+  actual: readonly string[] | undefined,
+  expected: readonly string[],
+  label: string,
+): void {
+  if (
+    actual === undefined ||
+    actual.length !== expected.length ||
+    actual.some((value, index) => value !== expected[index])
+  ) {
+    throw new Erl2Error(
+      CODES.ADAPTER_CERTIFICATION_SCOPE_MISMATCH,
+      `adapter negotiation ${label} do not exactly match the selected certified profile`,
+      { owner: "adapter" },
+    );
+  }
+}
+
+function localPackageKind(
+  payload: AdapterRequestV2["operation_payload"],
+): "archive" | "oci" | "native" | "bundle" | undefined {
+  const record = payload as unknown as Record<string, unknown>;
+  const kind = record["package_kind"] ?? record["expected_package_kind"];
+  return kind === "archive" || kind === "oci" || kind === "native" || kind === "bundle"
+    ? kind
+    : undefined;
 }

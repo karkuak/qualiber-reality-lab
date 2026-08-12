@@ -16,7 +16,12 @@
  * (§11.13 tracks replacing this with a generated closed schema; until then the
  * host owns this check explicitly.)
  */
-import { CODES, Erl2Error, type AdapterResponseMessage } from "@erl2/contracts";
+import {
+  CODES,
+  Erl2Error,
+  type AdapterResponseMessage,
+  type AdapterResponseMessageV2,
+} from "@erl2/contracts";
 
 function refuse(detail: string): never {
   throw new Erl2Error(CODES.ADAPTER_PROTOCOL_FRAME_INVALID, `malformed adapter response: ${detail}`, {
@@ -88,6 +93,12 @@ const RESPONSE_KEYS = [
   "kind", "protocol_version", "run_id", "operation", "operation_id", "status", "result",
   "result_schema_version", "mutations", "compensations", "credential_requests", "credential_uses",
   "egress_attempts", "unsupported_inputs", "error", "active_operator_ms",
+];
+const RESPONSE_KEYS_V2 = [
+  "kind", "schema_version", "protocol_version", "execution_mode", "execution_id", "operation",
+  "operation_id", "status", "result", "result_schema_version", "mutations", "compensations",
+  "credential_requests", "credential_uses", "egress_attempts", "unsupported_inputs", "error",
+  "active_operator_ms",
 ];
 
 /**
@@ -162,4 +173,87 @@ export function assertAdapterResponseShape(value: unknown): AdapterResponseMessa
   }
 
   return value as AdapterResponseMessage;
+}
+
+/** The same closed draft validation with the V2 mode/execution discriminators. */
+export function assertAdapterResponseShapeV2(value: unknown): AdapterResponseMessageV2 {
+  const record = asObject(value, "response");
+  closedKeys(record, RESPONSE_KEYS_V2, "response");
+  if (record["kind"] !== "response") refuse("kind is not \"response\"");
+  if (record["schema_version"] !== "adapter-response-message/v2") {
+    refuse("schema_version is not adapter-response-message/v2");
+  }
+  str(record, "protocol_version", "response");
+  str(record, "execution_mode", "response");
+  str(record, "execution_id", "response");
+  str(record, "operation", "response");
+  str(record, "operation_id", "response");
+  enumStr(record, "status", ["supported", "failed", "unsupported"], "response");
+  optionalStr(record, "result_schema_version", "response");
+  num(record, "active_operator_ms", "response");
+
+  arrayOf(record, "mutations", "response", (m, at) => {
+    closedKeys(m, MUTATION_KEYS, at);
+    str(m, "mutation_id", at);
+    enumStr(m, "mutation_class", ["filesystem", "service", "configuration", "package", "credential", "environment"], at);
+    str(m, "capability_id", at);
+    str(m, "target_descriptor", at);
+    str(m, "before_state_descriptor", at);
+    str(m, "after_state_descriptor", at);
+    str(m, "compensation_id", at);
+    str(m, "compensation_capability_id", at);
+    enumStr(m, "status", ["succeeded", "failed"], at);
+    optionalStr(m, "error_code", at);
+  });
+  arrayOf(record, "compensations", "response", (c, at) => {
+    closedKeys(c, COMPENSATION_KEYS, at);
+    str(c, "compensation_id", at);
+    str(c, "mutation_id", at);
+    str(c, "after_state_descriptor", at);
+    enumStr(c, "status", ["succeeded", "failed", "not_required"], at);
+    optionalStr(c, "reason_code", at);
+  });
+  arrayOf(record, "credential_requests", "response", (r, at) => {
+    closedKeys(r, CRED_REQ_KEYS, at);
+    str(r, "handle_request_id", at);
+    enumStr(r, "credential_reference_kind",
+      ["development-keychain-reference", "workload-identity-reference", "short-lived-token-reference"], at);
+    stringArray(r, "requested_scope_ids", at);
+    num(r, "requested_ttl_seconds", at);
+    num(r, "requested_max_uses", at);
+    str(r, "target_descriptor", at);
+    str(r, "purpose_code", at);
+  });
+  arrayOf(record, "credential_uses", "response", (u, at) => {
+    closedKeys(u, CRED_USE_KEYS, at);
+    str(u, "handle_id", at);
+    str(u, "used_scope_id", at);
+    str(u, "target_descriptor", at);
+  });
+  arrayOf(record, "egress_attempts", "response", (e, at) => {
+    closedKeys(e, EGRESS_KEYS, at);
+    str(e, "decision_id", at);
+    str(e, "url", at);
+    stringArray(e, "redirect_chain", at);
+    stringArray(e, "resolved_addresses", at);
+  });
+  stringArray(record, "unsupported_inputs", "response");
+  if (record["error"] !== undefined) {
+    const error = asObject(record["error"], "response.error");
+    closedKeys(error, ["code", "owner", "safe_message"], "response.error");
+    str(error, "code", "response.error");
+    enumStr(error, "owner", ["adapter", "subject"], "response.error");
+    str(error, "safe_message", "response.error");
+  }
+  if (record["status"] === "supported" && record["error"] !== undefined) {
+    refuse("supported response carries an error");
+  }
+  if (record["status"] !== "supported" && record["error"] === undefined) {
+    refuse("failed or unsupported response omits its error");
+  }
+  const unsupported = record["unsupported_inputs"] as unknown[];
+  if (record["status"] === "unsupported" ? unsupported.length === 0 : unsupported.length !== 0) {
+    refuse("unsupported_inputs do not match response status");
+  }
+  return value as AdapterResponseMessageV2;
 }

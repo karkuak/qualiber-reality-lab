@@ -37,6 +37,7 @@ import {
   type IsolationSubstrateLockV1,
   type SandboxControlId,
   type SandboxInvocationManifestV1,
+  type SandboxInvocationManifestV2,
 } from "@erl2/contracts";
 import { coreHash } from "@erl2/integrity";
 import type { ContainerLauncherAvailability } from "./containerLauncher.js";
@@ -340,6 +341,14 @@ export const ALLOWED_ENVIRONMENT_VARIABLE_NAMES = [
   "TZ",
 ] as const;
 
+/** Exact child environment for subject-adapter/v2 local observation. */
+export const LOCAL_OBSERVATION_ENVIRONMENT_VARIABLE_NAMES = [
+  "ERL2_ADAPTER_PROTOCOL_VERSION",
+  "ERL2_EXECUTION_ID",
+  "ERL2_EXECUTION_MODE",
+  "ERL2_OPERATION_ID",
+] as const;
+
 /** Names whose presence in a proposed environment is an immediate refusal. */
 const DENIED_ENVIRONMENT_SUBSTRINGS = [
   "TOKEN",
@@ -358,9 +367,12 @@ const DENIED_ENVIRONMENT_SUBSTRINGS = [
   "AZURE_",
 ];
 
-export function assertEnvironmentAllowlisted(env: Readonly<Record<string, string>>): void {
+export function assertEnvironmentAllowlisted(
+  env: Readonly<Record<string, string>>,
+  allowedNames: readonly string[] = ALLOWED_ENVIRONMENT_VARIABLE_NAMES,
+): void {
   for (const name of Object.keys(env)) {
-    if (!(ALLOWED_ENVIRONMENT_VARIABLE_NAMES as readonly string[]).includes(name)) {
+    if (!allowedNames.includes(name)) {
       throw new Erl2Error(
         CODES.ADAPTER_ENVIRONMENT_VARIABLE_DENIED,
         `environment variable ${name} is not on the adapter allowlist`,
@@ -450,7 +462,7 @@ export function assertMountPermitted(absolutePath: string, homeDirectory: string
 
 /** Asserts the manifest reports the profile's controls exactly, in order. */
 export function assertControlReportMatchesProfile(
-  manifest: SandboxInvocationManifestV1,
+  manifest: SandboxInvocationManifestV1 | SandboxInvocationManifestV2,
   profile: SandboxProfileId,
   activation?: ContainerProfileActivation,
 ): void {
