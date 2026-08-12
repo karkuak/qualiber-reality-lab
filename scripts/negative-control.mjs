@@ -2264,10 +2264,27 @@ export const CONTROLS = [
     id: "v2-residue-requires-report",
     what: "a clean substrate is read from the adapter's residue report, never inferred from an operation ending",
     file: "packages/core/src/observation/localObservation.ts",
-    // The exact defect that was found: cleanliness derived from a completed
-    // operation rather than from what the adapter reported.
-    find: "      finalResidue === undefined\n        ? \"not_observed\"",
-    replace: "      finalResidue === undefined\n        ? (succeeded(\"report-residue\") ? \"observed_clean\" : \"not_observed\")",
+    // The exact defect that was found, reintroduced verbatim: cleanliness
+    // derived from a `report-residue` operation having ended, with the report
+    // itself computed and then ignored.
+    //
+    // An earlier version of this control patched only the `finalResidue ===
+    // undefined` arm, and survived — because once the report is read, that arm
+    // is unreachable for an operation that succeeded. A control has to remove
+    // the property, not a line near it.
+    find:
+      '    const residue: LocalCleanupResultV1["residue"] =\n' +
+      "      finalResidue === undefined\n" +
+      '        ? "not_observed"\n' +
+      '        : finalResidue.status === "clean"\n' +
+      '          ? "observed_clean"\n' +
+      '          : finalResidue.status === "residue_detected"\n' +
+      '            ? "residue_detected"\n' +
+      '            : "not_observed";',
+    replace:
+      "    void finalResidue;\n" +
+      '    const residue: LocalCleanupResultV1["residue"] =\n' +
+      '      finalResiduePlanned && succeeded("report-residue") ? "observed_clean" : "not_observed";',
     tests: ["tests/dist/integration/localResidueTruth.test.js"],
     expect: "fail",
   },

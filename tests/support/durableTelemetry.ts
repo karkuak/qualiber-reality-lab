@@ -400,21 +400,17 @@ export function awaitDurableTelemetry(options: {
     bytes: 0,
   };
   let unusable: string | undefined;
+  let unreadable = false;
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    // Readiness first. A follower that failed makes the file's contents
-    // meaningless — an empty capture then says nothing about the collector, so
-    // there is no count to fall back on and no absence to report.
-    const readiness = options.capture.readiness();
-    if (!readiness.usable) {
-      unusable = readiness.detail ?? "the follower is not attached";
-      last = { ...last, available: false };
-      break;
-    }
+    // Leaving early when the follower has already failed saves forty seconds of
+    // re-reading a file nobody is writing. It decides nothing: the verdict is
+    // made once, below, so that there is a single place where an observation is
+    // declared unusable and a single place for a control to remove.
+    if (!options.capture.readiness().usable) break;
     const capture = readCapture(capturePath);
     if (capture === undefined) {
-      unusable = `the capture at ${capturePath} could not be read`;
-      last = { ...last, available: false };
+      unreadable = true;
       break;
     }
     const parsed = parseDurableTelemetry(capture.text, options.runId);
@@ -423,21 +419,24 @@ export function awaitDurableTelemetry(options: {
     if (attempt < attempts - 1) sleep(1000);
   }
 
-  // A late failure invalidates an otherwise complete-looking read: if the
-  // follower died halfway, what we hold is a truncated view of the run and must
-  // not be reported as "the collector emitted nothing more".
-  const finalReadiness = options.capture.readiness();
-  if (!finalReadiness.usable && last.currentRunSpanCount === 0) {
-    unusable ??= finalReadiness.detail ?? "the follower is not attached";
-    last = { ...last, available: false };
-  }
-
-  // A capture whose last batch is a bare summary was read mid-write. Its
-  // attribution is still being written, so "no spans for this run" is a claim
-  // about our timing rather than about the collector.
-  if (last.available && last.currentRunSpanCount === 0 && last.terminalBlockTruncated) {
-    unusable ??= `the capture ends inside an unterminated trace batch at ${capturePath}`;
-    last = { ...last, available: false };
+  // The one place an observation is declared unusable.
+  //
+  // Only reached when this run's spans were never seen: having observed them is
+  // the positive fact the caller asked for, and a follower that dies afterwards
+  // does not unobserve them. Everything else — a follower that never attached or
+  // died mid-run, a capture that could not be read, a capture ending inside a
+  // half-written batch — means the look itself did not complete, and a look that
+  // did not complete cannot report that the collector emitted nothing.
+  if (last.currentRunSpanCount === 0) {
+    const readiness = options.capture.readiness();
+    if (!readiness.usable) {
+      unusable = readiness.detail ?? "the follower is not attached";
+    } else if (unreadable) {
+      unusable = `the capture at ${capturePath} could not be read`;
+    } else if (last.terminalBlockTruncated) {
+      unusable = `the capture ends inside an unterminated trace batch at ${capturePath}`;
+    }
+    if (unusable !== undefined) last = { ...last, available: false };
   }
 
   const diagnosticCode = classifyDurableTelemetry({ ...last, deadlineReached: true });
