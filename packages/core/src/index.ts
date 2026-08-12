@@ -299,14 +299,19 @@ export {
   type AdapterHostOptions,
   type AdapterMount,
   type AdapterOperationResult,
+  type LocalAdapterOperationResult,
+  type LocalAdapterStepEvidence,
 } from "./adapter/host.js";
+export { LocalObservationCoordinator } from "./observation/localObservation.js";
 export {
   HostedSubjectPort,
   HOSTED_SUBJECT_PORT_ID,
 } from "./adapter/hostedSubjectPort.js";
 export {
   certifyAdapter,
+  certifyAdapterV2Scope,
   type CertifyAdapterOptions,
+  type CertifyAdapterV2ScopeOptions,
 } from "./adapter/certification.js";
 export {
   BOOTSTRAP_RECEIPT_SENTINEL,
@@ -318,6 +323,7 @@ export {
   deriveCertificationAuthenticity,
   retainAdmittedAdapter,
   verifyAdapterCertification,
+  verifyLocalAdapterCertificationV2,
   verifyReceiptSignature,
   type AdapterAdmission,
   type AdapterCertifiedGate,
@@ -327,6 +333,8 @@ export {
   type ReceiptSignatureVerification,
   type RetainedAdmission,
   type VerifyAdapterCertificationInput,
+  type VerifyLocalAdapterCertificationV2Input,
+  type LocalAdapterAdmissionV2,
 } from "./adapter/admission.js";
 export {
   UNPRIVILEGED_CAPABILITIES,
