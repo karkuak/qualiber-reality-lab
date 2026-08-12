@@ -21,6 +21,79 @@
 import { CODES, Erl2Error } from "./errors.js";
 
 export const ADAPTER_PROTOCOL_VERSION = "subject-adapter/v1" as const;
+/** Additive local-observation protocol; governed dispatch remains V1. */
+export const ADAPTER_PROTOCOL_VERSION_V2 = "subject-adapter/v2" as const;
+export const ADAPTER_LOCAL_EXECUTION_MODE = "local_observation" as const;
+
+/** Exact claim ceiling repeated by every local plan, request and result. */
+export const LOCAL_OBSERVATION_UNSUPPORTED_CLAIMS = [
+  "score",
+  "qualification",
+  "governor_authorization",
+  "reveal",
+  "judge_evaluation",
+  "governed_finalization",
+] as const;
+
+/** Governed names that may never occur anywhere inside a local request. */
+export const LOCAL_OBSERVATION_FORBIDDEN_FIELDS = [
+  "governor_id",
+  "preregistration_hash",
+  "acquisition_preregistration_hash",
+  "execution_plan_hash",
+  "visible_step",
+  "judge_expectation",
+  "judge_expectation_hash",
+  "trust_policy_hash",
+  "score",
+  "qualification",
+  "reveal_state",
+  "tier",
+  "commitment_hash",
+  "metadata",
+] as const;
+
+/** Recursive runtime backstop in addition to closed JSON Schema objects. */
+export function assertNoLocalObservationGovernedFields(value: unknown): void {
+  const forbidden = new Set<string>(LOCAL_OBSERVATION_FORBIDDEN_FIELDS);
+  const walk = (node: unknown, depth: number): void => {
+    if (node === null || typeof node !== "object") return;
+    if (depth > 32) {
+      throw new Erl2Error(CODES.ADAPTER_LOCAL_CONTEXT_FORBIDDEN, "local request nesting exceeds 32 levels");
+    }
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item, depth + 1);
+      return;
+    }
+    for (const [key, child] of Object.entries(node)) {
+      if (forbidden.has(key)) {
+        throw new Erl2Error(
+          CODES.ADAPTER_LOCAL_CONTEXT_FORBIDDEN,
+          `local observation carries governed field ${key}`,
+        );
+      }
+      walk(child, depth + 1);
+    }
+  };
+  walk(value, 0);
+}
+
+export function assertLocalObservationClaimExclusions(value: unknown): void {
+  const record = value as Record<string, unknown> | null;
+  const claims = record?.["unsupported_claims"];
+  if (
+    record?.["not_scored"] !== true ||
+    record?.["not_governor_authorized"] !== true ||
+    !Array.isArray(claims) ||
+    claims.length !== LOCAL_OBSERVATION_UNSUPPORTED_CLAIMS.length ||
+    claims.some((claim, index) => claim !== LOCAL_OBSERVATION_UNSUPPORTED_CLAIMS[index])
+  ) {
+    throw new Erl2Error(
+      CODES.ADAPTER_LOCAL_CONTEXT_FORBIDDEN,
+      "local observation claim exclusions do not match the closed local claim ceiling",
+    );
+  }
+}
 
 /** Absolute ceiling for one frame, independent of what a manifest negotiates. */
 export const MAX_FRAME_BYTES = 16 * 1024 * 1024;
@@ -114,11 +187,56 @@ export interface HostShutdownMessage {
 
 export type HostMessage = HostNegotiateMessage | HostOperationMessage | HostShutdownMessage;
 
+/** V2 local-observation handshake. It deliberately has no V1 fallback. */
+export interface HostNegotiateMessageV2 {
+  readonly kind: "negotiate";
+  readonly schema_version: "adapter-host-negotiation-request/v2";
+  readonly offered_protocol_versions: readonly [typeof ADAPTER_PROTOCOL_VERSION_V2];
+  readonly required_execution_mode: typeof ADAPTER_LOCAL_EXECUTION_MODE;
+  readonly execution_id: string;
+  readonly max_request_bytes: number;
+  readonly max_response_bytes: number;
+}
+
+export interface HostOperationMessageV2 {
+  readonly kind: "operation";
+  readonly schema_version: "adapter-host-operation/v2";
+  readonly protocol_version: typeof ADAPTER_PROTOCOL_VERSION_V2;
+  readonly execution_mode: typeof ADAPTER_LOCAL_EXECUTION_MODE;
+  readonly execution_id: string;
+  readonly operation: AdapterOperation;
+  readonly operation_id: string;
+  readonly request: unknown;
+  readonly mounts: readonly {
+    readonly mount_id: string;
+    readonly absolute_path: string;
+    readonly purpose: "subject-visible-input" | "canonical-evidence" | "frozen-package";
+  }[];
+  readonly output_directory: string;
+  readonly diagnostics_directory: string;
+  readonly granted_capability_ids: readonly string[];
+  readonly deadline: string;
+}
+
+export type HostMessageV2 = HostNegotiateMessageV2 | HostOperationMessageV2 | HostShutdownMessage;
+export type AnyHostMessage = HostMessage | HostMessageV2;
+
 // -- adapter -> host ---------------------------------------------------------
 
 export interface AdapterNegotiationMessage {
   readonly kind: "negotiation";
   readonly protocol_version: string;
+  readonly adapter_id: string;
+  readonly adapter_version: string;
+  readonly supported_operations: readonly string[];
+  readonly supported_package_kinds: readonly string[];
+}
+
+export interface AdapterNegotiationMessageV2 {
+  readonly kind: "negotiation";
+  readonly schema_version: "adapter-negotiation-response/v2";
+  readonly selected_protocol_version: string;
+  readonly execution_mode: string;
   readonly adapter_id: string;
   readonly adapter_version: string;
   readonly supported_operations: readonly string[];
@@ -209,7 +327,34 @@ export interface AdapterResponseMessage {
   readonly active_operator_ms: number;
 }
 
+export interface AdapterResponseMessageV2 {
+  readonly kind: "response";
+  readonly schema_version: "adapter-response-message/v2";
+  readonly protocol_version: string;
+  readonly execution_mode: string;
+  readonly execution_id: string;
+  readonly operation: string;
+  readonly operation_id: string;
+  readonly status: "supported" | "failed" | "unsupported";
+  readonly result?: unknown;
+  readonly result_schema_version?: string;
+  readonly mutations: readonly MutationDraft[];
+  readonly compensations: readonly CompensationDraft[];
+  readonly credential_requests: readonly CredentialHandleRequestDraft[];
+  readonly credential_uses: readonly CredentialUseDraft[];
+  readonly egress_attempts: readonly EgressAttemptDraft[];
+  readonly unsupported_inputs: readonly string[];
+  readonly error?: {
+    readonly code: string;
+    readonly owner: "adapter" | "subject";
+    readonly safe_message: string;
+  };
+  readonly active_operator_ms: number;
+}
+
 export type AdapterMessage = AdapterNegotiationMessage | AdapterResponseMessage;
+export type AdapterMessageV2 = AdapterNegotiationMessageV2 | AdapterResponseMessageV2;
+export type AnyAdapterMessage = AdapterMessage | AdapterMessageV2;
 
 // -- framing -----------------------------------------------------------------
 

@@ -204,6 +204,35 @@ export type SubjectAdapterManifestV1 = {
   readonly signature: Signature;
 };
 
+export type SubjectAdapterProtocolProfileV2 = {
+  readonly protocol_version: "subject-adapter/v1";
+  readonly execution_modes: readonly ["governed"];
+  readonly operations: readonly AdapterOperationId[];
+  readonly supported_package_kinds: readonly AdapterPackageKind[];
+  readonly required_controls: readonly SandboxControlId[];
+}
+  | {
+  readonly protocol_version: "subject-adapter/v2";
+  readonly execution_modes: readonly ["local_observation"];
+  readonly operations: readonly AdapterOperationId[];
+  readonly supported_package_kinds: readonly AdapterPackageKind[];
+  readonly required_controls: readonly SandboxControlId[];
+};
+
+export type SubjectAdapterManifestV2 = {
+  readonly schema_version: "subject-adapter-manifest/v2";
+  readonly adapter_id: Id;
+  readonly version: string;
+  readonly adapter_artifact_hash: Hash;
+  readonly protocol_support: readonly SubjectAdapterProtocolProfileV2[];
+  readonly required_broker_capabilities: readonly AdapterCapabilityId[];
+  readonly network_allowlist_ids: IdArray;
+  readonly certification_receipt_hash: Hash;
+  readonly owner: string;
+  readonly core_hash: Hash;
+  readonly signature: Signature;
+};
+
 export type GenericRunPolicyV1 = {
   readonly schema_version: "generic-run-policy/v1";
   readonly policy_id: Id;
@@ -573,6 +602,231 @@ export type SubjectAdapterCertificationReceiptV1 = {
   readonly certified_at: Instant;
   readonly core_hash: Hash;
   readonly signature?: Signature;
+};
+
+export type AdapterProtocolVersionV2 = "subject-adapter/v2";
+
+export type AdapterPackageKind = "archive" | "oci" | "native" | "bundle";
+
+export type AdapterExecutionModeV2 = "governed" | "local_observation";
+
+export type CertifiedAdapterProfileV2 = {
+  readonly protocol_version: "subject-adapter/v2";
+  readonly execution_modes: readonly ["local_observation"];
+  readonly operations: readonly AdapterOperationId[];
+  readonly supported_package_kinds: readonly AdapterPackageKind[];
+  readonly required_controls: readonly SandboxControlId[];
+};
+
+export type SubjectAdapterCertificationReceiptV2 = {
+  readonly schema_version: "subject-adapter-certification-receipt/v2";
+  readonly receipt_id: Id;
+  readonly suite: "ADAPTER-CERT-V2";
+  readonly suite_version: 2;
+  readonly adapter_manifest_hash: Hash;
+  readonly adapter_artifact_hash: Hash;
+  readonly adapter_id: Id;
+  readonly adapter_version: string;
+  readonly certified_profiles: readonly CertifiedAdapterProfileV2[];
+  readonly certified_modes: readonly "local_observation"[];
+  readonly certified_operations: readonly AdapterOperationId[];
+  readonly certified_package_kinds: readonly AdapterPackageKind[];
+  readonly checks: readonly AdapterCertificationFindingV1[];
+  readonly verdict: "certified" | "refused";
+  readonly refusal_codes: ShortStringArray;
+  readonly certifier_id: Id;
+  readonly certifier_is_adapter_owner: false;
+  readonly enforced_controls: readonly SandboxControlId[];
+  readonly unsupported_controls: readonly SandboxControlId[];
+  readonly certification_authenticity: "locally_observed_unauthenticated" | "authenticated";
+  readonly signature_state: "unsigned" | "signed";
+  readonly certified_at: Instant;
+  readonly core_hash: Hash;
+  readonly signature?: Signature;
+};
+
+export type AdapterProtocolNegotiationV2 = {
+  readonly schema_version: "adapter-protocol-negotiation/v2";
+  readonly execution_id: RunId;
+  readonly adapter_manifest_hash: Hash;
+  readonly offered_protocol_versions: readonly ["subject-adapter/v2"];
+  readonly required_execution_mode: "local_observation";
+  readonly selected_protocol_version: "subject-adapter/v2";
+  readonly execution_mode: "local_observation";
+  readonly adapter_id: Id;
+  readonly adapter_version: string;
+  readonly adapter_artifact_hash: Hash;
+  readonly supported_operations: readonly AdapterOperationId[];
+  readonly supported_package_kinds: readonly AdapterPackageKind[];
+  readonly max_request_bytes: number;
+  readonly max_response_bytes: number;
+  readonly negotiated_at: Instant;
+  readonly core_hash: Hash;
+};
+
+export type AdapterRequestPredecessorV2 = {
+  readonly operation_id: Id;
+  readonly operation_record_hash: Hash;
+  readonly request_hash: Hash;
+  readonly outcome: "completed";
+  readonly response_envelope_hash: Hash;
+}
+  | {
+  readonly operation_id: Id;
+  readonly operation_record_hash: Hash;
+  readonly request_hash: Hash;
+  readonly outcome: "failed";
+  readonly response_envelope_hash?: Hash;
+}
+  | {
+  readonly operation_id: Id;
+  readonly operation_record_hash: Hash;
+  readonly request_hash: Hash;
+  readonly outcome: "ambiguous_not_replayed";
+  readonly response_envelope_hash: null;
+};
+
+export type AdapterRequestAncestryV2 = {
+  readonly sequence: number;
+  readonly predecessor: null
+    | AdapterRequestPredecessorV2;
+};
+
+export type AdapterDiagnosticsPolicyV2 = {
+  readonly max_total_bytes: number;
+  readonly max_line_bytes: number;
+  readonly redact_secrets: true;
+  readonly scan_forbidden_identifiers: true;
+};
+
+export type GovernedAcquisitionContextV2 = {
+  readonly mode: "governed";
+  readonly phase: "acquisition";
+  readonly acquisition_preregistration_hash: Hash;
+  readonly acquisition_source_manifest_hash: Hash;
+  readonly visible_step: VisibleStepReference;
+  readonly resource_limit_hash: Hash;
+  readonly credential_handle_ids: IdArray;
+};
+
+export type GovernedPackageVerificationContextV2 = {
+  readonly mode: "governed";
+  readonly phase: "package_verification";
+  readonly acquisition_preregistration_hash: Hash;
+  readonly acquisition_record_hash: Hash;
+  readonly integrity_policy_hash: Hash;
+  readonly provenance_policy_hash: Hash;
+  readonly visible_step: VisibleStepReference;
+};
+
+export type GovernedPostPlanContextV2 = {
+  readonly mode: "governed";
+  readonly phase: "post_plan";
+  readonly execution_plan_hash: Hash;
+  readonly visible_step: VisibleStepReference;
+  readonly prior_visible_interaction_hashes: HashArray;
+  readonly resource_limit_hash: Hash;
+  readonly credential_handle_ids: IdArray;
+  readonly canonical_evidence_envelope_hash?: Hash;
+  readonly canonical_evidence_mount_handle_id?: Id;
+};
+
+export type GovernedExecutionContextV2 = GovernedAcquisitionContextV2
+  | GovernedPackageVerificationContextV2
+  | GovernedPostPlanContextV2;
+
+export type LocalObservationExecutionContextV2 = {
+  readonly mode: "local_observation";
+  readonly observation_plan_hash: Hash;
+  readonly resource_limits: LocalObservationLimitsV1;
+  readonly input_artifact_refs: readonly LocalInputArtifactRefV1[];
+  readonly egress_policy: EgressAllowlistPolicyV1;
+  readonly allowed_capability_ids: readonly AdapterCapabilityId[];
+  readonly allowed_credential_handle_ids: IdArray;
+  readonly not_scored: true;
+  readonly not_governor_authorized: true;
+  readonly unsupported_claims: LocalUnsupportedClaimsV1;
+};
+
+export type AdapterRequestV2 = {
+  readonly schema_version: "adapter-request/v2";
+  readonly protocol_version: "subject-adapter/v2";
+  readonly execution_id: RunId;
+  readonly adapter_manifest_hash: Hash;
+  readonly operation_id: Id;
+  readonly operation: AdapterOperationId;
+  readonly ancestry: AdapterRequestAncestryV2;
+  readonly deadline: Instant;
+  readonly diagnostics_policy: AdapterDiagnosticsPolicyV2;
+  readonly execution_context: GovernedExecutionContextV2
+    | LocalObservationExecutionContextV2;
+  readonly operation_payload: AdapterOperationPayloadV2;
+  readonly core_hash: Hash;
+};
+
+export type AdapterResponseEnvelopeV2 = {
+  readonly schema_version: "adapter-response-envelope/v2";
+  readonly protocol_version: "subject-adapter/v2";
+  readonly execution_mode: "local_observation";
+  readonly execution_id: RunId;
+  readonly operation_id: Id;
+  readonly operation: AdapterOperationId;
+  readonly request_core_hash: Hash;
+  readonly status: "supported" | "failed" | "unsupported";
+  readonly result_core_hash?: Hash;
+  readonly result_schema_version?: string;
+  readonly mutation_receipt_hashes: HashArray;
+  readonly compensation_receipt_hashes: HashArray;
+  readonly credential_use_receipt_hashes: HashArray;
+  readonly diagnostics_manifest_hash?: Hash;
+  readonly unsupported_inputs: ShortStringArray;
+  readonly error?: {
+    readonly code: string;
+    readonly owner: "adapter" | "subject";
+    readonly safe_message: string;
+  };
+  readonly active_operator_ms: number;
+  readonly responded_at: Instant;
+  readonly core_hash: Hash;
+};
+
+export type SandboxMountV2 = {
+  readonly mount_id: Id;
+  readonly logical_path: LogicalPath;
+  readonly purpose: "subject-visible-input" | "canonical-evidence" | "frozen-package";
+  readonly read_only: true;
+};
+
+export type SandboxControlReportV2 = {
+  readonly control_id: SandboxControlId;
+  readonly state: "enforced" | "unsupported_on_this_host";
+  readonly reason_code?: string;
+};
+
+export type SandboxInvocationManifestV2 = {
+  readonly schema_version: "sandbox-invocation-manifest/v2";
+  readonly execution_id: RunId;
+  readonly execution_mode: "local_observation";
+  readonly operation_id: Id;
+  readonly invocation_id: Id;
+  readonly adapter_manifest_hash: Hash;
+  readonly adapter_artifact_hash: Hash;
+  readonly executable_file_sha256: Hash;
+  readonly protocol_version: "subject-adapter/v2";
+  readonly working_directory_path: LogicalPath;
+  readonly read_only_mounts: readonly SandboxMountV2[];
+  readonly writable_output_path: LogicalPath;
+  readonly sandbox_profile?: "local-process" | "container";
+  readonly isolation_substrate_lock_hash?: Hash;
+  readonly environment_variable_names: ShortStringArray;
+  readonly enforced_controls: readonly SandboxControlReportV2[];
+  readonly resource_limits: LocalObservationLimitsV1;
+  readonly egress_policy_hash: Hash;
+  readonly capability_ids: readonly AdapterCapabilityId[];
+  readonly credential_handle_ids: IdArray;
+  readonly deadline: Instant;
+  readonly created_at: Instant;
+  readonly core_hash: Hash;
 };
 
 // ---- erl2:common : ERL2 shared scalar and composite definitions ----
@@ -1688,6 +1942,325 @@ export type JudgeExpectationRevealRecordV1 = {
   readonly revealed_step_ids: IdArray;
   readonly revealed_expectation_hashes: HashArray;
   readonly revealed_at: Instant;
+  readonly core_hash: Hash;
+};
+
+// ---- erl2:observation : ERL2 non-governed local-observation contracts ----
+
+export type LocalUnsupportedClaimsV1 = readonly ["score", "qualification", "governor_authorization", "reveal", "judge_evaluation", "governed_finalization"];
+
+export type LocalObservationControlExpectationV1 = {
+  readonly control_id: SandboxControlId;
+  readonly required_state: "enforced" | "unsupported_permitted";
+};
+
+export type LocalObservationLimitsV1 = {
+  readonly schema_version: "local-observation-limits/v1";
+  readonly wall_clock_ms: number;
+  readonly max_request_bytes: number;
+  readonly max_response_bytes: number;
+  readonly max_output_files: number;
+  readonly max_output_bytes: number;
+  readonly max_output_path_depth: number;
+  readonly max_diagnostic_bytes: number;
+  readonly max_diagnostic_line_bytes: number;
+  readonly environment_variable_names: readonly ("ERL2_ADAPTER_PROTOCOL_VERSION" | "ERL2_EXECUTION_ID" | "ERL2_EXECUTION_MODE" | "ERL2_OPERATION_ID")[];
+  readonly input_root: LogicalPath;
+  readonly workspace_root: LogicalPath;
+  readonly output_root: LogicalPath;
+  readonly control_expectations: readonly LocalObservationControlExpectationV1[];
+  readonly core_hash: Hash;
+};
+
+export type LocalInputArtifactRefV1 = {
+  readonly input_id: Id;
+  readonly role: Id;
+  readonly provenance_mode: "host_provisioned";
+  readonly artifact: ArtifactRef;
+}
+  | {
+  readonly input_id: Id;
+  readonly role: Id;
+  readonly provenance_mode: "acquired";
+  readonly artifact: ArtifactRef;
+  readonly producing_operation_record_hash: Hash;
+};
+
+export type AcquirePayloadV1 = {
+  readonly schema_version: "acquire-payload/v1";
+  readonly provenance_mode: "acquired";
+  readonly source_descriptor_input_id: Id;
+  readonly output_input_id: Id;
+  readonly expected_package_kind: AdapterPackageKind;
+  readonly credential_handle_ids: IdArray;
+};
+
+export type ValidatePackagePayloadV1 = {
+  readonly schema_version: "validate-package-payload/v1";
+  readonly package_input_id: Id;
+  readonly package_kind: AdapterPackageKind;
+};
+
+export type InstallPayloadV1 = {
+  readonly schema_version: "install-payload/v1";
+  readonly package_input_id: Id;
+};
+
+export type ConfigurePayloadV1 = {
+  readonly schema_version: "configure-payload/v1";
+  readonly configuration_input_ids: IdArray;
+};
+
+export type StartPayloadV1 = {
+  readonly schema_version: "start-payload/v1";
+  readonly input_ids: IdArray;
+};
+
+export type InteractPayloadV1 = {
+  readonly schema_version: "interact-payload/v1";
+  readonly interaction_input_ids: IdArray;
+};
+
+export type TranslateEvidencePayloadV1 = {
+  readonly schema_version: "translate-evidence-payload/v1";
+  readonly evidence_input_ids: IdArray;
+  readonly evidence_mount_handle_id: Id;
+};
+
+export type CollectOutputsPayloadV1 = {
+  readonly schema_version: "collect-outputs-payload/v1";
+  readonly requested_output_role_ids: IdArray;
+};
+
+export type ProjectPayloadV1 = {
+  readonly schema_version: "project-payload/v1";
+  readonly evidence_input_ids: IdArray;
+  readonly projection_schema: string;
+};
+
+export type StopPayloadV1 = {
+  readonly schema_version: "stop-payload/v1";
+  readonly start_operation_id: Id;
+};
+
+export type UninstallPayloadV1 = {
+  readonly schema_version: "uninstall-payload/v1";
+  readonly install_operation_id: Id;
+};
+
+export type ReportResiduePayloadV1 = {
+  readonly schema_version: "report-residue-payload/v1";
+  readonly checkpoint: "baseline" | "post_operation" | "final";
+};
+
+export type CompensatePayloadV1 = {
+  readonly schema_version: "compensate-payload/v1";
+  readonly mutation_receipt_hashes: readonly Hash[];
+};
+
+export type AdapterOperationPayloadV2 = AcquirePayloadV1
+  | ValidatePackagePayloadV1
+  | InstallPayloadV1
+  | ConfigurePayloadV1
+  | StartPayloadV1
+  | InteractPayloadV1
+  | TranslateEvidencePayloadV1
+  | CollectOutputsPayloadV1
+  | ProjectPayloadV1
+  | StopPayloadV1
+  | UninstallPayloadV1
+  | ReportResiduePayloadV1
+  | CompensatePayloadV1;
+
+export type LocalObservationOperationSpecV1 = {
+  readonly sequence: number;
+  readonly operation_id: Id;
+  readonly operation: AdapterOperationId;
+  readonly payload: AdapterOperationPayloadV2;
+  readonly timeout_ms: number;
+  readonly cleanup: boolean;
+};
+
+export type LocalObservationPlanInputV1 = {
+  readonly input_id: Id;
+  readonly role: Id;
+  readonly provenance_mode: "host_provisioned";
+  readonly artifact: ArtifactRef;
+}
+  | {
+  readonly input_id: Id;
+  readonly role: Id;
+  readonly provenance_mode: "acquired";
+  readonly expected_package_kind: AdapterPackageKind;
+};
+
+export type LocalObservationPlanV1 = {
+  readonly schema_version: "local-observation-plan/v1";
+  readonly observation_id: RunId;
+  readonly mode: "local_observation";
+  readonly protocol_version: "subject-adapter/v2";
+  readonly adapter_id: Id;
+  readonly adapter_version: string;
+  readonly adapter_manifest_hash: Hash;
+  readonly certification_receipt_hash: Hash;
+  readonly adapter_artifact_hash: Hash;
+  readonly certification_authenticity: "locally_observed_unauthenticated" | "authenticated";
+  readonly operations: readonly LocalObservationOperationSpecV1[];
+  readonly inputs: readonly LocalObservationPlanInputV1[];
+  readonly resource_limits: LocalObservationLimitsV1;
+  readonly egress_policy: EgressAllowlistPolicyV1;
+  readonly allowed_capability_ids: readonly AdapterCapabilityId[];
+  readonly allowed_credential_handle_ids: IdArray;
+  readonly created_at: Instant;
+  readonly expires_at: Instant;
+  readonly not_scored: true;
+  readonly not_governor_authorized: true;
+  readonly unsupported_claims: LocalUnsupportedClaimsV1;
+  readonly evidence_authenticity: "unauthenticated_local_record";
+  readonly core_hash: Hash;
+};
+
+export type LocalObservationDeclaredRecordV1 = {
+  readonly schema_version: "local-observation-operation-record/v1";
+  readonly state: "declared";
+  readonly observation_id: RunId;
+  readonly plan_hash: Hash;
+  readonly operation_id: Id;
+  readonly operation: AdapterOperationId;
+  readonly sequence: number;
+  readonly request_hash: Hash;
+  readonly prior_record_hash?: Hash;
+  readonly idempotency_key: string;
+  readonly cleanup_eligible: boolean;
+  readonly declared_at: Instant;
+  readonly evidence_authenticity: "unauthenticated_local_record";
+  readonly core_hash: Hash;
+};
+
+export type LocalObservationDispatchedRecordV1 = {
+  readonly schema_version: "local-observation-operation-record/v1";
+  readonly state: "dispatched";
+  readonly observation_id: RunId;
+  readonly plan_hash: Hash;
+  readonly operation_id: Id;
+  readonly operation: AdapterOperationId;
+  readonly sequence: number;
+  readonly request_hash: Hash;
+  readonly declared_record_hash: Hash;
+  readonly cleanup_eligible: boolean;
+  readonly dispatched_at: Instant;
+  readonly evidence_authenticity: "unauthenticated_local_record";
+  readonly core_hash: Hash;
+};
+
+export type LocalObservationCompletedRecordV1 = {
+  readonly schema_version: "local-observation-operation-record/v1";
+  readonly state: "completed";
+  readonly observation_id: RunId;
+  readonly plan_hash: Hash;
+  readonly operation_id: Id;
+  readonly operation: AdapterOperationId;
+  readonly sequence: number;
+  readonly request_hash: Hash;
+  readonly dispatched_record_hash: Hash;
+  readonly response_envelope_hash: Hash;
+  readonly sandbox_manifest_hash: Hash;
+  readonly sandbox_result_hash: Hash;
+  readonly diagnostics_manifest_hash?: Hash;
+  readonly mutation_receipt_hashes: HashArray;
+  readonly compensation_receipt_hashes: HashArray;
+  readonly retained_input_refs: readonly LocalInputArtifactRefV1[];
+  readonly retained_output_refs: readonly ArtifactRef[];
+  readonly cleanup_eligible: boolean;
+  readonly started_at: Instant;
+  readonly ended_at: Instant;
+  readonly evidence_authenticity: "unauthenticated_local_record";
+  readonly core_hash: Hash;
+};
+
+export type LocalObservationFailedRecordV1 = {
+  readonly schema_version: "local-observation-operation-record/v1";
+  readonly state: "failed";
+  readonly observation_id: RunId;
+  readonly plan_hash: Hash;
+  readonly operation_id: Id;
+  readonly operation: AdapterOperationId;
+  readonly sequence: number;
+  readonly request_hash: Hash;
+  readonly dispatched_record_hash: Hash;
+  readonly response_envelope_hash?: Hash;
+  readonly sandbox_manifest_hash?: Hash;
+  readonly sandbox_result_hash?: Hash;
+  readonly failure_code: string;
+  readonly cleanup_required: boolean;
+  readonly started_at: Instant;
+  readonly failed_at: Instant;
+  readonly evidence_authenticity: "unauthenticated_local_record";
+  readonly core_hash: Hash;
+};
+
+export type LocalObservationAmbiguousRecordV1 = {
+  readonly schema_version: "local-observation-operation-record/v1";
+  readonly state: "ambiguous_not_replayed";
+  readonly observation_id: RunId;
+  readonly plan_hash: Hash;
+  readonly operation_id: Id;
+  readonly operation: AdapterOperationId;
+  readonly sequence: number;
+  readonly request_hash: Hash;
+  readonly dispatched_record_hash: Hash;
+  readonly recovery_observation: string;
+  readonly cleanup_required: true;
+  readonly observed_at: Instant;
+  readonly evidence_authenticity: "unauthenticated_local_record";
+  readonly core_hash: Hash;
+};
+
+export type LocalObservationOperationRecordV1 = LocalObservationDeclaredRecordV1
+  | LocalObservationDispatchedRecordV1
+  | LocalObservationCompletedRecordV1
+  | LocalObservationFailedRecordV1
+  | LocalObservationAmbiguousRecordV1;
+
+export type LocalStructuralValidationV1 = {
+  readonly contract: string;
+  readonly status: "conforms" | "does_not_conform" | "not_applicable";
+  readonly evidence_refs: HashArray;
+};
+
+export type LocalCleanupResultV1 = {
+  readonly status: "cleanup_complete" | "cleanup_incomplete";
+  readonly stop: "not_applicable" | "completed" | "failed" | "ambiguous" | "unsupported";
+  readonly compensation: "not_applicable" | "completed" | "failed" | "ambiguous" | "unsupported";
+  readonly uninstall: "not_applicable" | "completed" | "failed" | "ambiguous" | "unsupported";
+  readonly residue: "observed_clean" | "residue_detected" | "not_observed";
+  readonly reason_codes: ShortStringArray;
+};
+
+export type LocalObservationResultV1 = {
+  readonly schema_version: "local-observation-result/v1";
+  readonly observation_id: RunId;
+  readonly plan_hash: Hash;
+  readonly protocol_version: "subject-adapter/v2";
+  readonly adapter_id: Id;
+  readonly adapter_version: string;
+  readonly adapter_manifest_hash: Hash;
+  readonly certification_receipt_hash: Hash;
+  readonly adapter_artifact_hash: Hash;
+  readonly certification_authenticity: "locally_observed_unauthenticated" | "authenticated";
+  readonly operation_record_hashes: HashArray;
+  readonly retained_input_refs: readonly LocalInputArtifactRefV1[];
+  readonly retained_output_refs: readonly ArtifactRef[];
+  readonly retained_evidence_refs: HashArray;
+  readonly structural_validation: readonly LocalStructuralValidationV1[];
+  readonly cleanup: LocalCleanupResultV1;
+  readonly status: "observed_complete" | "observed_with_unsupported" | "observation_failed" | "cleanup_incomplete" | "observation_expired" | "observation_cancelled";
+  readonly started_at: Instant;
+  readonly ended_at: Instant;
+  readonly not_scored: true;
+  readonly not_governor_authorized: true;
+  readonly unsupported_claims: LocalUnsupportedClaimsV1;
+  readonly evidence_authenticity: "unauthenticated_local_record";
   readonly core_hash: Hash;
 };
 

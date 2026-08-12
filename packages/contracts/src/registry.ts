@@ -234,6 +234,19 @@ export const CONTRACTS: readonly ContractDescriptor[] = [
   d("ERL2-C-141", "AdapterFailureReportV1", "adapter", "adapter-failure-report/v1"),
   d("ERL2-C-142", "AdapterCertificationFindingV1", "adapter", undefined),
 
+  // subject-adapter/v2 local observation (ADR-ERL2-037). These identities are
+  // additive: the governed V1 contracts above remain byte-for-byte unchanged.
+  d("ERL2-C-161", "SubjectAdapterManifestV2", "acquisition", "subject-adapter-manifest/v2"),
+  d("ERL2-C-162", "SubjectAdapterCertificationReceiptV2", "adapter", "subject-adapter-certification-receipt/v2"),
+  d("ERL2-C-163", "AdapterProtocolNegotiationV2", "adapter", "adapter-protocol-negotiation/v2"),
+  d("ERL2-C-164", "AdapterRequestV2", "adapter", "adapter-request/v2"),
+  d("ERL2-C-165", "AdapterResponseEnvelopeV2", "adapter", "adapter-response-envelope/v2"),
+  d("ERL2-C-166", "SandboxInvocationManifestV2", "adapter", "sandbox-invocation-manifest/v2"),
+  d("ERL2-C-167", "LocalObservationLimitsV1", "observation", "local-observation-limits/v1"),
+  d("ERL2-C-168", "LocalObservationPlanV1", "observation", "local-observation-plan/v1"),
+  d("ERL2-C-169", "LocalObservationOperationRecordV1", "observation", undefined, true),
+  d("ERL2-C-170", "LocalObservationResultV1", "observation", "local-observation-result/v1"),
+
   // Subject-isolation qualification (ERL2-OQ-008, ADR-ERL2-016)
   d("ERL2-C-149", "IsolationSubstrateLockV1", "isolation", "isolation-substrate-lock/v1"),
   d("ERL2-C-150", "IsolationEnforcementProbeResultV1", "isolation", "isolation-enforcement-probe-result/v1"),

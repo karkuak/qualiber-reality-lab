@@ -2010,6 +2010,512 @@
           }
         }
       ]
+    },
+    "AdapterProtocolVersionV2": {
+      "const": "subject-adapter/v2"
+    },
+    "AdapterPackageKind": {
+      "enum": ["archive", "oci", "native", "bundle"]
+    },
+    "AdapterExecutionModeV2": {
+      "enum": ["governed", "local_observation"]
+    },
+    "CertifiedAdapterProfileV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "execution_modes",
+        "operations",
+        "supported_package_kinds",
+        "required_controls"
+      ],
+      "properties": {
+        "protocol_version": { "const": "subject-adapter/v2" },
+        "execution_modes": {
+          "type": "array",
+          "prefixItems": [{ "const": "local_observation" }],
+          "items": false,
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 13,
+          "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" }
+        },
+        "supported_package_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/AdapterPackageKind" }
+        },
+        "required_controls": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/SandboxControlId" }
+        }
+      }
+    },
+    "SubjectAdapterCertificationReceiptV2": {
+      "$comment": "ADAPTER-CERT-V2 scope skeleton. It certifies local-observation profiles only and never authorizes a V1 manifest or governed V2 dispatch.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "receipt_id", "suite", "suite_version", "adapter_manifest_hash",
+        "adapter_artifact_hash", "adapter_id", "adapter_version", "certified_profiles",
+        "certified_modes", "certified_operations", "certified_package_kinds", "checks", "verdict",
+        "refusal_codes", "certifier_id", "certifier_is_adapter_owner", "enforced_controls",
+        "unsupported_controls", "certification_authenticity", "signature_state", "certified_at", "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "subject-adapter-certification-receipt/v2" },
+        "receipt_id": { "$ref": "erl2:common#/$defs/Id" },
+        "suite": { "const": "ADAPTER-CERT-V2" },
+        "suite_version": { "const": 2 },
+        "adapter_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_artifact_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_id": { "$ref": "erl2:common#/$defs/Id" },
+        "adapter_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "certified_profiles": {
+          "type": "array", "maxItems": 1, "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/CertifiedAdapterProfileV2" }
+        },
+        "certified_modes": {
+          "type": "array", "maxItems": 1, "uniqueItems": true,
+          "items": { "const": "local_observation" }
+        },
+        "certified_operations": {
+          "type": "array", "maxItems": 13, "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" }
+        },
+        "certified_package_kinds": {
+          "type": "array", "maxItems": 4, "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/AdapterPackageKind" }
+        },
+        "checks": {
+          "type": "array", "minItems": 1, "maxItems": 128,
+          "items": { "$ref": "erl2:adapter#/$defs/AdapterCertificationFindingV1" }
+        },
+        "verdict": { "enum": ["certified", "refused"] },
+        "refusal_codes": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+        "certifier_id": { "$ref": "erl2:common#/$defs/Id" },
+        "certifier_is_adapter_owner": { "const": false },
+        "enforced_controls": {
+          "type": "array", "maxItems": 32, "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/SandboxControlId" }
+        },
+        "unsupported_controls": {
+          "type": "array", "maxItems": 32, "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/SandboxControlId" }
+        },
+        "certification_authenticity": {
+          "enum": ["locally_observed_unauthenticated", "authenticated"]
+        },
+        "signature_state": { "enum": ["unsigned", "signed"] },
+        "certified_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "verdict": { "const": "certified" } }, "required": ["verdict"] },
+          "then": {
+            "properties": {
+              "certified_profiles": { "type": "array", "minItems": 1 },
+              "certified_modes": { "type": "array", "minItems": 1 },
+              "certified_operations": { "type": "array", "minItems": 1 },
+              "certified_package_kinds": { "type": "array", "minItems": 1 },
+              "refusal_codes": { "$ref": "erl2:common#/$defs/EmptyArray" }
+            }
+          },
+          "else": {
+            "properties": {
+              "certified_profiles": { "$ref": "erl2:common#/$defs/EmptyArray" },
+              "certified_modes": { "$ref": "erl2:common#/$defs/EmptyArray" },
+              "certified_operations": { "$ref": "erl2:common#/$defs/EmptyArray" },
+              "certified_package_kinds": { "$ref": "erl2:common#/$defs/EmptyArray" },
+              "refusal_codes": { "type": "array", "minItems": 1 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "signature_state": { "const": "signed" } }, "required": ["signature_state"] },
+          "then": {
+            "required": ["signature"],
+            "properties": { "certification_authenticity": { "const": "authenticated" } }
+          },
+          "else": {
+            "not": { "required": ["signature"] },
+            "properties": {
+              "certification_authenticity": { "const": "locally_observed_unauthenticated" }
+            }
+          }
+        }
+      ]
+    },
+    "AdapterProtocolNegotiationV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "execution_id", "adapter_manifest_hash", "offered_protocol_versions",
+        "required_execution_mode", "selected_protocol_version", "execution_mode", "adapter_id",
+        "adapter_version", "adapter_artifact_hash", "supported_operations", "supported_package_kinds",
+        "max_request_bytes", "max_response_bytes", "negotiated_at", "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "adapter-protocol-negotiation/v2" },
+        "execution_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "adapter_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "offered_protocol_versions": {
+          "type": "array", "prefixItems": [{ "const": "subject-adapter/v2" }],
+          "items": false, "minItems": 1, "maxItems": 1
+        },
+        "required_execution_mode": { "const": "local_observation" },
+        "selected_protocol_version": { "const": "subject-adapter/v2" },
+        "execution_mode": { "const": "local_observation" },
+        "adapter_id": { "$ref": "erl2:common#/$defs/Id" },
+        "adapter_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "adapter_artifact_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "supported_operations": {
+          "type": "array", "minItems": 1, "maxItems": 13, "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" }
+        },
+        "supported_package_kinds": {
+          "type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/AdapterPackageKind" }
+        },
+        "max_request_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "max_response_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "negotiated_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+    "AdapterRequestPredecessorV2": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["operation_id", "operation_record_hash", "request_hash", "outcome", "response_envelope_hash"],
+          "properties": {
+            "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+            "operation_record_hash": { "$ref": "erl2:common#/$defs/Hash" },
+            "request_hash": { "$ref": "erl2:common#/$defs/Hash" },
+            "outcome": { "const": "completed" },
+            "response_envelope_hash": { "$ref": "erl2:common#/$defs/Hash" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["operation_id", "operation_record_hash", "request_hash", "outcome"],
+          "properties": {
+            "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+            "operation_record_hash": { "$ref": "erl2:common#/$defs/Hash" },
+            "request_hash": { "$ref": "erl2:common#/$defs/Hash" },
+            "outcome": { "const": "failed" },
+            "response_envelope_hash": { "$ref": "erl2:common#/$defs/Hash" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["operation_id", "operation_record_hash", "request_hash", "outcome", "response_envelope_hash"],
+          "properties": {
+            "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+            "operation_record_hash": { "$ref": "erl2:common#/$defs/Hash" },
+            "request_hash": { "$ref": "erl2:common#/$defs/Hash" },
+            "outcome": { "const": "ambiguous_not_replayed" },
+            "response_envelope_hash": { "type": "null" }
+          }
+        }
+      ]
+    },
+    "AdapterRequestAncestryV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "predecessor"],
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 0, "maximum": 1023 },
+        "predecessor": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "erl2:adapter#/$defs/AdapterRequestPredecessorV2" }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "sequence": { "const": 0 } }, "required": ["sequence"] },
+          "then": { "properties": { "predecessor": { "type": "null" } } },
+          "else": { "properties": { "predecessor": { "$ref": "erl2:adapter#/$defs/AdapterRequestPredecessorV2" } } }
+        }
+      ]
+    },
+    "AdapterDiagnosticsPolicyV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_total_bytes", "max_line_bytes", "redact_secrets", "scan_forbidden_identifiers"],
+      "properties": {
+        "max_total_bytes": { "type": "integer", "minimum": 0, "maximum": 16777216 },
+        "max_line_bytes": { "type": "integer", "minimum": 1, "maximum": 65536 },
+        "redact_secrets": { "const": true },
+        "scan_forbidden_identifiers": { "const": true }
+      }
+    },
+    "GovernedAcquisitionContextV2": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "mode", "phase", "acquisition_preregistration_hash", "acquisition_source_manifest_hash",
+        "visible_step", "resource_limit_hash", "credential_handle_ids"
+      ],
+      "properties": {
+        "mode": { "const": "governed" },
+        "phase": { "const": "acquisition" },
+        "acquisition_preregistration_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "acquisition_source_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "visible_step": { "$ref": "erl2:acquisition#/$defs/VisibleStepReference" },
+        "resource_limit_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "credential_handle_ids": { "$ref": "erl2:common#/$defs/IdArray" }
+      }
+    },
+    "GovernedPackageVerificationContextV2": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "mode", "phase", "acquisition_preregistration_hash", "acquisition_record_hash",
+        "integrity_policy_hash", "provenance_policy_hash", "visible_step"
+      ],
+      "properties": {
+        "mode": { "const": "governed" },
+        "phase": { "const": "package_verification" },
+        "acquisition_preregistration_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "acquisition_record_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "integrity_policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "provenance_policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "visible_step": { "$ref": "erl2:acquisition#/$defs/VisibleStepReference" }
+      }
+    },
+    "GovernedPostPlanContextV2": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "mode", "phase", "execution_plan_hash", "visible_step", "prior_visible_interaction_hashes",
+        "resource_limit_hash", "credential_handle_ids"
+      ],
+      "properties": {
+        "mode": { "const": "governed" },
+        "phase": { "const": "post_plan" },
+        "execution_plan_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "visible_step": { "$ref": "erl2:acquisition#/$defs/VisibleStepReference" },
+        "prior_visible_interaction_hashes": { "$ref": "erl2:common#/$defs/HashArray" },
+        "resource_limit_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "credential_handle_ids": { "$ref": "erl2:common#/$defs/IdArray" },
+        "canonical_evidence_envelope_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "canonical_evidence_mount_handle_id": { "$ref": "erl2:common#/$defs/Id" }
+      }
+    },
+    "GovernedExecutionContextV2": {
+      "oneOf": [
+        { "$ref": "erl2:adapter#/$defs/GovernedAcquisitionContextV2" },
+        { "$ref": "erl2:adapter#/$defs/GovernedPackageVerificationContextV2" },
+        { "$ref": "erl2:adapter#/$defs/GovernedPostPlanContextV2" }
+      ]
+    },
+    "LocalObservationExecutionContextV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode", "observation_plan_hash", "resource_limits", "input_artifact_refs",
+        "egress_policy", "allowed_capability_ids", "allowed_credential_handle_ids",
+        "not_scored", "not_governor_authorized", "unsupported_claims"
+      ],
+      "properties": {
+        "mode": { "const": "local_observation" },
+        "observation_plan_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "resource_limits": { "$ref": "erl2:observation#/$defs/LocalObservationLimitsV1" },
+        "input_artifact_refs": {
+          "type": "array", "maxItems": 256,
+          "items": { "$ref": "erl2:observation#/$defs/LocalInputArtifactRefV1" }
+        },
+        "egress_policy": { "$ref": "erl2:adapter#/$defs/EgressAllowlistPolicyV1" },
+        "allowed_capability_ids": {
+          "type": "array", "maxItems": 32, "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/AdapterCapabilityId" }
+        },
+        "allowed_credential_handle_ids": { "$ref": "erl2:common#/$defs/IdArray" },
+        "not_scored": { "const": true },
+        "not_governor_authorized": { "const": true },
+        "unsupported_claims": { "$ref": "erl2:observation#/$defs/LocalUnsupportedClaimsV1" }
+      }
+    },
+    "AdapterRequestV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "protocol_version", "execution_id", "adapter_manifest_hash",
+        "operation_id", "operation", "ancestry", "deadline", "diagnostics_policy",
+        "execution_context", "operation_payload", "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "adapter-request/v2" },
+        "protocol_version": { "const": "subject-adapter/v2" },
+        "execution_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "adapter_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+        "operation": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" },
+        "ancestry": { "$ref": "erl2:adapter#/$defs/AdapterRequestAncestryV2" },
+        "deadline": { "$ref": "erl2:common#/$defs/Instant" },
+        "diagnostics_policy": { "$ref": "erl2:adapter#/$defs/AdapterDiagnosticsPolicyV2" },
+        "execution_context": {
+          "oneOf": [
+            { "$ref": "erl2:adapter#/$defs/GovernedExecutionContextV2" },
+            { "$ref": "erl2:adapter#/$defs/LocalObservationExecutionContextV2" }
+          ]
+        },
+        "operation_payload": { "$ref": "erl2:observation#/$defs/AdapterOperationPayloadV2" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      },
+      "allOf": [
+        { "if": { "properties": { "operation": { "const": "acquire" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/AcquirePayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "validate-package" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/ValidatePackagePayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "install" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/InstallPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "configure" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/ConfigurePayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "start" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/StartPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "interact" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/InteractPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "translate-evidence" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/TranslateEvidencePayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "collect-outputs" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/CollectOutputsPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "project" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/ProjectPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "stop" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/StopPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "uninstall" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/UninstallPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "report-residue" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/ReportResiduePayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "compensate" } }, "required": ["operation"] }, "then": { "properties": { "operation_payload": { "$ref": "erl2:observation#/$defs/CompensatePayloadV1" } } } }
+      ]
+    },
+    "AdapterResponseEnvelopeV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "protocol_version", "execution_mode", "execution_id", "operation_id",
+        "operation", "request_core_hash", "status", "mutation_receipt_hashes",
+        "compensation_receipt_hashes", "credential_use_receipt_hashes", "unsupported_inputs",
+        "active_operator_ms", "responded_at", "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "adapter-response-envelope/v2" },
+        "protocol_version": { "const": "subject-adapter/v2" },
+        "execution_mode": { "const": "local_observation" },
+        "execution_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+        "operation": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" },
+        "request_core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "status": { "enum": ["supported", "failed", "unsupported"] },
+        "result_core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "result_schema_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "mutation_receipt_hashes": { "$ref": "erl2:common#/$defs/HashArray" },
+        "compensation_receipt_hashes": { "$ref": "erl2:common#/$defs/HashArray" },
+        "credential_use_receipt_hashes": { "$ref": "erl2:common#/$defs/HashArray" },
+        "diagnostics_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "unsupported_inputs": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+        "error": {
+          "type": "object", "additionalProperties": false,
+          "required": ["code", "owner", "safe_message"],
+          "properties": {
+            "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$" },
+            "owner": { "enum": ["adapter", "subject"] },
+            "safe_message": { "type": "string", "minLength": 1, "maxLength": 1024 }
+          }
+        },
+        "active_operator_ms": { "type": "integer", "minimum": 0, "maximum": 86400000 },
+        "responded_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "supported" } }, "required": ["status"] },
+          "then": {
+            "required": ["result_core_hash", "result_schema_version"],
+            "not": { "required": ["error"] }
+          },
+          "else": { "required": ["error"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "unsupported" } }, "required": ["status"] },
+          "then": { "properties": { "unsupported_inputs": { "type": "array", "minItems": 1 } } },
+          "else": { "properties": { "unsupported_inputs": { "$ref": "erl2:common#/$defs/EmptyArray" } } }
+        }
+      ]
+    },
+    "SandboxMountV2": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mount_id", "logical_path", "purpose", "read_only"],
+      "properties": {
+        "mount_id": { "$ref": "erl2:common#/$defs/Id" },
+        "logical_path": { "$ref": "erl2:common#/$defs/LogicalPath" },
+        "purpose": { "enum": ["subject-visible-input", "canonical-evidence", "frozen-package"] },
+        "read_only": { "const": true }
+      }
+    },
+    "SandboxControlReportV2": {
+      "type": "object", "additionalProperties": false,
+      "required": ["control_id", "state"],
+      "properties": {
+        "control_id": { "$ref": "erl2:adapter#/$defs/SandboxControlId" },
+        "state": { "enum": ["enforced", "unsupported_on_this_host"] },
+        "reason_code": { "type": "string", "minLength": 1, "maxLength": 128 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "const": "unsupported_on_this_host" } }, "required": ["state"] },
+          "then": { "required": ["reason_code"] },
+          "else": { "not": { "required": ["reason_code"] } }
+        }
+      ]
+    },
+    "SandboxInvocationManifestV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "execution_id", "execution_mode", "operation_id", "invocation_id",
+        "adapter_manifest_hash", "adapter_artifact_hash", "executable_file_sha256", "protocol_version",
+        "working_directory_path", "read_only_mounts", "writable_output_path",
+        "environment_variable_names", "enforced_controls", "resource_limits", "egress_policy_hash",
+        "capability_ids", "credential_handle_ids", "deadline", "created_at", "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "sandbox-invocation-manifest/v2" },
+        "execution_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "execution_mode": { "const": "local_observation" },
+        "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+        "invocation_id": { "$ref": "erl2:common#/$defs/Id" },
+        "adapter_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_artifact_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "executable_file_sha256": { "$ref": "erl2:common#/$defs/Hash" },
+        "protocol_version": { "const": "subject-adapter/v2" },
+        "working_directory_path": { "$ref": "erl2:common#/$defs/LogicalPath" },
+        "read_only_mounts": {
+          "type": "array", "maxItems": 16,
+          "items": { "$ref": "erl2:adapter#/$defs/SandboxMountV2" }
+        },
+        "writable_output_path": { "$ref": "erl2:common#/$defs/LogicalPath" },
+        "sandbox_profile": { "enum": ["local-process", "container"] },
+        "isolation_substrate_lock_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "environment_variable_names": { "$ref": "erl2:common#/$defs/ShortStringArray" },
+        "enforced_controls": {
+          "type": "array", "minItems": 1, "maxItems": 32,
+          "items": { "$ref": "erl2:adapter#/$defs/SandboxControlReportV2" }
+        },
+        "resource_limits": { "$ref": "erl2:observation#/$defs/LocalObservationLimitsV1" },
+        "egress_policy_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "capability_ids": {
+          "type": "array", "maxItems": 32, "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/AdapterCapabilityId" }
+        },
+        "credential_handle_ids": { "$ref": "erl2:common#/$defs/IdArray" },
+        "deadline": { "$ref": "erl2:common#/$defs/Instant" },
+        "created_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
     }
   }
 }

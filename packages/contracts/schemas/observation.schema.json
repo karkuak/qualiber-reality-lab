@@ -1,0 +1,630 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erl2:observation",
+  "title": "ERL2 non-governed local-observation contracts",
+  "$comment": "ADR-ERL2-037. These records describe bounded local observation only. They carry no scoring, qualification, governor, reveal, judge, validity or finalization authority.",
+  "$defs": {
+    "LocalUnsupportedClaimsV1": {
+      "type": "array",
+      "prefixItems": [
+        { "const": "score" },
+        { "const": "qualification" },
+        { "const": "governor_authorization" },
+        { "const": "reveal" },
+        { "const": "judge_evaluation" },
+        { "const": "governed_finalization" }
+      ],
+      "items": false,
+      "minItems": 6,
+      "maxItems": 6
+    },
+    "LocalObservationControlExpectationV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["control_id", "required_state"],
+      "properties": {
+        "control_id": { "$ref": "erl2:adapter#/$defs/SandboxControlId" },
+        "required_state": {
+          "enum": ["enforced", "unsupported_permitted"]
+        }
+      }
+    },
+    "LocalObservationLimitsV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "wall_clock_ms",
+        "max_request_bytes",
+        "max_response_bytes",
+        "max_output_files",
+        "max_output_bytes",
+        "max_output_path_depth",
+        "max_diagnostic_bytes",
+        "max_diagnostic_line_bytes",
+        "environment_variable_names",
+        "input_root",
+        "workspace_root",
+        "output_root",
+        "control_expectations",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "local-observation-limits/v1" },
+        "wall_clock_ms": { "type": "integer", "minimum": 1, "maximum": 5400000 },
+        "max_request_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "max_response_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "max_output_files": { "type": "integer", "minimum": 0, "maximum": 100000 },
+        "max_output_bytes": { "type": "integer", "minimum": 0, "maximum": 68719476736 },
+        "max_output_path_depth": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "max_diagnostic_bytes": { "type": "integer", "minimum": 0, "maximum": 16777216 },
+        "max_diagnostic_line_bytes": { "type": "integer", "minimum": 1, "maximum": 65536 },
+        "environment_variable_names": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "ERL2_ADAPTER_PROTOCOL_VERSION",
+              "ERL2_EXECUTION_ID",
+              "ERL2_EXECUTION_MODE",
+              "ERL2_OPERATION_ID"
+            ]
+          }
+        },
+        "input_root": { "$ref": "erl2:common#/$defs/LogicalPath" },
+        "workspace_root": { "$ref": "erl2:common#/$defs/LogicalPath" },
+        "output_root": { "$ref": "erl2:common#/$defs/LogicalPath" },
+        "control_expectations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "erl2:observation#/$defs/LocalObservationControlExpectationV1" }
+        },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+    "LocalInputArtifactRefV1": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["input_id", "role", "provenance_mode", "artifact"],
+          "properties": {
+            "input_id": { "$ref": "erl2:common#/$defs/Id" },
+            "role": { "$ref": "erl2:common#/$defs/Id" },
+            "provenance_mode": { "const": "host_provisioned" },
+            "artifact": { "$ref": "erl2:common#/$defs/ArtifactRef" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "input_id",
+            "role",
+            "provenance_mode",
+            "artifact",
+            "producing_operation_record_hash"
+          ],
+          "properties": {
+            "input_id": { "$ref": "erl2:common#/$defs/Id" },
+            "role": { "$ref": "erl2:common#/$defs/Id" },
+            "provenance_mode": { "const": "acquired" },
+            "artifact": { "$ref": "erl2:common#/$defs/ArtifactRef" },
+            "producing_operation_record_hash": { "$ref": "erl2:common#/$defs/Hash" }
+          }
+        }
+      ]
+    },
+    "AcquirePayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "provenance_mode",
+        "source_descriptor_input_id",
+        "output_input_id",
+        "expected_package_kind",
+        "credential_handle_ids"
+      ],
+      "properties": {
+        "schema_version": { "const": "acquire-payload/v1" },
+        "provenance_mode": { "const": "acquired" },
+        "source_descriptor_input_id": { "$ref": "erl2:common#/$defs/Id" },
+        "output_input_id": { "$ref": "erl2:common#/$defs/Id" },
+        "expected_package_kind": { "$ref": "erl2:adapter#/$defs/AdapterPackageKind" },
+        "credential_handle_ids": { "$ref": "erl2:common#/$defs/IdArray" }
+      }
+    },
+    "ValidatePackagePayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "package_input_id", "package_kind"],
+      "properties": {
+        "schema_version": { "const": "validate-package-payload/v1" },
+        "package_input_id": { "$ref": "erl2:common#/$defs/Id" },
+        "package_kind": { "$ref": "erl2:adapter#/$defs/AdapterPackageKind" }
+      }
+    },
+    "InstallPayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "package_input_id"],
+      "properties": {
+        "schema_version": { "const": "install-payload/v1" },
+        "package_input_id": { "$ref": "erl2:common#/$defs/Id" }
+      }
+    },
+    "ConfigurePayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "configuration_input_ids"],
+      "properties": {
+        "schema_version": { "const": "configure-payload/v1" },
+        "configuration_input_ids": { "$ref": "erl2:common#/$defs/IdArray" }
+      }
+    },
+    "StartPayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "input_ids"],
+      "properties": {
+        "schema_version": { "const": "start-payload/v1" },
+        "input_ids": { "$ref": "erl2:common#/$defs/IdArray" }
+      }
+    },
+    "InteractPayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "interaction_input_ids"],
+      "properties": {
+        "schema_version": { "const": "interact-payload/v1" },
+        "interaction_input_ids": { "$ref": "erl2:common#/$defs/IdArray" }
+      }
+    },
+    "TranslateEvidencePayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "evidence_input_ids", "evidence_mount_handle_id"],
+      "properties": {
+        "schema_version": { "const": "translate-evidence-payload/v1" },
+        "evidence_input_ids": { "$ref": "erl2:common#/$defs/IdArray" },
+        "evidence_mount_handle_id": { "$ref": "erl2:common#/$defs/Id" }
+      }
+    },
+    "CollectOutputsPayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "requested_output_role_ids"],
+      "properties": {
+        "schema_version": { "const": "collect-outputs-payload/v1" },
+        "requested_output_role_ids": { "$ref": "erl2:common#/$defs/IdArray" }
+      }
+    },
+    "ProjectPayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "evidence_input_ids", "projection_schema"],
+      "properties": {
+        "schema_version": { "const": "project-payload/v1" },
+        "evidence_input_ids": { "$ref": "erl2:common#/$defs/IdArray" },
+        "projection_schema": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "StopPayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "start_operation_id"],
+      "properties": {
+        "schema_version": { "const": "stop-payload/v1" },
+        "start_operation_id": { "$ref": "erl2:common#/$defs/Id" }
+      }
+    },
+    "UninstallPayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "install_operation_id"],
+      "properties": {
+        "schema_version": { "const": "uninstall-payload/v1" },
+        "install_operation_id": { "$ref": "erl2:common#/$defs/Id" }
+      }
+    },
+    "ReportResiduePayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "checkpoint"],
+      "properties": {
+        "schema_version": { "const": "report-residue-payload/v1" },
+        "checkpoint": { "enum": ["baseline", "post_operation", "final"] }
+      }
+    },
+    "CompensatePayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "mutation_receipt_hashes"],
+      "properties": {
+        "schema_version": { "const": "compensate-payload/v1" },
+        "mutation_receipt_hashes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "$ref": "erl2:common#/$defs/Hash" }
+        }
+      }
+    },
+    "AdapterOperationPayloadV2": {
+      "oneOf": [
+        { "$ref": "erl2:observation#/$defs/AcquirePayloadV1" },
+        { "$ref": "erl2:observation#/$defs/ValidatePackagePayloadV1" },
+        { "$ref": "erl2:observation#/$defs/InstallPayloadV1" },
+        { "$ref": "erl2:observation#/$defs/ConfigurePayloadV1" },
+        { "$ref": "erl2:observation#/$defs/StartPayloadV1" },
+        { "$ref": "erl2:observation#/$defs/InteractPayloadV1" },
+        { "$ref": "erl2:observation#/$defs/TranslateEvidencePayloadV1" },
+        { "$ref": "erl2:observation#/$defs/CollectOutputsPayloadV1" },
+        { "$ref": "erl2:observation#/$defs/ProjectPayloadV1" },
+        { "$ref": "erl2:observation#/$defs/StopPayloadV1" },
+        { "$ref": "erl2:observation#/$defs/UninstallPayloadV1" },
+        { "$ref": "erl2:observation#/$defs/ReportResiduePayloadV1" },
+        { "$ref": "erl2:observation#/$defs/CompensatePayloadV1" }
+      ]
+    },
+    "LocalObservationOperationSpecV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "operation_id", "operation", "payload", "timeout_ms", "cleanup"],
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 0, "maximum": 1023 },
+        "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+        "operation": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" },
+        "payload": { "$ref": "erl2:observation#/$defs/AdapterOperationPayloadV2" },
+        "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 5400000 },
+        "cleanup": { "type": "boolean" }
+      },
+      "allOf": [
+        { "if": { "properties": { "operation": { "const": "acquire" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/AcquirePayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "validate-package" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/ValidatePackagePayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "install" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/InstallPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "configure" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/ConfigurePayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "start" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/StartPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "interact" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/InteractPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "translate-evidence" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/TranslateEvidencePayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "collect-outputs" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/CollectOutputsPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "project" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/ProjectPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "stop" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/StopPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "uninstall" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/UninstallPayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "report-residue" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/ReportResiduePayloadV1" } } } },
+        { "if": { "properties": { "operation": { "const": "compensate" } }, "required": ["operation"] }, "then": { "properties": { "payload": { "$ref": "erl2:observation#/$defs/CompensatePayloadV1" } } } }
+      ]
+    },
+    "LocalObservationPlanInputV1": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["input_id", "role", "provenance_mode", "artifact"],
+          "properties": {
+            "input_id": { "$ref": "erl2:common#/$defs/Id" },
+            "role": { "$ref": "erl2:common#/$defs/Id" },
+            "provenance_mode": { "const": "host_provisioned" },
+            "artifact": { "$ref": "erl2:common#/$defs/ArtifactRef" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["input_id", "role", "provenance_mode", "expected_package_kind"],
+          "properties": {
+            "input_id": { "$ref": "erl2:common#/$defs/Id" },
+            "role": { "$ref": "erl2:common#/$defs/Id" },
+            "provenance_mode": { "const": "acquired" },
+            "expected_package_kind": { "$ref": "erl2:adapter#/$defs/AdapterPackageKind" }
+          }
+        }
+      ]
+    },
+    "LocalObservationPlanV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "observation_id",
+        "mode",
+        "protocol_version",
+        "adapter_id",
+        "adapter_version",
+        "adapter_manifest_hash",
+        "certification_receipt_hash",
+        "adapter_artifact_hash",
+        "certification_authenticity",
+        "operations",
+        "inputs",
+        "resource_limits",
+        "egress_policy",
+        "allowed_capability_ids",
+        "allowed_credential_handle_ids",
+        "created_at",
+        "expires_at",
+        "not_scored",
+        "not_governor_authorized",
+        "unsupported_claims",
+        "evidence_authenticity",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "local-observation-plan/v1" },
+        "observation_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "mode": { "const": "local_observation" },
+        "protocol_version": { "const": "subject-adapter/v2" },
+        "adapter_id": { "$ref": "erl2:common#/$defs/Id" },
+        "adapter_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "adapter_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "certification_receipt_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_artifact_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "certification_authenticity": {
+          "enum": ["locally_observed_unauthenticated", "authenticated"]
+        },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "$ref": "erl2:observation#/$defs/LocalObservationOperationSpecV1" }
+        },
+        "inputs": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "erl2:observation#/$defs/LocalObservationPlanInputV1" }
+        },
+        "resource_limits": { "$ref": "erl2:observation#/$defs/LocalObservationLimitsV1" },
+        "egress_policy": { "$ref": "erl2:adapter#/$defs/EgressAllowlistPolicyV1" },
+        "allowed_capability_ids": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/AdapterCapabilityId" }
+        },
+        "allowed_credential_handle_ids": { "$ref": "erl2:common#/$defs/IdArray" },
+        "created_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "expires_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "not_scored": { "const": true },
+        "not_governor_authorized": { "const": true },
+        "unsupported_claims": { "$ref": "erl2:observation#/$defs/LocalUnsupportedClaimsV1" },
+        "evidence_authenticity": { "const": "unauthenticated_local_record" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+    "LocalObservationDeclaredRecordV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "state", "observation_id", "plan_hash", "operation_id", "operation",
+        "sequence", "request_hash", "idempotency_key", "cleanup_eligible", "declared_at", "evidence_authenticity", "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "local-observation-operation-record/v1" },
+        "state": { "const": "declared" },
+        "observation_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "plan_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+        "operation": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" },
+        "sequence": { "type": "integer", "minimum": 0, "maximum": 1023 },
+        "request_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "prior_record_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "idempotency_key": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "cleanup_eligible": { "type": "boolean" },
+        "declared_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "evidence_authenticity": { "const": "unauthenticated_local_record" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+    "LocalObservationDispatchedRecordV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "state", "observation_id", "plan_hash", "operation_id", "operation",
+        "sequence", "request_hash", "declared_record_hash", "cleanup_eligible", "dispatched_at", "evidence_authenticity", "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "local-observation-operation-record/v1" },
+        "state": { "const": "dispatched" },
+        "observation_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "plan_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+        "operation": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" },
+        "sequence": { "type": "integer", "minimum": 0, "maximum": 1023 },
+        "request_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "declared_record_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "cleanup_eligible": { "type": "boolean" },
+        "dispatched_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "evidence_authenticity": { "const": "unauthenticated_local_record" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+    "LocalObservationCompletedRecordV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "state", "observation_id", "plan_hash", "operation_id", "operation",
+        "sequence", "request_hash", "dispatched_record_hash", "response_envelope_hash",
+        "sandbox_manifest_hash", "sandbox_result_hash", "mutation_receipt_hashes",
+        "compensation_receipt_hashes", "retained_input_refs", "retained_output_refs",
+        "cleanup_eligible", "started_at", "ended_at", "evidence_authenticity", "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "local-observation-operation-record/v1" },
+        "state": { "const": "completed" },
+        "observation_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "plan_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+        "operation": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" },
+        "sequence": { "type": "integer", "minimum": 0, "maximum": 1023 },
+        "request_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "dispatched_record_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "response_envelope_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "sandbox_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "sandbox_result_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "diagnostics_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "mutation_receipt_hashes": { "$ref": "erl2:common#/$defs/HashArray" },
+        "compensation_receipt_hashes": { "$ref": "erl2:common#/$defs/HashArray" },
+        "retained_input_refs": {
+          "type": "array", "maxItems": 256,
+          "items": { "$ref": "erl2:observation#/$defs/LocalInputArtifactRefV1" }
+        },
+        "retained_output_refs": {
+          "type": "array", "maxItems": 100000,
+          "items": { "$ref": "erl2:common#/$defs/ArtifactRef" }
+        },
+        "cleanup_eligible": { "type": "boolean" },
+        "started_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "ended_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "evidence_authenticity": { "const": "unauthenticated_local_record" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+    "LocalObservationFailedRecordV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "state", "observation_id", "plan_hash", "operation_id", "operation",
+        "sequence", "request_hash", "dispatched_record_hash", "failure_code",
+        "cleanup_required", "started_at", "failed_at", "evidence_authenticity", "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "local-observation-operation-record/v1" },
+        "state": { "const": "failed" },
+        "observation_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "plan_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+        "operation": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" },
+        "sequence": { "type": "integer", "minimum": 0, "maximum": 1023 },
+        "request_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "dispatched_record_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "response_envelope_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "sandbox_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "sandbox_result_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "failure_code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$" },
+        "cleanup_required": { "type": "boolean" },
+        "started_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "failed_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "evidence_authenticity": { "const": "unauthenticated_local_record" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+    "LocalObservationAmbiguousRecordV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "state", "observation_id", "plan_hash", "operation_id", "operation",
+        "sequence", "request_hash", "dispatched_record_hash", "recovery_observation",
+        "cleanup_required", "observed_at", "evidence_authenticity", "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "local-observation-operation-record/v1" },
+        "state": { "const": "ambiguous_not_replayed" },
+        "observation_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "plan_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+        "operation": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" },
+        "sequence": { "type": "integer", "minimum": 0, "maximum": 1023 },
+        "request_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "dispatched_record_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "recovery_observation": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "cleanup_required": { "const": true },
+        "observed_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "evidence_authenticity": { "const": "unauthenticated_local_record" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+    "LocalObservationOperationRecordV1": {
+      "oneOf": [
+        { "$ref": "erl2:observation#/$defs/LocalObservationDeclaredRecordV1" },
+        { "$ref": "erl2:observation#/$defs/LocalObservationDispatchedRecordV1" },
+        { "$ref": "erl2:observation#/$defs/LocalObservationCompletedRecordV1" },
+        { "$ref": "erl2:observation#/$defs/LocalObservationFailedRecordV1" },
+        { "$ref": "erl2:observation#/$defs/LocalObservationAmbiguousRecordV1" }
+      ]
+    },
+    "LocalStructuralValidationV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract", "status", "evidence_refs"],
+      "properties": {
+        "contract": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "status": { "enum": ["conforms", "does_not_conform", "not_applicable"] },
+        "evidence_refs": { "$ref": "erl2:common#/$defs/HashArray" }
+      }
+    },
+    "LocalCleanupResultV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "stop", "compensation", "uninstall", "residue", "reason_codes"],
+      "properties": {
+        "status": { "enum": ["cleanup_complete", "cleanup_incomplete"] },
+        "stop": { "enum": ["not_applicable", "completed", "failed", "ambiguous", "unsupported"] },
+        "compensation": { "enum": ["not_applicable", "completed", "failed", "ambiguous", "unsupported"] },
+        "uninstall": { "enum": ["not_applicable", "completed", "failed", "ambiguous", "unsupported"] },
+        "residue": { "enum": ["observed_clean", "residue_detected", "not_observed"] },
+        "reason_codes": { "$ref": "erl2:common#/$defs/ShortStringArray" }
+      }
+    },
+    "LocalObservationResultV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "observation_id", "plan_hash", "protocol_version", "adapter_id",
+        "adapter_version", "adapter_manifest_hash", "certification_receipt_hash",
+        "adapter_artifact_hash", "certification_authenticity", "operation_record_hashes",
+        "retained_input_refs", "retained_output_refs", "retained_evidence_refs",
+        "structural_validation", "cleanup", "status", "started_at", "ended_at",
+        "not_scored", "not_governor_authorized", "unsupported_claims",
+        "evidence_authenticity", "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "local-observation-result/v1" },
+        "observation_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "plan_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "protocol_version": { "const": "subject-adapter/v2" },
+        "adapter_id": { "$ref": "erl2:common#/$defs/Id" },
+        "adapter_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "adapter_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "certification_receipt_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_artifact_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "certification_authenticity": {
+          "enum": ["locally_observed_unauthenticated", "authenticated"]
+        },
+        "operation_record_hashes": { "$ref": "erl2:common#/$defs/HashArray" },
+        "retained_input_refs": {
+          "type": "array", "maxItems": 256,
+          "items": { "$ref": "erl2:observation#/$defs/LocalInputArtifactRefV1" }
+        },
+        "retained_output_refs": {
+          "type": "array", "maxItems": 100000,
+          "items": { "$ref": "erl2:common#/$defs/ArtifactRef" }
+        },
+        "retained_evidence_refs": { "$ref": "erl2:common#/$defs/HashArray" },
+        "structural_validation": {
+          "type": "array", "maxItems": 256,
+          "items": { "$ref": "erl2:observation#/$defs/LocalStructuralValidationV1" }
+        },
+        "cleanup": { "$ref": "erl2:observation#/$defs/LocalCleanupResultV1" },
+        "status": {
+          "enum": [
+            "observed_complete", "observed_with_unsupported", "observation_failed",
+            "cleanup_incomplete", "observation_expired", "observation_cancelled"
+          ]
+        },
+        "started_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "ended_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "not_scored": { "const": true },
+        "not_governor_authorized": { "const": true },
+        "unsupported_claims": { "$ref": "erl2:observation#/$defs/LocalUnsupportedClaimsV1" },
+        "evidence_authenticity": { "const": "unauthenticated_local_record" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    }
+  }
+}

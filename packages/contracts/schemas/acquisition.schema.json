@@ -874,6 +874,166 @@
         }
       }
     },
+    "SubjectAdapterProtocolProfileV2": {
+      "$comment": "A V2 manifest may describe a companion governed V1 profile, but a V2 profile is local-observation-only until governed V2 is separately implemented and certified.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "protocol_version",
+            "execution_modes",
+            "operations",
+            "supported_package_kinds",
+            "required_controls"
+          ],
+          "properties": {
+            "protocol_version": { "const": "subject-adapter/v1" },
+            "execution_modes": {
+              "type": "array",
+              "prefixItems": [{ "const": "governed" }],
+              "items": false,
+              "minItems": 1,
+              "maxItems": 1
+            },
+            "operations": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 13,
+              "uniqueItems": true,
+              "items": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" }
+            },
+            "supported_package_kinds": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "uniqueItems": true,
+              "items": { "$ref": "erl2:adapter#/$defs/AdapterPackageKind" }
+            },
+            "required_controls": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": { "$ref": "erl2:adapter#/$defs/SandboxControlId" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "protocol_version",
+            "execution_modes",
+            "operations",
+            "supported_package_kinds",
+            "required_controls"
+          ],
+          "properties": {
+            "protocol_version": { "const": "subject-adapter/v2" },
+            "execution_modes": {
+              "type": "array",
+              "prefixItems": [{ "const": "local_observation" }],
+              "items": false,
+              "minItems": 1,
+              "maxItems": 1
+            },
+            "operations": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 13,
+              "uniqueItems": true,
+              "items": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" }
+            },
+            "supported_package_kinds": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "uniqueItems": true,
+              "items": { "$ref": "erl2:adapter#/$defs/AdapterPackageKind" }
+            },
+            "required_controls": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": { "$ref": "erl2:adapter#/$defs/SandboxControlId" }
+            }
+          }
+        }
+      ]
+    },
+    "SubjectAdapterManifestV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "adapter_id",
+        "version",
+        "adapter_artifact_hash",
+        "protocol_support",
+        "required_broker_capabilities",
+        "network_allowlist_ids",
+        "certification_receipt_hash",
+        "owner",
+        "core_hash",
+        "signature"
+      ],
+      "properties": {
+        "schema_version": { "const": "subject-adapter-manifest/v2" },
+        "adapter_id": { "$ref": "erl2:common#/$defs/Id" },
+        "version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "adapter_artifact_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "protocol_support": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "erl2:acquisition#/$defs/SubjectAdapterProtocolProfileV2" }
+        },
+        "required_broker_capabilities": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/AdapterCapabilityId" }
+        },
+        "network_allowlist_ids": { "$ref": "erl2:common#/$defs/IdArray" },
+        "certification_receipt_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "owner": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "signature": { "$ref": "erl2:common#/$defs/Signature" }
+      },
+      "allOf": [
+        {
+          "properties": {
+            "protocol_support": {
+              "type": "array",
+              "contains": {
+                "type": "object",
+                "properties": { "protocol_version": { "const": "subject-adapter/v1" } },
+                "required": ["protocol_version"]
+              },
+              "minContains": 0,
+              "maxContains": 1
+            }
+          }
+        },
+        {
+          "properties": {
+            "protocol_support": {
+              "type": "array",
+              "contains": {
+                "type": "object",
+                "properties": { "protocol_version": { "const": "subject-adapter/v2" } },
+                "required": ["protocol_version"]
+              },
+              "minContains": 0,
+              "maxContains": 1
+            }
+          }
+        }
+      ]
+    },
     "GenericRunPolicyV1": {
       "type": "object",
       "additionalProperties": false,
