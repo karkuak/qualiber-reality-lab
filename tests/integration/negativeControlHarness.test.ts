@@ -81,7 +81,12 @@ interface HarnessModule {
     readonly result: string;
     readonly pass: number;
     readonly fail: number;
-    readonly skipped?: number;
+    readonly tests: number;
+    readonly cancelled: number;
+    readonly skipped: number;
+    readonly detail?: string;
+    readonly undeclaredSkips?: readonly string[];
+    readonly declaredSkips?: readonly string[];
     readonly strayFiles?: readonly string[];
     readonly failingCases?: readonly string[];
     readonly missingCases?: readonly string[];
@@ -318,10 +323,37 @@ test("NC-TARGET: the bytes on disk are what the control must have proven", () =>
 // -- result classification ---------------------------------------------------
 
 const SUMMARY = (pass: number, fail: number): string =>
-  `ℹ tests ${String(pass + fail)}\nℹ suites 0\nℹ pass ${String(pass)}\nℹ fail ${String(fail)}\n`;
+  `ℹ tests ${String(pass + fail)}\nℹ suites 0\nℹ pass ${String(pass)}\nℹ fail ${String(fail)}\n` +
+  `ℹ cancelled 0\nℹ skipped 0\nℹ todo 0\n`;
+
+/**
+ * Classify a run whose process ended consistently with the output it produced.
+ *
+ * `classifyTestRun` requires the stage's execution facts and fails closed without
+ * them — that is the correction the independent review of `07da5fe` demanded, and
+ * `NC-EXECUTION` below asserts it directly. Every other control here is about
+ * *parsing and precedence*, so this helper supplies the uninteresting half: exit
+ * 1 when the output says something failed, exit 0 when it does not, no signal, no
+ * truncation. A test that cares about the process supplies its own `execution`
+ * and this defaults out of the way.
+ */
+const classify = (input: Record<string, unknown>): ReturnType<typeof harness.classifyTestRun> => {
+  if (input["execution"] !== undefined) return harness.classifyTestRun(input);
+  const failed = /^ℹ fail (\d+)$/m.exec(String(input["stdout"] ?? ""))?.[1];
+  return harness.classifyTestRun({
+    ...input,
+    execution: {
+      status: failed === undefined || failed === "0" ? 0 : 1,
+      signal: null,
+      timedOut: false,
+      truncated: false,
+      treeTerminationFailed: false,
+    },
+  });
+};
 
 test("NC-CLASSIFY: a named suite failing is a behavioural kill", () => {
-  const classified = harness.classifyTestRun({
+  const classified = classify({
     stdout: `${SUMMARY(3, 1)}\n✖ failing tests:\n\ntest at tests/dist/e2e/environmentRun.test.js:12:1\n`,
     expect: "fail",
     tests: ["tests/dist/e2e/environmentRun.test.js"],
@@ -332,7 +364,7 @@ test("NC-CLASSIFY: a named suite failing is a behavioural kill", () => {
 });
 
 test("NC-CLASSIFY: a guard that kills nothing is a result, not an error", () => {
-  const classified = harness.classifyTestRun({
+  const classified = classify({
     stdout: SUMMARY(4, 0),
     expect: "pass",
     tests: ["tests/dist/e2e/environmentRun.test.js"],
@@ -341,7 +373,7 @@ test("NC-CLASSIFY: a guard that kills nothing is a result, not an error", () => 
   assert.equal(harness.isHarnessError(classified.result), false);
   assert.equal(harness.agreesWithExpectation(classified.result, "pass"), true);
   // ...and the same run is a disagreement when a kill was expected.
-  const expectedAKill = harness.classifyTestRun({
+  const expectedAKill = classify({
     stdout: SUMMARY(4, 0),
     expect: "fail",
     tests: ["tests/dist/e2e/environmentRun.test.js"],
@@ -351,7 +383,7 @@ test("NC-CLASSIFY: a guard that kills nothing is a result, not an error", () => 
 });
 
 test("NC-CLASSIFY: a failure outside the declared suites is not the control's kill", () => {
-  const classified = harness.classifyTestRun({
+  const classified = classify({
     stdout:
       `${SUMMARY(2, 1)}\n✖ failing tests:\n\ntest at tests/dist/e2e/somethingElse.test.js:3:1\n`,
     expect: "fail",
@@ -363,7 +395,7 @@ test("NC-CLASSIFY: a failure outside the declared suites is not the control's ki
 });
 
 test("NC-CLASSIFY: an unparseable run is a harness failure, never `nothing failed`", () => {
-  const classified = harness.classifyTestRun({
+  const classified = classify({
     stdout: "SyntaxError: Unexpected token\n",
     expect: "fail",
     tests: ["tests/dist/e2e/environmentRun.test.js"],
@@ -656,7 +688,7 @@ test("NC-CASES: the reporter's failing-case names are parsed from a real `node -
     assert.equal(parsed.every((c) => c.file.endsWith("fixture.test.mjs")), true);
 
     // …and the classifier reaches the same verdict over those real bytes.
-    const killed = harness.classifyTestRun({
+    const killed = classify({
       stdout: run.stdout,
       expect: "fail",
       tests: ["fixture.test.mjs"],
@@ -669,7 +701,7 @@ test("NC-CASES: the reporter's failing-case names are parsed from a real `node -
 });
 
 test("NC-CASES: the intended named case failing is the control's kill", () => {
-  const classified = harness.classifyTestRun({
+  const classified = classify({
     stdout: FAILING(11, [[SUITE, "EB-OUTPUT: a secret canary in the subject's output bytes refuses before the freeze"]]),
     expect: "fail",
     tests: [SUITE],
@@ -684,7 +716,7 @@ test("NC-CASES: the intended named case failing is the control's kill", () => {
 test("NC-CASES: only an unrelated case in the same file failing is not an agreed kill", () => {
   // The defect in one line. The file is the declared file, the count is 1 of 12,
   // and the invariant the control names was never exercised.
-  const classified = harness.classifyTestRun({
+  const classified = classify({
     stdout: FAILING(11, [[SUITE, "EB-OUTPUT: clean binary output freezes and the run finalizes"]]),
     expect: "fail",
     tests: [SUITE],
@@ -705,7 +737,7 @@ test("NC-CASES: only an unrelated case in the same file failing is not an agreed
 test("NC-CASES: a declared case absent from the reporter output is not an agreed kill", () => {
   // The summary says a test failed and the failing-tests section names no case —
   // a truncated stream, a reporter change. Silence must not read as agreement.
-  const classified = harness.classifyTestRun({
+  const classified = classify({
     stdout: `${SUMMARY(11, 1)}\n✖ failing tests:\n\ntest at ${SUITE}:12:1\n`,
     expect: "fail",
     tests: [SUITE],
@@ -722,7 +754,7 @@ test("NC-CASES: every declared case must fail, not merely one of them", () => {
     "EB-TELEMETRY: a refused capture cannot be stepped past by retrying observe",
     "EB-TELEMETRY: the run still reaches exactly one invalid terminal that verifies offline",
   ];
-  const all = harness.classifyTestRun({
+  const all = classify({
     stdout: FAILING(9, declared.map((name) => [SUITE, name] as const)),
     expect: "fail",
     tests: [SUITE],
@@ -732,7 +764,7 @@ test("NC-CASES: every declared case must fail, not merely one of them", () => {
   assert.equal(all.result, harness.CONTROL_RESULT["NAMED_TESTS_FAILED"]);
   assert.equal(harness.agreesWithExpectation(all.result, "fail"), true);
 
-  const partial = harness.classifyTestRun({
+  const partial = classify({
     stdout: FAILING(10, [[SUITE, declared[0] as string], [SUITE, declared[1] as string]]),
     expect: "fail",
     tests: [SUITE],
@@ -746,7 +778,7 @@ test("NC-CASES: every declared case must fail, not merely one of them", () => {
 test("NC-CASES: a control that declares no cases keeps exactly its old behaviour", () => {
   // The legacy shape: file-level `mustFail` and nothing more. It must still be a
   // kill, and it must still carry no case-level fields to reason about.
-  const classified = harness.classifyTestRun({
+  const classified = classify({
     stdout: FAILING(11, [[SUITE, "EB-OUTPUT: clean binary output freezes and the run finalizes"]]),
     expect: "fail",
     tests: [SUITE],
@@ -759,7 +791,7 @@ test("NC-CASES: a control that declares no cases keeps exactly its old behaviour
 
   // …and a stray file still outranks the case check, because a failure outside
   // the declared suite is not this control's kill whatever it is named.
-  const stray = harness.classifyTestRun({
+  const stray = classify({
     stdout: FAILING(2, [["tests/dist/e2e/somethingElse.test.js", "EB-OUTPUT: a secret canary"]]),
     expect: "fail",
     tests: [SUITE],
@@ -840,7 +872,7 @@ test("NC-TIMEOUT: a hanging stage is killed at the bound and reported as a timeo
   // Null output on a killed child must reach the classifier as an unparseable
   // run — a harness error — and never as "nothing failed".
   assert.equal(typeof run.stdout, "string");
-  const classified = harness.classifyTestRun({ stdout: run.stdout, expect: "fail", tests: ["x.test.js"] });
+  const classified = classify({ stdout: run.stdout, expect: "fail", tests: ["x.test.js"] });
   assert.equal(classified.result, harness.CONTROL_RESULT["RUNNER_FAILED"]);
 });
 
@@ -1320,11 +1352,16 @@ interface ClassifyCase {
   readonly mustFail?: readonly string[];
   readonly mustFailCases?: readonly string[];
   readonly prerequisite?: string;
+  readonly expectedSkips?: readonly { readonly case: string; readonly reason: string }[];
+  /** The stage's execution facts, when the row is about the process rather than its output. */
+  readonly execution?: Record<string, unknown>;
   readonly result: string;
   /** `true` agreement, `false` disagreement, `null` neither — the third column. */
   readonly agrees: boolean | null;
   readonly harnessError: boolean;
   readonly unmeasured: boolean;
+  /** Counts and names the row asserts survive into the result, whatever it is. */
+  readonly retains?: Record<string, unknown>;
 }
 
 const CLASSIFY_TABLE: readonly ClassifyCase[] = [
@@ -1417,7 +1454,14 @@ const CLASSIFY_TABLE: readonly ClassifyCase[] = [
     unmeasured: false,
   },
   {
-    name: "many cases skipped but the designated one ran and failed — still a measured kill",
+    // Both of the rows below used to assert the opposite, and the independent
+    // review of `07da5fe` named them: they "deliberately assert that unrelated
+    // skips still produce a measured kill without requiring the skip to remain
+    // visible". That is the hole. A designated case failing says the guard is
+    // load-bearing; it says nothing whatsoever about two neighbouring cases that
+    // disappeared in the same run, and a campaign that scores the row as a clean
+    // agreement has quietly answered a question it never asked.
+    name: "an intended failure does not excuse two undeclared skips beside it",
     stdout:
       `${skipLine("COMPOSE-ADV: some docker-gated case", "no daemon")}\n` +
       `${skipLine("COMPOSE-ADV: another docker-gated case", "no daemon")}\n` +
@@ -1427,13 +1471,17 @@ const CLASSIFY_TABLE: readonly ClassifyCase[] = [
     mustFail: [COMPOSE_SUITE],
     mustFailCases: [RENDERED],
     prerequisite: "otel-demo-upstream",
-    result: "named_tests_failed",
-    agrees: true,
-    harnessError: false,
+    result: "unexpected_case_skipped",
+    agrees: false,
+    harnessError: true,
     unmeasured: false,
+    retains: {
+      skipped: 2,
+      undeclaredSkips: ["COMPOSE-ADV: some docker-gated case", "COMPOSE-ADV: another docker-gated case"],
+    },
   },
   {
-    name: "skips that are not the designated case do not make a control unmeasured",
+    name: "one undeclared skip beside an intended failure is enough to fail closed",
     stdout:
       `${skipLine("COMPOSE-ADV: some docker-gated case", "no daemon")}\n` +
       `✖ ${RENDERED} (88.6ms)\n${SUMMARY_WITH_SKIPS(27, 1, 1)}${failBlock(COMPOSE_SUITE, RENDERED)}`,
@@ -1442,9 +1490,217 @@ const CLASSIFY_TABLE: readonly ClassifyCase[] = [
     mustFail: [COMPOSE_SUITE],
     mustFailCases: [RENDERED],
     prerequisite: "otel-demo-upstream",
+    result: "unexpected_case_skipped",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+    retains: { skipped: 1, undeclaredSkips: ["COMPOSE-ADV: some docker-gated case"] },
+  },
+  {
+    // …and the way through: declare it. The three controls that run
+    // `composeSubstrate.test.js` before the fixture is provisioned do exactly
+    // this, so the skip is published on the row rather than absent from it.
+    name: "a declared skip beside an intended failure is an agreement that still shows the skip",
+    stdout:
+      `${skipLine(RENDERED, RENDER_SKIP_REASON)}\n` +
+      `✖ COMPOSE-ADV: an expected container name is refused (8.6ms)\n${SUMMARY_WITH_SKIPS(27, 1, 1)}` +
+      `${failBlock(COMPOSE_SUITE, "COMPOSE-ADV: an expected container name is refused")}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: ["COMPOSE-ADV: an expected container name is refused"],
+    expectedSkips: [{ case: RENDERED, reason: "RENDERED TOPOLOGY UNPROVEN" }],
     result: "named_tests_failed",
     agrees: true,
     harnessError: false,
+    unmeasured: false,
+    retains: { skipped: 1, skippedCases: [RENDERED], declaredSkips: [RENDERED] },
+  },
+  {
+    name: "a declaration whose reason no longer matches stops excusing the skip",
+    stdout:
+      `${skipLine(RENDERED, "someone commented it out")}\n` +
+      `✖ COMPOSE-ADV: an expected container name is refused (8.6ms)\n${SUMMARY_WITH_SKIPS(27, 1, 1)}` +
+      `${failBlock(COMPOSE_SUITE, "COMPOSE-ADV: an expected container name is refused")}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: ["COMPOSE-ADV: an expected container name is refused"],
+    expectedSkips: [{ case: RENDERED, reason: "RENDERED TOPOLOGY UNPROVEN" }],
+    result: "unexpected_case_skipped",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "an expected-pass control with an unexpected skip is a harness error, not a clean pass",
+    stdout: `${skipLine("SOME: unrelated case", "host is odd")}\n${SUMMARY_WITH_SKIPS(1, 0, 1)}`,
+    expect: "pass",
+    tests: [COMPOSE_SUITE],
+    result: "unexpected_case_skipped",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+    retains: { skipped: 1, skipReasons: ["host is odd"] },
+  },
+  {
+    name: "a designated skip whose reason does not name what the prerequisite stands for",
+    stdout: `${skipLine(RENDERED, "someone commented it out")}\n${SUMMARY_WITH_SKIPS(28, 0, 1)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    prerequisite: "otel-demo-upstream",
+    result: "designated_case_skipped",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "impossible accounting: the counters do not sum to the total",
+    stdout: "ℹ tests 2\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\n",
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    result: "impossible_test_accounting",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "a negative counter is not a count",
+    stdout: "ℹ tests 5\nℹ suites 0\nℹ pass 6\nℹ fail -1\nℹ cancelled 0\nℹ skipped 0\n",
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    result: "impossible_test_accounting",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "a missing summary counter fails closed rather than defaulting to zero",
+    stdout: "ℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\n",
+    expect: "pass",
+    tests: [COMPOSE_SUITE],
+    result: "test_runner_failed",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "the same case reported as both failed and skipped is impossible, not a kill",
+    stdout:
+      `${skipLine(RENDERED, RENDER_SKIP_REASON)}\n${SUMMARY_WITH_SKIPS(27, 1, 1)}` +
+      `${failBlock(COMPOSE_SUITE, RENDERED)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    result: "impossible_test_accounting",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "the reporter naming one failing case twice is impossible, not two kills",
+    stdout:
+      `${SUMMARY_WITH_SKIPS(4, 2, 0)}\n✖ failing tests:\n\ntest at ${COMPOSE_SUITE}:12:1\n` +
+      `✖ ${RENDERED} (8.6ms)\ntest at ${COMPOSE_SUITE}:12:1\n✖ ${RENDERED} (8.6ms)\n`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    result: "impossible_test_accounting",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    // The review's sharpest case: the tail parses perfectly, and it is a tail of
+    // a run that was cut. Annotating an otherwise-agreeing result with
+    // `outputTruncated: true` — which is what the harness used to do — leaves the
+    // agreement standing.
+    name: "truncated output with an otherwise valid tail is a harness error, not an annotated kill",
+    stdout: `${SUMMARY_WITH_SKIPS(27, 1, 0)}${failBlock(COMPOSE_SUITE, RENDERED)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    execution: { status: 1, signal: null, timedOut: false, truncated: true, treeTerminationFailed: false },
+    result: "output_truncated",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "an abnormal exit is not hidden by a parseable tail",
+    stdout: `${SUMMARY_WITH_SKIPS(27, 1, 0)}${failBlock(COMPOSE_SUITE, RENDERED)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    execution: { status: 137, signal: null, timedOut: false, truncated: false, treeTerminationFailed: false },
+    result: "stage_terminated_abnormally",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "a run whose exit status disagrees with its own counters is abnormal",
+    stdout: SUMMARY_WITH_SKIPS(6, 0, 0),
+    expect: "pass",
+    tests: [COMPOSE_SUITE],
+    execution: { status: 1, signal: null, timedOut: false, truncated: false, treeTerminationFailed: false },
+    result: "stage_terminated_abnormally",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "signal termination is a harness error even with a complete summary",
+    stdout: `${SUMMARY_WITH_SKIPS(27, 1, 0)}${failBlock(COMPOSE_SUITE, RENDERED)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    execution: { status: null, signal: "SIGKILL", timedOut: false, truncated: false, treeTerminationFailed: false },
+    result: "stage_terminated_abnormally",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "a stage stopped by its bound is a timeout, whatever its output says",
+    stdout: `${SUMMARY_WITH_SKIPS(27, 1, 0)}${failBlock(COMPOSE_SUITE, RENDERED)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+    execution: { status: null, signal: null, timedOut: true, truncated: false, treeTerminationFailed: false },
+    result: "stage_timed_out",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "a stage whose process group outlived its kill is a harness error",
+    stdout: SUMMARY_WITH_SKIPS(6, 0, 0),
+    expect: "pass",
+    tests: [COMPOSE_SUITE],
+    execution: { status: 0, signal: null, timedOut: false, truncated: false, treeTerminationFailed: true },
+    result: "stage_tree_termination_failed",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+  },
+  {
+    name: "a stage that could not be spawned is a harness error",
+    stdout: "",
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    execution: { status: null, signal: null, spawnError: "ENOENT: node is not on PATH" },
+    result: "test_runner_failed",
+    agrees: false,
+    harnessError: true,
     unmeasured: false,
   },
   {
@@ -1481,15 +1737,23 @@ const CLASSIFY_TABLE: readonly ClassifyCase[] = [
     unmeasured: true,
   },
   {
-    name: "a control naming no case, expecting a kill, that skipped something cannot attribute it",
+    // This row used to be `unmeasured_here`: a control naming no case, expecting
+    // a kill, that skipped something was given the benefit of the doubt because
+    // the skip *might* have been the kill that never ran. It might equally not
+    // have been. Declaring a prerequisite is not a licence to reinterpret any
+    // disappearance in the file as that prerequisite's fault, and `unmeasured` is
+    // the one column that is neither agreement nor failure — so it has to be the
+    // hardest to reach, not the easiest.
+    name: "a prerequisite does not excuse a skip the control never designated",
     stdout: `${skipLine("SOME: gated case", "unavailable here")}\n${SUMMARY_WITH_SKIPS(4, 0, 1)}`,
     expect: "fail",
     tests: [COMPOSE_SUITE],
     prerequisite: "otel-demo-upstream",
-    result: "unmeasured_here",
-    agrees: null,
-    harnessError: false,
-    unmeasured: true,
+    result: "unexpected_case_skipped",
+    agrees: false,
+    harnessError: true,
+    unmeasured: false,
+    retains: { skipped: 1, skippedCases: ["SOME: gated case"], undeclaredSkips: ["SOME: gated case"] },
   },
   {
     name: "a control that declared no kill and skipped nothing is unaffected",
@@ -1505,15 +1769,27 @@ const CLASSIFY_TABLE: readonly ClassifyCase[] = [
 
 for (const row of CLASSIFY_TABLE) {
   test(`NC-CLASSIFY-SKIP: ${row.name}`, () => {
-    const classified = harness.classifyTestRun({
+    const classified = classify({
       stdout: row.stdout,
       expect: row.expect,
       tests: row.tests,
       ...(row.mustFail === undefined ? {} : { mustFail: row.mustFail }),
       ...(row.mustFailCases === undefined ? {} : { mustFailCases: row.mustFailCases }),
       ...(row.prerequisite === undefined ? {} : { prerequisite: row.prerequisite }),
+      ...(row.expectedSkips === undefined ? {} : { expectedSkips: row.expectedSkips }),
+      ...(row.execution === undefined ? {} : { execution: row.execution }),
     });
     assert.equal(classified.result, row.result, `classified as ${classified.result}`);
+    // Whatever the row concluded, the observation it concluded it from stays in
+    // the result. A record that drops its counters on the way to an agreement
+    // cannot afterwards be asked what it agreed in spite of.
+    for (const [field, expected] of Object.entries(row.retains ?? {})) {
+      assert.deepEqual(
+        (classified as unknown as Record<string, unknown>)[field],
+        expected,
+        `${field} was not retained in the result`,
+      );
+    }
     assert.equal(harness.isHarnessError(classified.result), row.harnessError);
     assert.equal(harness.isUnmeasured(classified.result), row.unmeasured);
     // The three columns are exclusive: an unmeasured control is neither an
@@ -1530,12 +1806,61 @@ for (const row of CLASSIFY_TABLE) {
   });
 }
 
+test("NC-EXECUTION: classification without the stage's execution facts fails closed", () => {
+  // The default has to be refusal rather than optimism. If omitting the facts
+  // produced a classification, then every future caller that forgot to pass them
+  // would get a measurement it had not earned — which is precisely how output
+  // truncation came to be an annotation on an agreement rather than a reason to
+  // withhold one.
+  const complete = `${SUMMARY_WITH_SKIPS(27, 1, 0)}${failBlock(COMPOSE_SUITE, RENDERED)}`;
+  for (const execution of [undefined, null, "clean", 0]) {
+    const classified = harness.classifyTestRun({
+      stdout: complete,
+      expect: "fail",
+      tests: [COMPOSE_SUITE],
+      mustFail: [COMPOSE_SUITE],
+      mustFailCases: [RENDERED],
+      ...(execution === undefined ? {} : { execution }),
+    });
+    assert.equal(
+      classified.result,
+      harness.CONTROL_RESULT["EXECUTION_FACTS_MISSING"],
+      `execution=${JSON.stringify(execution)} produced ${classified.result}`,
+    );
+    assert.equal(harness.isHarnessError(classified.result), true);
+    assert.equal(harness.agreesWithExpectation(classified.result, "fail"), false);
+  }
+});
+
+test("NC-EXECUTION: every result carries the counters it was read from", () => {
+  // Including the agreeing ones. The review's finding was that a skip could be
+  // omitted from the record entirely, so a reader could not distinguish an
+  // agreement with a hidden skip from one without.
+  const classified = classify({
+    stdout: `${SUMMARY_WITH_SKIPS(27, 1, 0)}${failBlock(COMPOSE_SUITE, RENDERED)}`,
+    expect: "fail",
+    tests: [COMPOSE_SUITE],
+    mustFail: [COMPOSE_SUITE],
+    mustFailCases: [RENDERED],
+  });
+  assert.equal(classified.result, harness.CONTROL_RESULT["NAMED_TESTS_FAILED"]);
+  for (const counter of ["tests", "pass", "fail", "cancelled", "skipped"] as const) {
+    assert.equal(
+      typeof (classified as unknown as Record<string, unknown>)[counter],
+      "number",
+      `an agreeing result dropped its ${counter} counter`,
+    );
+  }
+  assert.equal(classified.tests, 28);
+  assert.equal(classified.tests, classified.pass + classified.fail + classified.skipped + classified.cancelled);
+});
+
 test("NC-CLASSIFY-SKIP: a skipped designated case is never an agreement, under any declaration", () => {
   // The single property the whole correction exists to guarantee. Whatever else
   // changes, a case that did not run must never be reported as a guard proven
   // load-bearing here.
   for (const prerequisite of [undefined, "otel-demo-upstream", "docker-daemon"]) {
-    const classified = harness.classifyTestRun({
+    const classified = classify({
       stdout: `${skipLine(RENDERED, RENDER_SKIP_REASON)}\n${SUMMARY_WITH_SKIPS(28, 0, 1)}`,
       expect: "fail",
       tests: [COMPOSE_SUITE],
@@ -1556,7 +1881,7 @@ test("NC-CLASSIFY-SKIP: a skipped designated case is never an agreement, under a
 });
 
 test("NC-CLASSIFY-SKIP: the unmeasured result carries why, so an operator need not reproduce it", () => {
-  const classified = harness.classifyTestRun({
+  const classified = classify({
     stdout: `${skipLine(RENDERED, RENDER_SKIP_REASON)}\n${SUMMARY_WITH_SKIPS(28, 0, 1)}`,
     expect: "fail",
     tests: [COMPOSE_SUITE],

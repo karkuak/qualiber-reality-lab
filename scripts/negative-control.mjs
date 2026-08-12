@@ -49,7 +49,8 @@
  */
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -66,6 +67,11 @@ import {
   PREREQUISITE_STATUS,
   ensurePrerequisite,
 } from "./lib/campaignFixtures.mjs";
+import {
+  CAMPAIGN_SCHEMA,
+  EVIDENCE_VERSION,
+  repositoryIdentity,
+} from "./lib/validationEvidence.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -82,7 +88,38 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  * that occurs exactly once and locate the preimage after it. Neither is a
  * formality: the default is what turns a preimage that stopped being unique from
  * a silent mis-patch into a failed campaign.
+ *
+ * `expectedSkips` is how a control admits, in advance, that one of the suites it
+ * runs will announce a skip. Since the independent review of `07da5fe`, any skip
+ * a control did not declare is a harness error — so this field is the only way a
+ * skip is permitted to coexist with a measurement, and declaring one is a claim a
+ * reader can check rather than a silence they cannot.
  */
+
+/**
+ * The one case in `composeSubstrate.test.js` that skips itself.
+ *
+ * It renders the *real* merged Compose configuration, which needs the extracted
+ * upstream fixture — git-ignored, so absent from a fresh campaign worktree until
+ * something provisions it. Only `substrate-loopback-only-rendered` declares that
+ * fixture as a prerequisite, and it is the last of the four controls running this
+ * suite, so for the three before it the case is genuinely unobservable and says
+ * so with `RENDERED TOPOLOGY UNPROVEN`.
+ *
+ * Those three measure ownership labels, running-image resolution and collector
+ * verification: none of them is *about* the rendered topology, so the skip is
+ * unrelated to what they claim. Before this declaration existed, the campaign
+ * recorded their agreements without recording the skip at all — which is exactly
+ * what the review meant by saying the 129-row record could not establish that no
+ * skips were hidden. Declaring it does not excuse it; it publishes it.
+ */
+const RENDERED_TOPOLOGY_SKIP = Object.freeze([
+  Object.freeze({
+    case: "COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else",
+    reason: "RENDERED TOPOLOGY UNPROVEN",
+  }),
+]);
+
 export const CONTROLS = [
   {
     id: "activate-connect-guard",
@@ -514,6 +551,7 @@ export const CONTROLS = [
     mustFailCases: [
       "COMPOSE-ADV: a collector that is not provably this run's yields an absent observation, not a zero",
     ],
+    expectedSkips: RENDERED_TOPOLOGY_SKIP,
     expect: "fail",
   },
   {
@@ -1759,6 +1797,7 @@ export const CONTROLS = [
       "COMPOSE-ADV: an expected container carrying a foreign Compose project label is refused",
       "COMPOSE-ADV: an expected container MISSING an ownership label is refused",
     ],
+    expectedSkips: RENDERED_TOPOLOGY_SKIP,
     expect: "fail",
   },
   {
@@ -1775,6 +1814,7 @@ export const CONTROLS = [
       "COMPOSE-ADV: an expected container name running an image the lock does not pin is refused",
       "COMPOSE-ADV: an expected container name whose image cannot be resolved at all is refused",
     ],
+    expectedSkips: RENDERED_TOPOLOGY_SKIP,
     expect: "fail",
   },
   {
@@ -2098,6 +2138,17 @@ export const CONTROL_RESULT = Object.freeze({
   TREE_TERMINATION_FAILED: "stage_tree_termination_failed",
   RESTORATION_FAILED: "restoration_failure",
   RESIDUE_FAILED: "residue_failure",
+  // The five the independent review of `07da5fe` required. Each names an
+  // *incomplete observation* rather than an outcome: the campaign did not learn
+  // less than it hoped, it learned nothing it can stand behind. They are separate
+  // values rather than one `runner_failed` because an operator reading a campaign
+  // needs to know which of "the output was cut", "the process was killed", "the
+  // numbers do not add up" and "a case vanished" happened.
+  EXECUTION_FACTS_MISSING: "execution_facts_missing",
+  OUTPUT_TRUNCATED: "output_truncated",
+  ABNORMAL_TERMINATION: "stage_terminated_abnormally",
+  IMPOSSIBLE_ACCOUNTING: "impossible_test_accounting",
+  UNEXPECTED_CASE_SKIPPED: "unexpected_case_skipped",
 });
 
 /** Result values that mean the campaign measured the guard rather than itself. */
@@ -2194,18 +2245,153 @@ export function parseSkippedCases(stdout) {
  * evidence, and it is reported as a harness error rather than as a result,
  * because what the campaign measured is not what the control declared.
  */
-export function classifyTestRun({ stdout, expect, tests, mustFail, mustFailCases, prerequisite }) {
-  const tests_ = Number(/^ℹ tests (\d+)$/m.exec(stdout)?.[1] ?? "-1");
-  const pass = Number(/^ℹ pass (\d+)$/m.exec(stdout)?.[1] ?? "-1");
-  const fail = Number(/^ℹ fail (\d+)$/m.exec(stdout)?.[1] ?? "-1");
-  const cancelled = Number(/^ℹ cancelled (\d+)$/m.exec(stdout)?.[1] ?? "0");
-  const skipped = Number(/^ℹ skipped (\d+)$/m.exec(stdout)?.[1] ?? "0");
+export function parseRunSummary(stdout) {
+  const read = (label) => {
+    const matched = new RegExp(`^ℹ ${label} (-?\\d+)$`, "m").exec(stdout);
+    return matched === null ? undefined : Number(matched[1]);
+  };
+  return {
+    tests: read("tests"),
+    pass: read("pass"),
+    fail: read("fail"),
+    cancelled: read("cancelled"),
+    skipped: read("skipped"),
+  };
+}
 
-  // No parseable summary means the runner never got far enough to have an
-  // opinion — a module that would not load, a crash before the first test. That
-  // is a harness failure and must not be read as "nothing failed".
-  if (pass < 0 || fail < 0 || tests_ <= 0) {
-    return { result: CONTROL_RESULT.RUNNER_FAILED, pass, fail, tests: tests_, failingFiles: [] };
+/** The counters every classification requires; a run missing one is not a run. */
+const REQUIRED_COUNTERS = Object.freeze(["tests", "pass", "fail", "cancelled", "skipped"]);
+
+/**
+ * Whether an observed skip is one the control said in advance it would see.
+ *
+ * Both halves must match. The name alone would let any change of reason keep an
+ * old excuse alive; the reason alone would let a *different* case inherit it.
+ */
+export function skipIsDeclared(observed, expectedSkips) {
+  if (!Array.isArray(expectedSkips)) return false;
+  return expectedSkips.some(
+    (declared) =>
+      typeof declared === "object" &&
+      declared !== null &&
+      observed.name.includes(String(declared.case)) &&
+      observed.reason.includes(String(declared.reason)),
+  );
+}
+
+export function classifyTestRun({
+  stdout,
+  expect,
+  tests,
+  mustFail,
+  mustFailCases,
+  prerequisite,
+  expectedSkips,
+  execution,
+}) {
+  const summary = parseRunSummary(stdout);
+  const skippedCases = parseSkippedCases(stdout);
+  const skippedNames = skippedCases.map((c) => c.name);
+
+  /**
+   * The facts every result carries, whatever the result turns out to be.
+   *
+   * The review's finding was not only that skips could be excused — it was that a
+   * skip could be *omitted from the record*, so a reader could not tell an
+   * agreement with a hidden skip from an agreement without one. Retaining the
+   * observation on every path, including the agreeing ones, is what makes the
+   * campaign's own JSON able to answer that question.
+   */
+  const observed = {
+    pass: summary.pass ?? -1,
+    fail: summary.fail ?? -1,
+    tests: summary.tests ?? -1,
+    cancelled: summary.cancelled ?? -1,
+    skipped: summary.skipped ?? -1,
+    failingFiles: [],
+    ...(skippedCases.length === 0
+      ? {}
+      : {
+          skippedCases: skippedNames,
+          skipReasons: [...new Set(skippedCases.map((c) => c.reason).filter((r) => r !== ""))],
+        }),
+  };
+  const outcome = (result, detail, extra = {}) => ({
+    ...observed,
+    result,
+    ...(detail === undefined ? {} : { detail }),
+    ...extra,
+  });
+
+  // -- what the process did, before a word of its output is believed ----------
+  //
+  // The order here is the correction. Everything below reads a *tail* of at most
+  // `STAGE_MAX_OUTPUT_BYTES`, and a tail is perfectly capable of carrying a
+  // well-formed summary from a run that was cut in half, killed by a signal, or
+  // exited nonzero for a reason no test explains. Reading the tail first and
+  // asking about the process afterwards is how "the stage died" becomes "nothing
+  // failed", which is the shape the review reproduced.
+  if (execution === null || typeof execution !== "object") {
+    return outcome(
+      CONTROL_RESULT.EXECUTION_FACTS_MISSING,
+      "classification was not given the stage's exit status, signal and truncation state; " +
+        "an observation with no execution facts cannot be scored as a measurement",
+    );
+  }
+  if (execution.spawnError !== undefined && execution.spawnError !== null) {
+    return outcome(CONTROL_RESULT.RUNNER_FAILED, `the stage could not be spawned: ${String(execution.spawnError)}`);
+  }
+  if (execution.timedOut === true) {
+    return outcome(CONTROL_RESULT.STAGE_TIMED_OUT, "the stage was stopped by its bound");
+  }
+  if (execution.treeTerminationFailed === true) {
+    return outcome(CONTROL_RESULT.TREE_TERMINATION_FAILED, "the stage's process group outlived its kill");
+  }
+  if (execution.truncated === true) {
+    return outcome(
+      CONTROL_RESULT.OUTPUT_TRUNCATED,
+      "the stage produced more output than the collection bound, so the summary below was read " +
+        "from a tail that cannot be reconciled against the whole run",
+    );
+  }
+  if (execution.signal !== undefined && execution.signal !== null) {
+    return outcome(
+      CONTROL_RESULT.ABNORMAL_TERMINATION,
+      `the stage was terminated by ${String(execution.signal)}`,
+    );
+  }
+  if (!Number.isInteger(execution.status)) {
+    return outcome(
+      CONTROL_RESULT.ABNORMAL_TERMINATION,
+      `the stage did not exit with a status (${String(execution.status)})`,
+    );
+  }
+
+  // -- whether the summary is a summary --------------------------------------
+
+  const missingCounters = REQUIRED_COUNTERS.filter((counter) => summary[counter] === undefined);
+  if (missingCounters.length > 0) {
+    // A module that would not load, a crash before the first test, a reporter
+    // that never reached its epilogue. Not "nothing failed".
+    return outcome(
+      CONTROL_RESULT.RUNNER_FAILED,
+      `the run printed no ${missingCounters.join(", ")} counter`,
+    );
+  }
+  const negative = REQUIRED_COUNTERS.filter((counter) => !Number.isInteger(summary[counter]) || summary[counter] < 0);
+  if (negative.length > 0) {
+    return outcome(CONTROL_RESULT.IMPOSSIBLE_ACCOUNTING, `${negative.join(", ")} is negative or not a whole number`);
+  }
+  if (summary.tests === 0) {
+    return outcome(CONTROL_RESULT.RUNNER_FAILED, "the run reported zero tests");
+  }
+  const accounted = summary.pass + summary.fail + summary.skipped + summary.cancelled;
+  if (summary.tests !== accounted) {
+    return outcome(
+      CONTROL_RESULT.IMPOSSIBLE_ACCOUNTING,
+      `${String(summary.tests)} tests ≠ ${String(summary.pass)} pass + ${String(summary.fail)} fail + ` +
+        `${String(summary.skipped)} skipped + ${String(summary.cancelled)} cancelled`,
+    );
   }
 
   // A cancelled case is a crash wearing a number.
@@ -2218,80 +2404,109 @@ export function classifyTestRun({ stdout, expect, tests, mustFail, mustFailCases
   // process has not shown the guard is unnecessary; it has shown the patch was
   // wrong. Checked before skips, because a cancellation is a fault and a skip is
   // a decision; a run carrying both is the fault.
-  if (cancelled > 0) {
-    return {
-      result: CONTROL_RESULT.RUNNER_FAILED,
-      pass,
-      fail,
-      tests: tests_,
-      failingFiles: [],
-      cancelled,
-    };
+  if (summary.cancelled > 0) {
+    return outcome(CONTROL_RESULT.RUNNER_FAILED, `${String(summary.cancelled)} case(s) were cancelled`);
   }
 
+  // The exit status has to agree with the counters it supposedly summarises.
+  // `node --test` exits 1 when a test failed and 0 when none did, so any other
+  // pairing is a process that ended for a reason its own output does not explain.
+  const expectedStatus = summary.fail > 0 ? 1 : 0;
+  if (execution.status !== expectedStatus) {
+    return outcome(
+      CONTROL_RESULT.ABNORMAL_TERMINATION,
+      `the run reported ${String(summary.fail)} failing test(s) but the process exited ` +
+        `${String(execution.status)}; a parseable tail does not account for that`,
+    );
+  }
+
+  // -- whether the cases are the cases ---------------------------------------
+
+  const failingCases = parseFailingCases(stdout);
+  const failingNames = failingCases.map((c) => c.name);
+  const seen = new Set();
+  const duplicated = [];
+  for (const failing of failingCases) {
+    const key = `${failing.file}::${failing.name}`;
+    if (seen.has(key)) duplicated.push(key);
+    else seen.add(key);
+  }
+  if (duplicated.length > 0) {
+    return outcome(
+      CONTROL_RESULT.IMPOSSIBLE_ACCOUNTING,
+      `the reporter named the same failing case more than once: ${[...new Set(duplicated)].join(" | ")}`,
+      { failingCases: failingNames },
+    );
+  }
+  const bothWays = failingNames.filter((name) => skippedNames.includes(name));
+  if (bothWays.length > 0) {
+    return outcome(
+      CONTROL_RESULT.IMPOSSIBLE_ACCOUNTING,
+      `the same case is reported as both failed and skipped: ${[...new Set(bothWays)].join(" | ")}`,
+      { failingCases: failingNames },
+    );
+  }
+
+  // -- what did not run ------------------------------------------------------
+  //
   // A case that skipped did not run, and a case that did not run cannot have
-  // agreed. This is the correction the independent review of `90a0039`
-  // required: `substrate-loopback-only-rendered` designates a case that skips
-  // itself when the extracted upstream configuration is absent, the other 28
-  // cases in its file passed, and the classifier reached `fail === 0` below and
-  // called it `tests_passed_unexpectedly` — a disagreement invented out of a
-  // measurement that never happened. The check has to sit *above* that
-  // short-circuit, and above `mustFailCases`, which only ever runs on a
-  // failure and so could never see a skip either.
-  const skippedCases = parseSkippedCases(stdout);
-  const skippedNames = skippedCases.map((c) => c.name);
+  // agreed. This is where the review of `90a0039` was answered and where the
+  // review of `07da5fe` widened the answer: it is no longer enough that the
+  // *designated* case ran. Every skip in the file has to be one somebody
+  // declared, because "the guard's own case failed" says nothing about a
+  // neighbouring case that quietly vanished in the same run.
+
   // Substring in the same direction as the failing-case match, so one declared
   // excerpt recognises the long descriptive name it was taken from.
   const skippedDesignated =
     mustFailCases === undefined
       ? []
       : mustFailCases.filter((declared) => skippedNames.some((n) => n.includes(declared)));
-  // A control that named no case cannot point at one, so the honest reading of
-  // "expected a kill, got none, and something skipped" is that the skip may be
-  // the kill that never ran.
-  const unattributableSkip =
-    mustFailCases === undefined && skipped > 0 && fail === 0 && expect === "fail";
 
-  if (skippedDesignated.length > 0 || unattributableSkip) {
-    const reasons = [
-      ...new Set(
-        skippedCases
-          .filter((c) => skippedDesignated.length === 0 || skippedDesignated.some((d) => c.name.includes(d)))
-          .map((c) => c.reason)
-          .filter((r) => r !== ""),
-      ),
-    ];
-    return {
-      // Declared: the control said this host might not be able to answer, and it
-      // could not. Undeclared: a designated case disappeared and nobody said it
-      // might, which stays fail-closed as a harness error rather than becoming
-      // an acceptable outcome by default.
-      result:
-        prerequisite === undefined
-          ? CONTROL_RESULT.DESIGNATED_CASE_SKIPPED
-          : CONTROL_RESULT.UNMEASURED_HERE,
-      pass,
-      fail,
-      tests: tests_,
-      skipped,
-      failingFiles: [],
-      skippedCases: skippedNames,
-      ...(skippedDesignated.length === 0 ? {} : { skippedDesignated }),
-      ...(prerequisite === undefined ? {} : { prerequisite }),
-      ...(reasons.length === 0 ? {} : { skipReasons: reasons }),
-    };
+  if (skippedDesignated.length > 0) {
+    const reasons = skippedCases
+      .filter((c) => skippedDesignated.some((d) => c.name.includes(d)))
+      .map((c) => c.reason);
+    // A declared prerequisite excuses a designated skip only when the skip the
+    // suite actually announced is the one the prerequisite is about. Without
+    // this, any control naming any prerequisite could launder any disappearance
+    // into `unmeasured_here` — the one outcome that is neither agreement nor
+    // failure, and so the one that must be hardest to reach.
+    const evidence =
+      prerequisite === undefined ? undefined : CAMPAIGN_PREREQUISITES[prerequisite]?.skipEvidence;
+    const agrees =
+      Array.isArray(evidence) &&
+      reasons.length > 0 &&
+      reasons.every((reason) => evidence.some((marker) => reason.includes(marker)));
+    return outcome(
+      agrees ? CONTROL_RESULT.UNMEASURED_HERE : CONTROL_RESULT.DESIGNATED_CASE_SKIPPED,
+      agrees
+        ? undefined
+        : prerequisite === undefined
+          ? "a designated case skipped and no prerequisite declared that it might"
+          : `a designated case skipped, but its reason does not name what \`${prerequisite}\` ` +
+            `stands for: ${reasons.join(" | ") || "(no reason given)"}`,
+      {
+        skippedDesignated,
+        ...(prerequisite === undefined ? {} : { prerequisite }),
+      },
+    );
+  }
+
+  const undeclaredSkips = skippedCases.filter((c) => !skipIsDeclared(c, expectedSkips));
+  if (undeclaredSkips.length > 0) {
+    return outcome(
+      CONTROL_RESULT.UNEXPECTED_CASE_SKIPPED,
+      `${String(undeclaredSkips.length)} case(s) skipped that this control did not declare: ` +
+        undeclaredSkips.map((c) => `${c.name}${c.reason === "" ? "" : ` # ${c.reason}`}`).join(" | "),
+      { undeclaredSkips: undeclaredSkips.map((c) => c.name) },
+    );
   }
 
   // A run that reports tests but produced no outcome at all, with nothing
   // skipped to explain it, never got far enough to have an opinion.
-  if (pass + fail === 0) {
-    return {
-      result: CONTROL_RESULT.RUNNER_FAILED,
-      pass,
-      fail,
-      tests: tests_,
-      failingFiles: [],
-    };
+  if (summary.pass + summary.fail === 0) {
+    return outcome(CONTROL_RESULT.RUNNER_FAILED, "no case passed and none failed");
   }
 
   const failingFiles = [
@@ -2300,65 +2515,49 @@ export function classifyTestRun({ stdout, expect, tests, mustFail, mustFailCases
     ),
   ].sort();
 
-  if (fail === 0) {
-    return {
-      result: expect === "fail" ? CONTROL_RESULT.TESTS_PASSED_UNEXPECTEDLY : CONTROL_RESULT.NO_KILL_AS_DECLARED,
-      pass,
-      fail,
-      tests: tests_,
-      failingFiles,
-    };
+  const declaredSkipNote =
+    skippedCases.length === 0 ? {} : { declaredSkips: skippedNames };
+
+  if (summary.fail === 0) {
+    return outcome(
+      expect === "fail" ? CONTROL_RESULT.TESTS_PASSED_UNEXPECTEDLY : CONTROL_RESULT.NO_KILL_AS_DECLARED,
+      undefined,
+      { failingFiles, ...declaredSkipNote },
+    );
   }
 
   const permitted = (mustFail ?? tests).map((t) => t.replace(/^\.\//, ""));
   const stray = failingFiles.filter((file) => !permitted.some((t) => file.endsWith(t) || t.endsWith(file)));
   if (stray.length > 0) {
-    return {
-      result: CONTROL_RESULT.UNRELATED_TESTS_FAILED,
-      pass,
-      fail,
-      tests: tests_,
+    return outcome(CONTROL_RESULT.UNRELATED_TESTS_FAILED, undefined, {
       failingFiles,
       strayFiles: stray,
-    };
+      ...declaredSkipNote,
+    });
   }
 
   // The right file failed. When the control named the case, that is not yet the
   // measurement it declared.
   if (mustFailCases !== undefined) {
-    const failingCases = parseFailingCases(stdout);
-    const names = failingCases.map((c) => c.name);
     // Substring, because a declared case is an excerpt of a long descriptive
     // name and the harness must not turn a prose edit into a campaign failure.
-    const missingCases = mustFailCases.filter((declared) => !names.some((n) => n.includes(declared)));
+    const missingCases = mustFailCases.filter((declared) => !failingNames.some((n) => n.includes(declared)));
     if (missingCases.length > 0) {
-      return {
-        result: CONTROL_RESULT.DECLARED_CASES_NOT_FAILED,
-        pass,
-        fail,
-        tests: tests_,
+      return outcome(CONTROL_RESULT.DECLARED_CASES_NOT_FAILED, undefined, {
         failingFiles,
         missingCases,
-        failingCases: names,
-      };
+        failingCases: failingNames,
+        ...declaredSkipNote,
+      });
     }
-    return {
-      result: CONTROL_RESULT.NAMED_TESTS_FAILED,
-      pass,
-      fail,
-      tests: tests_,
+    return outcome(CONTROL_RESULT.NAMED_TESTS_FAILED, undefined, {
       failingFiles,
-      failingCases: names,
-    };
+      failingCases: failingNames,
+      ...declaredSkipNote,
+    });
   }
 
-  return {
-    result: CONTROL_RESULT.NAMED_TESTS_FAILED,
-    pass,
-    fail,
-    tests: tests_,
-    failingFiles,
-  };
+  return outcome(CONTROL_RESULT.NAMED_TESTS_FAILED, undefined, { failingFiles, ...declaredSkipNote });
 }
 
 /** Whether a measured result matches what the control declared. */
@@ -2406,6 +2605,37 @@ export function validateControlDeclarations(controls) {
           `${where}: \`requiresPrerequisite\` names \`${String(control.requiresPrerequisite)}\`, ` +
             `which is not one of: ${Object.keys(CAMPAIGN_PREREQUISITES).join(", ")}`,
         );
+      }
+    }
+    if (control.expectedSkips !== undefined) {
+      // A declared skip is a promise about a *named* case with a *named* reason.
+      // A vague one would re-open the hole it exists to close: every skip this
+      // control's suites announce must be one a reader could have predicted from
+      // the declaration alone.
+      if (!Array.isArray(control.expectedSkips) || control.expectedSkips.length === 0) {
+        problems.push(`${where}: \`expectedSkips\` must be a non-empty array`);
+      } else {
+        for (const declared of control.expectedSkips) {
+          if (
+            declared === null ||
+            typeof declared !== "object" ||
+            typeof declared.case !== "string" ||
+            declared.case.trim() === "" ||
+            typeof declared.reason !== "string" ||
+            declared.reason.trim() === ""
+          ) {
+            problems.push(`${where}: every \`expectedSkips\` entry needs a non-empty \`case\` and \`reason\``);
+            continue;
+          }
+          if ((control.mustFailCases ?? []).some((c) => declared.case.includes(c) || c.includes(declared.case))) {
+            // Declaring the case you designated would be declaring away the
+            // measurement itself.
+            problems.push(
+              `${where}: \`expectedSkips\` names \`${declared.case}\`, which is also a designated case; ` +
+                `a control cannot declare its own measurement away`,
+            );
+          }
+        }
       }
     }
     if (control.mustFail !== undefined) {
@@ -2484,6 +2714,28 @@ export const STAGE_TIMEOUT_MS = Object.freeze({
  * for a runaway control to take the campaign down.
  */
 export const STAGE_MAX_OUTPUT_BYTES = 32 * 1024 * 1024;
+
+/**
+ * How much of a stage's output the durable record keeps, per control.
+ *
+ * A tail rather than a sample, and for the same reason the collector keeps a
+ * tail: everything a reader needs in order to check the classification — the
+ * `ℹ pass/fail` counters, the `failing tests:` section, the skip lines — is at
+ * the end. 16 KiB across 129 controls is a couple of megabytes of evidence, which
+ * is the right order of magnitude for something that has to survive a fresh
+ * clone. The full output's digest and byte count are recorded alongside it, so a
+ * reader can tell whether they are holding all of it.
+ */
+export const RETAINED_OUTPUT_BYTES = 16 * 1024;
+
+const sha256Text = (text) => `sha256:${createHash("sha256").update(text, "utf8").digest("hex")}`;
+
+const tailOf = (text) => {
+  const bytes = Buffer.from(text, "utf8");
+  return bytes.byteLength <= RETAINED_OUTPUT_BYTES
+    ? text
+    : bytes.subarray(-RETAINED_OUTPUT_BYTES).toString("utf8");
+};
 
 /**
  * Run one campaign stage under an explicit bound, and say plainly how it ended.
@@ -2628,6 +2880,11 @@ export async function runStage({ command, args, cwd, timeoutMs, stage }) {
 
   let timedOut = false;
   let spawnError;
+  // Captured rather than discarded. A stage killed by a signal exits with a null
+  // status and a signal name, and the classifier is now required to see the
+  // difference between that and an ordinary nonzero exit — a SIGSEGV halfway
+  // through a suite can still leave a perfectly parseable summary behind it.
+  let signal = null;
   const timer = setTimeout(() => {
     timedOut = true;
     if (pid !== undefined) killStageTree(pid);
@@ -2641,7 +2898,10 @@ export async function runStage({ command, args, cwd, timeoutMs, stage }) {
     });
     // `close` rather than `exit`: the stdio streams are drained first, so the
     // output a stage produced just before dying is not lost.
-    child.on("close", (code) => { resolve(code); });
+    child.on("close", (code, closedBy) => {
+      signal = closedBy ?? null;
+      resolve(code);
+    });
   });
   clearTimeout(timer);
 
@@ -2676,6 +2936,7 @@ export async function runStage({ command, args, cwd, timeoutMs, stage }) {
   return {
     stage,
     status,
+    signal,
     pid,
     stdout: out.text(),
     stderr: err.text(),
@@ -2691,6 +2952,16 @@ export async function runStage({ command, args, cwd, timeoutMs, stage }) {
 // -- the campaign ------------------------------------------------------------
 
 async function main() {
+  const campaignStartedAt = new Date().toISOString();
+  const campaignStartMs = Date.now();
+  // Where the durable record goes. A *file* rather than a directory, and never
+  // defaulted: the ignored `docs/ledger/negative-controls.json` below is still
+  // written for continuity, but it is explicitly not the evidence — it is
+  // overwritten by every targeted run, which is exactly why the review refused to
+  // treat it as a campaign record. A run that wants durable evidence says where.
+  const evidenceOutFlag = process.argv.indexOf("--evidence-out");
+  const evidenceOut = evidenceOutFlag === -1 ? undefined : process.argv[evidenceOutFlag + 1];
+
   const declarationProblems = validateControlDeclarations(CONTROLS);
   if (declarationProblems.length > 0) {
     console.error("negative-control refuses to run: the control table is malformed\n");
@@ -2737,7 +3008,20 @@ async function main() {
   // touches. A full campaign is ~70 builds and ~70 suite runs; a package that
   // changed nine guards should be able to say which nine it measured rather than
   // choosing between four hours and a partial answer with no record of which part.
-  const filter = process.argv.find((a) => !a.startsWith("--") && a !== process.argv[0] && a !== process.argv[1]);
+  // Positional, and only positional: `--evidence-out` takes a value, and a path
+  // silently read as a control filter would run a campaign of nothing while
+  // looking like it had run one of something.
+  const positional = [];
+  for (let i = 2; i < process.argv.length; i += 1) {
+    const argument = process.argv[i];
+    if (argument === "--evidence-out") {
+      i += 1;
+      continue;
+    }
+    if (argument.startsWith("--")) continue;
+    positional.push(argument);
+  }
+  const filter = positional[0];
   const wanted = filter === undefined ? undefined : filter.split(",").filter(Boolean);
   const selected = CONTROLS.filter(
     (c) => wanted === undefined || wanted.some((needle) => c.id.includes(needle)),
@@ -2988,10 +3272,25 @@ async function main() {
         // an unspawnable runner reaches the classifier as an unparseable run —
         // a harness error — rather than as a crash inside the classifier.
         stdout: run.stdout,
+        // The complete execution facts, not a summary of them. Truncation, a
+        // signal, an exit status the counters do not explain: each is decided by
+        // the classifier itself, so no path exists where an incomplete
+        // observation is scored first and annotated afterwards. The build stage's
+        // truncation rides along, because a build whose output was cut is not a
+        // clean input to the suite that follows it.
+        execution: {
+          status: run.status,
+          signal: run.signal ?? null,
+          timedOut: run.timedOut,
+          treeTerminationFailed: run.treeTerminationFailed,
+          truncated: run.truncated || build.truncated,
+          ...(run.spawnError === undefined ? {} : { spawnError: run.spawnError }),
+        },
         expect: control.expect,
         tests: control.tests,
         ...(control.mustFail === undefined ? {} : { mustFail: control.mustFail }),
         ...(control.mustFailCases === undefined ? {} : { mustFailCases: control.mustFailCases }),
+        ...(control.expectedSkips === undefined ? {} : { expectedSkips: control.expectedSkips }),
         // A satisfied prerequisite can still leave the designated case skipped —
         // the rendered-topology case needs a daemon as well as the fixture. The
         // control declared that it might not be answerable here, so a skip is
@@ -3017,12 +3316,32 @@ async function main() {
         ...(control.requiresPrerequisite === undefined
           ? {}
           : { prerequisite: control.requiresPrerequisite }),
-        ...(classified.skipped === undefined ? {} : { skipped: classified.skipped }),
+        // The complete observation, on every row and whatever the row concluded.
+        // A campaign record that drops the counters on its agreeing rows cannot
+        // be asked afterwards whether anything was hidden behind them.
+        tests: classified.tests,
+        cancelled: classified.cancelled,
+        skipped: classified.skipped,
+        ...(classified.skippedCases === undefined ? {} : { skippedCases: classified.skippedCases }),
         ...(classified.skipReasons === undefined ? {} : { skipReasons: classified.skipReasons }),
+        ...(classified.undeclaredSkips === undefined ? {} : { undeclaredSkips: classified.undeclaredSkips }),
+        ...(control.expectedSkips === undefined
+          ? {}
+          : { expectedSkips: control.expectedSkips.map((s) => ({ case: s.case, reason: s.reason })) }),
+        ...(classified.detail === undefined ? {} : { classifierDetail: classified.detail }),
+        // The identity of what actually ran, so a reader can reproduce the row
+        // rather than trust it.
+        command: ["node", "--test", "--test-reporter=spec", ...control.tests].join(" "),
+        exitStatus: run.status,
+        exitSignal: run.signal ?? null,
+        buildExitStatus: build.status,
         buildMs: build.elapsedMs,
         suiteMs: run.elapsedMs,
         stageTmpRemoved: build.stageTmpRemoved && run.stageTmpRemoved,
-        ...(run.truncated || build.truncated ? { outputTruncated: true } : {}),
+        outputTruncated: run.truncated || build.truncated,
+        suiteOutputSha256: sha256Text(`${run.stdout}${run.stderr}`),
+        suiteOutputBytes: Buffer.byteLength(run.stdout) + Buffer.byteLength(run.stderr),
+        suiteOutputTail: tailOf(`${run.stdout}${run.stderr}`),
         ...(run.spawnError === undefined ? {} : { spawnError: run.spawnError }),
         ...(classified.strayFiles === undefined ? {} : { strayFiles: classified.strayFiles }),
         ...(control.mustFailCases === undefined ? {} : { mustFailCases: [...control.mustFailCases] }),
@@ -3094,21 +3413,72 @@ async function main() {
   const accounted = measuredAgreements + disagreements + unmeasuredControls.length + harnessErrors;
   const reconciled = accounted === results.length && results.length === selected.length;
 
+  // The ignored, mutable, last-output-wins file. Kept for continuity and
+  // explicitly not the evidence: the retained output tails are stripped, because
+  // a file nobody can verify does not become more useful by being larger.
   writeFileSync(
     path.join(root, "docs", "ledger", "negative-controls.json"),
     `${JSON.stringify(
       {
         generated_by: "scripts/negative-control.mjs",
+        authoritative: false,
+        note:
+          "Regenerated by every campaign, including targeted ones, and excluded by .gitignore. " +
+          "The durable record is written by --evidence-out; see docs/evidence/validation-harness-closure/.",
         selected: selected.length,
         of: CONTROLS.length,
         accounting,
         reconciled,
-        results,
+        results: results.map(({ suiteOutputTail, ...rest }) => rest),
       },
       null,
       2,
     )}\n`,
   );
+
+  if (evidenceOut !== undefined) {
+    const identity = repositoryIdentity(root);
+    const endedAtMs = Date.now();
+    const record = {
+      schema: CAMPAIGN_SCHEMA,
+      version: EVIDENCE_VERSION,
+      generated_by: "scripts/negative-control.mjs",
+      executable: identity,
+      command: `node scripts/negative-control.mjs${filter === undefined ? "" : ` ${filter}`}`,
+      targeted: filter !== undefined,
+      started_at: campaignStartedAt,
+      ended_at: new Date(endedAtMs).toISOString(),
+      duration_ms: endedAtMs - campaignStartMs,
+      configuration: {
+        allow_fetch: allowFetch,
+        archive_override: archiveOverride ?? null,
+        allow_dirty: process.argv.includes("--allow-dirty"),
+        stage_timeout_ms: { ...STAGE_TIMEOUT_MS },
+        stage_max_output_bytes: STAGE_MAX_OUTPUT_BYTES,
+        retained_output_bytes: RETAINED_OUTPUT_BYTES,
+      },
+      discovered: selected.length,
+      of: CONTROLS.length,
+      controls: selected.map((c) => c.id),
+      prerequisites: Object.fromEntries(
+        [...prerequisiteCache.entries()].map(([id, outcome]) => [
+          id,
+          {
+            declared_by: selected.filter((c) => c.requiresPrerequisite === id).map((c) => c.id),
+            ...outcome,
+          },
+        ]),
+      ),
+      accounting,
+      reconciled,
+      repository_byte_identical: certified.certified === true,
+      residue,
+      results,
+    };
+    mkdirSync(path.dirname(path.resolve(evidenceOut)), { recursive: true });
+    writeFileSync(path.resolve(evidenceOut), `${JSON.stringify(record, null, 2)}\n`);
+    console.log(`\ndurable campaign record: ${path.resolve(evidenceOut)}`);
+  }
 
   console.log(
     `\naccounting: ${String(accounting.discovered)} discovered = ` +

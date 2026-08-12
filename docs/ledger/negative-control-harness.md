@@ -533,3 +533,151 @@ real opportunity and a separate one. It is recorded here as a follow-up rather
 than folded into a correctness fix, because a harness that changes how it
 measures while changing what it measures cannot tell you which change moved the
 number.
+
+## 9. Verified fixtures, fail-closed classification, durable evidence
+
+The independent review of `07da5fe` approved the production receipt admission
+unchanged and blocked publication on the *harness*. Three findings, all
+validation-only, all reproduced by the reviewer against a disposable clone.
+
+### 9.1 A fixture is bytes, not a directory that exists
+
+`extractionComplete()` checked that three paths existed, and
+`provisionOtelDemoUpstream()` returned `satisfied / reused: true` on the strength
+of that alone — before it had found an archive, let alone hashed one. The review
+put a symlink at the digest-derived extraction path, pointed it outside the
+worktree at three arbitrary files with the right names, and got:
+
+```json
+{ "status": "satisfied", "reused": true, "insideWorktree": false, "sample": "UNVERIFIED" }
+```
+
+Reuse is now a proof, performed from scratch on every call:
+
+1. **containment** — `resolveContained()` canonicalises the worktree once and
+   `lstat`s every component as it descends, so a symbolic link anywhere in the
+   path is *named and refused* rather than followed. If no component is a link,
+   the result cannot denote a file outside the worktree; the final `realpath`
+   equality is asserted anyway, because that is the containment claim and a test
+   should be able to read it directly rather than infer it.
+2. **a marker** — `.erl2-campaign-fixture.json`, written only by a verified
+   extraction, naming the release, the archive digest, the exact required paths
+   and a digest for each. Deterministic: no timestamps, no absolute paths.
+3. **recomputation** — every required file is re-hashed and compared, every time.
+   A marker is a file; anything that can plant three files can plant a fourth.
+
+Which is why (3) is not the last word either. A forged marker describing forged
+files recomputes perfectly, so verification also checks each digest against
+`config_hashes` in the tracked `substrate-lock.json` — bytes the campaign
+worktree cannot write, produced by `qualify-otel-demo.mjs` from the real release.
+The marker says *which archive this claims to be*; the lock says *whether these
+are the qualified bytes*. Only the second requires trusting something outside the
+worktree, and that is the one that closes the attack.
+
+Extraction is likewise no longer taken on trust from a matching digest. A
+verified archive can still legitimately contain an absolute member, a `..`
+traversal or a symlink — the digest would match, because those are the pinned
+bytes — so `inspectArchiveMembers()` reads the listing first and refuses rather
+than repairs. Only the three declared paths are extracted, each must be the sole
+regular-file member selecting it, and the whole listing is rejected if any member
+anywhere is absolute or traverses upward.
+
+Nothing is removed until a verified archive is in hand: a campaign that deleted
+an unverifiable extraction and *then* found nothing to rebuild from would have
+destroyed state and reported unavailable. A link **at** the extraction root is
+unlinked (never followed, never recursed into); a link **above** it is refused,
+because writing through it lands outside the worktree and deleting it would
+destroy something the campaign did not create.
+
+### 9.2 An incomplete observation is not a measurement
+
+`classifyTestRun` read a *tail* of the stage's output and never saw the process.
+A tail is perfectly capable of carrying a well-formed summary from a run that was
+cut in half, killed by a signal, or exited for a reason no test explains — and
+truncation was applied afterwards as `outputTruncated: true`, an annotation on an
+agreement that remained an agreement.
+
+Classification now receives the stage's complete execution facts and decides in
+this order, before a word of output is believed:
+
+| # | observation | result |
+|---|---|---|
+| 1 | facts absent | `execution_facts_missing` |
+| 2 | spawn error | `test_runner_failed` |
+| 3 | timed out / group outlived its kill | `stage_timed_out` / `stage_tree_termination_failed` |
+| 4 | output truncated | `output_truncated` |
+| 5 | terminated by a signal, or no integer status | `stage_terminated_abnormally` |
+| 6 | a counter missing, negative, or `tests ≠ pass + fail + skipped + cancelled` | `test_runner_failed` / `impossible_test_accounting` |
+| 7 | anything cancelled | `test_runner_failed` |
+| 8 | exit status disagrees with the counters it summarises | `stage_terminated_abnormally` |
+| 9 | a case named twice, or both failed and skipped | `impossible_test_accounting` |
+| 10 | designated case skipped, prerequisite's own marker in the reason | `unmeasured_here` |
+| 11 | designated case skipped otherwise | `designated_case_skipped` |
+| 12 | any remaining skip the control did not declare | `unexpected_case_skipped` |
+| 13 | …then the pre-existing kill/no-kill/stray/declared-case reading, unchanged |
+
+Everything from 1 to 12 is a harness error. `unmeasured_here` is the one outcome
+that is neither agreement nor disagreement, so it is now the *hardest* to reach
+rather than the easiest: a declared prerequisite excuses a skipped designated
+case only when the suite's own skip reason names what that prerequisite stands
+for (`skipEvidence`). Declaring a prerequisite is not a licence to reinterpret
+any disappearance in the file as that prerequisite's fault.
+
+Two behaviours are deliberately unchanged: a genuine intended failure is still an
+agreement, and a genuine unexpected pass is still a disagreement.
+
+**Skips are now published rather than absent.** Every result carries `tests`,
+`pass`, `fail`, `cancelled`, `skipped` and the name and reason of every skipped
+case — on the agreeing rows too, which is exactly where they used to be dropped.
+The review's objection was that the 129-row record *could not be asked* whether
+skips were hidden behind its agreements. It can now.
+
+It turned out there were three. `composeSubstrate.test.js` has one case that
+skips itself without the upstream fixture, four controls run that suite, and only
+`substrate-loopback-only-rendered` declares the fixture — and it is the last of
+the four. So for `telemetry-driver-verified-collector`,
+`compose-ownership-label-verification` and `compose-running-image-verification`
+the rendered-topology case was skipping, unrecorded, on every campaign. Those
+three now declare it with `expectedSkips`, which does not excuse the skip so much
+as publish it: the case, the required reason marker, and the skip itself all
+appear on the row. An undeclared skip, or a declared one whose reason has since
+changed, is `unexpected_case_skipped` and fails the campaign.
+
+### 9.3 Evidence that survives a fresh clone
+
+The campaign's only complete record was `docs/ledger/negative-controls.json`,
+which `.gitignore` excludes: no commit, no tree, no integrity binding, overwritten
+by every targeted run, absent from a fresh clone. The clean gate fared worse — a
+prose paragraph naming a log nobody retained.
+
+The format is three things and stops there: a JSON record, whatever bounded logs
+it refers to, and a `SHA256SUMS` over both, under
+`docs/evidence/validation-harness-closure/`. There is no evidence platform. The
+repository already byte-pins its deterministic artifacts through
+`generate-evidence.mjs`; a three-hour campaign is not deterministic, so pinning
+its bytes would be a lie. What can honestly be claimed is *this run, at this
+commit, produced these numbers, and here is the output they were read from*.
+
+- `scripts/negative-control.mjs --evidence-out <file>` writes what the campaign
+  knows about itself: commit and tree, command and configuration, timing,
+  discovered controls, prerequisite provisioning outcomes, per-control mutation
+  target and replacement count, designated command and cases, exit status,
+  signal, truncation, every counter, every skip and reason, per-stage durations,
+  stage cleanup, byte-identity certification, residue, and a digest plus 16 KiB
+  tail of each control's output.
+- `scripts/capture-validation-evidence.mjs --mode gate|campaign --out <dir>`
+  records what a process cannot certify about itself: repository identity before
+  and after, Docker inventory on both sides, wall-clock timing, surviving
+  processes, and the complete unbounded log of each step. It refuses to write
+  into a directory that already holds a capture.
+- `scripts/verify-validation-evidence.mjs` recomputes every digest, requires the
+  gate and the campaign to name the same executable commit and tree, reconciles
+  both sets of totals, and refuses the combinations the classifier made
+  unreachable — an agreement coexisting with truncation, a signal, an abnormal
+  exit, a harness error or an undeclared skip. It also asks `git check-ignore`
+  whether each retained file would survive a clone, because that is the defect
+  itself. It runs in the ordinary suite; the long runs do not.
+
+The ignored ledger JSON is still written, now marked `authoritative: false` and
+with the retained tails stripped. Targeted runs write wherever `--evidence-out`
+says, so they cannot overwrite a full-campaign record.

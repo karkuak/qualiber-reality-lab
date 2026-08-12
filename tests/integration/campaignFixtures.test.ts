@@ -21,8 +21,18 @@
 
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { mkdtempSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -35,11 +45,39 @@ interface ProvisionOutcome {
   readonly status: string;
   readonly reason?: string;
   readonly reused?: boolean;
+  readonly verified?: boolean;
   readonly fetched?: boolean;
   readonly archive?: string;
   readonly extractionRoot?: string;
   readonly archiveSha256?: string;
   readonly releaseTag?: string;
+  readonly reuseRefused?: string;
+  readonly rebuiltAfter?: string;
+  readonly marker?: { readonly files: Record<string, string> };
+}
+
+interface VerifyOutcome {
+  readonly ok: boolean;
+  readonly reason?: string;
+  readonly escaped?: boolean;
+  readonly unmarked?: boolean;
+  readonly forged?: boolean;
+  readonly tampered?: boolean;
+  readonly absent?: boolean;
+}
+
+interface ContainedOutcome {
+  readonly ok: boolean;
+  readonly exists?: boolean;
+  readonly path?: string;
+  readonly reason?: string;
+}
+
+interface ArchiveInspection {
+  readonly ok: boolean;
+  readonly reason?: string;
+  readonly members?: number;
+  readonly selected?: Record<string, string>;
 }
 
 interface FixturesModule {
@@ -53,9 +91,16 @@ interface FixturesModule {
     readonly archiveSha256: string;
     readonly archiveName: string;
     readonly extractionDir: string;
+    readonly configHashes: readonly string[];
   };
   readonly upstreamDirFor: (root: string) => string;
+  readonly extractionRelativePath: (pin: Record<string, unknown>) => string;
   readonly extractionComplete: (root: string) => boolean;
+  readonly resolveContained: (root: string, relative: string) => ContainedOutcome;
+  readonly verifyExtraction: (input: Record<string, unknown>) => VerifyOutcome;
+  readonly inspectArchiveMembers: (archive: string, run?: unknown) => ArchiveInspection;
+  readonly fixtureMarker: (input: Record<string, unknown>) => Record<string, unknown>;
+  readonly FIXTURE_MARKER_NAME: string;
   readonly provisionOtelDemoUpstream: (input: Record<string, unknown>) => ProvisionOutcome;
   readonly ensurePrerequisite: (
     id: string,
@@ -110,6 +155,12 @@ function fakeRepo(options: { readonly archive?: string } = {}): string {
   copyFileSync(
     path.join(repoRoot, "environments", "otel-demo", "qualification", "provenance.json"),
     path.join(root, "environments", "otel-demo", "qualification", "provenance.json"),
+  );
+  // The lock travels with the provenance: the pin is both of them, since
+  // `config_hashes` is what proves extracted bytes are the qualified ones.
+  copyFileSync(
+    path.join(repoRoot, "environments", "otel-demo", "substrate-lock.json"),
+    path.join(root, "environments", "otel-demo", "substrate-lock.json"),
   );
   if (options.archive !== undefined) {
     mkdirSync(fixtures.upstreamDirFor(root), { recursive: true });
@@ -184,7 +235,10 @@ test("CAMPAIGN-FIXTURE: the pinned archive provisions the declared paths", ARCHI
   assert.equal(outcome.archiveSha256, PIN.archiveSha256);
   assert.equal(
     outcome.extractionRoot,
-    path.join(fixtures.upstreamDirFor(worktree), PIN.extractionDir),
+    // Canonical, because containment is proven by resolving the root once and
+    // appending link-free components to it — on macOS that turns `/var` into
+    // `/private/var`, which is the point rather than an inconvenience.
+    path.join(fixtures.upstreamDirFor(realpathSync(worktree)), PIN.extractionDir),
     "the extraction did not land at the digest-derived path",
   );
   for (const declared of OTEL_DEMO_UPSTREAM_PATHS) {
@@ -327,7 +381,7 @@ test("CAMPAIGN-FIXTURE: provisioned state lives inside the worktree and dies wit
   const outcome = fixtures.provisionOtelDemoUpstream({ repoRoot: root, worktree });
   const extraction = outcome.extractionRoot as string;
   assert.ok(
-    extraction.startsWith(worktree + path.sep),
+    extraction.startsWith(realpathSync(worktree) + path.sep),
     "provisioning wrote outside the worktree it was given",
   );
 
@@ -338,6 +392,309 @@ test("CAMPAIGN-FIXTURE: provisioned state lives inside the worktree and dies wit
 });
 
 // -- who may ask -------------------------------------------------------------
+
+// -- containment and verified reuse ------------------------------------------
+//
+// The independent review of `07da5fe` placed a symlink at the digest-derived
+// extraction path, pointed it at a directory outside the worktree holding three
+// arbitrary files with the right names, and the prerequisite answered
+// `satisfied`, `reused: true` while the campaign went on to read `UNVERIFIED`
+// bytes. Presence and pathname are not provenance. Everything below is a way of
+// making the old answer, and each one must now refuse or rebuild.
+
+/** Three plausible-looking files that came from nowhere. */
+function arbitraryUpstream(dir: string, marker = "UNVERIFIED"): void {
+  mkdirSync(path.join(dir, "src", "otel-collector"), { recursive: true });
+  for (const declared of OTEL_DEMO_UPSTREAM_PATHS) {
+    writeFileSync(path.join(dir, declared), `${marker}\n`);
+  }
+}
+
+const REL = fixtures.extractionRelativePath(PIN);
+
+test("CAMPAIGN-FIXTURE: the review's attack — a symlinked extraction root — is refused", ARCHIVE_SKIP, () => {
+  const outside = ownedDir("erl2-fixture-outside-");
+  arbitraryUpstream(outside);
+  const worktree = ownedDir("erl2-fixture-wt-");
+  mkdirSync(path.join(worktree, "environments", "otel-demo", "upstream"), { recursive: true });
+  symlinkSync(outside, path.join(worktree, REL));
+
+  // With nothing to rebuild from, the only honest answer is unavailable.
+  const refused = fixtures.provisionOtelDemoUpstream({ repoRoot: fakeRepo(), worktree });
+  assert.equal(refused.status, PREREQUISITE_STATUS["UNAVAILABLE"]);
+  assert.match(String(refused.reuseRefused), /symbolic link/);
+  assert.equal(
+    readFileSync(path.join(outside, ".env"), "utf8"),
+    "UNVERIFIED\n",
+    "refusing to reuse a symlinked extraction deleted what it pointed at",
+  );
+
+  // With a verified archive it rebuilds — unlinking the link, never following it.
+  const rebuilt = fixtures.provisionOtelDemoUpstream({
+    repoRoot: fakeRepo({ archive: CANONICAL_ARCHIVE }),
+    worktree,
+  });
+  assert.equal(rebuilt.status, PREREQUISITE_STATUS["SATISFIED"]);
+  assert.equal(rebuilt.reused, false);
+  assert.match(String(rebuilt.rebuiltAfter), /symbolic link/);
+  assert.ok(
+    !readFileSync(path.join(worktree, REL, ".env"), "utf8").includes("UNVERIFIED"),
+    "the rebuild served the attacker's bytes",
+  );
+  assert.equal(
+    existsSync(path.join(outside, ".env")),
+    true,
+    "the rebuild deleted through the symlink instead of unlinking it",
+  );
+});
+
+test("CAMPAIGN-FIXTURE: a symlink above the extraction root is refused, not removed", ARCHIVE_SKIP, () => {
+  const outside = ownedDir("erl2-fixture-outside-");
+  mkdirSync(path.join(outside, PIN.extractionDir), { recursive: true });
+  arbitraryUpstream(path.join(outside, PIN.extractionDir));
+  const worktree = ownedDir("erl2-fixture-wt-");
+  mkdirSync(path.join(worktree, "environments", "otel-demo"), { recursive: true });
+  // `upstream/` itself is the link this time: writing through it would land
+  // outside the worktree, and deleting it would destroy what it names.
+  symlinkSync(outside, path.join(worktree, "environments", "otel-demo", "upstream"));
+
+  const outcome = fixtures.provisionOtelDemoUpstream({
+    repoRoot: fakeRepo({ archive: CANONICAL_ARCHIVE }),
+    worktree,
+  });
+  assert.equal(outcome.status, PREREQUISITE_STATUS["UNAVAILABLE"]);
+  assert.match(String(outcome.reason), /symbolic link|Refusing/);
+  assert.equal(existsSync(path.join(outside, PIN.extractionDir, ".env")), true);
+});
+
+for (const declared of OTEL_DEMO_UPSTREAM_PATHS) {
+  test(`CAMPAIGN-FIXTURE: a symlinked \`${declared}\` inside a marked extraction is refused`, ARCHIVE_SKIP, () => {
+    const worktree = ownedDir("erl2-fixture-wt-");
+    const provisioned = fixtures.provisionOtelDemoUpstream({
+      repoRoot: fakeRepo({ archive: CANONICAL_ARCHIVE }),
+      worktree,
+    });
+    assert.equal(provisioned.status, PREREQUISITE_STATUS["SATISFIED"]);
+
+    const outside = ownedDir("erl2-fixture-outside-");
+    const target = path.join(outside, "planted");
+    writeFileSync(target, "OUTSIDE\n");
+    rmSync(path.join(worktree, REL, declared));
+    symlinkSync(target, path.join(worktree, REL, declared));
+
+    const verified = fixtures.verifyExtraction({ worktree, pin: PIN });
+    assert.equal(verified.ok, false, `a symlinked ${declared} still verified`);
+    assert.equal(verified.escaped, true);
+    assert.match(String(verified.reason), /symbolic link/);
+  });
+}
+
+test("CAMPAIGN-FIXTURE: an arbitrary complete directory with no marker is not an extraction", () => {
+  const worktree = ownedDir("erl2-fixture-wt-");
+  mkdirSync(path.join(worktree, REL), { recursive: true });
+  arbitraryUpstream(path.join(worktree, REL), "ARBITRARY");
+
+  // Complete by the old test — every declared path present — and worthless.
+  assert.equal(fixtures.extractionComplete(path.join(worktree, REL)), true);
+  const verified = fixtures.verifyExtraction({ worktree, pin: PIN });
+  assert.equal(verified.ok, false);
+  assert.equal(verified.unmarked, true);
+
+  const outcome = fixtures.provisionOtelDemoUpstream({ repoRoot: fakeRepo(), worktree });
+  assert.equal(outcome.status, PREREQUISITE_STATUS["UNAVAILABLE"]);
+  assert.match(String(outcome.reuseRefused), /carries no/);
+});
+
+test("CAMPAIGN-FIXTURE: a marker whose bytes do not describe the files beside it is refused", ARCHIVE_SKIP, () => {
+  const worktree = ownedDir("erl2-fixture-wt-");
+  fixtures.provisionOtelDemoUpstream({ repoRoot: fakeRepo({ archive: CANONICAL_ARCHIVE }), worktree });
+
+  // The marker is left correct and one extracted file is edited: the case a
+  // marker-only check would pass, which is why every digest is recomputed.
+  writeFileSync(path.join(worktree, REL, ".env"), "TAMPERED\n");
+  const verified = fixtures.verifyExtraction({ worktree, pin: PIN });
+  assert.equal(verified.ok, false);
+  assert.equal(verified.tampered, true);
+  assert.match(String(verified.reason), /\.env is sha256:/);
+});
+
+test("CAMPAIGN-FIXTURE: a perfectly self-consistent forged marker is still refused", () => {
+  const worktree = ownedDir("erl2-fixture-wt-");
+  mkdirSync(path.join(worktree, REL), { recursive: true });
+  arbitraryUpstream(path.join(worktree, REL), "FORGED");
+  // The strongest forgery available to anything that can write in the worktree:
+  // a marker written *about* the arbitrary files, naming the pinned release and
+  // archive, listing exactly the required paths, with digests that genuinely
+  // recompute. Every marker-internal check passes.
+  const digests: Record<string, string> = {};
+  for (const declared of OTEL_DEMO_UPSTREAM_PATHS) {
+    digests[declared] = fixtures.sha256File(path.join(worktree, REL, declared));
+  }
+  writeFileSync(
+    path.join(worktree, REL, fixtures.FIXTURE_MARKER_NAME),
+    `${JSON.stringify(fixtures.fixtureMarker({ pin: PIN, extractionRelative: REL, digests }), null, 2)}\n`,
+  );
+
+  // …and it fails on the one question the forger cannot answer, because the
+  // answer is committed: `substrate-lock.json` pins the digests of the real
+  // configuration files, and these are not among them.
+  const verified = fixtures.verifyExtraction({ worktree, pin: PIN });
+  assert.equal(verified.ok, false, "a forged marker satisfied verification");
+  assert.equal(verified.tampered, true);
+  assert.match(String(verified.reason), /substrate-lock\.json does not pin/);
+
+  const provisioned = fixtures.provisionOtelDemoUpstream({ repoRoot: fakeRepo(), worktree });
+  assert.equal(provisioned.status, PREREQUISITE_STATUS["UNAVAILABLE"]);
+  assert.match(String(provisioned.reuseRefused), /substrate-lock\.json does not pin/);
+});
+
+test("CAMPAIGN-FIXTURE: the pin reads its content digests from the tracked substrate lock", () => {
+  const lock = JSON.parse(
+    readFileSync(path.join(repoRoot, "environments", "otel-demo", "substrate-lock.json"), "utf8"),
+  ) as { config_hashes: string[] };
+  assert.deepEqual([...PIN.configHashes], lock.config_hashes);
+  assert.ok(PIN.configHashes.length >= OTEL_DEMO_UPSTREAM_PATHS.length);
+});
+
+test("CAMPAIGN-FIXTURE: a marker for a different archive is refused against the committed pin", ARCHIVE_SKIP, () => {
+  const worktree = ownedDir("erl2-fixture-wt-");
+  fixtures.provisionOtelDemoUpstream({ repoRoot: fakeRepo({ archive: CANONICAL_ARCHIVE }), worktree });
+  const markerPath = path.join(worktree, REL, fixtures.FIXTURE_MARKER_NAME);
+
+  for (const [field, value] of [
+    ["archive_sha256", `sha256:${"00".repeat(32)}`],
+    ["release", "2.9.9"],
+    ["schema", "something.else"],
+    ["version", 99],
+    ["extraction_root", "environments/otel-demo/upstream/extracted-elsewhere"],
+  ] as const) {
+    const marker = JSON.parse(readFileSync(markerPath, "utf8")) as Record<string, unknown>;
+    const original = marker[field];
+    marker[field] = value;
+    writeFileSync(markerPath, `${JSON.stringify(marker, null, 2)}\n`);
+    const verified = fixtures.verifyExtraction({ worktree, pin: PIN });
+    assert.equal(verified.ok, false, `a marker with ${field}=${String(value)} still verified`);
+    assert.equal(verified.forged, true);
+    marker[field] = original;
+    writeFileSync(markerPath, `${JSON.stringify(marker, null, 2)}\n`);
+  }
+  // …and restored, it verifies again, so the loop proved the field and not the rewrite.
+  assert.equal(fixtures.verifyExtraction({ worktree, pin: PIN }).ok, true);
+});
+
+test("CAMPAIGN-FIXTURE: a marker that omits a required path is refused", ARCHIVE_SKIP, () => {
+  const worktree = ownedDir("erl2-fixture-wt-");
+  fixtures.provisionOtelDemoUpstream({ repoRoot: fakeRepo({ archive: CANONICAL_ARCHIVE }), worktree });
+  const markerPath = path.join(worktree, REL, fixtures.FIXTURE_MARKER_NAME);
+  const marker = JSON.parse(readFileSync(markerPath, "utf8")) as { files: Record<string, string> };
+  delete marker.files[".env"];
+  writeFileSync(markerPath, `${JSON.stringify(marker, null, 2)}\n`);
+
+  const verified = fixtures.verifyExtraction({ worktree, pin: PIN });
+  assert.equal(verified.ok, false);
+  assert.equal(verified.forged, true);
+});
+
+test("CAMPAIGN-FIXTURE: reuse recomputes rather than trusting the marker it just read", ARCHIVE_SKIP, () => {
+  const worktree = ownedDir("erl2-fixture-wt-");
+  const first = fixtures.provisionOtelDemoUpstream({
+    repoRoot: fakeRepo({ archive: CANONICAL_ARCHIVE }),
+    worktree,
+  });
+  assert.equal(first.verified, true);
+
+  // Reuse with no archive anywhere: it must still be able to prove the bytes.
+  const reused = fixtures.provisionOtelDemoUpstream({ repoRoot: fakeRepo(), worktree });
+  assert.equal(reused.status, PREREQUISITE_STATUS["SATISFIED"]);
+  assert.equal(reused.reused, true);
+  assert.equal(reused.verified, true);
+  assert.deepEqual(reused.marker?.files, first.marker?.files);
+
+  // One byte changed, same marker, no archive: reuse must now refuse rather than
+  // fall back to the extraction it can no longer vouch for.
+  writeFileSync(path.join(worktree, REL, "compose.yaml"), "services: {}\n");
+  const refused = fixtures.provisionOtelDemoUpstream({ repoRoot: fakeRepo(), worktree });
+  assert.equal(refused.status, PREREQUISITE_STATUS["UNAVAILABLE"]);
+  assert.match(String(refused.reuseRefused), /do not match/);
+});
+
+// -- what the archive is allowed to contain ----------------------------------
+
+test("CAMPAIGN-FIXTURE: the pinned archive's members are all relative, and the selected ones regular", ARCHIVE_SKIP, () => {
+  const inspected = fixtures.inspectArchiveMembers(CANONICAL_ARCHIVE);
+  assert.equal(inspected.ok, true, inspected.reason);
+  assert.ok((inspected.members ?? 0) > 100, "the pinned archive listing is implausibly short");
+  assert.deepEqual(
+    Object.keys(inspected.selected ?? {}).sort(),
+    [...OTEL_DEMO_UPSTREAM_PATHS].sort(),
+    "the archive selects a different set of paths than the campaign extracts",
+  );
+});
+
+test("CAMPAIGN-FIXTURE: an archive member that escapes the extraction root is refused", () => {
+  // Listings rather than tarballs: `tar`'s own handling of absolute and
+  // traversing members differs between the GNU and BSD families, and the claim
+  // under test is that *this* code refuses them before `tar` is ever asked.
+  const listing = (names: readonly string[]) => (command: string, args: readonly string[]) => ({
+    status: 0,
+    stdout: args.includes("-tvzf")
+      ? names.map((n) => `-rw-r--r--  0 root root 10 Jan  1 00:00 ${n}`).join("\n")
+      : names.join("\n"),
+    stderr: "",
+  });
+  const good = ["demo/compose.yaml", "demo/.env", "demo/src/otel-collector/otelcol-config.yml"];
+
+  for (const [what, names] of [
+    ["an absolute path", ["/etc/passwd", ...good]],
+    ["upward traversal", ["demo/../../escape.yaml", ...good]],
+    ["a duplicate selected member", [...good, "other/compose.yaml".replace("other", "demo")]],
+  ] as const) {
+    const inspected = fixtures.inspectArchiveMembers("fake.tar.gz", listing(names) as never);
+    assert.equal(inspected.ok, false, `${what} was accepted`);
+  }
+
+  // The control: the same three members, alone, are fine.
+  assert.equal(fixtures.inspectArchiveMembers("fake.tar.gz", listing(good) as never).ok, true);
+});
+
+test("CAMPAIGN-FIXTURE: a real archive whose selected member is a symlink is refused", () => {
+  const staging = ownedDir("erl2-fixture-tar-");
+  const demo = path.join(staging, "demo");
+  mkdirSync(path.join(demo, "src", "otel-collector"), { recursive: true });
+  writeFileSync(path.join(demo, "compose.yaml"), "services: {}\n");
+  writeFileSync(path.join(demo, "src", "otel-collector", "otelcol-config.yml"), "receivers: {}\n");
+  // `.env` is a link out of the archive's own root — the escape a digest check
+  // would happily wave through, because these really are the pinned bytes.
+  symlinkSync("/etc/hosts", path.join(demo, ".env"));
+  const archive = path.join(staging, "hostile.tar.gz");
+  const built = spawnSync("tar", ["-czf", archive, "-C", staging, "demo"], { encoding: "utf8" });
+  assert.equal(built.status, 0, built.stderr);
+
+  const inspected = fixtures.inspectArchiveMembers(archive);
+  assert.equal(inspected.ok, false, "a symlinked member was accepted");
+  assert.match(String(inspected.reason), /unexpected links/);
+});
+
+test("CAMPAIGN-FIXTURE: containment resolution reports where a path leaves the root", () => {
+  const root = ownedDir("erl2-fixture-root-");
+  const outside = ownedDir("erl2-fixture-outside-");
+  mkdirSync(path.join(root, "a", "b"), { recursive: true });
+  writeFileSync(path.join(root, "a", "b", "file"), "in\n");
+  symlinkSync(outside, path.join(root, "a", "link"));
+
+  assert.equal(fixtures.resolveContained(root, "a/b/file").ok, true);
+  assert.equal(fixtures.resolveContained(root, "a/b/file").exists, true);
+  // A path that does not exist yet is answerable, and answers with the full path.
+  const future = fixtures.resolveContained(root, "a/b/c/d/e");
+  assert.equal(future.ok, true);
+  assert.equal(future.exists, false);
+  assert.equal(future.path, path.join(realpathSync(root), "a", "b", "c", "d", "e"));
+
+  for (const escape of ["a/link", "a/link/anything", "../outside", "a/../../x"]) {
+    assert.equal(fixtures.resolveContained(root, escape).ok, false, `${escape} was accepted`);
+  }
+  assert.equal(fixtures.resolveContained(root, "/etc/passwd").ok, false);
+});
 
 test("CAMPAIGN-FIXTURE: only declared controls request a prerequisite, and only known ones", () => {
   const declaring = harness.CONTROLS.filter((c) => c.requiresPrerequisite !== undefined);
