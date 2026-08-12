@@ -99,3 +99,33 @@ Test and test-support only: `tests/support/durableTelemetry.ts`,
 in `tests/e2e/composeEnvironmentRun.test.ts`. No Package A contract, SDK, host,
 reducer, certification or claim-firewall code was touched, and the
 driver-substitution test keeps its semantics unchanged.
+
+## Review closure (2026-08-12)
+
+An independent Package B review confirmed this correction is test-only and
+watched it pass a live COMPOSE-E2E execution with no Docker residue. It found
+two gaps in what the observation *proves*, both closed in
+[the Package A remediation](subject-adapter-v2-package-a-remediation.md):
+
+- **The follower's readiness was never established.** The capture file is
+  created by `openSync` before `docker container logs --follow` is known to have
+  attached, and the observer treated a readable file as a completed look. A
+  follower that never attached was therefore reported as `TRACE_NOT_EMITTED` —
+  the same false statement this package exists to remove, relocated from "the
+  line rotated away" to "we never attached", which left
+  `TRACE_OBSERVATION_UNAVAILABLE` unreachable on the live path. Readiness is now
+  read from the follower process: a spawn failure, an `error`, a stream error or
+  an unrequested exit makes the capture unusable.
+- **Block termination had no control.** The boundary was correct, and the
+  mutation that never terminates a block survived the whole suite while
+  crediting 107 spans from an earlier run to the current one. The existing
+  cross-run fixture could not catch it, because it contained no marker for the
+  current run at all. A two-block fixture now pins both directions.
+
+A batch read between its summary line and its dump is now an incomplete
+observation rather than an absence, and a complete terminal block is explicitly
+asserted not to be treated as truncated, so the new distinction cannot decay
+into never failing.
+
+Still no substrate change: no collector configuration, overlay, mount, image,
+release tag, digest, lock, retention limit, timeout or product code path.

@@ -83,3 +83,29 @@ carry-forward cannot be claimed unchanged because Package A alters the adapter
 host and protocol boundary. Whether the full campaign must be rerun is left to
 the independent Package B architecture, security, compatibility, and
 certification-scope review, as required by the approved package boundary.
+
+## Superseded by the review-closure remediation
+
+The independent Package B review returned `CHANGES REQUIRED` against this
+record. Four findings were closed by
+[the remediation package](subject-adapter-v2-package-a-remediation.md), which is
+the current statement of what this branch establishes:
+
+- the cleanup reducer inferred `observed_clean` from a completed
+  `report-residue` operation, so the "cleanup, freeze and result" row of the
+  targeted validation above overstated what the reducer could distinguish;
+- the v2-to-governed `HostedSubjectPort` refusal had no test, so the claim
+  firewall was proven at the schema level only;
+- a telemetry follower that never attached was reported as emitted-nothing;
+- the parser's block termination had no load-bearing control.
+
+Two corrections to this record itself:
+
+- The twelve mutations tabulated above ran in a separate script that
+  `npm run negative-control` could not discover. They are now canonical controls;
+  canonical discovery reports 146.
+- A `targeted regression total: 199/199` figure circulated alongside this record
+  in the handoff status. It is not stated in this file, it is supported by no
+  retained evidence, and it does not reconcile with the totals above
+  (29 + 142 = 171, or 186 including the 15 durable-telemetry controls). **It is
+  withdrawn.** The measured totals are recorded in the remediation ledger.
