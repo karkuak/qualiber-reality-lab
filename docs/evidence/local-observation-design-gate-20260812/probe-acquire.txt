@@ -1,0 +1,2 @@
+MINIMAL acquire status: failed unsupported_inputs: []
+FIXTURE acquire status: supported unsupported_inputs: []
