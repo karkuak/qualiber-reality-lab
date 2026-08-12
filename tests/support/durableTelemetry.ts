@@ -71,6 +71,8 @@ export interface DurableTelemetryObservation {
   readonly observationComplete: boolean;
   readonly firstObservedAt: string | undefined;
   readonly diagnosticCode: TelemetryDiagnosticCode;
+  /** Why nothing is claimed, when the observation itself could not be made. */
+  readonly unavailableReason: string | undefined;
   readonly evidenceRefs: readonly string[];
 }
 
@@ -100,14 +102,37 @@ const SIGNAL_SUMMARY_LINE = /\t(?:Traces|Metrics|Logs|Profiles)\t\{/;
 /** A run marker as the reference adapter writes it into the request URL. */
 const RUN_MARKER = /erl2_run=([0-9a-fA-F-]{1,64})/g;
 
+/**
+ * Whether the follower is in a state where its capture means anything.
+ *
+ * This exists because creating the capture file proves nothing. `openSync` on a
+ * fresh path succeeds whether or not `docker container logs --follow` ever
+ * attached, so an observer that treats "the file is readable" as "we looked"
+ * will read an empty file after a failed attach and report that the collector
+ * received nothing. That is the same false statement the durable capture was
+ * written to remove, relocated from "the line rotated away" to "we never
+ * attached". Readiness is tracked from the follower process itself.
+ */
+export interface CaptureReadiness {
+  readonly usable: boolean;
+  /** Why the follower is unusable, for the diagnostic message. */
+  readonly detail: string | undefined;
+}
+
 /** A live `docker logs --follow` copy of one container's output. */
 export interface CollectorCapture {
   readonly containerName: string;
   readonly capturePath: string;
+  /** Whether the follower attached and has not since failed. */
+  readiness(): CaptureReadiness;
   /** Detach the follower and stop writing. Safe to call more than once. */
   stop(): void;
   /** Remove the task-owned capture file. Implies `stop()`. */
   dispose(): void;
+}
+
+function describe(cause: unknown): string {
+  return cause instanceof Error ? cause.message.slice(0, 200) : String(cause).slice(0, 200);
 }
 
 /**
@@ -117,6 +142,12 @@ export interface CollectorCapture {
  * records, and a second prefix would only complicate the parse. `--follow`
  * replays the log from the beginning and then streams, so attaching as soon as
  * the container exists captures the whole of it.
+ *
+ * `docker logs` writes the container's stdout *and* stderr, and the collector's
+ * console exporter writes to stderr, so both are deliberately directed at the
+ * same file. That is also why a failed attach cannot be detected by inspecting
+ * the file — the daemon's own error text lands in it — and must instead be read
+ * from the process: an `error` event, or an exit we did not ask for.
  */
 export function startCollectorCapture(options: {
   readonly containerName: string;
@@ -126,27 +157,98 @@ export function startCollectorCapture(options: {
   const capturePath = path.join(options.directory, `${options.containerName}.stream.log`);
   const fd = openSync(capturePath, "w");
   const args = ["container", "logs", "--follow", options.containerName];
-  const child =
-    options.spawnProcess === undefined
-      ? spawn("docker", [...args], { stdio: ["ignore", fd, fd] })
-      : options.spawnProcess("docker", args, fd);
+
+  let failure: string | undefined;
   let stopped = false;
-  const stop = (): void => {
-    if (stopped) return;
-    stopped = true;
-    child.kill("SIGTERM");
+  let fdOpen = true;
+  const closeCapture = (): void => {
+    if (!fdOpen) return;
+    fdOpen = false;
     try {
       closeSync(fd);
     } catch {
-      // Already closed by the child's exit; nothing to release.
+      // Already released by the child's exit; nothing further to close.
     }
   };
+
+  let child: ChildProcess;
+  try {
+    child =
+      options.spawnProcess === undefined
+        ? spawn("docker", [...args], { stdio: ["ignore", fd, fd] })
+        : options.spawnProcess("docker", args, fd);
+  } catch (cause) {
+    // A synchronous spawn failure: there is no follower and never was one.
+    closeCapture();
+    return {
+      containerName: options.containerName,
+      capturePath,
+      readiness: () => ({ usable: false, detail: `the follower could not be started: ${describe(cause)}` }),
+      stop: () => undefined,
+      dispose: () => {
+        rmSync(capturePath, { force: true });
+      },
+    };
+  }
+
+  child.on("error", (cause) => {
+    failure ??= `the follower failed to attach: ${describe(cause)}`;
+  });
+  // A stream-level failure on an injected follower is an observation failure
+  // too: bytes the container produced are being lost, not absent.
+  child.stdout?.on("error", (cause) => {
+    failure ??= `the follower's stream failed: ${describe(cause)}`;
+  });
+  child.on("exit", (code, signal) => {
+    closeCapture();
+    if (stopped) return;
+    // Exit code 0 is the container's log ending cleanly, which leaves a
+    // complete capture. Anything else — most commonly "No such container" —
+    // means we were never watching what we claimed to watch.
+    if (code !== 0) {
+      failure ??= `the follower exited early with ${
+        signal === null || signal === undefined ? `status ${String(code)}` : `signal ${signal}`
+      }`;
+    }
+  });
+
+  const stop = (): void => {
+    if (stopped) return;
+    stopped = true;
+    try {
+      child.kill("SIGTERM");
+    } catch {
+      // Already gone; `exit` has run or will run, and reaping is Node's.
+    }
+    closeCapture();
+  };
+
   return {
     containerName: options.containerName,
     capturePath,
+    readiness: () => ({ usable: failure === undefined, detail: failure }),
     stop,
     dispose: () => {
       stop();
+      rmSync(capturePath, { force: true });
+    },
+  };
+}
+
+/**
+ * A capture backed by a file that is already complete.
+ *
+ * For fixtures that exercise the parser and the classifier without a follower.
+ * It is explicit rather than a default parameter so that no live call site can
+ * silently inherit "assume the observation worked".
+ */
+export function completedCapture(capturePath: string): CollectorCapture {
+  return {
+    containerName: path.basename(capturePath),
+    capturePath,
+    readiness: () => ({ usable: true, detail: undefined }),
+    stop: () => undefined,
+    dispose: () => {
       rmSync(capturePath, { force: true });
     },
   };
@@ -199,6 +301,7 @@ export function parseDurableTelemetry(
   readonly unattributedSpanCount: number;
   readonly traceBatches: number;
   readonly firstObservedAt: string | undefined;
+  readonly terminalBlockTruncated: boolean;
 } {
   const lines = text.split("\n");
   let currentRunSpanCount = 0;
@@ -206,6 +309,10 @@ export function parseDurableTelemetry(
   let unattributedSpanCount = 0;
   let traceBatches = 0;
   let firstObservedAt: string | undefined;
+  // A summary line with no dump beneath it is a batch we caught mid-write. Its
+  // spans are real but its attribution has not been written yet, so concluding
+  // "none of this is ours" from it would be reading a sentence half-typed.
+  let terminalBlockTruncated = false;
 
   for (let index = 0; index < lines.length; index += 1) {
     const header = TRACE_BATCH_LINE.exec(lines[index] ?? "");
@@ -220,23 +327,33 @@ export function parseDurableTelemetry(
       const stamp = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)/.exec(lines[index] ?? "");
       firstObservedAt = stamp?.[1];
     }
-    // The batch's own detailed dump: everything up to the next console record.
+    // The batch's own detailed dump: everything up to the next signal summary.
     const markers = new Set<string>();
+    let dumpLines = 0;
     for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
       const line = lines[cursor] ?? "";
       if (SIGNAL_SUMMARY_LINE.test(line)) break;
+      if (line.length > 0) dumpLines += 1;
       RUN_MARKER.lastIndex = 0;
       for (const match of line.matchAll(RUN_MARKER)) {
         if (match[1] !== undefined) markers.add(match[1]);
       }
     }
+    terminalBlockTruncated = dumpLines === 0;
     if (!usable) continue;
     if (markers.has(runId)) currentRunSpanCount += spans;
     else if (markers.size > 0) otherRunSpanCount += spans;
     else unattributedSpanCount += spans;
   }
 
-  return { currentRunSpanCount, otherRunSpanCount, unattributedSpanCount, traceBatches, firstObservedAt };
+  return {
+    currentRunSpanCount,
+    otherRunSpanCount,
+    unattributedSpanCount,
+    traceBatches,
+    firstObservedAt,
+    terminalBlockTruncated,
+  };
 }
 
 /** Turn parsed counts into the first missing transition. */
@@ -264,13 +381,14 @@ export function classifyDurableTelemetry(input: {
  * process spawn, which is what keeps the loop honest on a saturated host.
  */
 export function awaitDurableTelemetry(options: {
-  readonly capturePath: string;
+  readonly capture: CollectorCapture;
   readonly runId: string;
   readonly attempts?: number;
   readonly sleep?: (ms: number) => void;
 }): DurableTelemetryObservation {
   const attempts = options.attempts ?? 40;
   const sleep = options.sleep ?? defaultSleep;
+  const capturePath = options.capture.capturePath;
   let last = {
     available: false,
     currentRunSpanCount: 0,
@@ -278,17 +396,48 @@ export function awaitDurableTelemetry(options: {
     unattributedSpanCount: 0,
     traceBatches: 0,
     firstObservedAt: undefined as string | undefined,
+    terminalBlockTruncated: false,
     bytes: 0,
   };
+  let unusable: string | undefined;
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const capture = readCapture(options.capturePath);
-    if (capture !== undefined) {
-      const parsed = parseDurableTelemetry(capture.text, options.runId);
-      last = { available: true, ...parsed, bytes: capture.bytes };
-      if (parsed.currentRunSpanCount > 0) break;
+    // Readiness first. A follower that failed makes the file's contents
+    // meaningless — an empty capture then says nothing about the collector, so
+    // there is no count to fall back on and no absence to report.
+    const readiness = options.capture.readiness();
+    if (!readiness.usable) {
+      unusable = readiness.detail ?? "the follower is not attached";
+      last = { ...last, available: false };
+      break;
     }
+    const capture = readCapture(capturePath);
+    if (capture === undefined) {
+      unusable = `the capture at ${capturePath} could not be read`;
+      last = { ...last, available: false };
+      break;
+    }
+    const parsed = parseDurableTelemetry(capture.text, options.runId);
+    last = { available: true, ...parsed, bytes: capture.bytes };
+    if (parsed.currentRunSpanCount > 0) break;
     if (attempt < attempts - 1) sleep(1000);
+  }
+
+  // A late failure invalidates an otherwise complete-looking read: if the
+  // follower died halfway, what we hold is a truncated view of the run and must
+  // not be reported as "the collector emitted nothing more".
+  const finalReadiness = options.capture.readiness();
+  if (!finalReadiness.usable && last.currentRunSpanCount === 0) {
+    unusable ??= finalReadiness.detail ?? "the follower is not attached";
+    last = { ...last, available: false };
+  }
+
+  // A capture whose last batch is a bare summary was read mid-write. Its
+  // attribution is still being written, so "no spans for this run" is a claim
+  // about our timing rather than about the collector.
+  if (last.available && last.currentRunSpanCount === 0 && last.terminalBlockTruncated) {
+    unusable ??= `the capture ends inside an unterminated trace batch at ${capturePath}`;
+    last = { ...last, available: false };
   }
 
   const diagnosticCode = classifyDurableTelemetry({ ...last, deadlineReached: true });
@@ -300,7 +449,8 @@ export function awaitDurableTelemetry(options: {
     observationComplete: last.available,
     firstObservedAt: last.firstObservedAt,
     diagnosticCode,
-    evidenceRefs: last.available ? [`${options.capturePath} (${String(last.bytes)} bytes)`] : [],
+    unavailableReason: unusable,
+    evidenceRefs: last.available ? [`${capturePath} (${String(last.bytes)} bytes)`] : [],
   };
 }
 
@@ -319,7 +469,9 @@ export function explainDurableTelemetry(observation: DurableTelemetryObservation
     `refs=${observation.evidenceRefs.join(",")}`;
   switch (observation.diagnosticCode) {
     case "TRACE_OBSERVATION_UNAVAILABLE":
-      return `TRACE_OBSERVATION_UNAVAILABLE: the durable collector capture could not be read, so nothing is claimed about telemetry — ${detail}`;
+      return `TRACE_OBSERVATION_UNAVAILABLE: ${
+        observation.unavailableReason ?? "the durable collector capture could not be read"
+      }, so nothing is claimed about telemetry — ${detail}`;
     case "TRACE_NOT_EMITTED":
       return `TRACE_NOT_EMITTED: the collector received no trace batch at all within the deadline — ${detail}`;
     case "TRACE_RUN_ATTRIBUTION_MISSING":

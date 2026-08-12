@@ -253,7 +253,7 @@ function retained<T>(run: ComposeRun, ...segments: readonly string[]): T {
  * rotation inside the container cannot evict what was already observed.
  */
 function telemetry(capture: CollectorCapture, run: ComposeRun): DurableTelemetryObservation {
-  return awaitDurableTelemetry({ capturePath: capture.capturePath, runId: run.runId });
+  return awaitDurableTelemetry({ capture, runId: run.runId });
 }
 
 test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compose substrate", SKIP, () => {
