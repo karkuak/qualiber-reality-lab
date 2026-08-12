@@ -181,7 +181,7 @@
         },
         "profile": "local-developer",
         "node_version": "v26.4.0",
-        "registered_contracts": 156,
+        "registered_contracts": 166,
         "lifecycle_states": 63,
         "separation_domains": 21,
         "threshold_vrf": "THRESHOLD_VRF_NOT_ACTIVATED",
