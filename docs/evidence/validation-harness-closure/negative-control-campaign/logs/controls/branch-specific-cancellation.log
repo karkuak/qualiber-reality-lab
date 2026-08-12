@@ -1,0 +1,150 @@
+✔ ENV-CANCEL: cancellation before provisioning stays pre-environment (6780.767125ms)
+✖ ENV-CANCEL: a live environment never receives a `not_required` cleanup (4608.001958ms)
+✖ ENV-CANCEL: cancellation during journey execution enumerates its frontier (7518.576208ms)
+✖ ENV-CANCEL: cancellation after restoration begins takes the emergency route (14119.408209ms)
+✔ ENV-CANCEL: cancellation during partial provisioning enumerates what was created (4129.817667ms)
+✖ ENV-CANCEL: replaying a completed cancellation writes nothing and returns the same record (4725.8075ms)
+✔ ENV-CANCEL: cancellation after a valid terminal is refused (15171.835292ms)
+✖ ENV-CANCEL: reservations are held until cleanup is proven, then released (4614.464458ms)
+✖ ENV-CANCEL: the substrate is actually cleaned up, not merely declared clean (4728.891042ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 3
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 66774.269834
+
+✖ failing tests:
+
+test at tests/dist/e2e/environmentCancellation.test.js:82:1
+✖ ENV-CANCEL: a live environment never receives a `not_required` cleanup (4608.001958ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to:
+  
+  'none'
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentCancellation.test.js:91:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'none',
+    expected: 'none',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentCancellation.test.js:102:1
+✖ ENV-CANCEL: cancellation during journey execution enumerates its frontier (7518.576208ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'pre_environment'
+  - 'journey_execution'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentCancellation.test.js:106:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'pre_environment',
+    expected: 'journey_execution',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentCancellation.test.js:111:1
+✖ ENV-CANCEL: cancellation after restoration begins takes the emergency route (14119.408209ms)
+  AssertionError [ERR_ASSERTION]: a cancellation after cleanup began has exactly one authorized route
+  + actual - expected
+  
+  + 'pre_environment'
+  - 'emergency_environment'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentCancellation.test.js:116:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'pre_environment',
+    expected: 'emergency_environment',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentCancellation.test.js:139:1
+✖ ENV-CANCEL: replaying a completed cancellation writes nothing and returns the same record (4725.8075ms)
+  AssertionError [ERR_ASSERTION]: a replay returns the same terminal
+  + actual - expected
+  
+  + undefined
+  - 'sha256:cb76a6760e8abf697ca53686d35a78091dcf4ffbd53dee612285ce0aa3c8ce9d'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentCancellation.test.js:145:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'sha256:cb76a6760e8abf697ca53686d35a78091dcf4ffbd53dee612285ce0aa3c8ce9d',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentCancellation.test.js:156:1
+✖ ENV-CANCEL: reservations are held until cleanup is proven, then released (4614.464458ms)
+  AssertionError [ERR_ASSERTION]: a cancelled run returns its substrate identities
+  
+  4 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentCancellation.test.js:161:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentCancellation.test.js:165:1
+✖ ENV-CANCEL: the substrate is actually cleaned up, not merely declared clean (4728.891042ms)
+  AssertionError [ERR_ASSERTION]: cancellation must destroy the run's own resources
+  
+  5 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentCancellation.test.js:174:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 5,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,73 @@
+✔ COMPOSE-ADV: an unqualified lock never reaches a substrate (14.30525ms)
+✔ COMPOSE-ADV: a lock whose amd64 slot holds an arm64 manifest is refused (3.336708ms)
+✔ COMPOSE-ADV: a lock pinning an EXTRA service is refused (1.861083ms)
+✔ COMPOSE-ADV: a lock MISSING one of the subset's images is refused (1.454625ms)
+✔ COMPOSE-ADV: a changed applied configuration file is refused before provisioning (1.768208ms)
+✔ COMPOSE-ADV: every discovery is an exact run-scoped name or label value (6.72225ms)
+✔ COMPOSE-ADV: a broad cleanup selector is refused by construction (0.098708ms)
+✔ COMPOSE-ADV: a foreign object wearing this run's project label stops the teardown (2.800708ms)
+✔ COMPOSE-ADV: a compensation that reverts nothing is receipted as failed (4.548875ms)
+✔ COMPOSE-ADV: a mutation the substrate did not apply is receipted as failed (2.852084ms)
+✔ COMPOSE-ADV: a teardown Compose reports as clean is re-inspected (2.828917ms)
+✔ COMPOSE-ADV: a failed `compose pull` refuses before anything is created (1.407291ms)
+✔ COMPOSE-ADV: a partial provision is reported partial, with everything created (2.122583ms)
+✔ COMPOSE-ADV: a stored receipt is not adopted once the substrate contradicts it (2.256208ms)
+✔ COMPOSE-ADV: an expected container name running an image the lock does not pin is refused (6.816667ms)
+✔ COMPOSE-ADV: an expected container name whose image cannot be resolved at all is refused (3.088666ms)
+✔ COMPOSE-ADV: an expected container carrying another run's run_id label is refused (2.947584ms)
+✔ COMPOSE-ADV: an expected container carrying a foreign driver_id label is refused (3.15125ms)
+✔ COMPOSE-ADV: an expected container carrying a foreign Compose project label is refused (3.136917ms)
+✔ COMPOSE-ADV: an expected container MISSING an ownership label is refused (2.997792ms)
+✔ COMPOSE-ADV: two unproven containers are two inventory entries, not one (2.168083ms)
+✔ COMPOSE-ADV: the baseline observation records what Docker said, not what the lock says (2.792167ms)
+✔ COMPOSE-ADV: an activation observed on an unproven container is not this run's mutation (3.133292ms)
+✖ COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else (138.360291ms)
+✔ COMPOSE-ADV: the substrate identity changes when the daemon does (2.559833ms)
+✔ COMPOSE-ADV: telemetry the collector received is observed with the lines its counts derive from (2.368375ms)
+✔ COMPOSE-ADV: a collector that is not provably this run's yields an absent observation, not a zero (2.010291ms)
+✔ COMPOSE-ADV: a collector whose logs cannot be read is absent for a different, named reason (2.076958ms)
+✔ COMPOSE-ADV: a verified collector that received nothing this run is observed, honestly, as zero (2.174625ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 28
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 471.683792
+
+✖ failing tests:
+
+test at tests/dist/adversarial/composeSubstrate.test.js:658:1
+✖ COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else (138.360291ms)
+  AssertionError [ERR_ASSERTION]: the collector still publishes: [{"mode":"ingress","target":4317,"protocol":"tcp"},{"mode":"ingress","target":4318,"protocol":"tcp"}]
+  + actual - expected
+  
+  + [
+  +   {
+  +     mode: 'ingress',
+  +     protocol: 'tcp',
+  +     target: 4317
+  +   },
+  +   {
+  +     mode: 'ingress',
+  +     protocol: 'tcp',
+  +     target: 4318
+  +   }
+  + ]
+  - undefined
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/composeSubstrate.test.js:676:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ { mode: 'ingress', target: 4317, protocol: 'tcp' }, { mode: 'ingress', target: 4318, protocol: 'tcp' } ],
+    expected: undefined,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

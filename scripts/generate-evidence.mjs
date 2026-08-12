@@ -436,12 +436,29 @@ transcript.push(
   );
 
   // --- the journey, driven by each reference adapter through the real host --
-  const registry = buildGovernorRegistry({ random: seededRandom("adapter-platform") });
+  // The timeout fixture is admitted with a certified receipt over its own real
+  // bytes, so the hostile run stays a *runtime* refusal — the deadline and the
+  // process-tree kill — rather than collapsing into an admission refusal that
+  // would prove something else (ADR-ERL2-036).
+  const registry = buildGovernorRegistry({
+    random: seededRandom("adapter-platform"),
+    certifiedSabotageAdapters: [{ name: "timeout", adapterId: "sabotage-timeout" }],
+  });
   const journeys = [
-    ["reference-correct", registry.referenceCorrectAdapterHash, "verify_package"],
-    ["reference-limited", registry.referenceLimitedAdapterHash, "verify_package"],
+    [
+      "reference-correct",
+      registry.referenceCorrectAdapterHash,
+      registry.referenceCorrectCertificationHash,
+      "verify_package",
+    ],
+    [
+      "reference-limited",
+      registry.referenceLimitedAdapterHash,
+      registry.referenceLimitedCertificationHash,
+      "verify_package",
+    ],
   ];
-  for (const [id, adapterHash] of journeys) {
+  for (const [id, adapterHash, certificationHash] of journeys) {
     const runRoot = path.join(adapterDir, id, "run");
     mkdirSync(runRoot, { recursive: true });
     const base = [
@@ -457,6 +474,7 @@ transcript.push(
       "--run", adapterRunId,
       "--acquisition-source", registry.sourceManifestHash,
       "--adapter", adapterHash,
+      "--adapter-certification", certificationHash,
       "--acquisition-actor-script", registry.acquisitionActorScriptHash,
       "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
       "--acquisition-step", registry.acquisitionStep.commitmentHash,
@@ -494,7 +512,8 @@ transcript.push(
       ...base,
       "--run", hostileRunId,
       "--acquisition-source", registry.sourceManifestHash,
-      "--adapter", registry.referenceCorrectAdapterHash,
+      "--adapter", registry.sabotageAdapterHashes["timeout"].manifestHash,
+      "--adapter-certification", registry.sabotageAdapterHashes["timeout"].certificationHash,
       "--acquisition-actor-script", registry.acquisitionActorScriptHash,
       "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
       "--acquisition-step", registry.acquisitionStep.commitmentHash,
@@ -1035,7 +1054,15 @@ if (mode === "verify") {
   // `run/diagnostics/**` copies moved beneath `subject-output/` and two
   // content-addressed step-outcome names moved with their hashes. 57 files added,
   // 12 removed. Again: the exclusion manifest is unchanged and the pin grew.
-  const EXPECTED_PINNED = 832;
+  //
+  // 832 -> 838 when a real adapter stopped being dispatchable without its
+  // certification receipt (ADR-ERL2-036, closing LIVE-001): each of the three
+  // adapter-platform runs now retains `adapter-certification-receipt.json` and
+  // its `.frozen` marker, and two content-addressed step-outcome names in the
+  // reference-limited run moved with the manifest hash they cover. 10 files
+  // added, 4 removed. The exclusion manifest is unchanged — the pin grew, and
+  // no file became unpinned.
+  const EXPECTED_PINNED = 838;
   const EXPECTED_EXCLUDED = 7;
 
   const manifestDigest = createHash("sha256")

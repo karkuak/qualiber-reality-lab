@@ -140,6 +140,7 @@ function selectedComposeRun(): ComposeRun {
     "preregister-acquisition", ...base0,
     "--acquisition-source", registry.sourceManifestHash,
     "--adapter", registry.referenceOtelDemoAdapterHash,
+    "--adapter-certification", registry.referenceOtelDemoCertificationHash,
     "--acquisition-actor-script", registry.acquisitionActorScriptHash,
     "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
     "--acquisition-step", registry.acquisitionStep.commitmentHash,

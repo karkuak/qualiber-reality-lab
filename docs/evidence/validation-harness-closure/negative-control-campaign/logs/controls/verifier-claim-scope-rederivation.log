@@ -1,0 +1,100 @@
+✔ CLAIM-SCOPE: with no flag, an environment run derives T1 from its own evidence (17677.206542ms)
+✖ CLAIM-SCOPE: T2 and T3 are typed refusals naming what holds the ceiling down (15042.344417ms)
+✔ CLAIM-SCOPE: T1 is accepted, and an out-of-range or T4 request is a typed refusal (29989.014417ms)
+✖ CLAIM-SCOPE: the pre-environment terminal cannot be operator-upgraded either (3149.172167ms)
+✖ CLAIM-SCOPE: a direct library caller derives the same ceiling and cannot exceed it (15007.322ms)
+✔ CLAIM-SCOPE: every component that holds this run at T1 does so independently (15405.782833ms)
+✔ CLAIM-SCOPE: the rule is a minimum, and no component can raise another (0.495833ms)
+✖ CLAIM-SCOPE: the offline verifier rejects a self-consistent T3 bundle, for exceeding the ceiling (15506.631333ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 4
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 112242.392958
+
+✖ failing tests:
+
+test at tests/dist/adversarial/claimScopeEscalation.test.js:67:1
+✖ CLAIM-SCOPE: T2 and T3 are typed refusals naming what holds the ceiling down (15042.344417ms)
+  AssertionError [ERR_ASSERTION]: --claim-scope T2 must be refused
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/claimScopeEscalation.test.js:71:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/claimScopeEscalation.test.js:95:1
+✖ CLAIM-SCOPE: the pre-environment terminal cannot be operator-upgraded either (3149.172167ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'POLICY_CLAIM_SCOPE_EXCEEDS_EVIDENCE'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/claimScopeEscalation.test.js:109:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'POLICY_CLAIM_SCOPE_EXCEEDS_EVIDENCE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/claimScopeEscalation.test.js:112:1
+✖ CLAIM-SCOPE: a direct library caller derives the same ceiling and cannot exceed it (15007.322ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'POLICY_CLAIM_SCOPE_EXCEEDS_EVIDENCE'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/claimScopeEscalation.test.js:124:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'POLICY_CLAIM_SCOPE_EXCEEDS_EVIDENCE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/claimScopeEscalation.test.js:235:1
+✖ CLAIM-SCOPE: the offline verifier rejects a self-consistent T3 bundle, for exceeding the ceiling (15506.631333ms)
+  AssertionError [ERR_ASSERTION]: a T3 attestation over a T1 run must not verify
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/claimScopeEscalation.test.js:287:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

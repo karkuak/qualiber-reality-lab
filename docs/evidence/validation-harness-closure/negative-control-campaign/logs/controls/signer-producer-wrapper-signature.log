@@ -1,0 +1,48 @@
+✔ SIGNER-DERIVE: an ordinary `signature` member is enumerated (0.59775ms)
+✔ SIGNER-DERIVE: a `root_signature` member is enumerated — the omission every run had (0.083125ms)
+✖ SIGNER-DERIVE: a `wrapper_signature` member is enumerated — the review's finding (0.428792ms)
+✔ SIGNER-DERIVE: an unsigned retained artifact is not a member (0.089667ms)
+✔ SIGNER-DERIVE: the public terminal types and the inventory itself are excluded, with reasons (0.420916ms)
+✔ SIGNER-DERIVE: the environment branch excludes two public terminal types (0.104833ms)
+✔ SIGNER-DERIVE: a signed contract with no declared producer role refuses (0.257292ms)
+✔ SIGNER-DERIVE: an authority field the contract does not declare refuses (0.090625ms)
+✔ SIGNER-DERIVE: two authority fields on one artifact refuse (0.0905ms)
+✔ SIGNER-DERIVE: a signature over a different core hash refuses (0.115208ms)
+✔ SIGNER-DERIVE: a malformed signature envelope refuses (0.139792ms)
+✔ SIGNER-DERIVE: two retained files claiming one core hash refuse (0.079416ms)
+✔ SIGNER-DERIVE: the applicable set is ordered by core hash, not by walk order (0.103167ms)
+✔ SIGNER-DERIVE: an empty applicable set is not complete (0.0465ms)
+✔ SIGNER-DERIVE: the projection carries the signer and the signed hash the artifact actually has (0.072042ms)
+✔ SIGNER-DERIVE: the builder refuses an inventory the derivation could not certify (6.171209ms)
+✔ SIGNER-DERIVE: a signed member that appears after the inventory is sealed is refused (0.180916ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 16
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 141.318167
+
+✖ failing tests:
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:87:1
+✖ SIGNER-DERIVE: a `wrapper_signature` member is enumerated — the review's finding (0.428792ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:97:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

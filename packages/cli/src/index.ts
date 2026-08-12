@@ -38,6 +38,7 @@ import {
   unsupportedControls,
 } from "@erl2/core";
 import { parseFlags, requireString, type ParsedFlags } from "./args.js";
+import { admitAdapter } from "./adapterAdmission.js";
 import { ISOLATION_EVIDENCE_DIR, isolationStatus } from "./isolationStatus.js";
 import { OTEL_DEMO_LOCK_FILE, composeSubstrateStatus } from "./composeStatus.js";
 import {
@@ -178,6 +179,7 @@ const IMPLEMENTED_COMMANDS = new Set([
   "resume",
   "verify",
   "verify-record",
+  "admit-adapter",
   "preregister-acquisition",
   "preregister-challenge",
   "select",
@@ -208,6 +210,55 @@ const IMPLEMENTED_COMMANDS = new Set([
   "restore",
   "destroy",
 ]);
+
+/**
+ * Per-command usage, for the commands whose inputs a reader cannot guess.
+ *
+ * Deliberately not a full man page: it documents the admission step, because a
+ * new evaluator has no way to discover that an external adapter needs a
+ * certification receipt, what the three inputs are, or how the development and
+ * scored tiers differ. The journey commands are documented in the runbooks.
+ */
+const COMMAND_USAGE = {
+  "admit-adapter": {
+    summary:
+      "Validate an external adapter's manifest, certification receipt and entry, " +
+      "and publish them into a governor-prepared registry.",
+    required_flags: {
+      "--registry": "the governor-prepared registry directory the artifacts are published into",
+      "--adapter-manifest": "path to the adapter's SubjectAdapterManifestV1 JSON",
+      "--certification-receipt":
+        "path to the SubjectAdapterCertificationReceiptV1 JSON produced by ADAPTER-CERT-V1",
+      "--adapter-entry": "path to the adapter's entry module, whose bytes are re-hashed here",
+    },
+    optional_flags: {
+      "--tier": "development (default), held_out or blind; decides the authentication policy",
+    },
+    trust_behaviour: {
+      development:
+        "a contract-valid, core-hash-valid, in-scope receipt with no verifiable signature is " +
+        "admitted as locally_observed_unauthenticated; no scored, blind or authenticated claim " +
+        "may be derived from it",
+      held_out_and_blind:
+        "a receipt must carry a signature that cryptographically verifies under a pinned " +
+        "certification authority; unsigned, placeholder and unverifiable signatures are refused " +
+        "before the adapter is ever executed",
+      no_override:
+        "there is no flag that admits unsigned evidence at a scored tier; the allowance derives " +
+        "from the selected tier only",
+    },
+    outputs:
+      "a JSON object naming the adapter manifest hash, the certification receipt hash, the " +
+      "adapter artifact hash, the certifier, the certified scope, the authenticity and the " +
+      "registry path the pair was published to",
+    then:
+      "pass the certification receipt hash to preregister-acquisition as " +
+      "--adapter-certification, alongside --adapter and --adapter-entry",
+    cleanup:
+      "remove the printed registry_path directory beneath the registry root; admission creates " +
+      "nothing else and starts no adapter",
+  },
+} as const;
 
 /**
  * Whether this run has entered the environment branch.
@@ -339,7 +390,9 @@ function withRunLease<T>(command: string, argv: readonly string[], fn: () => T):
 export function runCommand(argv: readonly string[]): CommandResult {
   const command = argv[0];
   if (command === undefined || command === "--help" || command === "help") {
-    return ok("help", { data: { commands: [...IMPLEMENTED_COMMANDS].sort() } });
+    return ok("help", {
+      data: { commands: [...IMPLEMENTED_COMMANDS].sort(), usage: COMMAND_USAGE },
+    });
   }
   const rest = argv.slice(1);
   try {
@@ -354,6 +407,8 @@ export function runCommand(argv: readonly string[]): CommandResult {
         return verify(rest);
       case "verify-record":
         return verifyRecord(rest);
+      case "admit-adapter":
+        return ok("admit-adapter", { data: admitAdapter(rest) });
       default: {
         const journey = JOURNEY_COMMANDS[command];
         if (journey) {

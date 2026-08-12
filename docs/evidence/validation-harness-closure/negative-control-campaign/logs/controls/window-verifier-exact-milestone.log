@@ -1,0 +1,64 @@
+✔ WINDOW-BASELINE: a shipped environment terminal commits exactly one window and verifies (18213.258917ms)
+✔ WINDOW-HARNESS: re-sealing the whole chain unchanged still verifies (288.548875ms)
+✖ WINDOW-SHIFTED-WITHIN-BOUNDS: a window moved inside the bounds no longer escapes (288.454292ms)
+✖ WINDOW-SHIFTED-COMMITMENT: moving the commitment to match a shifted window is caught too (289.456917ms)
+✔ WINDOW-OBSERVATION-DURATION: an observation window shifted within bounds is caught (285.574041ms)
+✔ WINDOW-BUNDLE-CUTOFF: an observation bundle whose cutoff disagrees with the commitment refuses (288.475458ms)
+✔ WINDOW-MISSING: a terminal that started traffic and dropped its commitment refuses (286.67675ms)
+✔ WINDOW-UNREACHED: a commitment retained but produced by no event refuses (270.449875ms)
+✔ WINDOW-LATE-COMMITMENT: a window committed after the capture it governs refuses (287.019ms)
+✔ WINDOW-WRONG-SIGNER: a commitment signed by the traffic supervisor refuses (271.581666ms)
+✔ WINDOW-FOREIGN-RUN: a commitment naming another run refuses (281.828792ms)
+✔ WINDOW-POLICY-BINDING: a commitment naming a different cutoff policy refuses (280.475791ms)
+✔ WINDOW-PROCESS-BINDING: a commitment measured from a different process start refuses (282.263625ms)
+✔ WINDOW-CLOCK-BINDING: a commitment in a different clock domain refuses (286.653167ms)
+✔ WINDOW-OBSERVATION-BINDING: a commitment naming a different comparison policy refuses (289.111083ms)
+✔ WINDOW-RULE-BINDING: a commitment declaring another instant rule refuses (306.67025ms)
+✔ WINDOW-INVENTORY: the commitment is an applicable signed member of the terminal (58.344042ms)
+✔ WINDOW-INVENTORY-OMITTED: dropping the commitment from an otherwise complete inventory refuses (271.787167ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 16
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 23002.811292
+
+✖ failing tests:
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:380:1
+✖ WINDOW-SHIFTED-WITHIN-BOUNDS: a window moved inside the bounds no longer escapes (288.454292ms)
+  AssertionError [ERR_ASSERTION]: a within-bounds shifted window must not verify
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:393:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:397:1
+✖ WINDOW-SHIFTED-COMMITMENT: moving the commitment to match a shifted window is caught too (289.456917ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:405:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

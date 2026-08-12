@@ -1,0 +1,48 @@
+✔ SIGNER-DERIVE: an ordinary `signature` member is enumerated (0.605375ms)
+✔ SIGNER-DERIVE: a `root_signature` member is enumerated — the omission every run had (0.083208ms)
+✔ SIGNER-DERIVE: a `wrapper_signature` member is enumerated — the review's finding (0.0825ms)
+✔ SIGNER-DERIVE: an unsigned retained artifact is not a member (0.077917ms)
+✔ SIGNER-DERIVE: the public terminal types and the inventory itself are excluded, with reasons (0.428417ms)
+✔ SIGNER-DERIVE: the environment branch excludes two public terminal types (0.1005ms)
+✔ SIGNER-DERIVE: a signed contract with no declared producer role refuses (0.266333ms)
+✔ SIGNER-DERIVE: an authority field the contract does not declare refuses (0.0915ms)
+✔ SIGNER-DERIVE: two authority fields on one artifact refuse (0.091875ms)
+✔ SIGNER-DERIVE: a signature over a different core hash refuses (0.106291ms)
+✔ SIGNER-DERIVE: a malformed signature envelope refuses (0.128458ms)
+✔ SIGNER-DERIVE: two retained files claiming one core hash refuse (0.080041ms)
+✔ SIGNER-DERIVE: the applicable set is ordered by core hash, not by walk order (0.096583ms)
+✖ SIGNER-DERIVE: an empty applicable set is not complete (0.481125ms)
+✔ SIGNER-DERIVE: the projection carries the signer and the signed hash the artifact actually has (0.074666ms)
+✔ SIGNER-DERIVE: the builder refuses an inventory the derivation could not certify (4.545625ms)
+✔ SIGNER-DERIVE: a signed member that appears after the inventory is sealed is refused (0.18375ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 16
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 140.800875
+
+✖ failing tests:
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:235:1
+✖ SIGNER-DERIVE: an empty applicable set is not complete (0.481125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:248:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

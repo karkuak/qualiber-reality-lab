@@ -1,0 +1,56 @@
+✖ SUBSTRATE-SUBSTITUTION: the exploit's own commands are refused before any cleanup evidence freezes (16630.416625ms)
+✖ SUBSTRATE-SUBSTITUTION: substrate A remains uncleared and no valid attestation is emitted (13339.914041ms)
+✔ SUBSTRATE-SUBSTITUTION: a run bound to a substrate reaches it without being told where it is (15309.415208ms)
+✔ SUBSTRATE-SUBSTITUTION: a mutated retained binding is refused offline (15262.458958ms)
+✔ SUBSTRATE-SUBSTITUTION: a reservation-namespace redirect is refused independently (13285.534166ms)
+✔ SUBSTRATE-SUBSTITUTION: the locator flags are unreachable on the release surface (4069.67025ms)
+✔ SUBSTRATE-SUBSTITUTION: a substrate with no identity cannot stand in for the bound one (13381.529708ms)
+✔ SUBSTRATE-SUBSTITUTION: every bound identity refuses independently, offline (15067.039917ms)
+✔ SUBSTRATE-SUBSTITUTION: a binding signed by the wrong role is refused offline (15627.559416ms)
+✔ SUBSTRATE-SUBSTITUTION: an invalid binding signature is refused offline (15305.654167ms)
+✔ SUBSTRATE-SUBSTITUTION: the same path with a different instance marker is a mismatch (13645.583708ms)
+✔ SUBSTRATE-SUBSTITUTION: a different established substrate is a mismatch, not a fresh start (17417.721083ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 10
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 168989.98875
+
+✖ failing tests:
+
+test at tests/dist/adversarial/substrateSubstitution.test.js:59:1
+✖ SUBSTRATE-SUBSTITUTION: the exploit's own commands are refused before any cleanup evidence freezes (16630.416625ms)
+  AssertionError [ERR_ASSERTION]: the substitution must be refused
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/substrateSubstitution.test.js:72:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/substrateSubstitution.test.js:81:1
+✖ SUBSTRATE-SUBSTITUTION: substrate A remains uncleared and no valid attestation is emitted (13339.914041ms)
+  AssertionError [ERR_ASSERTION]: restore must refuse the substituted substrate
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/substrateSubstitution.test.js:88:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

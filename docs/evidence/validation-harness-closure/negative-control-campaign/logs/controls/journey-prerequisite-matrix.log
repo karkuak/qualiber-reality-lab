@@ -1,0 +1,52 @@
+✔ REFUSAL-ATOMIC: this is P1-10 — journey with a missing comparison policy freezes no cutoff policy (13912.103375ms)
+✔ REFUSAL-ATOMIC: every representative refusal cause leaves the run byte-identical (41526.633125ms)
+✔ REFUSAL-ATOMIC: a refused environment command creates no substrate or reservation directory (4293.070125ms)
+✔ REFUSAL-ATOMIC: nothing is written after the valid terminal, refused or replayed (16314.322791ms)
+✖ PREREQ-CLI: this is P1-9 — a committed post-capture step cannot run before activation (7676.446334ms)
+✔ CANCEL-BRANCH: a live environment never receives a pre-environment cleanup terminal (38534.934791ms)
+✔ CANCEL-BRANCH: the branch is not decided by one file's existence (4262.6585ms)
+✔ CANCEL-BRANCH: an unreadable binding refuses rather than answering pre-environment (3730.041458ms)
+✔ CANCEL-BRANCH: a pre-environment run still takes the pre-environment branch (3620.595375ms)
+✔ CANCEL-BRANCH: cancelling a cleanup interrupted mid-flight continues it, not restarts it (14335.712709ms)
+✔ CANCEL-BRANCH: cancelling after emergency cleanup completed returns its terminal (14247.991917ms)
+✔ CANCEL-BRANCH: cancelling a cancelled run returns the same record and writes nothing (5496.886666ms)
+✔ ENV-CLI: a run advances from case_selected to a finalized environment terminal (21285.332958ms)
+✔ ENV-VERIFY: the environment public bundle verifies offline, as an external reader (15704.453ms)
+✔ ENV-VERIFY: a verifier without the pinned beacon cannot authorize the selection chain (15665.183084ms)
+✔ ENV-CLI: the environment is really torn down and the reservations released (15904.378042ms)
+✔ ENV-CLI: the plan executes exactly the persona the selection opened (4162.444875ms)
+✔ ENV-CLI: an unsupported step is a retained outcome, never a removed case (15630.45975ms)
+✔ ENV-CLI-CRASH: every phase boundary resumes from retained evidence (306764.170208ms)
+✔ ENV-CLI: replaying a finished run adds nothing, whether the phase is idempotent or refused (21178.97775ms)
+✔ ENV-NO-WRITE: every refused environment command adds zero retained evidence (18684.464ms)
+✔ ENV-ORDER: a named step command may not reorder the committed journey (4645.298292ms)
+✔ ENV-SUBSTRATE: the driver's substrate lives outside the run root (3871.64875ms)
+✔ ENV-ORACLE: a canary in the subject's output bytes invalidates the run before it freezes (11390.957625ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 23
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 456441.10375
+
+✖ failing tests:
+
+test at tests/dist/adversarial/lifecycleOrdering.test.js:184:1
+✖ PREREQ-CLI: this is P1-9 — a committed post-capture step cannot run before activation (7676.446334ms)
+  AssertionError [ERR_ASSERTION]: the committed exercise step must not run before activation
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/lifecycleOrdering.test.js:190:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

@@ -170,7 +170,7 @@ npm run evidence
 ```
 
 Byte-compare a deterministic generation against the pinned goldens without
-touching them (832 files pinned; 7 are excluded with a printed reason — the
+touching them (838 files pinned; 7 are excluded with a printed reason — the
 adapter `request.frames` bake an absolute workspace path, `grandchild.pid` is a
 real OS pid, and `cli-transcript.json` records absolute CLI paths):
 
@@ -192,6 +192,26 @@ development fake port by adding `--adapter-entry`:
 ```bash
 node packages/cli/dist/src/bin.js acquire --run-root ./run --registry ./registry --tier development --run RUN_ID --adapter-entry adapters/reference-correct/dist/src/main.js
 ```
+
+An adapter the Lab did not author has to be **admitted on its certification
+receipt** first — a real adapter is never dispatched without one. Admission is
+one command, and it prints the two hashes the journey then takes
+(ADR-ERL2-036; see [`runbooks/adapter.md`](runbooks/adapter.md) for the trust
+matrix, the typed refusals and cleanup):
+
+```bash
+node packages/cli/dist/src/bin.js admit-adapter --registry ./registry --adapter-manifest ./adapter/manifest.json --certification-receipt ./adapter/receipt.json --adapter-entry ./adapter/main.mjs
+```
+
+```bash
+node packages/cli/dist/src/bin.js preregister-acquisition --run-root ./run --registry ./registry --tier development --adapter-entry ./adapter/main.mjs --adapter ADAPTER_MANIFEST_HASH --adapter-certification CERTIFICATION_RECEIPT_HASH --acquisition-source HASH --acquisition-actor-script HASH --acquisition-actor-schema HASH --acquisition-step HASH --package-verification-step HASH --generic-policy HASH --trust-policy HASH --limits HASH --expires 2026-12-31T00:00:00Z
+```
+
+At `--tier development` an unsigned receipt is admitted and labelled
+`locally_observed_unauthenticated`; a scored tier requires one signed by a
+pinned certification authority. The remaining `HASH` values still come from a
+governor-prepared registry, which is prepared out of band — admission removes
+one blocker, not the whole setup.
 
 Verify a public bundle offline, exactly as an external consumer would:
 

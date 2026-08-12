@@ -1,0 +1,36 @@
+✔ PAYLOAD-BASELINE: the unmutated run's payload root is completely accounted (6084.213208ms)
+✖ PAYLOAD-MUT: a declared payload that is not retained is refused (184.09375ms)
+✔ PAYLOAD-MUT: an undeclared extra file in the payload root is refused (179.205291ms)
+✔ PAYLOAD-MUT: an extra file that is itself a well-formed artifact is still refused (176.156167ms)
+✔ PAYLOAD-MUT: an orphan freeze marker in the payload root is refused (179.27075ms)
+✔ PAYLOAD-MUT: a declared payload replaced by a symlink is refused (162.129833ms)
+✔ PAYLOAD-MUT: a subdirectory of undeclared files in the payload root is refused (178.672583ms)
+✔ PAYLOAD-ORDER: altered payload bytes are caught by the referenced-bytes layer (155.449791ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 7
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7450.001458
+
+✖ failing tests:
+
+test at tests/dist/adversarial/subjectOutputPayloads.test.js:51:1
+✖ PAYLOAD-MUT: a declared payload that is not retained is refused (184.09375ms)
+  AssertionError [ERR_ASSERTION]: a declared payload is not optional
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/subjectOutputPayloads.test.js:60:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

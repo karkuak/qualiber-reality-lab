@@ -1,0 +1,44 @@
+✔ SUBSTRATE-ERRORS: a missing state file is the only thing that means `never provisioned` (0.639208ms)
+✔ SUBSTRATE-ERRORS: malformed JSON is a typed corruption refusal, not an empty substrate (0.671625ms)
+✔ SUBSTRATE-ERRORS: truncated state is a typed corruption refusal (0.429125ms)
+✖ SUBSTRATE-ERRORS: a document that is not substrate state fails closed rather than reading as empty (0.872ms)
+✔ SUBSTRATE-ERRORS: an unsupported shape version fails closed (0.62825ms)
+✔ SUBSTRATE-ERRORS: a directory where the state file belongs is a typed I/O refusal (0.313833ms)
+✔ SUBSTRATE-ERRORS: an unreadable state file is a typed I/O refusal (0.33ms)
+✔ SUBSTRATE-ERRORS: an arbitrary injected I/O fault is a typed refusal, whatever the errno (0.53225ms)
+✔ SUBSTRATE-ERRORS: an ENOENT from the seam is still `never provisioned` (0.130959ms)
+✔ SUBSTRATE-ERRORS: a write fault is typed and does not leak the substrate path (0.183125ms)
+✔ SUBSTRATE-ERRORS: an unreadable substrate never yields a clean teardown (16711.254375ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 10
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16885.747417
+
+✖ failing tests:
+
+test at tests/dist/adversarial/substrateErrorClassification.test.js:82:1
+✖ SUBSTRATE-ERRORS: a document that is not substrate state fails closed rather than reading as empty (0.872ms)
+  AssertionError [ERR_ASSERTION]: {"version": 1, "resources": "gone"} must not read as an empty substrate
+  + actual - expected
+  
+  + undefined
+  - 'ENV_SUBSTRATE_UNREADABLE'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/substrateErrorClassification.test.js:101:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'ENV_SUBSTRATE_UNREADABLE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

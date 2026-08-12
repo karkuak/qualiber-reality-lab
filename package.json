@@ -42,7 +42,8 @@
     "evidence": "npm run build && node scripts/generate-evidence.mjs",
     "evidence:generate": "npm run build && node scripts/generate-evidence.mjs",
     "evidence:verify": "npm run build && node scripts/generate-evidence.mjs --verify",
-    "evidence:update": "npm run build && node scripts/generate-evidence.mjs --update"
+    "evidence:update": "npm run build && node scripts/generate-evidence.mjs --update",
+    "evidence:validation": "node scripts/verify-validation-evidence.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

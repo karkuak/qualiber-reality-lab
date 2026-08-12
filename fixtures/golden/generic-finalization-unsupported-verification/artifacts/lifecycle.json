@@ -2,14 +2,14 @@
   {
     "actor_id": "operator",
     "command_id": "preregister-acquisition",
-    "core_hash": "sha256:5b9bc295e88b47b67b6cc5de34ade89dc79dc87ab769a7e31c9fce736488cf11",
+    "core_hash": "sha256:6cdc2334a7b7ef31467ad89d04c82694a8301e18c90e9cd49ae53dbd9a574209",
     "event_id": "evt-000000",
     "event_type": "acquisition_preregistered",
     "occurred_at": "2026-07-01T00:00:02Z",
     "operation_id": "op-preregister",
     "produced": [
       {
-        "artifact_core_hash": "sha256:b621edc766a1068dd3000dad42242aed3fcf8bbce5610016dc48bab1831b4fd2",
+        "artifact_core_hash": "sha256:72c68f3537f56158c1cd0ac640962250454723847d3ea37b21fb16b0595a2d17",
         "artifact_role": "acquisition-preregistration",
         "artifact_schema_version": "acquisition-preregistration/v1"
       },
@@ -19,7 +19,7 @@
         "artifact_schema_version": "acquisition-source-manifest/v1"
       },
       {
-        "artifact_core_hash": "sha256:024396f303175f2345b7243bb9721434e743cc79d8a6bedab43d623e228aa72d",
+        "artifact_core_hash": "sha256:93254957ffbcb3df3fe8e2fc1130342506357267c156d3a086193d53f06badab",
         "artifact_role": "acquisition-preregistration-verification-receipt",
         "artifact_schema_version": "acquisition-preregistration-verification-receipt/v1"
       },
@@ -44,12 +44,12 @@
   {
     "actor_id": "operator",
     "command_id": "acquire",
-    "core_hash": "sha256:0627458ce643a4999662034d3887e02275783b2754d9be772dba68b9ce20d0c4",
+    "core_hash": "sha256:054eba1179ce9437ceff610097e479f3cc3dd131740ab9c80bfd0f41c910aef6",
     "event_id": "evt-000001",
     "event_type": "subject_acquisition_planned",
     "occurred_at": "2026-07-01T00:00:03Z",
     "operation_id": "op-acquire-planned",
-    "prior_event_hash": "sha256:5b9bc295e88b47b67b6cc5de34ade89dc79dc87ab769a7e31c9fce736488cf11",
+    "prior_event_hash": "sha256:6cdc2334a7b7ef31467ad89d04c82694a8301e18c90e9cd49ae53dbd9a574209",
     "produced": [],
     "required_hashes": [
       "sha256:6c69b632ae854d0c7d1f0a0319bcc654d84806aeeac0eeb37e87bc8f5893f73e",
@@ -64,15 +64,15 @@
   {
     "actor_id": "operator",
     "command_id": "acquire",
-    "core_hash": "sha256:70027aac866bbe9bd60584c94eb29214d45989089d2f11e6a10293284f314ecd",
+    "core_hash": "sha256:ec89bb2921338679ac1834f7d3a22fddac66db13b5e0f01e1106aa07e4d3926d",
     "event_id": "evt-000002",
     "event_type": "subject_acquisition_started",
     "occurred_at": "2026-07-01T00:00:04Z",
     "operation_id": "op-acquire-started",
-    "prior_event_hash": "sha256:0627458ce643a4999662034d3887e02275783b2754d9be772dba68b9ce20d0c4",
+    "prior_event_hash": "sha256:054eba1179ce9437ceff610097e479f3cc3dd131740ab9c80bfd0f41c910aef6",
     "produced": [],
     "required_hashes": [
-      "sha256:fa4de480082fbe0b5b3dffced6ef89ea97a2730e988e774dce9379c23aa2f676"
+      "sha256:1ca303c5e4bed0eaec534bc9fa025baa619d816f1f544ddb748772b50f7e7ac8"
     ],
     "run_id": "00000000-0000-7000-8000-000000000008",
     "schema_version": "lab-lifecycle-event/v1",
@@ -83,12 +83,12 @@
   {
     "actor_id": "operator",
     "command_id": "acquire",
-    "core_hash": "sha256:1e6d3dfdfeda6b31e91d9cb34686ebebf4a65e6d1745bebcc0a40192901ec46a",
+    "core_hash": "sha256:2b6a92e836e2950ae9e56612c5a585881531e7ace0ce4b23edf790dd27ed03e9",
     "event_id": "evt-000003",
     "event_type": "subject_acquisition_completed",
     "occurred_at": "2026-07-01T00:00:05Z",
     "operation_id": "op-acquire-succeeded",
-    "prior_event_hash": "sha256:70027aac866bbe9bd60584c94eb29214d45989089d2f11e6a10293284f314ecd",
+    "prior_event_hash": "sha256:ec89bb2921338679ac1834f7d3a22fddac66db13b5e0f01e1106aa07e4d3926d",
     "produced": [],
     "required_hashes": [],
     "run_id": "00000000-0000-7000-8000-000000000008",
@@ -100,20 +100,20 @@
   {
     "actor_id": "operator",
     "command_id": "acquire",
-    "core_hash": "sha256:642bdc1453435479ed77176aecf89bbcff9fd913fc08e8f4f58a87cf39ed6658",
+    "core_hash": "sha256:2d4186d44f3e42a3adf8c46ef57d9e5bf2fdd6c23b651eddbc186f093ee393eb",
     "event_id": "evt-000004",
     "event_type": "subject_acquisition_outcome_frozen",
     "occurred_at": "2026-07-01T00:00:07Z",
     "operation_id": "op-acquire-outcome-frozen",
-    "prior_event_hash": "sha256:1e6d3dfdfeda6b31e91d9cb34686ebebf4a65e6d1745bebcc0a40192901ec46a",
+    "prior_event_hash": "sha256:2b6a92e836e2950ae9e56612c5a585881531e7ace0ce4b23edf790dd27ed03e9",
     "produced": [
       {
-        "artifact_core_hash": "sha256:a9bb9d1c52e1da07ca16677afbc7e2ae4cfd3ecaf05b36372b319f7a09866607",
+        "artifact_core_hash": "sha256:769734576d02d3537d14f2adbd0e0f16bb11b56589108f5331efc29106d4eb77",
         "artifact_role": "journey-step-outcome",
         "artifact_schema_version": "journey-step-outcome/v1"
       },
       {
-        "artifact_core_hash": "sha256:3907a3abe668b8622b9aaab2066424048fc4c2fe2cb5abbab4c811bba814062e",
+        "artifact_core_hash": "sha256:2ea4a2717a007a6dc5b1c0429df7f1b2cb7a98ab7488b4867179821db737559d",
         "artifact_role": "acquisition-record",
         "artifact_schema_version": "subject-acquisition-record/v1"
       }
@@ -128,15 +128,15 @@
   {
     "actor_id": "operator",
     "command_id": "freeze-package",
-    "core_hash": "sha256:84f3699df4b5bc170ce0022161df1a97f841a2c9e409b68bae7e5fff7e484cd4",
+    "core_hash": "sha256:22388b4c46549d551c59452f8c0b96c2098434ff3fb9d5cb0995a127a36c466e",
     "event_id": "evt-000005",
     "event_type": "subject_package_frozen",
     "occurred_at": "2026-07-01T00:00:00Z",
     "operation_id": "op-freeze-package",
-    "prior_event_hash": "sha256:642bdc1453435479ed77176aecf89bbcff9fd913fc08e8f4f58a87cf39ed6658",
+    "prior_event_hash": "sha256:2d4186d44f3e42a3adf8c46ef57d9e5bf2fdd6c23b651eddbc186f093ee393eb",
     "produced": [],
     "required_hashes": [
-      "sha256:3907a3abe668b8622b9aaab2066424048fc4c2fe2cb5abbab4c811bba814062e"
+      "sha256:2ea4a2717a007a6dc5b1c0429df7f1b2cb7a98ab7488b4867179821db737559d"
     ],
     "run_id": "00000000-0000-7000-8000-000000000008",
     "schema_version": "lab-lifecycle-event/v1",
@@ -147,12 +147,12 @@
   {
     "actor_id": "operator",
     "command_id": "verify-package",
-    "core_hash": "sha256:017eb023db4706cb72b2cd72f915acbb28636b0655631a7be170b14ed7379d9e",
+    "core_hash": "sha256:d8a376b8386ad88b955782534d221a0a8f41497c95fa44c285cec82f8925e7a1",
     "event_id": "evt-000006",
     "event_type": "subject_package_verification_planned",
     "occurred_at": "2026-07-01T00:00:03Z",
     "operation_id": "op-verify-package-planned",
-    "prior_event_hash": "sha256:84f3699df4b5bc170ce0022161df1a97f841a2c9e409b68bae7e5fff7e484cd4",
+    "prior_event_hash": "sha256:22388b4c46549d551c59452f8c0b96c2098434ff3fb9d5cb0995a127a36c466e",
     "produced": [],
     "required_hashes": [
       "sha256:e868b0c9e1547444637f45bdf2eaf0bda1ed4ce64e07b0066c8749a2cfb8989d",
@@ -167,15 +167,15 @@
   {
     "actor_id": "operator",
     "command_id": "verify-package",
-    "core_hash": "sha256:6ba7e2a64b31cfa66639b0b554d1a18c054628eb17f5767052060877dfd0b1ac",
+    "core_hash": "sha256:137e6d494f607ed940da00d267449d79803a1f6d7efb53e3fd45f93669c52ec5",
     "event_id": "evt-000007",
     "event_type": "subject_package_verification_started",
     "occurred_at": "2026-07-01T00:00:04Z",
     "operation_id": "op-verify-package-started",
-    "prior_event_hash": "sha256:017eb023db4706cb72b2cd72f915acbb28636b0655631a7be170b14ed7379d9e",
+    "prior_event_hash": "sha256:d8a376b8386ad88b955782534d221a0a8f41497c95fa44c285cec82f8925e7a1",
     "produced": [],
     "required_hashes": [
-      "sha256:6e741fa65defe44c28995259affd596fee6d6f0178415bcb72ed0ed7392041d0"
+      "sha256:ba61ed4647802cf0cac00196fee99a0acd5c85fc4b511a976ae43354c6320664"
     ],
     "run_id": "00000000-0000-7000-8000-000000000008",
     "schema_version": "lab-lifecycle-event/v1",
@@ -186,7 +186,7 @@
   {
     "actor_id": "operator",
     "command_id": "verify-package",
-    "core_hash": "sha256:fb70c4507cc6afbc9d4c794f6b9ab2c969dee23828c066f1a81c45f5c39acc3a",
+    "core_hash": "sha256:1b6c7d1cbc0f89dd5d1fdf71075cc28efca734a203a9ebda5cebf46353629447",
     "event_id": "evt-000008",
     "event_type": "subject_package_verification_unsupported",
     "failure": {
@@ -196,7 +196,7 @@
     },
     "occurred_at": "2026-07-01T00:00:05Z",
     "operation_id": "op-verify-package-unsupported",
-    "prior_event_hash": "sha256:6ba7e2a64b31cfa66639b0b554d1a18c054628eb17f5767052060877dfd0b1ac",
+    "prior_event_hash": "sha256:137e6d494f607ed940da00d267449d79803a1f6d7efb53e3fd45f93669c52ec5",
     "produced": [],
     "required_hashes": [],
     "run_id": "00000000-0000-7000-8000-000000000008",
@@ -208,25 +208,25 @@
   {
     "actor_id": "operator",
     "command_id": "verify-package",
-    "core_hash": "sha256:538e3e3fa7020208c95ef1bf44e96fa195ed408b8906de332dd057c2f8e3cfc7",
+    "core_hash": "sha256:f22f75875d212df26212ac34b4a8248fd03ea77b1f267495631a2eae55c70d75",
     "event_id": "evt-000009",
     "event_type": "subject_package_verification_outcome_frozen",
     "occurred_at": "2026-07-01T00:00:07Z",
     "operation_id": "op-verify-package-outcome-frozen",
-    "prior_event_hash": "sha256:fb70c4507cc6afbc9d4c794f6b9ab2c969dee23828c066f1a81c45f5c39acc3a",
+    "prior_event_hash": "sha256:1b6c7d1cbc0f89dd5d1fdf71075cc28efca734a203a9ebda5cebf46353629447",
     "produced": [
       {
-        "artifact_core_hash": "sha256:290c0ae9facaed23b43c38a0f5e180897227d9636f5959e17ff0b85ffb8bdd5c",
+        "artifact_core_hash": "sha256:a34eea9eaa2aa2dfaf1dfab1b050af52f379e1ece5339fc4d230b25d987bab04",
         "artifact_role": "journey-step-outcome",
         "artifact_schema_version": "journey-step-outcome/v1"
       },
       {
-        "artifact_core_hash": "sha256:9efa6e99f61358c9690e2010d9842c01365389541ca78f441b3fca5dd0d0461c",
+        "artifact_core_hash": "sha256:7a17e6e9e27eadc410147b45b17b92d117b849f3f62f1685833091f80f5e9469",
         "artifact_role": "package-verification-record",
         "artifact_schema_version": "subject-package-verification-record/v1"
       },
       {
-        "artifact_core_hash": "sha256:338c3f782e1274a063ba0d1e1429f5b20975e233d5a06474ab4221c50a9f9db2",
+        "artifact_core_hash": "sha256:dded74a5d572cc5718c5781b35f2f6e3b589a7aa430487b99266585aa782bb83",
         "artifact_role": "finding",
         "artifact_schema_version": "finding/v1"
       }
@@ -241,15 +241,15 @@
   {
     "actor_id": "operator",
     "command_id": "freeze-output",
-    "core_hash": "sha256:1ca5cadf0614abfac2e8dd5267ffe67b434b919be3ebe5eca33f00316f852c44",
+    "core_hash": "sha256:28a825c93143e4fdda75d6fdb1a259a9c5cb34dac4201a5777ee25b0858af8c5",
     "event_id": "evt-000010",
     "event_type": "subject_output_frozen",
     "occurred_at": "2026-07-01T00:00:01Z",
     "operation_id": "op-freeze-output",
-    "prior_event_hash": "sha256:538e3e3fa7020208c95ef1bf44e96fa195ed408b8906de332dd057c2f8e3cfc7",
+    "prior_event_hash": "sha256:f22f75875d212df26212ac34b4a8248fd03ea77b1f267495631a2eae55c70d75",
     "produced": [
       {
-        "artifact_core_hash": "sha256:29375b51ab5a3112e1d4f8979d41cc9822b53f77de27b558f84662c9eedf2e0c",
+        "artifact_core_hash": "sha256:2a6093aebaf904607b2851f83f0e3c23a043b91af2dbf9ca93d9640273d3f860",
         "artifact_role": "subject-output-manifest",
         "artifact_schema_version": "subject-output-manifest/v1"
       }
@@ -264,21 +264,21 @@
   {
     "actor_id": "judge",
     "command_id": "reveal",
-    "core_hash": "sha256:d85bea29c31dc53b2526aa5730533ffce968cbe3b978b217288266d805b19a57",
+    "core_hash": "sha256:c603f4fcdecc6f2534766df532e9c218d4371f78e37e05744d23ab138846c341",
     "event_id": "evt-000011",
     "event_type": "judge_journey_expectation_revealed",
     "occurred_at": "2026-07-01T00:00:01Z",
     "operation_id": "op-reveal-journey-expectations",
-    "prior_event_hash": "sha256:1ca5cadf0614abfac2e8dd5267ffe67b434b919be3ebe5eca33f00316f852c44",
+    "prior_event_hash": "sha256:28a825c93143e4fdda75d6fdb1a259a9c5cb34dac4201a5777ee25b0858af8c5",
     "produced": [
       {
-        "artifact_core_hash": "sha256:ffb2e79a3262317f557c05e3c4cc0bad315fb250251c5e5b28852a9ace7864b7",
+        "artifact_core_hash": "sha256:c7a6d9574350aab3ffd94f43d9c1a775f5ea36d13de3c53d3adf106e0d18665d",
         "artifact_role": "judge-expectation-reveal",
         "artifact_schema_version": "judge-expectation-reveal-record/v1"
       }
     ],
     "required_hashes": [
-      "sha256:29375b51ab5a3112e1d4f8979d41cc9822b53f77de27b558f84662c9eedf2e0c"
+      "sha256:2a6093aebaf904607b2851f83f0e3c23a043b91af2dbf9ca93d9640273d3f860"
     ],
     "run_id": "00000000-0000-7000-8000-000000000008",
     "schema_version": "lab-lifecycle-event/v1",
@@ -289,12 +289,12 @@
   {
     "actor_id": "judge",
     "command_id": "evaluate",
-    "core_hash": "sha256:f437bc1f14f5811587da03fff4f0fd318982e3a1e39de0fe16ebb1b13ca9f27d",
+    "core_hash": "sha256:8eb6f9651663f34a0e11c99b625854ecff6641c04fdbe0a7d4889442b2f0e2c3",
     "event_id": "evt-000012",
     "event_type": "nonfunctional_journey_result_frozen",
     "occurred_at": "2026-07-01T00:00:01Z",
     "operation_id": "op-journey-result",
-    "prior_event_hash": "sha256:d85bea29c31dc53b2526aa5730533ffce968cbe3b978b217288266d805b19a57",
+    "prior_event_hash": "sha256:c603f4fcdecc6f2534766df532e9c218d4371f78e37e05744d23ab138846c341",
     "produced": [
       {
         "artifact_core_hash": "sha256:2c38add23371db58483968a5bb532dcb5cfbd4a7cd1fe7b8d4bfb94a8c7e15ac",
@@ -302,12 +302,12 @@
         "artifact_schema_version": "metric-result/v1"
       },
       {
-        "artifact_core_hash": "sha256:1c60434c83d92c5545ade911346dbc74169f19243fa270e459f6ac90f5afa12c",
+        "artifact_core_hash": "sha256:ab2aa87994183b6d923f6469e4910c4f3f7a088d38d3474958c11db69e3e5b9b",
         "artifact_role": "metric-result",
         "artifact_schema_version": "metric-result/v1"
       },
       {
-        "artifact_core_hash": "sha256:4bf1d02625e8361031c545d7765540e2ee26457379156efb2943974192961ccd",
+        "artifact_core_hash": "sha256:cda58c5b7711d2c64ec65cb80c86824bc0b26713678e887e9d620bf248168cc0",
         "artifact_role": "metric-result",
         "artifact_schema_version": "metric-result/v1"
       },
@@ -327,22 +327,22 @@
         "artifact_schema_version": "metric-result/v1"
       },
       {
-        "artifact_core_hash": "sha256:6958dffd03810265eb23003eafc7474368071426fed372f6c8529f16b7e49d29",
+        "artifact_core_hash": "sha256:0173ea29048f1e893307aa854f469e0a7ac184d6190819ec72c750b39f4afdc5",
         "artifact_role": "metric-result",
         "artifact_schema_version": "metric-result/v1"
       },
       {
-        "artifact_core_hash": "sha256:0f3928745ff973b39b8f9d140bfb97e8b4ecc675cf0131ae28d6edf3a2a0449d",
+        "artifact_core_hash": "sha256:3c8e1de26ca5eede8bd753d68eedf8e0b58d6d6ddadf0f26f45db7710c711a99",
         "artifact_role": "metric-result",
         "artifact_schema_version": "metric-result/v1"
       },
       {
-        "artifact_core_hash": "sha256:ec375c9380bfedc5a2b25535b201cf16a582dc73de78d73495a83801d0fb2622",
+        "artifact_core_hash": "sha256:abffb8af0f1635f298b603b1b8ed4c46e47f7cb5d2e695bd38e3e58e07a3470e",
         "artifact_role": "metric-result",
         "artifact_schema_version": "metric-result/v1"
       },
       {
-        "artifact_core_hash": "sha256:fb4c1d3ef4fe6b955f94f9ac5f3c0e63d10a0c86316499a8f7b409b8979dab16",
+        "artifact_core_hash": "sha256:bc274755c78cc243c2d389cde4bf5a5431a15ddea7692ac6982ab88bcdec4d02",
         "artifact_role": "journey-result",
         "artifact_schema_version": "pre-selection-journey-result/v1"
       }
@@ -357,15 +357,15 @@
   {
     "actor_id": "judge",
     "command_id": "evaluate",
-    "core_hash": "sha256:cc6ba73b630756ced614e1d5ce64fdc32b8d5bf10c31c945015b287c141bc6fc",
+    "core_hash": "sha256:1bb858d2ebd9bf22858917f62780ad3e26e2c8765a7bcdc0fb511aa5284e7265",
     "event_id": "evt-000013",
     "event_type": "domain_not_applicable_frozen",
     "occurred_at": "2026-07-01T00:00:02Z",
     "operation_id": "op-domain-result",
-    "prior_event_hash": "sha256:f437bc1f14f5811587da03fff4f0fd318982e3a1e39de0fe16ebb1b13ca9f27d",
+    "prior_event_hash": "sha256:8eb6f9651663f34a0e11c99b625854ecff6641c04fdbe0a7d4889442b2f0e2c3",
     "produced": [
       {
-        "artifact_core_hash": "sha256:4bb36b14facc9d5d8b72ab3602b38f3e9308a7f4178184fef44b142896dcd366",
+        "artifact_core_hash": "sha256:595a3f929def0452f139aed9db2c8b4d1124bd8ccafc670bb41bab810979867e",
         "artifact_role": "domain-result",
         "artifact_schema_version": "domain-result-not-applicable/v1"
       }
@@ -380,15 +380,15 @@
   {
     "actor_id": "judge",
     "command_id": "evaluate",
-    "core_hash": "sha256:0d94e0478dd46f198aa950d634762059111eb58d06477c9bbab74514278c185a",
+    "core_hash": "sha256:6daf094fdfdc8c58c4d2323303eb521e292161f4b013e719ba356c7d15c0c8b4",
     "event_id": "evt-000014",
     "event_type": "generic_precleanup_results_complete",
     "occurred_at": "2026-07-01T00:00:03Z",
     "operation_id": "op-result-join",
-    "prior_event_hash": "sha256:cc6ba73b630756ced614e1d5ce64fdc32b8d5bf10c31c945015b287c141bc6fc",
+    "prior_event_hash": "sha256:1bb858d2ebd9bf22858917f62780ad3e26e2c8765a7bcdc0fb511aa5284e7265",
     "produced": [
       {
-        "artifact_core_hash": "sha256:a8e2841eecb1dfafb797174e052af73f0d37520b45f6ead7bcfccfcfd7ba85ec",
+        "artifact_core_hash": "sha256:a8f17c636b1647a9f1b7b273c8b59706a718d1b6847af02a7c6e78ea6ea1278e",
         "artifact_role": "precleanup-result-join",
         "artifact_schema_version": "generic-precleanup-result-join/v1"
       }
@@ -403,15 +403,15 @@
   {
     "actor_id": "operator",
     "command_id": "finalize-generic",
-    "core_hash": "sha256:f99e961c47a5256f7a536464ecc95578dfa00fef8d3017fd2cbdaec833e874fc",
+    "core_hash": "sha256:5b74f2921899697032ef69c0c7553e5ef8e38ebe8544d98b08b267651d204d70",
     "event_id": "evt-000015",
     "event_type": "pre_environment_cleanup_started",
     "occurred_at": "2026-07-01T00:00:00Z",
     "operation_id": "op-cleanup-start",
-    "prior_event_hash": "sha256:0d94e0478dd46f198aa950d634762059111eb58d06477c9bbab74514278c185a",
+    "prior_event_hash": "sha256:6daf094fdfdc8c58c4d2323303eb521e292161f4b013e719ba356c7d15c0c8b4",
     "produced": [],
     "required_hashes": [
-      "sha256:a8e2841eecb1dfafb797174e052af73f0d37520b45f6ead7bcfccfcfd7ba85ec"
+      "sha256:a8f17c636b1647a9f1b7b273c8b59706a718d1b6847af02a7c6e78ea6ea1278e"
     ],
     "run_id": "00000000-0000-7000-8000-000000000008",
     "schema_version": "lab-lifecycle-event/v1",
@@ -422,15 +422,15 @@
   {
     "actor_id": "operator",
     "command_id": "finalize-generic",
-    "core_hash": "sha256:883f6dc373f51ccd7196296853a2a4e12ea394af9525d7a0550e7fbc56d4b347",
+    "core_hash": "sha256:47aca6ad0866eb44e5a277c4b2fc10a485f582dea2315f5dfee787829919012a",
     "event_id": "evt-000016",
     "event_type": "pre_environment_cleanup_verified",
     "occurred_at": "2026-07-01T00:00:02Z",
     "operation_id": "op-cleanup-verified",
-    "prior_event_hash": "sha256:f99e961c47a5256f7a536464ecc95578dfa00fef8d3017fd2cbdaec833e874fc",
+    "prior_event_hash": "sha256:5b74f2921899697032ef69c0c7553e5ef8e38ebe8544d98b08b267651d204d70",
     "produced": [
       {
-        "artifact_core_hash": "sha256:463a72d85c495f1aeafac2d543259b23180351d11cb2cd707e306d2da7092910",
+        "artifact_core_hash": "sha256:c13a5454c5d60a86574707f91ce7e201061ff1d93974a44fab5d31542467659a",
         "artifact_role": "pre-environment-cleanup",
         "artifact_schema_version": "pre-environment-cleanup-verification/v1"
       }
@@ -445,15 +445,15 @@
   {
     "actor_id": "judge",
     "command_id": "finalize-generic",
-    "core_hash": "sha256:a4d7ee6df6a72987f194e1b5518a054f60e4a26153e226cdb35f20b88d5daa02",
+    "core_hash": "sha256:87b4dbd4defce0652f079dc7d7621eea94c274290bdee9ed68fe14787dbb7e18",
     "event_id": "evt-000017",
     "event_type": "pre_environment_validity_result_frozen",
     "occurred_at": "2026-07-01T00:00:04Z",
     "operation_id": "op-validity",
-    "prior_event_hash": "sha256:883f6dc373f51ccd7196296853a2a4e12ea394af9525d7a0550e7fbc56d4b347",
+    "prior_event_hash": "sha256:47aca6ad0866eb44e5a277c4b2fc10a485f582dea2315f5dfee787829919012a",
     "produced": [
       {
-        "artifact_core_hash": "sha256:39b29331f8bd168717f3436dfcfad1ef1d3eed7684bd1c7a3eb6c11517cbe95f",
+        "artifact_core_hash": "sha256:688d687169cf939076a888081cfec92fabcb4d40d4dec570cfe94c1b6044ccd0",
         "artifact_role": "validity-result",
         "artifact_schema_version": "pre-environment-validity-result/v1"
       }
@@ -468,15 +468,15 @@
   {
     "actor_id": "judge",
     "command_id": "finalize-generic",
-    "core_hash": "sha256:3dc960efda7f840fe6c7eb9c807812d5172988baec99153ea6f73bf23d4c0ec2",
+    "core_hash": "sha256:6403af68d87bab95a1153671368425e402e93dc9f50979a41c4558a4155c8ce7",
     "event_id": "evt-000018",
     "event_type": "generic_evaluation_index_frozen",
     "occurred_at": "2026-07-01T00:00:05Z",
     "operation_id": "op-index",
-    "prior_event_hash": "sha256:a4d7ee6df6a72987f194e1b5518a054f60e4a26153e226cdb35f20b88d5daa02",
+    "prior_event_hash": "sha256:87b4dbd4defce0652f079dc7d7621eea94c274290bdee9ed68fe14787dbb7e18",
     "produced": [
       {
-        "artifact_core_hash": "sha256:eee1809eda381c8dc3b474a018af2490c52564c8d001bd7423e5f4a2f5330aa4",
+        "artifact_core_hash": "sha256:20aca7d79bed255047198b94c040adf1eaa2becdf8688d174a7886e1a03fbba4",
         "artifact_role": "generic-evaluation-index",
         "artifact_schema_version": "generic-evaluation-index/v1"
       }
@@ -491,32 +491,32 @@
   {
     "actor_id": "finalizer",
     "command_id": "finalize-generic",
-    "core_hash": "sha256:42d865bdd41c47ebdc25c0acf84cc54ba82fd7134401fea2a444b6f55e8eca8e",
+    "core_hash": "sha256:9ff5823a33e696b54960e12c83983a2a78be6295a0dea827d649b73eb38fa175",
     "event_id": "evt-000019",
     "event_type": "generic_finalized",
     "occurred_at": "2026-07-01T00:00:10Z",
     "operation_id": "op-finalize",
-    "prior_event_hash": "sha256:3dc960efda7f840fe6c7eb9c807812d5172988baec99153ea6f73bf23d4c0ec2",
+    "prior_event_hash": "sha256:6403af68d87bab95a1153671368425e402e93dc9f50979a41c4558a4155c8ce7",
     "produced": [
       {
-        "artifact_core_hash": "sha256:7b0250e89ae7b2c65a993aac0cfbf91773656015c9f769e1d4f1f7f4154b8d06",
+        "artifact_core_hash": "sha256:0a5a5b86229c7ddc4e6586f5cb6877e87d32e28fd2a18d15ab618b6e771c09bc",
         "artifact_role": "run-record",
         "artifact_schema_version": "pre-environment-lab-run-record/v1"
       },
       {
-        "artifact_core_hash": "sha256:9e0f113749c4c0c02be1d6c15cb7e4387ff59c2aa7c40645e5fd0c0e2ed02ac2",
+        "artifact_core_hash": "sha256:a3564470516921a3bcc5e0ed00fcccf5ae0d99ce0212ce30a718f07a805e8f4e",
         "artifact_role": "final-attestation",
         "artifact_schema_version": "pre-environment-final-lab-attestation/v1"
       },
       {
-        "artifact_core_hash": "sha256:82633ed097c6dcd117cfb9db6d6b6bc45380025daf89ae873bfbd0187d90cc76",
+        "artifact_core_hash": "sha256:dddd62db60be73b33537314cef2ac55b194814a6fe0be4f890897f77511f2886",
         "artifact_role": "signer-inventory",
         "artifact_schema_version": "signer-inventory/v2"
       }
     ],
     "required_hashes": [
-      "sha256:eee1809eda381c8dc3b474a018af2490c52564c8d001bd7423e5f4a2f5330aa4",
-      "sha256:463a72d85c495f1aeafac2d543259b23180351d11cb2cd707e306d2da7092910"
+      "sha256:20aca7d79bed255047198b94c040adf1eaa2becdf8688d174a7886e1a03fbba4",
+      "sha256:c13a5454c5d60a86574707f91ce7e201061ff1d93974a44fab5d31542467659a"
     ],
     "run_id": "00000000-0000-7000-8000-000000000008",
     "schema_version": "lab-lifecycle-event/v1",

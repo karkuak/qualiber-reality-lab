@@ -1,0 +1,46 @@
+✔ VERIFIER-DERIVE: a real environment bundle verifies, and the derivations are reached (18058.651834ms)
+✔ VERIFIER-DERIVE: a validity result that claims `valid` over a failed gate is refused (14883.482334ms)
+✔ VERIFIER-DERIVE: a status that disagrees with its own gates is refused, on that ground alone (15097.720334ms)
+✔ VERIFIER-DERIVE: a failed gate with no invalidity finding naming it is refused (14791.806959ms)
+✔ VERIFIER-DERIVE: a valid result citing invalidity findings is refused (14782.848208ms)
+✖ VERIFIER-DERIVE: a restoration `passed` that its own evidence contradicts is refused (15037.256083ms)
+✔ VERIFIER-DERIVE: a restoration citing no compensation receipt is refused (15113.55125ms)
+✔ VERIFIER-DERIVE: a teardown `passed` over non-empty residue is refused (14878.046209ms)
+✔ VERIFIER-DERIVE: a teardown whose residue count and list disagree is refused (15128.298166ms)
+✔ VERIFIER-DERIVE: a bundle whose lifecycle names no substrate binding is refused (15127.176167ms)
+✔ VERIFIER-DERIVE: a binding naming another run is refused (15064.420875ms)
+✔ VERIFIER-DERIVE: a cancellation claiming `not_required` over an environment is refused (5107.099542ms)
+✔ VERIFIER-DERIVE: a cancellation closing over a pre-environment cleanup is refused (5222.871167ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 12
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 178974.443416
+
+✖ failing tests:
+
+test at tests/dist/adversarial/environmentVerifierDerivation.test.js:122:1
+✖ VERIFIER-DERIVE: a restoration `passed` that its own evidence contradicts is refused (15037.256083ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'RESTORATION_FAILED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/environmentVerifierDerivation.test.js:132:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'RESTORATION_FAILED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

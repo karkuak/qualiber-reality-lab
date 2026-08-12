@@ -159,6 +159,7 @@ import {
   assertSubjectOutputContentClean,
   assertSubjectOutputWithinDeclaredBytes,
 } from "../adapter/outputFreezer.js";
+import { adapterCertifiedGateResults } from "../adapter/admission.js";
 import {
   CANONICAL_JOURNEY_INTENTS,
   JOURNEY_PREREQUISITES,
@@ -2753,6 +2754,10 @@ export class EnvironmentRun {
     );
 
     const validity = buildEnvironmentValidity({
+      subjectExecutionMode: this.ws.subjectExecutionMode() ?? "development_fake_port",
+      ...(this.ws.boundCertificationReceiptHash() === undefined
+        ? {}
+        : { adapterCertificationReceiptHash: this.ws.boundCertificationReceiptHash() as Hash }),
       runId: this.runId,
       terminalStage,
       genericRunPolicyHash: policyHash,
@@ -3904,7 +3909,13 @@ export class EnvironmentRun {
             ? [...this.ws.hashesForRole("attributable-telemetry-observation")]
             : [coreHash(this.driver.manifest)],
       },
-      { gate_id: "adapter-certified", passed: true, evidence_refs: [this.ws.requireHashForRole("adapter-manifest")] },
+      ...adapterCertifiedGateResults({
+        adapterManifestHash: this.ws.requireHashForRole("adapter-manifest"),
+        subjectExecutionMode: this.ws.subjectExecutionMode() ?? "development_fake_port",
+        certification: this.ws.derivedAdapterCertification(),
+        boundCertificationHash: this.ws.boundCertificationReceiptHash(),
+        dispatchedRealAdapter: this.ws.dispatchedRealAdapter(),
+      }),
       {
         gate_id: "adapter-authority-respected",
         passed: true,

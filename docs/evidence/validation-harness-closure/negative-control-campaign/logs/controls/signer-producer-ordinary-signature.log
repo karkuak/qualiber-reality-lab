@@ -1,0 +1,257 @@
+✖ SIGNER-DERIVE: an ordinary `signature` member is enumerated (0.954667ms)
+✔ SIGNER-DERIVE: a `root_signature` member is enumerated — the omission every run had (0.118375ms)
+✔ SIGNER-DERIVE: a `wrapper_signature` member is enumerated — the review's finding (0.081125ms)
+✖ SIGNER-DERIVE: an unsigned retained artifact is not a member (0.115666ms)
+✖ SIGNER-DERIVE: the public terminal types and the inventory itself are excluded, with reasons (0.120042ms)
+✖ SIGNER-DERIVE: the environment branch excludes two public terminal types (0.712ms)
+✖ SIGNER-DERIVE: a signed contract with no declared producer role refuses (0.161917ms)
+✔ SIGNER-DERIVE: an authority field the contract does not declare refuses (0.222458ms)
+✖ SIGNER-DERIVE: two authority fields on one artifact refuse (0.105292ms)
+✖ SIGNER-DERIVE: a signature over a different core hash refuses (0.150875ms)
+✖ SIGNER-DERIVE: a malformed signature envelope refuses (0.101792ms)
+✖ SIGNER-DERIVE: two retained files claiming one core hash refuse (0.077625ms)
+✔ SIGNER-DERIVE: the applicable set is ordered by core hash, not by walk order (0.116125ms)
+✔ SIGNER-DERIVE: an empty applicable set is not complete (0.052042ms)
+✖ SIGNER-DERIVE: the projection carries the signer and the signed hash the artifact actually has (0.106833ms)
+✖ SIGNER-DERIVE: the builder refuses an inventory the derivation could not certify (0.223084ms)
+✖ SIGNER-DERIVE: a signed member that appears after the inventory is sealed is refused (0.090208ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 5
+ℹ fail 12
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 136.2575
+
+✖ failing tests:
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:59:1
+✖ SIGNER-DERIVE: an ordinary `signature` member is enumerated (0.954667ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:64:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:101:1
+✖ SIGNER-DERIVE: an unsigned retained artifact is not a member (0.115666ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:114:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:118:1
+✖ SIGNER-DERIVE: the public terminal types and the inventory itself are excluded, with reasons (0.120042ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 3
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:129:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 3,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:135:1
+✖ SIGNER-DERIVE: the environment branch excludes two public terminal types (0.712ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   'exposure-event/v1'
+  - ]
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:148:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'exposure-event/v1' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:152:1
+✖ SIGNER-DERIVE: a signed contract with no declared producer role refuses (0.161917ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception: an undeclared signed contract
+      at throwsCode (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:52:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:156:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:170:1
+✖ SIGNER-DERIVE: two authority fields on one artifact refuse (0.105292ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception: two authority fields
+      at throwsCode (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:52:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:179:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:184:1
+✖ SIGNER-DERIVE: a signature over a different core hash refuses (0.150875ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception: a signature bound to other bytes
+      at throwsCode (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:52:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:185:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:190:1
+✖ SIGNER-DERIVE: a malformed signature envelope refuses (0.101792ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception: a non-Ed25519 algorithm
+      at throwsCode (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:52:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:197:9)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:211:1
+✖ SIGNER-DERIVE: two retained files claiming one core hash refuse (0.077625ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception: a retained core-hash collision
+      at throwsCode (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:52:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:214:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:250:1
+✖ SIGNER-DERIVE: the projection carries the signer and the signed hash the artifact actually has (0.106833ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:260:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:268:1
+✖ SIGNER-DERIVE: the builder refuses an inventory the derivation could not certify (0.223084ms)
+  Error [Erl2Error]: a pre-environment signer inventory covers at least one signed artifact
+      at buildPreEnvironmentSignerInventory (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/packages/core/dist/src/terminal/finalize.js:110:15)
+      at build (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:281:49)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:290:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    code: 'INVENTORY_ENTRY_MISSING',
+    owner: 'lab',
+    detail: undefined
+  }
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:303:1
+✖ SIGNER-DERIVE: a signed member that appears after the inventory is sealed is refused (0.090208ms)
+  Error [Erl2Error]: finalization refused: 0 applicable signed member(s) are not covered by the sealed signer inventory: 
+      at assertInventoryCoversDerivation (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/packages/core/dist/src/terminal/signerInventoryDerivation.js:251:15)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/integration/signerInventoryDerivation.test.js:317:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    code: 'INVENTORY_ENTRY_MISSING',
+    owner: 'lab',
+    detail: undefined
+  }

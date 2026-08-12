@@ -419,6 +419,16 @@ The one claim this slice earns, stated at exactly its width:
   reference adapters, which exist to exercise the platform. Certification
   permits an adapter version and digest; it says nothing about the quality of
   the subject behind it, and no real product has been run.
+- **No *authenticated* adapter-certification claim.** An external adapter is now
+  admitted only on a validated `ADAPTER-CERT-V1` receipt, and the
+  `adapter-certified` validity gate is derived from that receipt rather than
+  asserted (ADR-ERL2-036, closing LIVE-001). But no certification authority is
+  pinned on this checkout, so every receipt admitted here is
+  **`locally_observed_unauthenticated`** — genuine certification evidence that
+  nobody authenticated — exactly as the substrate qualification is. The
+  authenticated path is enforced (`held_out` and `blind` refuse anything less)
+  and has never been exercised against a real signed receipt. A run admitted at
+  `development` supports no scored, blind or authenticated claim.
 - **No OS-level or container isolation claim for any subject the Lab did not
   author.** A `container` profile now exists and can be derived on a host whose
   substrate qualifies, but it is available to **trusted, repository-owned

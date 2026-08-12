@@ -5,30 +5,30 @@
   "failed_phase": {
     "kind": "lifecycle_phase",
     "phase": "acquisition",
-    "lifecycle_event_hash": "sha256:f9b45964abe5cba21f6d46dd2488f60ad10708034a03250e9daed1daaf706ddd"
+    "lifecycle_event_hash": "sha256:c6ff3dc09e97f03169839ea8cbe27ca1b929ec8831e3e3d2eaa4139cfde5c7df"
   },
   "terminal_reason": {
     "kind": "classified_failure",
     "classification": "lab_invalidity",
-    "failure_event_hash": "sha256:f9b45964abe5cba21f6d46dd2488f60ad10708034a03250e9daed1daaf706ddd",
+    "failure_event_hash": "sha256:c6ff3dc09e97f03169839ea8cbe27ca1b929ec8831e3e3d2eaa4139cfde5c7df",
     "primary_finding_hash": "sha256:b9236de945e74ff3e2a66ebd76ae24970bc58d510e9e80b84c86a5f0e90260ef",
     "invalidity_finding_hash": "sha256:b9236de945e74ff3e2a66ebd76ae24970bc58d510e9e80b84c86a5f0e90260ef"
   },
   "available_evidence": [
     {
       "artifact_role": "acquisition-preregistration",
-      "artifact_hash": "sha256:a9f00c180f38c8d9e3269116aa59f8f9afaccb466c756265bdce3efbf759fb3d",
-      "reached_event_hash": "sha256:fdc08e266c736619fc911844fa211137e5028926862dd25649bf04e8e3f46d2c"
+      "artifact_hash": "sha256:383ef0a179294091ea3a4d23607767a2bf4dc11ed6299e7d5a68b00e40fa4617",
+      "reached_event_hash": "sha256:9879709f24e9db53ae73c322d5fc465363e906f50f44fb838bf39b912ef58e3d"
     },
     {
       "artifact_role": "acquisition-source-manifest",
       "artifact_hash": "sha256:fa57383df86cc9071d64f8bf365328cadf0abeab833b2a032ca3ef1d0a6c1c34",
-      "reached_event_hash": "sha256:fdc08e266c736619fc911844fa211137e5028926862dd25649bf04e8e3f46d2c"
+      "reached_event_hash": "sha256:9879709f24e9db53ae73c322d5fc465363e906f50f44fb838bf39b912ef58e3d"
     },
     {
       "artifact_role": "primary-finding",
       "artifact_hash": "sha256:b9236de945e74ff3e2a66ebd76ae24970bc58d510e9e80b84c86a5f0e90260ef",
-      "reached_event_hash": "sha256:f9b45964abe5cba21f6d46dd2488f60ad10708034a03250e9daed1daaf706ddd"
+      "reached_event_hash": "sha256:c6ff3dc09e97f03169839ea8cbe27ca1b929ec8831e3e3d2eaa4139cfde5c7df"
     }
   ],
   "cleanup": {
@@ -36,7 +36,7 @@
     "status": "not_required",
     "attempt_hashes": []
   },
-  "lifecycle_head_hash": "sha256:134483e8be982a173d1665bdccc5db54b314df822d2163db20889140241c4f75",
+  "lifecycle_head_hash": "sha256:8175b73c108accdcad1c96a963f57ade7dc09b7d05c515a000488a356ecc532a",
   "invalidated_at": "2026-07-01T00:00:07Z",
-  "core_hash": "sha256:d58d8be4b815b665051932111fd01ac3deb3d625c3fd61bccec0ef5befa68ef2"
+  "core_hash": "sha256:1bbae86aafed467d52786fc3e81e2d3aaff8f117571ca14090063ece2a619b22"
 }

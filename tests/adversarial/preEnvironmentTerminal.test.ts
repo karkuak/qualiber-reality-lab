@@ -283,6 +283,7 @@ test("EARLY-TERMINAL-CLOSURE: the run workspace refuses the early terminal with 
     subjectPort: new FakeSubjectPort(),
   });
   workspace.preregisterAcquisition({
+    subjectExecutionMode: "development_fake_port",
     sourceManifestHash: registry.sourceManifestHash,
     adapterManifestHash: registry.adapterManifestHash,
     genericRunPolicyHash: registry.genericRunPolicyHash,

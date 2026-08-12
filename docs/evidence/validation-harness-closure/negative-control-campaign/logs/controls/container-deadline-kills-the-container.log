@@ -1,0 +1,60 @@
+✖ CONTAINER-DEADLINE: a subject that ignores every signal is bounded by its deadline (5662.91175ms)
+✖ CONTAINER-DEADLINE: termination is observed — the whole pid namespace, keyed on container id (4253.528625ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10048.296625
+
+✖ failing tests:
+
+test at tests/dist/adversarial/containerDeadlineEnforcement.test.js:43:1
+✖ CONTAINER-DEADLINE: a subject that ignores every signal is bounded by its deadline (5662.91175ms)
+  AssertionError [ERR_ASSERTION]: a container that never answers must be refused as a deadline breach
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/containerDeadlineEnforcement.test.js:66:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: Erl2Error: the adapter process ended without a valid response ()
+        at AdapterHost.hostFailure (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/packages/core/dist/src/adapter/host.js:544:16)
+        at AdapterHost.run (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/packages/core/dist/src/adapter/host.js:303:24)
+        at file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/containerDeadlineEnforcement.test.js:66:30
+        at getActual (node:assert:580:5)
+        at strict.throws (node:assert:728:24)
+        at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/containerDeadlineEnforcement.test.js:66:12)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1382:25)
+        at Test.start (node:internal/test_runner/test:1242:17)
+        at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17),
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/containerDeadlineEnforcement.test.js:74:1
+✖ CONTAINER-DEADLINE: termination is observed — the whole pid namespace, keyed on container id (4253.528625ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'refused'
+  - 'timed_out'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/containerDeadlineEnforcement.test.js:126:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'refused',
+    expected: 'timed_out',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

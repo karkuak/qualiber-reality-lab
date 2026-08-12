@@ -15,7 +15,7 @@
     "produced": [
       {
         "artifact_role": "acquisition-preregistration",
-        "artifact_core_hash": "sha256:a9f00c180f38c8d9e3269116aa59f8f9afaccb466c756265bdce3efbf759fb3d",
+        "artifact_core_hash": "sha256:383ef0a179294091ea3a4d23607767a2bf4dc11ed6299e7d5a68b00e40fa4617",
         "artifact_schema_version": "acquisition-preregistration/v1"
       },
       {
@@ -25,7 +25,7 @@
       },
       {
         "artifact_role": "acquisition-preregistration-verification-receipt",
-        "artifact_core_hash": "sha256:fed56a32e03415ea694351585a84a7b916fa2485b2910b4fb2f3d8ec8d92990b",
+        "artifact_core_hash": "sha256:1417c5860fc13cfb11e270ba3b37c2448c93d247f568d04441d88dcbee671221",
         "artifact_schema_version": "acquisition-preregistration-verification-receipt/v1"
       },
       {
@@ -39,7 +39,7 @@
         "artifact_schema_version": "generic-run-policy/v1"
       }
     ],
-    "core_hash": "sha256:fdc08e266c736619fc911844fa211137e5028926862dd25649bf04e8e3f46d2c"
+    "core_hash": "sha256:9879709f24e9db53ae73c322d5fc465363e906f50f44fb838bf39b912ef58e3d"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -53,10 +53,10 @@
     "actor_id": "fake-operator",
     "command_id": "acquire",
     "operation_id": "op-acquire-planned",
-    "prior_event_hash": "sha256:fdc08e266c736619fc911844fa211137e5028926862dd25649bf04e8e3f46d2c",
+    "prior_event_hash": "sha256:9879709f24e9db53ae73c322d5fc465363e906f50f44fb838bf39b912ef58e3d",
     "required_hashes": [],
     "produced": [],
-    "core_hash": "sha256:e7dd069ea8eaa4aa01d78cf8de3004e8e96c9eb0c075990f4070b51d2d202ad8"
+    "core_hash": "sha256:8f8f8d7704d2a97cb47600058a3fe100d025e34270f8206cbf1fdbf87f1f7302"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -70,7 +70,7 @@
     "actor_id": "fake-operator",
     "command_id": "acquire",
     "operation_id": "op-acquire-failed",
-    "prior_event_hash": "sha256:e7dd069ea8eaa4aa01d78cf8de3004e8e96c9eb0c075990f4070b51d2d202ad8",
+    "prior_event_hash": "sha256:8f8f8d7704d2a97cb47600058a3fe100d025e34270f8206cbf1fdbf87f1f7302",
     "required_hashes": [],
     "produced": [
       {
@@ -84,7 +84,7 @@
       "owner": "lab",
       "message": "control probe failed"
     },
-    "core_hash": "sha256:f9b45964abe5cba21f6d46dd2488f60ad10708034a03250e9daed1daaf706ddd"
+    "core_hash": "sha256:c6ff3dc09e97f03169839ea8cbe27ca1b929ec8831e3e3d2eaa4139cfde5c7df"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -98,10 +98,10 @@
     "actor_id": "fake-operator",
     "command_id": "cleanup",
     "operation_id": "op-invalid-cleanup-start",
-    "prior_event_hash": "sha256:f9b45964abe5cba21f6d46dd2488f60ad10708034a03250e9daed1daaf706ddd",
+    "prior_event_hash": "sha256:c6ff3dc09e97f03169839ea8cbe27ca1b929ec8831e3e3d2eaa4139cfde5c7df",
     "required_hashes": [],
     "produced": [],
-    "core_hash": "sha256:73513bc4b4cc22fd254f839674fe5f27c39ed3240dfd94c6b5d4d54be69eb915"
+    "core_hash": "sha256:bfee840421cb007cdf1fa6092a19290687d709943a6c41117051925007cea04c"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -115,10 +115,10 @@
     "actor_id": "fake-operator",
     "command_id": "cleanup",
     "operation_id": "op-invalid-cleanup-terminal",
-    "prior_event_hash": "sha256:73513bc4b4cc22fd254f839674fe5f27c39ed3240dfd94c6b5d4d54be69eb915",
+    "prior_event_hash": "sha256:bfee840421cb007cdf1fa6092a19290687d709943a6c41117051925007cea04c",
     "required_hashes": [],
     "produced": [],
-    "core_hash": "sha256:134483e8be982a173d1665bdccc5db54b314df822d2163db20889140241c4f75"
+    "core_hash": "sha256:8175b73c108accdcad1c96a963f57ade7dc09b7d05c515a000488a356ecc532a"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -132,16 +132,16 @@
     "actor_id": "fake-operator",
     "command_id": "cleanup",
     "operation_id": "op-invalid-record",
-    "prior_event_hash": "sha256:134483e8be982a173d1665bdccc5db54b314df822d2163db20889140241c4f75",
+    "prior_event_hash": "sha256:8175b73c108accdcad1c96a963f57ade7dc09b7d05c515a000488a356ecc532a",
     "required_hashes": [],
     "produced": [
       {
         "artifact_role": "invalid-run-record",
-        "artifact_core_hash": "sha256:d58d8be4b815b665051932111fd01ac3deb3d625c3fd61bccec0ef5befa68ef2",
+        "artifact_core_hash": "sha256:1bbae86aafed467d52786fc3e81e2d3aaff8f117571ca14090063ece2a619b22",
         "artifact_schema_version": "invalid-lab-run-record/v1"
       }
     ],
-    "core_hash": "sha256:7187a0103065010466a1392c48366b5b36e868f9f448a5d32a25ec8f9890a705"
+    "core_hash": "sha256:57707e68877531d6ec5c71726f762f7be74ac7c85c16b256061a530c10e0339c"
   },
   {
     "schema_version": "lab-lifecycle-event/v1",
@@ -155,9 +155,9 @@
     "actor_id": "fake-operator",
     "command_id": "cleanup",
     "operation_id": "op-invalidated",
-    "prior_event_hash": "sha256:7187a0103065010466a1392c48366b5b36e868f9f448a5d32a25ec8f9890a705",
+    "prior_event_hash": "sha256:57707e68877531d6ec5c71726f762f7be74ac7c85c16b256061a530c10e0339c",
     "required_hashes": [],
     "produced": [],
-    "core_hash": "sha256:ddd949be81e7a41f540c53f2337c97392dc9afad62245d3af19b49f3fdda73dc"
+    "core_hash": "sha256:14ecfe658d1282eaf976b1dc31d863b3779fbc153e6f840dedbeef6492e2f1b3"
   }
 ]

@@ -7,6 +7,7 @@
  * host against SDK-shaped adapters would only prove the SDK works.
  */
 
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -14,10 +15,17 @@ import {
   packageMediaType,
   type Hash,
   type PackageKind,
+  type SubjectAdapterCertificationReceiptV1,
   type SubjectAdapterManifestV1,
 } from "@erl2/contracts";
-import { ArtifactStore, coreHash, developmentKey, sealSigned } from "@erl2/integrity";
-import { AdapterHost, SteppingClock, type AdapterHostOptions, type AdapterMount } from "@erl2/core";
+import { ArtifactStore, coreHash, developmentKey, hashBytes, sealSigned } from "@erl2/integrity";
+import {
+  AdapterHost,
+  BOOTSTRAP_RECEIPT_SENTINEL,
+  SteppingClock,
+  type AdapterHostOptions,
+  type AdapterMount,
+} from "@erl2/core";
 import { ownedTempDir } from "./tempDirs.js";
 
 export const repoRoot = path.resolve(
@@ -53,6 +61,26 @@ export interface AdapterManifestOptions {
   readonly packageKinds?: readonly PackageKind[];
   readonly capabilities?: readonly string[];
   readonly protocolVersion?: string;
+  /**
+   * The adapter's real entry digest.
+   *
+   * Most fixtures never execute the bytes they name, so the default is a
+   * synthetic hash derived from the id. A manifest that is going to be
+   * *certified and admitted*, though, must declare the digest of the file that
+   * will actually run: admission requires the manifest, the receipt and the
+   * bytes on disk to agree, and a synthetic hash cannot satisfy that.
+   */
+  readonly artifactHash?: Hash;
+  /**
+   * A prior certification receipt, or the bootstrap sentinel when there is
+   * none. Never the receipt that certifies this manifest — that is a cycle.
+   */
+  readonly certificationReceiptHash?: Hash;
+}
+
+/** The digest of a compiled reference adapter's entry, as it is on disk. */
+export function referenceAdapterEntryDigest(id: ReferenceAdapterId): Hash {
+  return hashBytes(readFileSync(referenceAdapterEntry(id)));
 }
 
 /** A signed, admissible adapter manifest. */
@@ -65,7 +93,7 @@ export function adapterManifest(options: AdapterManifestOptions): SubjectAdapter
         adapter_id: options.adapterId,
         version: options.version ?? "0.1.0",
         protocol_version: (options.protocolVersion ?? "subject-adapter/v1") as "subject-adapter/v1",
-        adapter_artifact_hash: coreHash({ artifact: options.adapterId }),
+        adapter_artifact_hash: options.artifactHash ?? coreHash({ artifact: options.adapterId }),
         supported_package_kinds: [...(options.packageKinds ?? ["archive"])],
         operations: [...(options.operations ?? ["acquire", "validate-package"])],
         required_broker_capabilities: [
@@ -73,7 +101,8 @@ export function adapterManifest(options: AdapterManifestOptions): SubjectAdapter
         ],
         network_allowlist_ids: [],
         projection_schema: "generic-claim-set/v1" as const,
-        certification_receipt_hash: coreHash({ certification: options.adapterId }),
+        certification_receipt_hash:
+          options.certificationReceiptHash ?? coreHash({ certification: options.adapterId }),
         owner: `${options.adapterId} owner`,
       },
       developmentKey("adapter-owner"),
@@ -81,9 +110,18 @@ export function adapterManifest(options: AdapterManifestOptions): SubjectAdapter
   );
 }
 
+/**
+ * The three dispatchable reference adapters name the digest of the file that
+ * really runs and declare no prior receipt, because they are certified and
+ * admitted and admission requires manifest, receipt and bytes to agree. Every
+ * other fixture keeps the synthetic default: it is never dispatched, and giving
+ * it a real digest would couple an unrelated fixture to a build artifact.
+ */
 export const REFERENCE_CORRECT_MANIFEST = (): SubjectAdapterManifestV1 =>
   adapterManifest({
     adapterId: "reference-correct",
+    artifactHash: referenceAdapterEntryDigest("reference-correct"),
+    certificationReceiptHash: BOOTSTRAP_RECEIPT_SENTINEL,
     operations: [
       "acquire",
       "validate-package",
@@ -108,6 +146,8 @@ export const REFERENCE_CORRECT_MANIFEST = (): SubjectAdapterManifestV1 =>
 export const REFERENCE_OTEL_DEMO_MANIFEST = (): SubjectAdapterManifestV1 =>
   adapterManifest({
     adapterId: "reference-otel-demo",
+    artifactHash: referenceAdapterEntryDigest("reference-otel-demo"),
+    certificationReceiptHash: BOOTSTRAP_RECEIPT_SENTINEL,
     operations: [
       "acquire",
       "validate-package",
@@ -127,9 +167,94 @@ export const REFERENCE_OTEL_DEMO_MANIFEST = (): SubjectAdapterManifestV1 =>
 export const REFERENCE_LIMITED_MANIFEST = (): SubjectAdapterManifestV1 =>
   adapterManifest({
     adapterId: "reference-limited",
+    artifactHash: referenceAdapterEntryDigest("reference-limited"),
+    certificationReceiptHash: BOOTSTRAP_RECEIPT_SENTINEL,
     operations: ["acquire", "validate-package", "translate-evidence", "project", "report-residue"],
     packageKinds: ["oci"],
   });
+
+/**
+ * A manifest and a *certified* receipt for a sabotage fixture.
+ *
+ * Certification is not a promise of good behaviour. An adapter can pass
+ * `ADAPTER-CERT-V1` and still hang, crash or lie on a later operation, and the
+ * host's runtime controls — deadlines, process-tree termination, identity and
+ * response adjudication — are what answer that. Proving they still fire needs
+ * an adapter that is *legitimately admitted* and then misbehaves.
+ *
+ * `certifyAdapter` cannot produce this receipt: it would run the suite against
+ * the fixture and refuse it, which is correct and is exactly why the receipt is
+ * built by hand here. It carries the fixture's real entry digest, so admission
+ * accepts it on the same terms as any other — nothing about the admission path
+ * is weakened to let it through.
+ *
+ * Test and evidence fixtures only. Nothing in `packages/` builds one.
+ */
+export function certifiedSabotageAdapter(
+  name: string,
+  options: { readonly adapterId: string; readonly operations?: readonly string[] },
+): {
+  readonly manifest: SubjectAdapterManifestV1;
+  readonly receipt: SubjectAdapterCertificationReceiptV1;
+} {
+  const entryPath = sabotageAdapterEntry(name);
+  const manifest = adapterManifest({
+    adapterId: options.adapterId,
+    artifactHash: hashBytes(readFileSync(entryPath)),
+    certificationReceiptHash: BOOTSTRAP_RECEIPT_SENTINEL,
+    ...(options.operations === undefined ? {} : { operations: options.operations }),
+  });
+  return { manifest, receipt: syntheticCertificationReceipt(manifest, entryPath) };
+}
+
+/**
+ * A `certified` receipt for a manifest whose declared digest is the real entry.
+ *
+ * Built rather than measured, for fixtures where running `ADAPTER-CERT-V1`
+ * would be circular (a sabotage fixture it must refuse) or would couple a
+ * Docker-gated end-to-end test to an eight-spawn certification run. It is
+ * accepted by admission on exactly the same terms as a measured receipt —
+ * nothing in the admission path is relaxed for it — and it is a *fixture*, not
+ * a certification: it asserts nothing about the adapter's behaviour.
+ */
+export function syntheticCertificationReceipt(
+  manifest: SubjectAdapterManifestV1,
+  entryPath: string,
+  options: {
+    readonly receiptId?: string;
+    readonly verdict?: "certified" | "refused";
+    readonly refusalCodes?: readonly string[];
+  } = {},
+): SubjectAdapterCertificationReceiptV1 {
+  const entryDigest = hashBytes(readFileSync(entryPath));
+  const body = {
+    schema_version: "subject-adapter-certification-receipt/v1" as const,
+    receipt_id: options.receiptId ?? `cert-${manifest.adapter_id}`,
+    suite: "ADAPTER-CERT-V1" as const,
+    adapter_manifest_hash: manifest.core_hash,
+    adapter_artifact_hash: entryDigest,
+    adapter_id: manifest.adapter_id,
+    adapter_version: manifest.version,
+    certified_operations: [...manifest.operations],
+    certified_package_kinds: [...manifest.supported_package_kinds],
+    checks: [
+      {
+        check_id: "immutable-artifact-identity",
+        status: "passed" as const,
+        severity: "info" as const,
+        detail: "fixture receipt, certified by construction",
+      },
+    ],
+    verdict: (options.verdict ?? "certified") as "certified" | "refused",
+    refusal_codes: [...(options.refusalCodes ?? [])],
+    certifier_id: "erl2-certifier",
+    certifier_is_adapter_owner: false as const,
+    enforced_controls: [],
+    unsupported_controls: [],
+    certified_at: RUN_START,
+  };
+  return { ...body, core_hash: coreHash(body) } as SubjectAdapterCertificationReceiptV1;
+}
 
 export const REFERENCE_MISLEADING_MANIFEST = (): SubjectAdapterManifestV1 =>
   adapterManifest({

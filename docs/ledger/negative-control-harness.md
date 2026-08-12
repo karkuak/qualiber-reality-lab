@@ -62,6 +62,8 @@ git — that decides what a patch *would* do before anything is written.
 | `expectedMatches` | no — **defaults to exactly one** | how many occurrences the control means |
 | `anchor` | no | a string occurring exactly once, after which `find` is searched |
 | `mustFail` | no | a subset of `tests`; a failure outside it is not this control's kill |
+| `mustFailCases` | no | the exact case names that must be among the failures |
+| `requiresPrerequisite` | no | a host input the control needs — `otel-demo-upstream` or `docker-daemon`; see §8 |
 | `uniquePostimage` | no | also require the postimage not to already occur elsewhere |
 | `note` | no | why an `expect: "pass"` control is kept |
 
@@ -125,6 +127,8 @@ share one column.
 | `named_tests_failed` | yes | the kill; the guard is load-bearing |
 | `no_kill_as_declared` | yes | an `expect: "pass"` control, agreeing |
 | `tests_passed_unexpectedly` | yes | a control that expected a kill and got none |
+| `unmeasured_here` | **neither** | the control declared a prerequisite this host cannot supply, and the designated case skipped itself; see §8 |
+| `designated_case_skipped` | **no** | a designated case skipped with no prerequisite declared — fail-closed, because nobody said it might |
 | `patch_not_applicable` | **no** | the preimage is gone |
 | `ambiguous_patch_target` | **no** | the preimage is not unique |
 | `anchor_not_found` / `anchor_ambiguous` | **no** | the window cannot be established |
@@ -343,3 +347,401 @@ Two rows are worth reading twice:
 `git worktree list` shows only the repository; no `erl2-negative-control-*` temp
 directory remains; no `node --test` or harness process survives; `git status
 --short` is empty and `git diff --check` is clean.
+
+## 8. Declared prerequisites, and the third column they need
+
+Added by the validation-harness closure that answers the independent review of
+`90a0039` ([`docs/evidence/independent-review-90a0039/`](../evidence/independent-review-90a0039/README.md)).
+
+### 8.1 The defect: one control spent a full campaign being a false disagreement
+
+The campaign at `90a0039` discovered 129 controls, agreed 128, and reported one
+disagreement: `substrate-loopback-only-rendered`, recorded as
+`tests_passed_unexpectedly`, `harnessError: false`, `replacedCount: 1`, 28 pass /
+0 fail.
+
+It was not a disagreement. Two independent defects produced it, and the review
+proved both.
+
+**The fixture was never in the worktree.** Controls are applied to a `git
+worktree` checked out at HEAD, and a worktree carries tracked files only.
+`environments/otel-demo/upstream/` is git-ignored — it is a 3 MB third-party
+release archive and its extraction — so it is absent from every campaign
+worktree that has ever run. The designated case, `COMPOSE-ADV: the RENDERED
+configuration publishes one loopback port and nothing else`, renders the real
+merged Compose configuration and skips itself, announcing `RENDERED TOPOLOGY
+UNPROVEN`, when that extraction is missing. It did exactly what it says it does.
+
+The review's four-cell matrix settled what that meant:
+
+| revision | fixture | designated case | classification |
+|---|---|---|---|
+| `e9718e0` | absent | skipped | `tests_passed_unexpectedly` → disagreed |
+| `90a0039` | absent | skipped | `tests_passed_unexpectedly` → disagreed |
+| `e9718e0` | provisioned | ran | baseline passes, mutation fails → agreed |
+| `90a0039` | provisioned | ran | baseline passes, mutation fails → agreed |
+
+Identical at both revisions, so **not a receipt-admission regression**; and fully
+load-bearing once provisioned — the unmodified baseline passes, the mutated
+overlay fails the intended loopback assertion, and reverting restores the pass.
+
+**The classifier could not say "not measured".** It parsed `tests`, `pass`,
+`fail` and `cancelled`, and never `skipped`. With the designated case skipped and
+the other 28 passing, it reached `fail === 0` and — for an `expect: "fail"`
+control — returned `tests_passed_unexpectedly`. Worse, that short-circuit sits
+*above* the `mustFailCases` check written to catch precisely "the declared case
+did not fail", so the one mechanism that could have noticed never ran.
+
+### 8.2 Provisioning: the pin decides, not the directory
+
+`scripts/lib/campaignFixtures.mjs` provisions the fixture once per worktree, for
+the controls that declare it.
+
+The rule it exists to enforce is that the prerequisite can never be satisfied by
+bytes nobody verified:
+
+- the digest is **read** from the repository's own committed
+  `environments/otel-demo/qualification/provenance.json`, not restated, so a
+  re-pin cannot leave the campaign provisioning the previous release;
+- the extraction directory is **derived** from that digest
+  (`extracted-<first 16 hex>`), which is the same derivation
+  `qualify-otel-demo.mjs` performs and the exact directory
+  `composeSubstrate.test.ts` reads;
+- only the qualifier's own three config paths are extracted;
+- a pre-existing extraction is reused **only when complete**, and re-made from
+  the verified archive when not — a half-extracted root is the case a bare
+  `existsSync` would pass and `docker compose config` would then fail inside,
+  where it looks like a substrate fault;
+- a canonical ignored directory is **never copied**. Extraction is always from an
+  archive that matched the pin;
+- fetching is opt-in through `ERL2_CAMPAIGN_ALLOW_FETCH=1`. Absent that, a
+  missing archive is an unavailable prerequisite, not a silent download of
+  whatever the URL serves today.
+
+Provisioned state lives inside the worktree, so `release()` removes it with
+everything else, and the destination is git-ignored, so `restore()`'s `git status
+--porcelain` cannot see it and the byte-identical-tree certification is
+unaffected.
+
+Two prerequisites exist, deliberately. `otel-demo-upstream` is *provisioned* —
+the campaign can make it true. `docker-daemon` is only *detected*; nothing the
+campaign does conjures a daemon, and pretending otherwise would turn a host fact
+into a harness failure. `container-deadline-kills-the-container` has carried a
+note since it was written asking readers to read its no-daemon result as
+UNMEASURED HERE by hand; it now declares the prerequisite and the harness says it.
+
+### 8.3 Why a skip needs its own column
+
+A skip is neither a result nor a fault, and both existing columns lie about it.
+Scoring it as a result claims the campaign learned something about a guard it
+never ran. Scoring it as a harness error claims something broke when the only
+fact is that this host is not the host.
+
+| condition | result | agreement |
+|---|---|---|
+| designated case skipped, prerequisite **declared** | `unmeasured_here` | neither — `agreed: null` |
+| designated case skipped, **no** prerequisite declared | `designated_case_skipped` | harness error |
+| designated case failed | `named_tests_failed` | agreement |
+| nothing skipped, nothing failed, kill expected | `tests_passed_unexpectedly` | disagreement |
+
+The asymmetry is the point. A declared prerequisite is a claim made in advance
+and reviewable; an undeclared skip is a designated case that vanished with nobody
+having said it might, and that stays fail-closed. A typo in
+`requiresPrerequisite` would otherwise buy a control a permanent, silent
+`unmeasured_here`, so the name is validated against the registry before any
+worktree exists.
+
+The campaign summary now reconciles **discovered = agreements + disagreements +
+unmeasured + harness errors** and refuses to finish if they do not add up. The
+zero-disagreement rule is untouched: an unmeasured control is not an acceptable
+disagreement, it is an absent measurement, and the summary says so in its own
+section rather than folding it into a total.
+
+Sixteen table-driven cases in `tests/integration/negativeControlHarness.test.ts`
+pin the truth table, including the exact recorded defect (28 pass / 0 fail with
+the designated case skipped), the undeclared variant, cancellation, truncated
+output, multiple skips where the designated case still failed, and both
+`container-deadline-kills-the-container` hosts. One control asserts the single
+property the whole correction exists to guarantee: **a skipped designated case is
+never an agreement, under any declaration.**
+
+### 8.4 Targeted reproduction
+
+Run through the real campaign path, one control, before any full campaign.
+
+| fixture | outcome |
+|---|---|
+| available | `· prerequisite otel-demo-upstream: satisfied (provisioned …/extracted-1bf3ef8fbaffc049, archive sha256:1bf3ef8f…c051c)`; **28 pass / 1 fail**, `named_tests_failed`, **agreed**; accounting `1 = 1 + 0 + 0 + 0` |
+| unavailable | prerequisite refused with the reason and no fallback; **not patched, not built, not run**; `unmeasured_here`; accounting `1 = 0 + 0 + 1 + 0` |
+
+Both left the working tree byte-identical, no worktree registered, and no temp
+root behind.
+
+### 8.5 The campaign this closure gated
+
+Run once, at `3392b8ec28cc6168292f421f0ae54e667b32bf22`, tree
+`6aac61b9a6d89c25b8054f8ec0518eb0e69838ad`, on a clean worktree, immediately
+after the exact-head clean gate passed at that same tree.
+
+**Clean gate.** 1,246 tests, 1,244 passed, 0 failed, 0 cancelled, 2
+Docker-gated skips, 1,056 s. The total is the previous 1,209 plus the 37
+controls this closure adds. `verify:generated` current; `evidence:verify` 838
+pinned / 7 excluded with no drift; `git diff --check` clean.
+
+The previous package's gate was recorded by the independent review as
+implementer-reported, because no durable log of it existed. This one was
+captured to a log as it ran, which is the whole of the change: the numbers above
+are read from that log rather than remembered.
+
+**Campaign.**
+
+| | |
+|---|---|
+| discovered | **129** |
+| measured agreements | **129** |
+| disagreements | **0** |
+| unmeasured | **0** |
+| harness errors | **0** |
+| duration | 11,346 s (3 h 09 m 06 s) |
+| output truncation | none |
+| working tree afterwards | byte-identical |
+| residue | none — no worktree, temp root, container, network, volume or surviving process |
+
+`accounting: 129 discovered = 129 agreed + 0 disagreed + 0 unmeasured + 0
+harness error(s)`, and `reconciled: true` in
+`docs/ledger/negative-controls.json`.
+
+Three rows are the point of this package:
+
+- **`substrate-loopback-only-rendered`: 28 pass / 1 fail, `named_tests_failed`,
+  agreed.** The same control, the same mutation, `replacedCount: 1` — and the
+  designated case now *runs*. Its previous 28 pass / **0** fail was the skip.
+- **`container-deadline-kills-the-container`: 0 pass / 2 fail, agreed**, with
+  `docker-daemon` satisfied. Its declared prerequisite changes nothing on a host
+  that has a daemon; it changes what gets reported on a host that does not.
+- **`adapter-mode-binding`: 7 pass / 2 fail, agreed** — the LIVE-001 red control,
+  unaffected by any of this.
+
+This is the first campaign to reach 129/129. The previous one reached 128/129
+with a disagreement that was never a disagreement.
+
+**A note on runtime, deliberately not acted on here.** 3 h 09 m is within the
+documented bound and close to the previous 3 h 16 m; per-control build and suite
+time sums to ~189 minutes, so the campaign is very nearly all measurement. Making
+it faster — a shared build, or parallel controls over several worktrees — is a
+real opportunity and a separate one. It is recorded here as a follow-up rather
+than folded into a correctness fix, because a harness that changes how it
+measures while changing what it measures cannot tell you which change moved the
+number.
+
+## 9. Verified fixtures, fail-closed classification, durable evidence
+
+The independent review of `07da5fe` approved the production receipt admission
+unchanged and blocked publication on the *harness*. Three findings, all
+validation-only, all reproduced by the reviewer against a disposable clone.
+
+### 9.1 A fixture is bytes, not a directory that exists
+
+`extractionComplete()` checked that three paths existed, and
+`provisionOtelDemoUpstream()` returned `satisfied / reused: true` on the strength
+of that alone — before it had found an archive, let alone hashed one. The review
+put a symlink at the digest-derived extraction path, pointed it outside the
+worktree at three arbitrary files with the right names, and got:
+
+```json
+{ "status": "satisfied", "reused": true, "insideWorktree": false, "sample": "UNVERIFIED" }
+```
+
+Reuse is now a proof, performed from scratch on every call:
+
+1. **containment** — `resolveContained()` canonicalises the worktree once and
+   `lstat`s every component as it descends, so a symbolic link anywhere in the
+   path is *named and refused* rather than followed. If no component is a link,
+   the result cannot denote a file outside the worktree; the final `realpath`
+   equality is asserted anyway, because that is the containment claim and a test
+   should be able to read it directly rather than infer it.
+2. **a marker** — `.erl2-campaign-fixture.json`, written only by a verified
+   extraction, naming the release, the archive digest, the exact required paths
+   and a digest for each. Deterministic: no timestamps, no absolute paths.
+3. **recomputation** — every required file is re-hashed and compared, every time.
+   A marker is a file; anything that can plant three files can plant a fourth.
+
+Which is why (3) is not the last word either. A forged marker describing forged
+files recomputes perfectly, so verification also checks each digest against
+`config_hashes` in the tracked `substrate-lock.json` — bytes the campaign
+worktree cannot write, produced by `qualify-otel-demo.mjs` from the real release.
+The marker says *which archive this claims to be*; the lock says *whether these
+are the qualified bytes*. Only the second requires trusting something outside the
+worktree, and that is the one that closes the attack.
+
+Extraction is likewise no longer taken on trust from a matching digest. A
+verified archive can still legitimately contain an absolute member, a `..`
+traversal or a symlink — the digest would match, because those are the pinned
+bytes — so `inspectArchiveMembers()` reads the listing first and refuses rather
+than repairs. Only the three declared paths are extracted, each must be the sole
+regular-file member selecting it, and the whole listing is rejected if any member
+anywhere is absolute or traverses upward.
+
+Nothing is removed until a verified archive is in hand: a campaign that deleted
+an unverifiable extraction and *then* found nothing to rebuild from would have
+destroyed state and reported unavailable. A link **at** the extraction root is
+unlinked (never followed, never recursed into); a link **above** it is refused,
+because writing through it lands outside the worktree and deleting it would
+destroy something the campaign did not create.
+
+### 9.2 An incomplete observation is not a measurement
+
+`classifyTestRun` read a *tail* of the stage's output and never saw the process.
+A tail is perfectly capable of carrying a well-formed summary from a run that was
+cut in half, killed by a signal, or exited for a reason no test explains — and
+truncation was applied afterwards as `outputTruncated: true`, an annotation on an
+agreement that remained an agreement.
+
+Classification now receives the stage's complete execution facts and decides in
+this order, before a word of output is believed:
+
+| # | observation | result |
+|---|---|---|
+| 1 | facts absent | `execution_facts_missing` |
+| 2 | spawn error | `test_runner_failed` |
+| 3 | timed out / group outlived its kill | `stage_timed_out` / `stage_tree_termination_failed` |
+| 4 | output truncated | `output_truncated` |
+| 5 | terminated by a signal, or no integer status | `stage_terminated_abnormally` |
+| 6 | a counter missing, negative, or `tests ≠ pass + fail + skipped + cancelled` | `test_runner_failed` / `impossible_test_accounting` |
+| 7 | anything cancelled | `test_runner_failed` |
+| 8 | exit status disagrees with the counters it summarises | `stage_terminated_abnormally` |
+| 9 | a case named twice, or both failed and skipped | `impossible_test_accounting` |
+| 10 | designated case skipped, prerequisite's own marker in the reason | `unmeasured_here` |
+| 11 | designated case skipped otherwise | `designated_case_skipped` |
+| 12 | any remaining skip the control did not declare | `unexpected_case_skipped` |
+| 13 | …then the pre-existing kill/no-kill/stray/declared-case reading, unchanged |
+
+Everything from 1 to 12 is a harness error. `unmeasured_here` is the one outcome
+that is neither agreement nor disagreement, so it is now the *hardest* to reach
+rather than the easiest: a declared prerequisite excuses a skipped designated
+case only when the suite's own skip reason names what that prerequisite stands
+for (`skipEvidence`). Declaring a prerequisite is not a licence to reinterpret
+any disappearance in the file as that prerequisite's fault.
+
+Two behaviours are deliberately unchanged: a genuine intended failure is still an
+agreement, and a genuine unexpected pass is still a disagreement.
+
+**Skips are now published rather than absent.** Every result carries `tests`,
+`pass`, `fail`, `cancelled`, `skipped` and the name and reason of every skipped
+case — on the agreeing rows too, which is exactly where they used to be dropped.
+The review's objection was that the 129-row record *could not be asked* whether
+skips were hidden behind its agreements. It can now.
+
+It turned out there were three. `composeSubstrate.test.js` has one case that
+skips itself without the upstream fixture, four controls run that suite, and only
+`substrate-loopback-only-rendered` declares the fixture — and it is the last of
+the four. So for `telemetry-driver-verified-collector`,
+`compose-ownership-label-verification` and `compose-running-image-verification`
+the rendered-topology case was skipping, unrecorded, on every campaign. Those
+three now declare it with `expectedSkips`, which does not excuse the skip so much
+as publish it: the case, the required reason marker, and the skip itself all
+appear on the row. An undeclared skip, or a declared one whose reason has since
+changed, is `unexpected_case_skipped` and fails the campaign.
+
+### 9.3 Evidence that survives a fresh clone
+
+The campaign's only complete record was `docs/ledger/negative-controls.json`,
+which `.gitignore` excludes: no commit, no tree, no integrity binding, overwritten
+by every targeted run, absent from a fresh clone. The clean gate fared worse — a
+prose paragraph naming a log nobody retained.
+
+The format is three things and stops there: a JSON record, whatever bounded logs
+it refers to, and a `SHA256SUMS` over both, under
+`docs/evidence/validation-harness-closure/`. There is no evidence platform. The
+repository already byte-pins its deterministic artifacts through
+`generate-evidence.mjs`; a three-hour campaign is not deterministic, so pinning
+its bytes would be a lie. What can honestly be claimed is *this run, at this
+commit, produced these numbers, and here is the output they were read from*.
+
+- `scripts/negative-control.mjs --evidence-out <file>` writes what the campaign
+  knows about itself: commit and tree, command and configuration, timing,
+  discovered controls, prerequisite provisioning outcomes, per-control mutation
+  target and replacement count, designated command and cases, exit status,
+  signal, truncation, every counter, every skip and reason, per-stage durations,
+  stage cleanup, byte-identity certification, residue, and a digest plus 16 KiB
+  tail of each control's output.
+- `scripts/capture-validation-evidence.mjs --mode gate|campaign --out <dir>`
+  records what a process cannot certify about itself: repository identity before
+  and after, Docker inventory on both sides, wall-clock timing, surviving
+  processes, and the complete unbounded log of each step. It refuses to write
+  into a directory that already holds a capture.
+- `scripts/verify-validation-evidence.mjs` recomputes every digest, requires the
+  gate and the campaign to name the same executable commit and tree, reconciles
+  both sets of totals, and refuses the combinations the classifier made
+  unreachable — an agreement coexisting with truncation, a signal, an abnormal
+  exit, a harness error or an undeclared skip. It also asks `git check-ignore`
+  whether each retained file would survive a clone, because that is the defect
+  itself. It runs in the ordinary suite; the long runs do not.
+
+The ignored ledger JSON is still written, now marked `authoritative: false` and
+with the retained tails stripped. Targeted runs write wherever `--evidence-out`
+says, so they cannot overwrite a full-campaign record.
+
+## 10. The gate and campaign this closure rests on
+
+Both ran once, at the executable harness commit
+`76933408980c79e7787f14366073ab24c9ed2c88`, tree
+`e1d089e748bf80421e3cd289c30e7cf5881ee80d`, on a clean worktree — the gate
+first, the campaign only after it passed. Neither was rerun. The complete
+records, their logs and their checksum manifests are in
+`docs/evidence/validation-harness-closure/`, and
+`npm run evidence:validation` checks them.
+
+**Clean gate.** 1,301 tests, 1,299 passed, 0 failed, 0 cancelled, 2 skipped, in
+1,416 s. `verify:generated` current; `evidence:verify` 838 pinned / 7 excluded
+with no drift; `git diff --check` clean; all four steps exit 0. The two skips are
+`EXTERNAL SUBJECT UNPROVEN` — the gate supplies no external adapter entry and
+must not require one — and they are named in the record rather than counted. The
+total is the previous 1,246 plus the 55 controls this package adds.
+
+**Campaign.** 10,829 s (3 h 00 m 29 s).
+
+| | |
+|---|---|
+| discovered | **129** |
+| measured agreements | **129** (125 `named_tests_failed` + 4 `no_kill_as_declared`) |
+| disagreements | **0** |
+| unmeasured | **0** |
+| harness errors | **0** |
+| output truncation | **0 rows** |
+| termination signals | none |
+| working tree afterwards | byte-identical |
+| residue | none — worktree, temp root, process, container, network, volume, image |
+
+`substrate-loopback-only-rendered` measured the pinned fixture: prerequisite
+provisioned and *verified*, 28 pass / 1 fail, `replacedCount: 1`, the designated
+rendered-topology case running and failing. `adapter-mode-binding` 7 pass / 2
+fail, agreed. `container-deadline-kills-the-container` 0 pass / 2 fail, agreed,
+`docker-daemon` satisfied.
+
+And the answer to the question the previous record could not be asked: **three
+skips, all declared, none hidden.** `telemetry-driver-verified-collector`,
+`compose-ownership-label-verification` and `compose-running-image-verification`
+each skipped the rendered-topology case with `RENDERED TOPOLOGY UNPROVEN`, and
+each row now carries the case name, the reason and the declaration that permits
+it. They were skipping on every previous campaign; the difference is that the
+record says so.
+
+### Carry-forward
+
+The evidence is committed *after* the runs, in its own commit, and that ordering
+is the point rather than an accident: evidence produced by the same commit it
+certifies would be circular. So the executable head is
+`76933408980c79e7787f14366073ab24c9ed2c88` and the evidence commit sits directly
+on top of it, adding only files under
+`docs/evidence/validation-harness-closure/` and this section.
+
+It changes no production code, no test, no harness, no discovery metadata, no
+fixture, no designated command, no package script, no generated evidence and no
+generator input — so every executable input to the gate and the campaign is
+identical at the final head to what they measured. A search across `packages/`,
+`tests/`, `scripts/` and `adapters/` finds no executable reader of either
+`docs/evidence/validation-harness-closure/` or this ledger file, other than the
+verifier that exists to check the evidence and its own tests. Rerunning the gate
+or the campaign because the evidence for them was committed would measure the
+same tree twice.

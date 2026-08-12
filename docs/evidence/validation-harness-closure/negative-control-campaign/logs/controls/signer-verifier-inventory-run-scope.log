@@ -1,0 +1,50 @@
+✔ INV-BASELINE: an honest CLI terminal lists every applicable signed member (6123.258292ms)
+✔ INV-HARNESS: re-sealing the chain unchanged still verifies (193.770208ms)
+✔ INV-MISSING: an inventory that omits generic-run-policy/v1 is refused (189.689458ms)
+✔ INV-MISSING: an inventory that omits trust-policy-manifest/v2 is refused (183.99625ms)
+✔ INV-MISSING: an inventory that omits trusted-timestamp-checkpoint/v1 is refused (185.384291ms)
+✔ INV-MISSING: an inventory that omits acquisition-preregistration/v1 is refused (181.052541ms)
+✔ INV-MISSING: a false completeness claim is not a separate rule — it is never read (184.567958ms)
+✔ INV-MISSING: a manipulated completeness flag is not representable at all (175.698083ms)
+✔ INV-WRONG: an entry naming a retained artifact that is not an applicable member is refused (183.661167ms)
+✔ INV-WRONG: an entry whose schema contradicts the artifact is refused (179.145041ms)
+✔ INV-WRONG: an entry whose key contradicts the artifact is refused (180.259125ms)
+✔ INV-WRONG: an entry whose signature hash contradicts the artifact is refused (177.81375ms)
+✔ INV-WRONG: the correct key under an unauthorized role is refused (179.454875ms)
+✔ INV-WRONG: a signed member from another run is refused (3439.3445ms)
+✔ INV-WRONG: a lifecycle-unreachable signed member is refused (180.896708ms)
+✔ INV-WRONG: a member created after the inventory cutoff cannot be listed (172.282667ms)
+✔ INV-SET: a duplicated entry is refused (181.403959ms)
+✖ INV-SET: an inventory naming another run is refused even when every hash resolves (3408.581625ms)
+✔ INV-SET: the right count with one member substituted is refused (183.058167ms)
+✔ INV-SET: the verifier declares its own exclusions rather than reading the inventory's (170.712333ms)
+✔ INV-SET: entry order is not normative (185.011375ms)
+✔ INV-INVALID: an invalid record that retains a signer inventory is refused (159.988125ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 21
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16585.999084
+
+✖ failing tests:
+
+test at tests/dist/adversarial/signerInventoryCompleteness.test.js:373:1
+✖ INV-SET: an inventory naming another run is refused even when every hash resolves (3408.581625ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/signerInventoryCompleteness.test.js:378:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,59 @@
+✖ MODE-FROZEN: a fake preregistration refuses a later real adapter and a later receipt (4248.099417ms)
+✔ MODE-FROZEN: a real preregistration requires a receipt and freezes the exact one (2350.864667ms)
+✔ MODE-FROZEN: a second valid receipt cannot replace the frozen one (1456.978584ms)
+✖ MODE-FROZEN: mode and receipt survive a new process, replay and a dropped snapshot (1567.814583ms)
+✔ PRE-HOST: an unadmitted certification never reaches the adapter host (1391.866667ms)
+✔ PRE-HOST: an uncertified receipt cannot construct the host at preregistration (1112.719333ms)
+✔ FAILURE-EVIDENCE: an adapter failure cites the frozen current receipt, not the bootstrap sentinel (1491.849166ms)
+✔ PER-DISPATCH: deterministic replacement at the same path is refused before it executes (149.2725ms)
+✔ PER-DISPATCH: retargeting a symlinked entry is refused before it executes (145.971416ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 7
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14143.657125
+
+✖ failing tests:
+
+test at tests/dist/adversarial/adapterModeBinding.test.js:122:1
+✖ MODE-FROZEN: a fake preregistration refuses a later real adapter and a later receipt (4248.099417ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'SCHEMA_VALIDATION_FAILED'
+  - 'ADMISSION_SUBJECT_EXECUTION_MODE_FROZEN'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/adapterModeBinding.test.js:142:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SCHEMA_VALIDATION_FAILED',
+    expected: 'ADMISSION_SUBJECT_EXECUTION_MODE_FROZEN',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/adapterModeBinding.test.js:194:1
+✖ MODE-FROZEN: mode and receipt survive a new process, replay and a dropped snapshot (1567.814583ms)
+  AssertionError [ERR_ASSERTION]: fresh process: omission must not downgrade to the fake port
+      at assertStillBound (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/adapterModeBinding.test.js:214:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/adapterModeBinding.test.js:225:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

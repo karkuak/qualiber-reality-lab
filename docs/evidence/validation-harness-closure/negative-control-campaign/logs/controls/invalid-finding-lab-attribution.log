@@ -1,0 +1,76 @@
+✔ BOUNDED-CLEANUP: a frontier-unsafe resource survives, and is reported as skipped (7145.880042ms)
+✔ BOUNDED-CLEANUP: no whole-environment destroy is dispatched on the bounded route (4338.03075ms)
+✔ BOUNDED-CLEANUP: every safe action has exactly one receipt, and every skip none (4389.125208ms)
+✔ BOUNDED-CLEANUP: a foreign resource does not prevent the run reaching a terminal (4571.135ms)
+✔ BOUNDED-CLEANUP: the owned resources are cleaned up around the foreign one (4248.074417ms)
+✔ BOUNDED-CLEANUP: a baseline failure's finding names the baseline gate (4299.70575ms)
+✔ BOUNDED-CLEANUP: the cleanup consequence never replaces the original cause (4363.215875ms)
+✔ BOUNDED-CLEANUP: the unmutated bounded terminal derives cleanly (4367.4475ms)
+✔ BOUNDED-CLEANUP: a fabricated empty residue is refused as undeclared destruction (4483.729917ms)
+✔ BOUNDED-CLEANUP: a probe that authorizes what the frontier did not is refused (4480.270833ms)
+✔ BOUNDED-CLEANUP: a probe whose `before` is a post-destruction inventory is refused (4109.998ms)
+✔ BOUNDED-CLEANUP: a probe belonging to another run or another substrate is refused (4372.758208ms)
+✔ BOUNDED-CLEANUP: an action claiming success over a resource that is still there is refused (4297.801583ms)
+✔ BOUNDED-CLEANUP: a residue the observation does not see is refused (4324.322625ms)
+✖ BOUNDED-CLEANUP: a finding naming another phase's gate is refused (4383.944583ms)
+✖ BOUNDED-CLEANUP: a subject-attributed finding on a Lab environment failure is refused (4364.196958ms)
+✔ BOUNDED-CLEANUP: the verifier's entry point requires the residue probe (4436.47125ms)
+✔ BOUNDED-CLEANUP: a cleanup status that disagrees with the residue is refused (4335.093708ms)
+✔ BOUNDED-CLEANUP: the verifier's entry point requires the pre-action frontier (4327.208875ms)
+✔ BOUNDED-CLEANUP: no attestation and no public bundle descend from a bounded terminal (4459.544041ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 18
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 90783.523584
+
+✖ failing tests:
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:341:1
+✖ BOUNDED-CLEANUP: a finding naming another phase's gate is refused (4383.944583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'INVALID_REASON_PHASE_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:352:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'INVALID_REASON_PHASE_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:354:1
+✖ BOUNDED-CLEANUP: a subject-attributed finding on a Lab environment failure is refused (4364.196958ms)
+  AssertionError [ERR_ASSERTION]: a finding with owner = "subject" must be refused
+  + actual - expected
+  
+  + undefined
+  - 'INVALID_REASON_FABRICATED_FINDING'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:373:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'INVALID_REASON_FABRICATED_FINDING',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

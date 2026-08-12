@@ -40,6 +40,8 @@ export type AcquisitionPreregistrationV1 = {
   readonly generic_run_policy_hash: Hash;
   readonly run_trust_policy_hash: Hash;
   readonly limits_hash: Hash;
+  readonly subject_execution_mode: "development_fake_port" | "external_adapter";
+  readonly adapter_certification_receipt_hash?: Hash;
   readonly registered_at: Instant;
   readonly expires_at: Instant;
   readonly selected_case_identity: "absent";

@@ -21,12 +21,15 @@ import {
   type Hash,
   type LabLifecycleEventV1,
   type SelectionAssuranceV1,
+  type SubjectAdapterCertificationReceiptV1,
   type SubjectAdapterManifestV1,
+  type SubjectExecutionMode,
   type Tier,
 } from "@erl2/contracts";
 import {
   AdapterHost,
   AdmissionRegistry,
+  verifyAdapterCertification,
   FakeSubjectPort,
   HostedSubjectPort,
   JOURNEY_PLANE_METRICS,
@@ -63,6 +66,7 @@ export const COMMON_FLAGS: readonly FlagSpec[] = [
   { name: "fake-acquire", kind: "string" },
   { name: "fake-verify-package", kind: "string" },
   { name: "adapter-entry", kind: "string" },
+  { name: "adapter-certification", kind: "string" },
   { name: "fake-leak-canary", kind: "string" },
   { name: "fake-output-bytes", kind: "string" },
   { name: "fake-step-status", kind: "string" },
@@ -251,8 +255,22 @@ function subjectPort(
   clock: SystemClock,
   environmentAccess?: EnvironmentAccess,
 ): SubjectPort {
+  // The frozen binding decides, before anything is constructed. This is the
+  // single authoritative point at which a run's seam is enforced (ADR-ERL2-036).
+  assertSubjectModeUnchanged(flags, runRoot);
   const entry = flags["adapter-entry"] as string | undefined;
   if (entry === undefined) {
+    // A certification supplied to a run that dispatches no adapter would be
+    // accepted, ignored, and never appear in the run's evidence — an operator
+    // could reasonably read the exit code as "my adapter was certified". It is
+    // refused rather than dropped.
+    if (flags["adapter-certification"] !== undefined) {
+      throw new Erl2Error(
+        CODES.CFG_MISSING_REQUIRED,
+        "--adapter-certification applies to a real adapter; without --adapter-entry this run " +
+          "drives the development fake port, which executes no adapter bytes and certifies nothing",
+      );
+    }
     // The scripting flags are refused unless the explicit development profile is
     // enabled — they are not reachable on the release surface (§11.8).
     assertFakeFlagsUnavailableUnlessDevelopmentProfile(flags);
@@ -280,11 +298,29 @@ function subjectPort(
     adapterManifestHash(flags, runRoot),
     "SubjectAdapterManifestV1",
   );
+  // Certification is required *before* the host exists, not checked afterwards:
+  // constructing an `AdapterHost` is the point past which adapter bytes can be
+  // dispatched, so an uncertified adapter must be refused on this side of it
+  // (LIVE-001, ADR-ERL2-036).
+  const receipt = registry.require<SubjectAdapterCertificationReceiptV1>(
+    adapterCertificationReceiptHash(flags, runRoot),
+    "SubjectAdapterCertificationReceiptV1",
+  );
+  // Certification is decided here — before the host exists. The entry's bytes
+  // are re-verified by the host on every dispatch instead of once here, which
+  // is the tighter place for it: it closes the window between this check and
+  // the spawn, and the window between one operation and the next.
+  verifyAdapterCertification({
+    manifest,
+    receipt,
+    tier: requireDevelopmentTier(flags),
+  });
   return new HostedSubjectPort(
     new AdapterHost({
       runId,
       adapterManifest: manifest,
       adapterEntryPath: entry,
+      certifiedArtifactHash: receipt.adapter_artifact_hash,
       workspaceRoot: path.join(path.resolve(runRoot), "adapter-workspace"),
       store: new ArtifactStore(runRoot),
       clock,
@@ -408,6 +444,115 @@ function adapterManifestHash(flags: ParsedFlags, runRoot: string): Hash {
     }
   }
   return hash(flags, "adapter");
+}
+
+/**
+ * Resolves the adapter certification receipt this run is bound to.
+ *
+ * Same discipline as {@link adapterManifestHash}: once the run has durably
+ * retained a receipt, that is the one it uses, and a later command cannot
+ * substitute a different certification by passing a flag. Only
+ * `preregister-acquisition` — which has nothing retained yet — reads the flag.
+ *
+ * A real adapter with no receipt is refused here, before the host is built.
+ */
+function adapterCertificationReceiptHash(flags: ParsedFlags, runRoot: string): Hash {
+  const supplied = flags["adapter-certification"] as string | undefined;
+  const frozen = frozenSubjectBinding(runRoot);
+  if (frozen?.receiptHash !== undefined) {
+    // Authoritative. The receipt comes from the signed preregistration, never
+    // from a flag: the independent review showed a run could otherwise
+    // authorize receipt A on one command and receipt B on the next, with
+    // neither inside the frozen boundary.
+    if (supplied !== undefined && supplied !== frozen.receiptHash) {
+      throw new Erl2Error(
+        CODES.ADAPTER_CERTIFICATION_IDENTITY_MISMATCH,
+        "--adapter-certification does not match the certification this run froze at " +
+          "preregistration; a run cannot substitute its adapter's certification",
+      );
+    }
+    return frozen.receiptHash;
+  }
+  if (supplied === undefined) {
+    throw new Erl2Error(
+      CODES.ADAPTER_CERTIFICATION_RECEIPT_REQUIRED,
+      "--adapter-entry drives a real out-of-process adapter, which may not be dispatched " +
+        "without its certification receipt: pass --adapter-certification HASH, admitted with " +
+        "`erl2 admit-adapter`",
+    );
+  }
+  return supplied as Hash;
+}
+
+/**
+ * The subject seam and current receipt this run froze at preregistration.
+ *
+ * `undefined` only before preregistration — the one moment the run has not
+ * chosen yet, and the only moment a flag may decide. Read from the retained,
+ * signed `AcquisitionPreregistrationV1` rather than held in memory, so it
+ * survives process exit, a fresh command, recovery and replay.
+ */
+interface FrozenSubjectBinding {
+  readonly mode: SubjectExecutionMode;
+  readonly receiptHash?: Hash;
+}
+
+function frozenSubjectBinding(runRoot: string): FrozenSubjectBinding | undefined {
+  const preregPath = path.join(
+    path.resolve(runRoot),
+    "retained",
+    "acquisition-preregistration.json",
+  );
+  if (!existsSync(preregPath)) return undefined;
+  const prereg = parseStrictJson(readFileSync(preregPath, "utf8")) as {
+    subject_execution_mode?: unknown;
+    adapter_certification_receipt_hash?: unknown;
+  };
+  const mode = prereg.subject_execution_mode;
+  if (mode !== "development_fake_port" && mode !== "external_adapter") return undefined;
+  const receipt = prereg.adapter_certification_receipt_hash;
+  return {
+    mode,
+    ...(typeof receipt === "string" ? { receiptHash: receipt as Hash } : {}),
+  };
+}
+
+/**
+ * Refuses any later command that tries to change the seam the run froze.
+ *
+ * This is the **single authoritative enforcement point** for LIVE-001's P1: a
+ * fake-port run cannot acquire a real adapter, and a real run cannot quietly
+ * drop back to the fake port by omitting a flag. Removing it is what the
+ * campaign red control and `MODE-FROZEN` tests detect.
+ */
+function assertSubjectModeUnchanged(flags: ParsedFlags, runRoot: string): void {
+  const frozen = frozenSubjectBinding(runRoot);
+  if (frozen === undefined) return;
+  const entry = flags["adapter-entry"] as string | undefined;
+  if (frozen.mode === "development_fake_port") {
+    if (entry !== undefined) {
+      throw new Erl2Error(
+        CODES.ADMISSION_SUBJECT_EXECUTION_MODE_FROZEN,
+        "this run preregistered the development fake port, which executes no adapter bytes; " +
+          "--adapter-entry cannot introduce a real adapter into it",
+      );
+    }
+    if (flags["adapter-certification"] !== undefined) {
+      throw new Erl2Error(
+        CODES.ADMISSION_SUBJECT_EXECUTION_MODE_FROZEN,
+        "this run preregistered the development fake port and bound no certification; " +
+          "--adapter-certification cannot be added to it",
+      );
+    }
+    return;
+  }
+  if (entry === undefined) {
+    throw new Erl2Error(
+      CODES.ADMISSION_SUBJECT_EXECUTION_MODE_FROZEN,
+      "this run preregistered a real external adapter; omitting --adapter-entry would run it " +
+        "on the development fake port, which is a downgrade the frozen binding forbids",
+    );
+  }
 }
 
 /**
@@ -636,6 +781,14 @@ export function preregisterAcquisition(argv: readonly string[]): JourneyCommandO
     packageVerificationStepCommitmentHash: hash(flags, "package-verification-step"),
     limitsHash: hash(flags, "limits"),
     expiresAt: requireString(flags, "expires"),
+    // Bound only when this run will drive a real adapter. The development fake
+    // port executes no adapter bytes, so it has nothing to certify — and
+    // binding a receipt it never uses would be a claim, not evidence.
+    subjectExecutionMode:
+      flags["adapter-entry"] === undefined ? "development_fake_port" : "external_adapter",
+    ...(flags["adapter-entry"] === undefined
+      ? {}
+      : { adapterCertificationReceiptHash: adapterCertificationReceiptHash(flags, requireString(flags, "run-root")) }),
   });
   return {
     runId,

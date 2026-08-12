@@ -1,0 +1,145 @@
+✖ WINDOW-BASELINE: a shipped environment terminal commits exactly one window and verifies (24087.4625ms)
+✖ WINDOW-HARNESS: re-sealing the whole chain unchanged still verifies (640.707875ms)
+✔ WINDOW-SHIFTED-WITHIN-BOUNDS: a window moved inside the bounds no longer escapes (301.5055ms)
+✔ WINDOW-SHIFTED-COMMITMENT: moving the commitment to match a shifted window is caught too (327.116375ms)
+✖ WINDOW-OBSERVATION-DURATION: an observation window shifted within bounds is caught (379.412ms)
+✔ WINDOW-BUNDLE-CUTOFF: an observation bundle whose cutoff disagrees with the commitment refuses (690.311ms)
+✔ WINDOW-MISSING: a terminal that started traffic and dropped its commitment refuses (669.045584ms)
+✔ WINDOW-UNREACHED: a commitment retained but produced by no event refuses (293.188125ms)
+✔ WINDOW-LATE-COMMITMENT: a window committed after the capture it governs refuses (332.830083ms)
+✔ WINDOW-WRONG-SIGNER: a commitment signed by the traffic supervisor refuses (305.077709ms)
+✔ WINDOW-FOREIGN-RUN: a commitment naming another run refuses (296.138625ms)
+✔ WINDOW-POLICY-BINDING: a commitment naming a different cutoff policy refuses (309.670625ms)
+✔ WINDOW-PROCESS-BINDING: a commitment measured from a different process start refuses (313.181875ms)
+✔ WINDOW-CLOCK-BINDING: a commitment in a different clock domain refuses (322.544959ms)
+✔ WINDOW-OBSERVATION-BINDING: a commitment naming a different comparison policy refuses (405.863875ms)
+✔ WINDOW-RULE-BINDING: a commitment declaring another instant rule refuses (316.968416ms)
+✔ WINDOW-INVENTORY: the commitment is an applicable signed member of the terminal (159.1ms)
+✔ WINDOW-INVENTORY-OMITTED: dropping the commitment from an otherwise complete inventory refuses (298.954ms)
+✔ ENV-CLI: a run advances from case_selected to a finalized environment terminal (23488.872458ms)
+✖ ENV-VERIFY: the environment public bundle verifies offline, as an external reader (16192.102958ms)
+✖ ENV-VERIFY: a verifier without the pinned beacon cannot authorize the selection chain (15905.194625ms)
+✔ ENV-CLI: the environment is really torn down and the reservations released (16262.089ms)
+✔ ENV-CLI: the plan executes exactly the persona the selection opened (4529.632291ms)
+✔ ENV-CLI: an unsupported step is a retained outcome, never a removed case (15822.226125ms)
+✔ ENV-CLI-CRASH: every phase boundary resumes from retained evidence (330055.25075ms)
+✔ ENV-CLI: replaying a finished run adds nothing, whether the phase is idempotent or refused (21881.92725ms)
+✔ ENV-NO-WRITE: every refused environment command adds zero retained evidence (19156.086208ms)
+✔ ENV-ORDER: a named step command may not reorder the committed journey (4539.335792ms)
+✔ ENV-SUBSTRATE: the driver's substrate lives outside the run root (3865.039625ms)
+✔ ENV-ORACLE: a canary in the subject's output bytes invalidates the run before it freezes (11953.9105ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 25
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 485152.455875
+
+✖ failing tests:
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:348:1
+✖ WINDOW-BASELINE: a shipped environment terminal commits exactly one window and verifies (24087.4625ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 1786517103000
+  - 1786517104000
+             ^
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:366:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1786517103000,
+    expected: 1786517104000,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:370:1
+✖ WINDOW-HARNESS: re-sealing the whole chain unchanged still verifies (640.707875ms)
+  AssertionError [ERR_ASSERTION]: {"schema_version":"erl2-cli-response/v1","command":"verify","ok":false,"exit_code":5,"authority_scope":"lab_orchestration_only","findings":[],"errors":[{"code":"CUTOFF_BOUND_EXCEEDED","message":"the retained cutoff is 2026-08-12T06:45:03Z, but the committed window (1000 ms warmup + 5000 ms observation from 2026-08-12T06:44:58Z) derives 2026-08-12T06:45:04Z"}]}
+  
+  5 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:377:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 5,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:408:1
+✖ WINDOW-OBSERVATION-DURATION: an observation window shifted within bounds is caught (379.412ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:414:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:197:1
+✖ ENV-VERIFY: the environment public bundle verifies offline, as an external reader (16192.102958ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"CUTOFF_BOUND_EXCEEDED","message":"the retained cutoff is 2026-08-12T06:45:22Z, but the committed window (1000 ms warmup + 5000 ms observation from 2026-08-12T06:45:17Z) derives 2026-08-12T06:45:23Z"}]
+  
+  5 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentRun.test.js:206:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 5,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:214:1
+✖ ENV-VERIFY: a verifier without the pinned beacon cannot authorize the selection chain (15905.194625ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'CUTOFF_BOUND_EXCEEDED'
+  - 'RANDOMNESS_SOURCE_NOT_PINNED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentRun.test.js:221:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'CUTOFF_BOUND_EXCEEDED',
+    expected: 'RANDOMNESS_SOURCE_NOT_PINNED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

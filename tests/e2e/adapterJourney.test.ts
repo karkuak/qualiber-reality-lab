@@ -99,6 +99,13 @@ function startJourney(
     adapter === "reference-correct"
       ? registry.referenceCorrectAdapterHash
       : registry.referenceLimitedAdapterHash;
+  // A real adapter is never dispatched without its admitted certification
+  // (ADR-ERL2-036); the governor registry admits the receipt beside the
+  // manifest, and the run binds it here.
+  const certificationHash =
+    adapter === "reference-correct"
+      ? registry.referenceCorrectCertificationHash
+      : registry.referenceLimitedCertificationHash;
   const runRoot = newRunRoot();
   const base = [
     "--run-root", runRoot,
@@ -111,6 +118,7 @@ function startJourney(
     ...base,
     "--acquisition-source", registry.sourceManifestHash,
     "--adapter", adapterHash,
+    "--adapter-certification", certificationHash,
     "--acquisition-actor-script", registry.acquisitionActorScriptHash,
     "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
     "--acquisition-step", registry.acquisitionStep.commitmentHash,
@@ -190,6 +198,7 @@ test("UNSUPPORTED-HONESTY: the limited reference adapter reaches a retained unsu
     ...base,
     "--acquisition-source", registry.sourceManifestHash,
     "--adapter", registry.referenceLimitedAdapterHash,
+    "--adapter-certification", registry.referenceLimitedCertificationHash,
     "--acquisition-actor-script", registry.acquisitionActorScriptHash,
     "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
     "--acquisition-step", registry.acquisitionStep.commitmentHash,
@@ -242,6 +251,9 @@ test("FAILURE-FIXTURES: a hostile adapter yields an adapter exit, never a subjec
     ...base,
     "--acquisition-source", registry.sourceManifestHash,
     "--adapter", registry.referenceCorrectAdapterHash,
+    // Legitimately certified manifest, different bytes on disk: the host now
+    // refuses this before it spawns anything (ADR-ERL2-036 §6).
+    "--adapter-certification", registry.referenceCorrectCertificationHash,
     "--acquisition-actor-script", registry.acquisitionActorScriptHash,
     "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
     "--acquisition-step", registry.acquisitionStep.commitmentHash,
@@ -316,6 +328,9 @@ test("ADAPTER-CERT: a run cannot substitute a different adapter after preregistr
     ...base,
     "--acquisition-source", registry.sourceManifestHash,
     "--adapter", registry.referenceCorrectAdapterHash,
+    // Legitimately certified manifest, different bytes on disk: the host now
+    // refuses this before it spawns anything (ADR-ERL2-036 §6).
+    "--adapter-certification", registry.referenceCorrectCertificationHash,
     "--acquisition-actor-script", registry.acquisitionActorScriptHash,
     "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
     "--acquisition-step", registry.acquisitionStep.commitmentHash,
@@ -352,6 +367,9 @@ test("ADAPTER-CERT: the fake-port scripting flags cannot steer a real adapter", 
     "--fake-acquire", "failed",
     "--acquisition-source", registry.sourceManifestHash,
     "--adapter", registry.referenceCorrectAdapterHash,
+    // Legitimately certified manifest, different bytes on disk: the host now
+    // refuses this before it spawns anything (ADR-ERL2-036 §6).
+    "--adapter-certification", registry.referenceCorrectCertificationHash,
     "--acquisition-actor-script", registry.acquisitionActorScriptHash,
     "--acquisition-actor-schema", registry.acquisitionActorSchemaHash,
     "--acquisition-step", registry.acquisitionStep.commitmentHash,

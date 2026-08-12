@@ -1,0 +1,40 @@
+✖ CONTAINER-PROFILE: with nothing derived, the profile is refused and reports why (0.629667ms)
+✔ CONTAINER-PROFILE: the local-process profile is untouched by the container profile existing (0.1975ms)
+✔ CONTAINER-PROFILE: a drifted substrate is refused before anything executes (10.3255ms)
+✔ CONTAINER-PROFILE: mocked probes qualify nothing, launcher or no launcher (1.861334ms)
+✔ CONTAINER-PROFILE: a qualified substrate with no launcher is still refused (1.420708ms)
+✔ CONTAINER-PROFILE: an opaque or third-party subject is refused a fully working profile (2.023083ms)
+✔ CONTAINER-PROFILE: probe evidence frozen against another lock licenses nothing (1.0585ms)
+✔ CONTAINER-PROFILE: the control report is derived per control, from the probe bytes (0.940834ms)
+✔ CONTAINER-PROFILE: an activation is re-derived from its evidence on every use (1.672ms)
+✔ CONTAINER-PROFILE: a container manifest that names no substrate lock is refused (7.142792ms)
+✔ CONTAINER-PROFILE: a host cannot be built on the container profile without an activation (3.9425ms)
+✔ CONTAINER-PROFILE: the module closure is the declared graph, resolved and bounded (1.800541ms)
+✔ CONTAINER-PROFILE: the launcher and the probes apply the same hardened flags (0.11525ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 12
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 164.931875
+
+✖ failing tests:
+
+test at tests/dist/adversarial/containerSandboxProfile.test.js:100:1
+✖ CONTAINER-PROFILE: with nothing derived, the profile is refused and reports why (0.629667ms)
+  AssertionError [ERR_ASSERTION]: an underived container profile: expected a refusal and none was raised
+      at throwsCode (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/containerSandboxProfile.test.js:97:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/containerSandboxProfile.test.js:101:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }

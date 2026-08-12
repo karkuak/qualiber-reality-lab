@@ -17,7 +17,10 @@ export {
   type IsolationProbeSigningManifestV1,
   type IsolationSubstrateLockV1,
   type LabLifecycleEventV1,
+  type SubjectAdapterCertificationReceiptV1,
+  type SubjectAdapterManifestV1,
   type SubstrateLockV1,
+  type Tier,
 } from "@erl2/contracts";
 
 import { CONTRACTS } from "@erl2/contracts";

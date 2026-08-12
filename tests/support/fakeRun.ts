@@ -176,6 +176,9 @@ function preregister(ctx: Ctx) {
         generic_run_policy_hash: policy.hash,
         run_trust_policy_hash: h("run-trust-policy"),
         limits_hash: h("limits"),
+        // The fake run drives the development fake port, so it binds no
+        // certification at all — the schema forbids one in this mode.
+        subject_execution_mode: "development_fake_port" as const,
         registered_at: ctx.clock.now(),
         expires_at: "2026-12-31T00:00:00Z",
         selected_case_identity: "absent" as const,

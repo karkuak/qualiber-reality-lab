@@ -74,6 +74,7 @@ import {
   isPrivilegedCapability,
   privilegedRefusal,
 } from "./capabilities.js";
+import { assertEntryDigestUnchanged } from "./admission.js";
 import { CredentialBroker } from "./credentials.js";
 import { decideEgress, denyByDefaultEgressPolicy } from "./egress.js";
 import { MutationLedger } from "./mutations.js";
@@ -126,6 +127,16 @@ export interface AdapterHostOptions {
   readonly adapterManifest: SubjectAdapterManifestV1;
   /** Absolute path of the adapter's entry module. Its digest is pinned. */
   readonly adapterEntryPath: string;
+  /**
+   * The adapter artifact digest an admitted certification receipt covers.
+   *
+   * Supplied whenever the run bound a certification. The host then re-reads the
+   * entry and compares before **every** dispatch, so replacing the file after
+   * admission cannot execute different bytes under the admitted certification
+   * (LIVE-001, ADR-ERL2-036). Absent for hosts built outside the admission path
+   * — the certification harness itself, which is what *produces* the digest.
+   */
+  readonly certifiedArtifactHash?: Hash;
   readonly workspaceRoot: string;
   readonly store: ArtifactStore;
   readonly clock: Clock;
@@ -313,6 +324,7 @@ export class AdapterHost {
   private readonly nodeExecutable: string;
   /** See `AdapterHostOptions.evidenceFixtureWallClockMs`. Undefined in production. */
   private readonly evidenceFixtureWallClockMs: number | undefined;
+  private readonly certifiedArtifactHash: Hash | undefined;
   private outputFrozen = false;
   private invocationSequence = 0;
 
@@ -334,6 +346,7 @@ export class AdapterHost {
     this.permittedMutationPrefixes = options.permittedMutationPrefixes ?? ["adapter-workspace/"];
     this.nodeExecutable = options.nodeExecutable ?? process.execPath;
     this.evidenceFixtureWallClockMs = options.evidenceFixtureWallClockMs;
+    this.certifiedArtifactHash = options.certifiedArtifactHash;
 
     if (this.manifest.protocol_version !== ADAPTER_PROTOCOL_VERSION) {
       throw new Erl2Error(
@@ -406,6 +419,16 @@ export class AdapterHost {
     readonly requestedCapabilityIds?: readonly string[];
   }): AdapterOperationResult {
     assertNoExecutionAfterOutputFreeze(this.outputFrozen, `adapter operation ${input.operation}`);
+    // Time of use. Admission hashed these bytes once; this re-hashes them on
+    // every dispatch, before anything is spawned, so the window between
+    // admission and execution — and between one operation and the next — is
+    // closed rather than merely narrow.
+    if (this.certifiedArtifactHash !== undefined) {
+      assertEntryDigestUnchanged({
+        entryPath: this.entryPath,
+        certifiedArtifactHash: this.certifiedArtifactHash,
+      });
+    }
     if (!this.manifest.operations.includes(input.operation)) {
       throw new Erl2Error(
         CODES.ADAPTER_OPERATION_UNSUPPORTED,

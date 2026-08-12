@@ -1,0 +1,99 @@
+✖ INV-ENV-BASELINE: an environment terminal lists every applicable signed member (18168.316208ms)
+✖ INV-ENV-MISSING: an environment inventory that omits external-beacon-randomness-receipt/v1 is refused (280.056459ms)
+✖ INV-ENV-MISSING: an environment inventory that omits trust-policy-manifest/v2 is refused (272.618834ms)
+✖ INV-ENV-MISSING: an environment inventory that omits exposure-event/v1 is refused (276.363ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19175.910708
+
+✖ failing tests:
+
+test at tests/dist/adversarial/signerInventoryEnvironment.test.js:125:1
+✖ INV-ENV-BASELINE: an environment terminal lists every applicable signed member (18168.316208ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"INVENTORY_ENTRY_EXTRA","message":"the signer inventory lists external-beacon-randomness-receipt/v1@sha256:e9d92e26f1ac666cfd9977c0e9d93f77963a9dd93be958d9ee434192cfc6483a, which is not an applicable signed member of this terminal"}]
+  
+  10 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/signerInventoryEnvironment.test.js:136:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/signerInventoryEnvironment.test.js:143:5
+✖ INV-ENV-MISSING: an environment inventory that omits external-beacon-randomness-receipt/v1 is refused (280.056459ms)
+  AssertionError [ERR_ASSERTION]: omitting external-beacon-randomness-receipt/v1 must be refused
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/signerInventoryEnvironment.test.js:150:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/signerInventoryEnvironment.test.js:143:5
+✖ INV-ENV-MISSING: an environment inventory that omits trust-policy-manifest/v2 is refused (272.618834ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'INVENTORY_ENTRY_EXTRA'
+  - 'INVENTORY_ENTRY_MISSING'
+                     ^
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/signerInventoryEnvironment.test.js:151:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'INVENTORY_ENTRY_EXTRA',
+    expected: 'INVENTORY_ENTRY_MISSING',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/signerInventoryEnvironment.test.js:143:5
+✖ INV-ENV-MISSING: an environment inventory that omits exposure-event/v1 is refused (276.363ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'INVENTORY_ENTRY_EXTRA'
+  - 'INVENTORY_ENTRY_MISSING'
+                     ^
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/adversarial/signerInventoryEnvironment.test.js:151:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'INVENTORY_ENTRY_EXTRA',
+    expected: 'INVENTORY_ENTRY_MISSING',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

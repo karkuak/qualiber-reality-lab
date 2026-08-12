@@ -1,0 +1,40 @@
+✔ EB-MOUNT: a canary in the mounted file's bytes refuses before the adapter is dispatched (7267.711541ms)
+✔ EB-MOUNT: the run cannot step past a refused mount by retrying it (4964.631708ms)
+✔ EB-MOUNT: a clean run publishes its mounts and the canonical entries are real files (8797.384ms)
+✔ EB-TELEMETRY: a canary in the telemetry bytes refuses before the telemetry is retained (8267.395625ms)
+✔ EB-TELEMETRY: a refused capture cannot be stepped past by retrying observe (8617.502459ms)
+✔ EB-TELEMETRY: the run still reaches exactly one invalid terminal that verifies offline (9177.856667ms)
+✔ EB-OUTPUT: a secret canary in the subject's output bytes refuses before the freeze (11960.774875ms)
+✖ EB-OUTPUT: a forbidden identifier in the subject's output bytes refuses before the freeze (12169.110666ms)
+✔ EB-OUTPUT: a judge canary still refuses under its own rule, not the new one (11926.212958ms)
+✔ EB-OUTPUT: clean binary output freezes and the run finalizes (15135.487084ms)
+✔ EB-SIZE: one byte over the declared ceiling refuses before the manifest freezes (12544.789667ms)
+✔ EB-SIZE: exactly at the declared ceiling is admitted (12355.575709ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 11
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 123725.932333
+
+✖ failing tests:
+
+test at tests/dist/e2e/environmentEvidenceBoundaries.test.js:217:1
+✖ EB-OUTPUT: a forbidden identifier in the subject's output bytes refuses before the freeze (12169.110666ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-XK4399/tree/tests/dist/e2e/environmentEvidenceBoundaries.test.js:225:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

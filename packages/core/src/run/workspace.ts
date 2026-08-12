@@ -66,7 +66,9 @@ import {
   type PreEnvironmentValidityResultV1,
   type PreSelectionJourneyResultV1,
   type SubjectAcquisitionRecordV1,
+  type SubjectAdapterCertificationReceiptV1,
   type SubjectAdapterManifestV1,
+  type SubjectExecutionMode,
   type SubjectPackageManifestV1,
   type SubjectPackageVerificationRecordV1,
   type SubjectVisibleJourneyStepV1,
@@ -119,6 +121,12 @@ import {
   type SubjectPort,
 } from "../journey/subjectPort.js";
 import { AdmissionRegistry } from "../registry/admission.js";
+import {
+  BOOTSTRAP_RECEIPT_SENTINEL,
+  adapterCertifiedGateResults,
+  verifyAdapterCertification,
+  type AdapterAdmission,
+} from "../adapter/admission.js";
 import { TimestampLog } from "../timestamps/log.js";
 import type { Clock } from "../runtime/seams.js";
 import { SteppingClock } from "../runtime/seams.js";
@@ -437,16 +445,60 @@ export class RunWorkspace {
     readonly packageVerificationStepCommitmentHash: Hash;
     readonly limitsHash: Hash;
     readonly expiresAt: string;
+    /**
+     * The subject seam this run is permanently bound to.
+     *
+     * Frozen into the signed preregistration, not inferred per command. The
+     * independent review of the first LIVE-001 package showed why: a run that
+     * preregistered without an adapter left nothing durable saying so, and a
+     * later command could introduce a real adapter and then authorize two
+     * different receipts on two different commands, neither of which was ever
+     * part of the frozen boundary.
+     */
+    readonly subjectExecutionMode: SubjectExecutionMode;
+    /**
+     * The admitted certification receipt for this adapter.
+     *
+     * Required for `external_adapter`, and refused for `development_fake_port`
+     * — the fake port executes no adapter bytes, so a receipt there would be a
+     * claim rather than evidence (LIVE-001, ADR-ERL2-036).
+     */
+    readonly adapterCertificationReceiptHash?: Hash;
   }): AcquisitionPreregistrationV1 {
+    if (input.subjectExecutionMode === "external_adapter") {
+      if (input.adapterCertificationReceiptHash === undefined) {
+        throw new Erl2Error(
+          CODES.ADAPTER_CERTIFICATION_RECEIPT_REQUIRED,
+          "an external-adapter run must name its current certification receipt at " +
+            "preregistration; the binding is frozen there and cannot be supplied later",
+        );
+      }
+    } else if (input.adapterCertificationReceiptHash !== undefined) {
+      throw new Erl2Error(
+        CODES.CFG_MISSING_REQUIRED,
+        "a development fake-port run executes no adapter bytes and may not bind a " +
+          "certification receipt",
+      );
+    }
     // Every referenced artifact must already be admitted.
     this.registry.require<AcquisitionSourceManifestV1>(
       input.sourceManifestHash,
       "AcquisitionSourceManifestV1",
     );
-    this.registry.require<SubjectAdapterManifestV1>(
+    const adapterManifestForCertification = this.registry.require<SubjectAdapterManifestV1>(
       input.adapterManifestHash,
       "SubjectAdapterManifestV1",
     );
+    // The receipt is validated *here*, against the manifest this run is binding,
+    // rather than trusted because `admit-adapter` once said so: a registry is a
+    // directory, and a directory can be edited between two commands.
+    const admission =
+      input.adapterCertificationReceiptHash === undefined
+        ? undefined
+        : this.admitAdapterCertification(
+            adapterManifestForCertification,
+            input.adapterCertificationReceiptHash,
+          );
     this.registry.require<GenericRunPolicyV1>(input.genericRunPolicyHash, "GenericRunPolicyV1");
     this.registry.require<JourneyStepCommitmentV1>(
       input.acquisitionStepCommitmentHash,
@@ -473,6 +525,10 @@ export class RunWorkspace {
           generic_run_policy_hash: input.genericRunPolicyHash,
           run_trust_policy_hash: input.runTrustPolicyHash,
           limits_hash: input.limitsHash,
+          subject_execution_mode: input.subjectExecutionMode,
+          ...(input.adapterCertificationReceiptHash === undefined
+            ? {}
+            : { adapter_certification_receipt_hash: input.adapterCertificationReceiptHash }),
           registered_at: this.clock.now(),
           expires_at: input.expiresAt,
           selected_case_identity: "absent" as const,
@@ -521,6 +577,20 @@ export class RunWorkspace {
       "SubjectAdapterManifestV1",
     );
     this.store.freezeJson("retained/adapter-manifest.json", adapterManifest, "INTERNAL");
+    // The receipt is mirrored into the run for the same reason the adapter
+    // manifest is: the `adapter-certified` gate and an offline reader must be
+    // able to re-derive certification from the run alone, without the governor
+    // registry that admitted it.
+    if (admission !== undefined) {
+      this.store.freezeJson(
+        "retained/adapter-certification-receipt.json",
+        this.registry.require<SubjectAdapterCertificationReceiptV1>(
+          admission.receiptHash,
+          "SubjectAdapterCertificationReceiptV1",
+        ),
+        "INTERNAL",
+      );
+    }
     const runPolicy = this.registry.require<GenericRunPolicyV1>(
       input.genericRunPolicyHash,
       "GenericRunPolicyV1",
@@ -562,6 +632,15 @@ export class RunWorkspace {
           artifact_core_hash: input.adapterManifestHash,
           artifact_schema_version: "subject-adapter-manifest/v1",
         },
+        ...(admission === undefined
+          ? []
+          : [
+              {
+                artifact_role: "adapter-certification-receipt",
+                artifact_core_hash: admission.receiptHash,
+                artifact_schema_version: "subject-adapter-certification-receipt/v1",
+              },
+            ]),
         {
           artifact_role: "generic-run-policy",
           artifact_core_hash: input.genericRunPolicyHash,
@@ -570,6 +649,106 @@ export class RunWorkspace {
       ],
     });
     return preregistration;
+  }
+
+  /**
+   * Resolves an admitted certification receipt and re-validates it against the
+   * adapter manifest this run is binding.
+   *
+   * Resolution goes through `registry.require`, so an unknown hash is
+   * `ADMISSION_ARTIFACT_UNKNOWN` and a receipt whose bytes do not produce its
+   * declared `core_hash` never gets indexed in the first place.
+   */
+  private admitAdapterCertification(
+    manifest: SubjectAdapterManifestV1,
+    receiptHash: Hash,
+  ): AdapterAdmission {
+    const receipt = this.registry.require<SubjectAdapterCertificationReceiptV1>(
+      receiptHash,
+      "SubjectAdapterCertificationReceiptV1",
+    );
+    return verifyAdapterCertification({ manifest, receipt, tier: this.tier });
+  }
+
+  /**
+   * The subject seam this run froze at preregistration.
+   *
+   * Read from the run's own signed preregistration, so it survives process
+   * exit, reopening and replay. `undefined` only before preregistration, which
+   * is the one point at which the run has not chosen yet.
+   */
+  subjectExecutionMode(): SubjectExecutionMode | undefined {
+    const preregHash = this.hashForRole("acquisition-preregistration");
+    if (preregHash === undefined) return undefined;
+    return this.preregistration().subject_execution_mode;
+  }
+
+  /**
+   * The exact current receipt this run was authorized on, or `undefined` for a
+   * fake-port run.
+   *
+   * Authoritative: it comes from the frozen preregistration, never from a flag
+   * and never from the manifest's bootstrap/prior field.
+   */
+  boundCertificationReceiptHash(): Hash | undefined {
+    const preregHash = this.hashForRole("acquisition-preregistration");
+    if (preregHash === undefined) return undefined;
+    return this.preregistration().adapter_certification_receipt_hash;
+  }
+
+  private preregistration(): AcquisitionPreregistrationV1 {
+    return this.artifact<AcquisitionPreregistrationV1>(
+      this.requireHashForRole("acquisition-preregistration"),
+      "AcquisitionPreregistrationV1",
+    );
+  }
+
+  /**
+   * The certification this run bound, re-derived from its own retained
+   * evidence — never a stored verdict.
+   *
+   * Returns `undefined` when the run bound none, which is the fake-port case.
+   */
+  adapterCertification(): AdapterAdmission | undefined {
+    const receiptHash = this.boundCertificationReceiptHash();
+    if (receiptHash === undefined) return undefined;
+    const manifest = this.artifact<SubjectAdapterManifestV1>(
+      this.requireHashForRole("adapter-manifest"),
+      "SubjectAdapterManifestV1",
+    );
+    const receipt = this.artifact<SubjectAdapterCertificationReceiptV1>(
+      receiptHash,
+      "SubjectAdapterCertificationReceiptV1",
+    );
+    return verifyAdapterCertification({ manifest, receipt, tier: this.tier });
+  }
+
+  /**
+   * {@link adapterCertification}, but a re-validation failure is an answer
+   * rather than a throw.
+   *
+   * Finalization must be able to record "this run's certification no longer
+   * holds" as a failed gate. Letting the refusal escape would abort the
+   * terminal instead, and a run that cannot finalize produces no validity
+   * report at all — which is the one outcome a tamper must not be able to buy.
+   */
+  derivedAdapterCertification(): AdapterAdmission | undefined {
+    try {
+      return this.adapterCertification();
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Whether this run ever dispatched a real out-of-process adapter.
+   *
+   * Read from the invocation manifests the host freezes, so it answers what
+   * happened rather than what was configured. A run that executed adapter bytes
+   * has one; the development fake port produces none.
+   */
+  dispatchedRealAdapter(): boolean {
+    return this.hashesForRole("adapter-sandbox-invocation-manifest").length > 0;
   }
 
   // -- 2. measured acquisition ---------------------------------------------
@@ -2054,7 +2233,6 @@ export class RunWorkspace {
     readonly proofRefs: readonly Hash[];
   }): Hash {
     const adapterHash = this.requireHashForRole("adapter-manifest");
-    const adapter = this.artifact<SubjectAdapterManifestV1>(adapterHash, "SubjectAdapterManifestV1");
     const base = {
       schema_version: "finding/v1" as const,
       kind: "adapter_failure" as const,
@@ -2066,7 +2244,12 @@ export class RunWorkspace {
       owner: "adapter" as const,
       category: input.category,
       adapter_hash: adapterHash,
-      certification_receipt_hash: adapter.certification_receipt_hash,
+      // The receipt that authorized *this execution*, not the manifest's
+      // `certification_receipt_hash` — that field is a bootstrap/prior
+      // reference (ADR-ERL2-036) and naming it here asserted a current
+      // authority the run never had. The hostile golden recorded the all-zero
+      // sentinel while its real authorizing receipt was nonzero.
+      certification_receipt_hash: this.currentAuthorizingReceiptHash(),
       subject_attribution_proven: false as const,
       scoreable_planes: [] as const,
     };
@@ -2076,6 +2259,29 @@ export class RunWorkspace {
     });
     this.store.freezeJson(`retained/finding-${input.findingId}.json`, finding, "INTERNAL");
     return finding.core_hash;
+  }
+
+  /**
+   * The receipt that authorized the adapter execution this finding describes.
+   *
+   * An `external_adapter` run always has one — preregistration refuses to
+   * complete without it — so its absence here means the frozen binding was
+   * removed, and that fails closed rather than falling back to a prior value.
+   * A fake-port run has no adapter certification at all, and says so with the
+   * bootstrap sentinel rather than manufacturing one.
+   */
+  private currentAuthorizingReceiptHash(): Hash {
+    const bound = this.boundCertificationReceiptHash();
+    if (bound !== undefined) return bound;
+    if (this.subjectExecutionMode() === "external_adapter") {
+      throw new Erl2Error(
+        CODES.ADAPTER_CERTIFICATION_RECEIPT_REQUIRED,
+        "an external-adapter failure cannot be attributed: the run has no retained current " +
+          "certification receipt, so nothing authorized the execution that failed",
+        { owner: "lab" },
+      );
+    }
+    return BOOTSTRAP_RECEIPT_SENTINEL;
   }
 
   /** Freezes the Lab-owned finding that explains an invalid pre-environment terminal. */
@@ -2470,6 +2676,10 @@ export class RunWorkspace {
     // 7.2 Lab-owned validity. Every gate reads integrity or experimental-control
     //     evidence; none of them reads a claim, a metric value or a result status.
     const validity = buildPreEnvironmentValidity({
+      subjectExecutionMode: this.subjectExecutionMode() ?? "development_fake_port",
+      ...(this.boundCertificationReceiptHash() === undefined
+        ? {}
+        : { adapterCertificationReceiptHash: this.boundCertificationReceiptHash() as Hash }),
       runId: this.runId,
       terminalStage: output.terminal_stage,
       genericRunPolicyHash: policyHash,
@@ -2748,7 +2958,15 @@ export class RunWorkspace {
         passed: true,
         evidence_refs: [outputHash],
       },
-      { gate_id: "adapter-certified", passed: true, evidence_refs: [adapterHash] },
+      // Omitted entirely for a development fake-port run: not applicable, not
+      // passed (ADR-ERL2-036, review P2).
+      ...adapterCertifiedGateResults({
+        adapterManifestHash: adapterHash,
+        subjectExecutionMode: this.subjectExecutionMode() ?? "development_fake_port",
+        certification: this.derivedAdapterCertification(),
+        boundCertificationHash: this.boundCertificationReceiptHash(),
+        dispatchedRealAdapter: this.dispatchedRealAdapter(),
+      }),
       { gate_id: "adapter-authority-respected", passed: true, evidence_refs: [adapterHash] },
       {
         gate_id: "subject-output-frozen-before-reveal",

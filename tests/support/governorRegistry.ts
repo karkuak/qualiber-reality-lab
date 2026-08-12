@@ -14,7 +14,12 @@
 import { createHash } from "node:crypto";
 import { existsSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
-import type { Hash, JourneyIntent, SubjectAdapterManifestV1 } from "@erl2/contracts";
+import type {
+  Hash,
+  JourneyIntent,
+  SubjectAdapterCertificationReceiptV1,
+  SubjectAdapterManifestV1,
+} from "@erl2/contracts";
 import {
   ageRecipientOf,
   ArtifactStore,
@@ -24,12 +29,21 @@ import {
   sealSigned,
   type AgeIdentity,
 } from "@erl2/integrity";
-import { commitJourneyStep, DEVELOPMENT_BEACON_SOURCE_ID, type CommittedStep } from "@erl2/core";
+import {
+  certifyAdapter,
+  commitJourneyStep,
+  DEVELOPMENT_BEACON_SOURCE_ID,
+  SteppingClock,
+  type CommittedStep,
+} from "@erl2/core";
 import { developmentKeyring, developmentTrustPolicy, type DevelopmentKeyring } from "./keys.js";
 import {
   REFERENCE_CORRECT_MANIFEST,
   REFERENCE_LIMITED_MANIFEST,
   REFERENCE_OTEL_DEMO_MANIFEST,
+  certifiedSabotageAdapter,
+  referenceAdapterEntry,
+  type ReferenceAdapterId,
 } from "./adapterFixtures.js";
 import { ownedTempDir } from "./tempDirs.js";
 
@@ -44,6 +58,10 @@ export interface GovernorRegistry {
   readonly referenceCorrectAdapterHash: Hash;
   readonly referenceLimitedAdapterHash: Hash;
   readonly referenceOtelDemoAdapterHash: Hash;
+  /** Admitted `ADAPTER-CERT-V1` receipts for the two dispatchable reference adapters. */
+  readonly referenceCorrectCertificationHash: Hash;
+  readonly referenceLimitedCertificationHash: Hash;
+  readonly referenceOtelDemoCertificationHash: Hash;
   /**
    * Core hash of each externally supplied adapter manifest, keyed by its
    * `adapter_id`.
@@ -53,6 +71,17 @@ export interface GovernorRegistry {
    * suite already asserts against.
    */
   readonly externalAdapterHashes: Readonly<Record<string, Hash>>;
+  /** Admitted certification receipt hashes for external adapters, by adapter id. */
+  readonly externalAdapterCertificationHashes: Readonly<Record<string, Hash>>;
+  /** The external adapter manifests themselves, by adapter id. */
+  readonly externalAdapterManifestsById: Readonly<Record<string, SubjectAdapterManifestV1>>;
+  /**
+   * Manifest and certification hashes for each admitted sabotage fixture,
+   * keyed by fixture name. Empty unless `certifiedSabotageAdapters` was given.
+   */
+  readonly sabotageAdapterHashes: Readonly<
+    Record<string, { readonly manifestHash: Hash; readonly certificationHash: Hash }>
+  >;
   readonly genericRunPolicyHash: Hash;
   readonly runTrustPolicyHash: Hash;
   readonly limitsHash: Hash;
@@ -91,6 +120,42 @@ export interface ChallengeCandidate {
 }
 
 const CREATED_AT = "2026-07-01T00:00:00Z";
+
+/**
+ * The certification instant and certifier for the reference adapters' receipts.
+ *
+ * Fixed, because the receipts are admitted into a registry whose hashes pinned
+ * evidence depends on. The certifier id is not any adapter's id — an adapter
+ * cannot certify itself, and admission refuses one that claims to.
+ */
+const CERTIFICATION_INSTANT = "2026-07-01T00:00:00Z";
+const CERTIFIER_ID = "erl2-certifier";
+
+/**
+ * `ADAPTER-CERT-V1` receipts for the reference adapters, memoized per process.
+ *
+ * The suite is deterministic — fixed clock, fixed certifier, fixed bytes — so a
+ * receipt is a pure function of the adapter. Running it on every
+ * `buildGovernorRegistry` call would spawn the adapter roughly eight times per
+ * registry, in a suite that builds many.
+ */
+const REFERENCE_RECEIPTS = new Map<string, SubjectAdapterCertificationReceiptV1>();
+
+function certifiedReferenceReceipt(
+  id: ReferenceAdapterId,
+  manifest: () => SubjectAdapterManifestV1,
+): SubjectAdapterCertificationReceiptV1 {
+  const cached = REFERENCE_RECEIPTS.get(id);
+  if (cached !== undefined) return cached;
+  const receipt = certifyAdapter({
+    adapterManifest: manifest(),
+    adapterEntryPath: referenceAdapterEntry(id),
+    clock: new SteppingClock(CERTIFICATION_INSTANT, 1000),
+    certifierId: CERTIFIER_ID,
+  });
+  REFERENCE_RECEIPTS.set(id, receipt);
+  return receipt;
+}
 
 /**
  * A stable identity for policy bodies whose contracts belong to later slices.
@@ -173,6 +238,20 @@ export interface BuildGovernorRegistryOptions {
    */
   readonly environmentActorRole?: string;
   /**
+   * Sabotage fixtures to admit with a certified receipt, keyed by fixture name.
+   *
+   * Empty by default, so a registry built without them is byte-identical to the
+   * one every existing suite asserts against. Used where a control needs an
+   * adapter that is *legitimately admitted* and then misbehaves at runtime —
+   * certification is not a promise of good behaviour, and the host's deadline
+   * and identity controls have to keep firing after it.
+   */
+  readonly certifiedSabotageAdapters?: readonly {
+    readonly name: string;
+    readonly adapterId: string;
+    readonly operations?: readonly string[];
+  }[];
+  /**
    * An extra evidence source the archetype declares, beyond the three the fake
    * driver ordinarily serves.
    *
@@ -195,6 +274,13 @@ export interface BuildGovernorRegistryOptions {
    * id, a version, a set of operations and a signature.
    */
   readonly externalAdapterManifests?: readonly SubjectAdapterManifestV1[];
+  /**
+   * Certification receipts for externally supplied adapters, admitted beside
+   * their manifests. Required for any external adapter a run will actually
+   * dispatch (ADR-ERL2-036); empty by default, so a registry built without them
+   * is byte-identical to the one every existing suite asserts against.
+   */
+  readonly externalAdapterCertifications?: readonly SubjectAdapterCertificationReceiptV1[];
   /**
    * The ordered environment-phase intents every admitted candidate commits.
    *
@@ -360,6 +446,68 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
     "adapter-manifest-reference-otel-demo",
     REFERENCE_OTEL_DEMO_MANIFEST(),
   );
+
+  // …and so are their certification receipts. An adapter the Lab is going to
+  // *dispatch* may not be admitted on its manifest alone (LIVE-001), so the two
+  // reference adapters a run can actually drive are certified here, by the same
+  // `ADAPTER-CERT-V1` suite any external adapter must pass, and admitted
+  // alongside the manifests they certify. `reference-otel-demo` gets none: it is
+  // driven only by the environment branch's own fixtures, which do not dispatch
+  // it through the adapter host in this registry.
+  const referenceCorrectReceipt = certifiedReferenceReceipt(
+    "reference-correct",
+    REFERENCE_CORRECT_MANIFEST,
+  );
+  const referenceLimitedReceipt = certifiedReferenceReceipt(
+    "reference-limited",
+    REFERENCE_LIMITED_MANIFEST,
+  );
+  const referenceOtelDemoReceipt = certifiedReferenceReceipt(
+    "reference-otel-demo",
+    REFERENCE_OTEL_DEMO_MANIFEST,
+  );
+  const referenceCorrectCertificationHash = admit(
+    "adapter-certification-reference-correct",
+    referenceCorrectReceipt,
+  );
+  const referenceLimitedCertificationHash = admit(
+    "adapter-certification-reference-limited",
+    referenceLimitedReceipt,
+  );
+  const referenceOtelDemoCertificationHash = admit(
+    "adapter-certification-reference-otel-demo",
+    referenceOtelDemoReceipt,
+  );
+
+  // Sabotage fixtures that are legitimately admitted and then misbehave. None
+  // is admitted unless a caller asks for it, so a default registry's bytes are
+  // unchanged by this seam existing.
+  const externalAdapterManifestsById: Record<string, SubjectAdapterManifestV1> = {};
+  for (const manifest of options.externalAdapterManifests ?? []) {
+    externalAdapterManifestsById[manifest.adapter_id] = manifest;
+  }
+  const externalAdapterCertificationHashes: Record<string, Hash> = {};
+  for (const receipt of options.externalAdapterCertifications ?? []) {
+    externalAdapterCertificationHashes[receipt.adapter_id] = admit(
+      `adapter-certification-external-${receipt.adapter_id}`,
+      receipt,
+    );
+  }
+
+  const sabotageAdapterHashes: Record<
+    string,
+    { manifestHash: Hash; certificationHash: Hash }
+  > = {};
+  for (const fixture of options.certifiedSabotageAdapters ?? []) {
+    const { manifest, receipt } = certifiedSabotageAdapter(fixture.name, {
+      adapterId: fixture.adapterId,
+      ...(fixture.operations === undefined ? {} : { operations: fixture.operations }),
+    });
+    sabotageAdapterHashes[fixture.name] = {
+      manifestHash: admit(`adapter-manifest-sabotage-${fixture.name}`, manifest),
+      certificationHash: admit(`adapter-certification-sabotage-${fixture.name}`, receipt),
+    };
+  }
 
   // Externally authored adapters, admitted through the same path and refused
   // rather than merged whenever two of them are indistinguishable. This loop
@@ -738,6 +886,12 @@ export function buildGovernorRegistry(options: BuildGovernorRegistryOptions = {}
     referenceCorrectAdapterHash,
     referenceLimitedAdapterHash,
     referenceOtelDemoAdapterHash,
+    referenceCorrectCertificationHash,
+    referenceLimitedCertificationHash,
+    referenceOtelDemoCertificationHash,
+    externalAdapterCertificationHashes,
+    externalAdapterManifestsById,
+    sabotageAdapterHashes,
     externalAdapterHashes,
     genericRunPolicyHash,
     runTrustPolicyHash,
