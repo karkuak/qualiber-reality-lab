@@ -476,3 +476,60 @@ Run through the real campaign path, one control, before any full campaign.
 
 Both left the working tree byte-identical, no worktree registered, and no temp
 root behind.
+
+### 8.5 The campaign this closure gated
+
+Run once, at `3392b8ec28cc6168292f421f0ae54e667b32bf22`, tree
+`6aac61b9a6d89c25b8054f8ec0518eb0e69838ad`, on a clean worktree, immediately
+after the exact-head clean gate passed at that same tree.
+
+**Clean gate.** 1,246 tests, 1,244 passed, 0 failed, 0 cancelled, 2
+Docker-gated skips, 1,056 s. The total is the previous 1,209 plus the 37
+controls this closure adds. `verify:generated` current; `evidence:verify` 838
+pinned / 7 excluded with no drift; `git diff --check` clean.
+
+The previous package's gate was recorded by the independent review as
+implementer-reported, because no durable log of it existed. This one was
+captured to a log as it ran, which is the whole of the change: the numbers above
+are read from that log rather than remembered.
+
+**Campaign.**
+
+| | |
+|---|---|
+| discovered | **129** |
+| measured agreements | **129** |
+| disagreements | **0** |
+| unmeasured | **0** |
+| harness errors | **0** |
+| duration | 11,346 s (3 h 09 m 06 s) |
+| output truncation | none |
+| working tree afterwards | byte-identical |
+| residue | none — no worktree, temp root, container, network, volume or surviving process |
+
+`accounting: 129 discovered = 129 agreed + 0 disagreed + 0 unmeasured + 0
+harness error(s)`, and `reconciled: true` in
+`docs/ledger/negative-controls.json`.
+
+Three rows are the point of this package:
+
+- **`substrate-loopback-only-rendered`: 28 pass / 1 fail, `named_tests_failed`,
+  agreed.** The same control, the same mutation, `replacedCount: 1` — and the
+  designated case now *runs*. Its previous 28 pass / **0** fail was the skip.
+- **`container-deadline-kills-the-container`: 0 pass / 2 fail, agreed**, with
+  `docker-daemon` satisfied. Its declared prerequisite changes nothing on a host
+  that has a daemon; it changes what gets reported on a host that does not.
+- **`adapter-mode-binding`: 7 pass / 2 fail, agreed** — the LIVE-001 red control,
+  unaffected by any of this.
+
+This is the first campaign to reach 129/129. The previous one reached 128/129
+with a disagreement that was never a disagreement.
+
+**A note on runtime, deliberately not acted on here.** 3 h 09 m is within the
+documented bound and close to the previous 3 h 16 m; per-control build and suite
+time sums to ~189 minutes, so the campaign is very nearly all measurement. Making
+it faster — a shared build, or parallel controls over several worktrees — is a
+real opportunity and a separate one. It is recorded here as a follow-up rather
+than folded into a correctness fix, because a harness that changes how it
+measures while changing what it measures cannot tell you which change moved the
+number.
