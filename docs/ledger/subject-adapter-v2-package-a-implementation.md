@@ -1,7 +1,9 @@
 # Subject Adapter V2 Package A implementation record
 
-Date: 2026-08-12  
-Design baseline: `1d9d27ad32548323f94bb36e992b62030ce8d452`  
+Date: 2026-08-12
+
+Design baseline: `1d9d27ad32548323f94bb36e992b62030ce8d452`
+
 Mutation baseline: `ab6aca571f207bd838f83d87df5b35e4f1f0ab33`
 
 ## Scope delivered
@@ -81,4 +83,3 @@ carry-forward cannot be claimed unchanged because Package A alters the adapter
 host and protocol boundary. Whether the full campaign must be rerun is left to
 the independent Package B architecture, security, compatibility, and
 certification-scope review, as required by the approved package boundary.
-
