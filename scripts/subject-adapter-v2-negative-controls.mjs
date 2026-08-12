@@ -137,6 +137,7 @@ try {
       cpSync(path.join(repo, "node_modules"), path.join(worktree, "node_modules"), {
         recursive: true,
         dereference: false,
+        verbatimSymlinks: true,
       });
       const target = path.join(worktree, item.file);
       if (item.mutateJson !== undefined) {
