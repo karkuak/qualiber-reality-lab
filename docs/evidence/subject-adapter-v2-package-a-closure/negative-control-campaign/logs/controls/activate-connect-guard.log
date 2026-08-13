@@ -1,0 +1,39 @@
+✔ ENV-MUT: a run cannot be provisioned into an archetype its challenge never admitted (6274.2925ms)
+✔ ENV-MUT: a second live run cannot reserve this run's substrate identities (7399.057958ms)
+✔ ENV-MUT: the driver's substrate survives the process that created it (3721.9745ms)
+✔ ENV-MUT: a tampered retained inventory is refused, and the refusal writes nothing (3924.557875ms)
+✔ ENV-MUT: activation is refused until the journey has actually connected (6542.481125ms)
+✔ ENV-MUT: subject output cannot freeze while a committed step is still owed (5274.220458ms)
+✔ ENV-MUT: the environment branch cannot be finalized through the pre-environment terminal (4664.77975ms)
+✔ ENV-MUT: the execution plan cannot be built on a persona the selection did not open (4171.836334ms)
+✔ ENV-MUT: an environment command on a run that never selected a case is refused (1569.75125ms)
+✖ ENV-MUT: activation is refused after a connect that failed (7580.842666ms)
+✔ ENV-MUT: --fake-step-status is unreachable without the development profile (3610.935833ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 10
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 55172.571291
+
+✖ failing tests:
+
+test at tests/dist/adversarial/environmentCommands.test.js:206:1
+✖ ENV-MUT: activation is refused after a connect that failed (7580.842666ms)
+  AssertionError [ERR_ASSERTION]: a challenge may not go live over a failed connection
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/environmentCommands.test.js:220:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

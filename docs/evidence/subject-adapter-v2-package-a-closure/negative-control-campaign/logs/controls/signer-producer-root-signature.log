@@ -1,0 +1,66 @@
+✔ SIGNER-DERIVE: an ordinary `signature` member is enumerated (0.76925ms)
+✖ SIGNER-DERIVE: a `root_signature` member is enumerated — the omission every run had (0.559375ms)
+✔ SIGNER-DERIVE: a `wrapper_signature` member is enumerated — the review's finding (0.09875ms)
+✔ SIGNER-DERIVE: an unsigned retained artifact is not a member (0.179791ms)
+✔ SIGNER-DERIVE: the public terminal types and the inventory itself are excluded, with reasons (0.655875ms)
+✔ SIGNER-DERIVE: the environment branch excludes two public terminal types (0.12525ms)
+✔ SIGNER-DERIVE: a signed contract with no declared producer role refuses (0.317333ms)
+✖ SIGNER-DERIVE: an authority field the contract does not declare refuses (0.118333ms)
+✔ SIGNER-DERIVE: two authority fields on one artifact refuse (0.130792ms)
+✔ SIGNER-DERIVE: a signature over a different core hash refuses (0.131583ms)
+✔ SIGNER-DERIVE: a malformed signature envelope refuses (0.184625ms)
+✔ SIGNER-DERIVE: two retained files claiming one core hash refuse (0.092083ms)
+✔ SIGNER-DERIVE: the applicable set is ordered by core hash, not by walk order (0.124209ms)
+✔ SIGNER-DERIVE: an empty applicable set is not complete (0.044709ms)
+✔ SIGNER-DERIVE: the projection carries the signer and the signed hash the artifact actually has (0.075125ms)
+✔ SIGNER-DERIVE: the builder refuses an inventory the derivation could not certify (10.143834ms)
+✔ SIGNER-DERIVE: a signed member that appears after the inventory is sealed is refused (0.243792ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 15
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 209.61925
+
+✖ failing tests:
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:70:1
+✖ SIGNER-DERIVE: a `root_signature` member is enumerated — the omission every run had (0.559375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/signerInventoryDerivation.test.js:83:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/signerInventoryDerivation.test.js:161:1
+✖ SIGNER-DERIVE: an authority field the contract does not declare refuses (0.118333ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception: an undeclared authority field
+      at throwsCode (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/signerInventoryDerivation.test.js:52:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/signerInventoryDerivation.test.js:165:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }

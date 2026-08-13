@@ -1,0 +1,91 @@
+✔ LOCAL-RESIDUE: an explicitly clean report is the only route to observed_clean (326.708958ms)
+✖ LOCAL-RESIDUE: fifty remaining artifacts reach the reducer as residue_detected (250.819042ms)
+✖ LOCAL-RESIDUE: zero and fifty remaining artifacts are observably different evidence (525.017333ms)
+✖ LOCAL-RESIDUE: an adapter that cannot tell is not rounded to clean (305.876291ms)
+✔ LOCAL-RESIDUE: a self-contradicting report is refused, never believed (188.763708ms)
+✔ LOCAL-RESIDUE: a completed operation that is not a residue report never implies clean (242.205458ms)
+✔ LOCAL-RESIDUE: the host refuses an unusable report at the protocol boundary (0.379167ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 4
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2011.69075
+
+✖ failing tests:
+
+test at tests/dist/integration/localResidueTruth.test.js:60:1
+✖ LOCAL-RESIDUE: fifty remaining artifacts reach the reducer as residue_detected (250.819042ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'observed_clean'
+  - 'residue_detected'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localResidueTruth.test.js:62:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'observed_clean',
+    expected: 'residue_detected',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/localResidueTruth.test.js:72:1
+✖ LOCAL-RESIDUE: zero and fifty remaining artifacts are observably different evidence (525.017333ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" not to be strictly deep-equal to:
+  
+  {
+    compensation: 'not_applicable',
+    reason_codes: [],
+    residue: 'observed_clean',
+    status: 'cleanup_complete',
+    stop: 'not_applicable',
+    uninstall: 'not_applicable'
+  }
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localResidueTruth.test.js:76:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { status: 'cleanup_complete', stop: 'not_applicable', compensation: 'not_applicable', uninstall: 'not_applicable', residue: 'observed_clean', reason_codes: [] },
+    expected: { status: 'cleanup_complete', stop: 'not_applicable', compensation: 'not_applicable', uninstall: 'not_applicable', residue: 'observed_clean', reason_codes: [] },
+    operator: 'notDeepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/localResidueTruth.test.js:80:1
+✖ LOCAL-RESIDUE: an adapter that cannot tell is not rounded to clean (305.876291ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'observed_clean'
+  - 'not_observed'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localResidueTruth.test.js:82:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'observed_clean',
+    expected: 'not_observed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

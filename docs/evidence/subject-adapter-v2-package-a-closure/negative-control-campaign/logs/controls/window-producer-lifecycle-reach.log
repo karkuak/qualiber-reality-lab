@@ -1,0 +1,238 @@
+ed after the capture it governs refuses (8875.172542ms)
+  AssertionError [ERR_ASSERTION]: observe: [{"code":"GRAPH_CLOSURE_MISSING_ROLE","message":"this run has not yet produced a evidence-window-commitment; the ordered journey forbids skipping it"}]
+  
+  10 !== 0
+  
+      at runToEnvironmentTerminal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/cliRun.js:168:16)
+      at finalized (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:325:24)
+      at freshCopy (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:330:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:486:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:492:1
+✖ WINDOW-WRONG-SIGNER: a commitment signed by the traffic supervisor refuses (10679.608417ms)
+  AssertionError [ERR_ASSERTION]: observe: [{"code":"GRAPH_CLOSURE_MISSING_ROLE","message":"this run has not yet produced a evidence-window-commitment; the ordered journey forbids skipping it"}]
+  
+  10 !== 0
+  
+      at runToEnvironmentTerminal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/cliRun.js:168:16)
+      at finalized (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:325:24)
+      at freshCopy (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:330:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:495:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:504:1
+✖ WINDOW-FOREIGN-RUN: a commitment naming another run refuses (9000.751083ms)
+  AssertionError [ERR_ASSERTION]: observe: [{"code":"GRAPH_CLOSURE_MISSING_ROLE","message":"this run has not yet produced a evidence-window-commitment; the ordered journey forbids skipping it"}]
+  
+  10 !== 0
+  
+      at runToEnvironmentTerminal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/cliRun.js:168:16)
+      at finalized (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:325:24)
+      at freshCopy (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:330:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:505:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:513:1
+✖ WINDOW-POLICY-BINDING: a commitment naming a different cutoff policy refuses (8568.746375ms)
+  AssertionError [ERR_ASSERTION]: observe: [{"code":"GRAPH_CLOSURE_MISSING_ROLE","message":"this run has not yet produced a evidence-window-commitment; the ordered journey forbids skipping it"}]
+  
+  10 !== 0
+  
+      at runToEnvironmentTerminal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/cliRun.js:168:16)
+      at finalized (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:325:24)
+      at freshCopy (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:330:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:514:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:522:1
+✖ WINDOW-PROCESS-BINDING: a commitment measured from a different process start refuses (8988.572959ms)
+  AssertionError [ERR_ASSERTION]: observe: [{"code":"GRAPH_CLOSURE_MISSING_ROLE","message":"this run has not yet produced a evidence-window-commitment; the ordered journey forbids skipping it"}]
+  
+  10 !== 0
+  
+      at runToEnvironmentTerminal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/cliRun.js:168:16)
+      at finalized (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:325:24)
+      at freshCopy (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:330:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:523:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:531:1
+✖ WINDOW-CLOCK-BINDING: a commitment in a different clock domain refuses (8555.541ms)
+  AssertionError [ERR_ASSERTION]: observe: [{"code":"GRAPH_CLOSURE_MISSING_ROLE","message":"this run has not yet produced a evidence-window-commitment; the ordered journey forbids skipping it"}]
+  
+  10 !== 0
+  
+      at runToEnvironmentTerminal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/cliRun.js:168:16)
+      at finalized (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:325:24)
+      at freshCopy (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:330:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:532:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:540:1
+✖ WINDOW-OBSERVATION-BINDING: a commitment naming a different comparison policy refuses (8505.51075ms)
+  AssertionError [ERR_ASSERTION]: observe: [{"code":"GRAPH_CLOSURE_MISSING_ROLE","message":"this run has not yet produced a evidence-window-commitment; the ordered journey forbids skipping it"}]
+  
+  10 !== 0
+  
+      at runToEnvironmentTerminal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/cliRun.js:168:16)
+      at finalized (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:325:24)
+      at freshCopy (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:330:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:541:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:549:1
+✖ WINDOW-RULE-BINDING: a commitment declaring another instant rule refuses (9240.432375ms)
+  AssertionError [ERR_ASSERTION]: observe: [{"code":"GRAPH_CLOSURE_MISSING_ROLE","message":"this run has not yet produced a evidence-window-commitment; the ordered journey forbids skipping it"}]
+  
+  10 !== 0
+  
+      at runToEnvironmentTerminal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/cliRun.js:168:16)
+      at finalized (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:325:24)
+      at freshCopy (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:330:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:550:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:558:1
+✖ WINDOW-INVENTORY: the commitment is an applicable signed member of the terminal (9401.402625ms)
+  AssertionError [ERR_ASSERTION]: observe: [{"code":"GRAPH_CLOSURE_MISSING_ROLE","message":"this run has not yet produced a evidence-window-commitment; the ordered journey forbids skipping it"}]
+  
+  10 !== 0
+  
+      at runToEnvironmentTerminal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/cliRun.js:168:16)
+      at finalized (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:325:24)
+      at freshCopy (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:330:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:559:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/evidenceWindowCommitment.test.js:568:1
+✖ WINDOW-INVENTORY-OMITTED: dropping the commitment from an otherwise complete inventory refuses (8714.292125ms)
+  AssertionError [ERR_ASSERTION]: observe: [{"code":"GRAPH_CLOSURE_MISSING_ROLE","message":"this run has not yet produced a evidence-window-commitment; the ordered journey forbids skipping it"}]
+  
+  10 !== 0
+  
+      at runToEnvironmentTerminal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/cliRun.js:168:16)
+      at finalized (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:325:24)
+      at freshCopy (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:330:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/evidenceWindowCommitment.test.js:571:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 10,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

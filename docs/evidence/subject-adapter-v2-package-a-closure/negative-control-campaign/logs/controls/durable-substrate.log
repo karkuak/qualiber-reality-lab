@@ -1,0 +1,269 @@
+de:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:156:1
+✖ ENV-CLI: a run advances from case_selected to a finalized environment terminal (9672.485542ms)
+  AssertionError [ERR_ASSERTION]: baseline: [{"code":"ENV_SUBSTRATE_BINDING_MISSING","message":"this run is bound to substrate sha256:e6c32663fe2ceb77775b395841c5d0ab46dfe74358aa743a5a65b538e9f2a751, but the substrate this command reached carries no identity at all; a fresh or foreign substrate cannot stand in for the one the run provisioned"}]
+  
+  4 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:104:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:158:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:197:1
+✖ ENV-VERIFY: the environment public bundle verifies offline, as an external reader (5268.938542ms)
+  AssertionError [ERR_ASSERTION]: baseline: [{"code":"ENV_SUBSTRATE_BINDING_MISSING","message":"this run is bound to substrate sha256:7927c66fc96363ce62021b413d49d75506e5e78962c51af3ee8138df56b026b6, but the substrate this command reached carries no identity at all; a fresh or foreign substrate cannot stand in for the one the run provisioned"}]
+  
+  4 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:104:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:199:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:214:1
+✖ ENV-VERIFY: a verifier without the pinned beacon cannot authorize the selection chain (5093.965041ms)
+  AssertionError [ERR_ASSERTION]: baseline: [{"code":"ENV_SUBSTRATE_BINDING_MISSING","message":"this run is bound to substrate sha256:2fc3024dd2dc0519fc96c72b76190de5af53a7a130e1b0b95ab15a4e6354743b, but the substrate this command reached carries no identity at all; a fresh or foreign substrate cannot stand in for the one the run provisioned"}]
+  
+  4 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:104:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:216:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:223:1
+✖ ENV-CLI: the environment is really torn down and the reservations released (4695.911042ms)
+  AssertionError [ERR_ASSERTION]: baseline: [{"code":"ENV_SUBSTRATE_BINDING_MISSING","message":"this run is bound to substrate sha256:fdd550bb61191e1751b81c5018b18a8c1ae128a41f989cb8e3fc651a98b729c0, but the substrate this command reached carries no identity at all; a fresh or foreign substrate cannot stand in for the one the run provisioned"}]
+  
+  4 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:104:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:225:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:238:1
+✖ ENV-CLI: the plan executes exactly the persona the selection opened (4763.45075ms)
+  AssertionError [ERR_ASSERTION]: baseline: [{"code":"ENV_SUBSTRATE_BINDING_MISSING","message":"this run is bound to substrate sha256:b4a48dd3baa227193dfcce5034c0ef8bb327d343a19cdc27054deb6e024fd8d1, but the substrate this command reached carries no identity at all; a fresh or foreign substrate cannot stand in for the one the run provisioned"}]
+  
+  4 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:104:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:240:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:248:1
+✖ ENV-CLI: an unsupported step is a retained outcome, never a removed case (5005.431833ms)
+  AssertionError [ERR_ASSERTION]: baseline: [{"code":"ENV_SUBSTRATE_BINDING_MISSING","message":"this run is bound to substrate sha256:80e929ab811bf77c78c950fc44769bcc6c13aaa008bd94f716d757d3a813c1be, but the substrate this command reached carries no identity at all; a fresh or foreign substrate cannot stand in for the one the run provisioned"}]
+  
+  4 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:104:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:250:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:262:1
+✖ ENV-CLI-CRASH: every phase boundary resumes from retained evidence (4855.048375ms)
+  AssertionError [ERR_ASSERTION]: baseline: [{"code":"ENV_SUBSTRATE_BINDING_MISSING","message":"this run is bound to substrate sha256:e1f7baf0021213f18e099e42294c6dce16e51248b151e3970296e406e2ec8803, but the substrate this command reached carries no identity at all; a fresh or foreign substrate cannot stand in for the one the run provisioned"}]
+  
+  4 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:104:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:267:26)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:276:1
+✖ ENV-CLI: replaying a finished run adds nothing, whether the phase is idempotent or refused (4790.914875ms)
+  AssertionError [ERR_ASSERTION]: baseline: [{"code":"ENV_SUBSTRATE_BINDING_MISSING","message":"this run is bound to substrate sha256:604314f7a4b48cbbc9f0dc0d77e6d0f179e75aed2d37a974f3c6ccfa1e2aceae, but the substrate this command reached carries no identity at all; a fresh or foreign substrate cannot stand in for the one the run provisioned"}]
+  
+  4 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:104:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:278:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:307:1
+✖ ENV-NO-WRITE: every refused environment command adds zero retained evidence (8151.346833ms)
+  AssertionError [ERR_ASSERTION]: baseline: [{"code":"ENV_SUBSTRATE_BINDING_MISSING","message":"this run is bound to substrate sha256:a9f3451e04cbb21b647e241d859f994a44dfec089860f91abccfece5037ab9bd, but the substrate this command reached carries no identity at all; a fresh or foreign substrate cannot stand in for the one the run provisioned"}]
+  
+  4 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:104:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:350:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:355:1
+✖ ENV-ORDER: a named step command may not reorder the committed journey (4748.586ms)
+  AssertionError [ERR_ASSERTION]: baseline: [{"code":"ENV_SUBSTRATE_BINDING_MISSING","message":"this run is bound to substrate sha256:b5f20d75371cbb222b1a283b411de64d4958a1b7855a2edbe116d2b782998939, but the substrate this command reached carries no identity at all; a fresh or foreign substrate cannot stand in for the one the run provisioned"}]
+  
+  4 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:104:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:357:5)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:366:1
+✖ ENV-SUBSTRATE: the driver's substrate lives outside the run root (4057.083792ms)
+  AssertionError [ERR_ASSERTION]: the fake driver's substrate is a sibling of the run root
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:369:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentRun.test.js:402:1
+✖ ENV-ORACLE: a canary in the subject's output bytes invalidates the run before it freezes (4106.3895ms)
+  AssertionError [ERR_ASSERTION]: baseline: [{"code":"ENV_SUBSTRATE_BINDING_MISSING","message":"this run is bound to substrate sha256:4271e59f88c276232ec537537a2e286df6d03115c7b1c642a508822c6cf51830, but the substrate this command reached carries no identity at all; a fresh or foreign substrate cannot stand in for the one the run provisioned"}]
+  
+  4 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentRun.test.js:409:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

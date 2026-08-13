@@ -1,0 +1,43 @@
+✔ LOCAL-V2: both neutral fixture shapes use the real subprocess protocol path (689.97475ms)
+✔ LOCAL-V2: V1 remains the default and cannot be selected for local mode (5.84725ms)
+✔ LOCAL-V2: a V1 SDK response to the V2-only offer is a downgrade refusal (160.416792ms)
+✔ LOCAL-V2: governed V2 is rejected before executable dispatch (2.474791ms)
+✖ LOCAL-V2: V1 receipts and altered manifest/artifact/profile scope never authorize V2 (2.292708ms)
+✔ LOCAL-LIMITS: plan ceilings intersect with host, output, diagnostics and controls (207.673917ms)
+✔ LOCAL-LIMITS: timeout, response bomb and diagnostic-line bomb reuse existing host enforcement (523.150958ms)
+✔ LOCAL-CONTROLS: egress, redirect, proxy environment and capabilities fail closed (385.770792ms)
+✔ LOCAL-V2: per-dispatch artifact verification is load-bearing (2.020458ms)
+✔ ADAPTER-CERT-V2: the neutral scope skeleton produces deterministic unsigned test receipts (1.414583ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 9
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2163.484709
+
+✖ failing tests:
+
+test at tests/dist/adversarial/localAdapterV2.test.js:118:1
+✖ LOCAL-V2: V1 receipts and altered manifest/artifact/profile scope never authorize V2 (2.292708ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'SCHEMA_VALIDATION_FAILED'
+  - 'ADAPTER_CERTIFICATION_SCOPE_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/localAdapterV2.test.js:123:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SCHEMA_VALIDATION_FAILED',
+    expected: 'ADAPTER_CERTIFICATION_SCOPE_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

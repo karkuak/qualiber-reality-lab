@@ -1,0 +1,37 @@
+✔ LOCAL-CONTRACTS: exactly ERL2-C-161 through ERL2-C-170 are registered (0.8065ms)
+✔ LOCAL-CONTRACTS: all ten approved objects validate and reject unknown fields (30.315917ms)
+✔ LOCAL-PAYLOADS: all thirteen operation payloads are closed and correlated (3.998625ms)
+✖ LOCAL-CLOSURE: governed fields, claim changes, signatures and trusted status words are unrepresentable (1.155291ms)
+✔ LOCAL-ANCESTRY: first and later predecessor rules fail closed (0.267083ms)
+✔ LOCAL-LIMITS: every numeric, root and environment boundary is contract-enforced (0.418791ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 5
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 291.907667
+
+✖ failing tests:
+
+test at tests/dist/contract/localObservationContracts.test.js:173:1
+✖ LOCAL-CLOSURE: governed fields, claim changes, signatures and trusted status words are unrepresentable (1.155291ms)
+  AssertionError [ERR_ASSERTION]: governor_id
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/contract/localObservationContracts.test.js:182:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

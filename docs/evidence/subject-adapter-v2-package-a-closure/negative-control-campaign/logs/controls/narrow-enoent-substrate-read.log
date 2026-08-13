@@ -1,0 +1,90 @@
+✔ SUBSTRATE-ERRORS: a missing state file is the only thing that means `never provisioned` (0.629875ms)
+✔ SUBSTRATE-ERRORS: malformed JSON is a typed corruption refusal, not an empty substrate (0.669542ms)
+✔ SUBSTRATE-ERRORS: truncated state is a typed corruption refusal (0.874791ms)
+✔ SUBSTRATE-ERRORS: a document that is not substrate state fails closed rather than reading as empty (1.122084ms)
+✔ SUBSTRATE-ERRORS: an unsupported shape version fails closed (0.589375ms)
+✖ SUBSTRATE-ERRORS: a directory where the state file belongs is a typed I/O refusal (0.589458ms)
+✖ SUBSTRATE-ERRORS: an unreadable state file is a typed I/O refusal (0.370459ms)
+✖ SUBSTRATE-ERRORS: an arbitrary injected I/O fault is a typed refusal, whatever the errno (0.156375ms)
+✔ SUBSTRATE-ERRORS: an ENOENT from the seam is still `never provisioned` (0.137708ms)
+✔ SUBSTRATE-ERRORS: a write fault is typed and does not leak the substrate path (0.195875ms)
+✔ SUBSTRATE-ERRORS: an unreadable substrate never yields a clean teardown (16761.583458ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 8
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16941.973083
+
+✖ failing tests:
+
+test at tests/dist/adversarial/substrateErrorClassification.test.js:115:1
+✖ SUBSTRATE-ERRORS: a directory where the state file belongs is a typed I/O refusal (0.589458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'ENV_SUBSTRATE_UNREADABLE'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/substrateErrorClassification.test.js:119:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'ENV_SUBSTRATE_UNREADABLE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/substrateErrorClassification.test.js:128:1
+✖ SUBSTRATE-ERRORS: an unreadable state file is a typed I/O refusal (0.370459ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'ENV_SUBSTRATE_UNREADABLE'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/substrateErrorClassification.test.js:147:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'ENV_SUBSTRATE_UNREADABLE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/substrateErrorClassification.test.js:149:1
+✖ SUBSTRATE-ERRORS: an arbitrary injected I/O fault is a typed refusal, whatever the errno (0.156375ms)
+  AssertionError [ERR_ASSERTION]: EACCES must fail closed
+  + actual - expected
+  
+  + undefined
+  - 'ENV_SUBSTRATE_UNREADABLE'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/substrateErrorClassification.test.js:165:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'ENV_SUBSTRATE_UNREADABLE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

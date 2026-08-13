@@ -1,0 +1,52 @@
+✔ LOCAL-RESIDUE: an explicitly clean report is the only route to observed_clean (361.584041ms)
+✔ LOCAL-RESIDUE: fifty remaining artifacts reach the reducer as residue_detected (274.379125ms)
+✔ LOCAL-RESIDUE: zero and fifty remaining artifacts are observably different evidence (543.315208ms)
+✔ LOCAL-RESIDUE: an adapter that cannot tell is not rounded to clean (261.64175ms)
+✖ LOCAL-RESIDUE: a self-contradicting report is refused, never believed (265.956ms)
+✔ LOCAL-RESIDUE: a completed operation that is not a residue report never implies clean (285.919084ms)
+✖ LOCAL-RESIDUE: the host refuses an unusable report at the protocol boundary (0.373791ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 5
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2148.979417
+
+✖ failing tests:
+
+test at tests/dist/integration/localResidueTruth.test.js:88:1
+✖ LOCAL-RESIDUE: a self-contradicting report is refused, never believed (265.956ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'observed_clean'
+  - 'not_observed'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localResidueTruth.test.js:95:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'observed_clean',
+    expected: 'not_observed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/localResidueTruth.test.js:110:1
+✖ LOCAL-RESIDUE: the host refuses an unusable report at the protocol boundary (0.373791ms)
+  Error: expected a typed refusal
+      at refusal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localResidueTruth.test.js:120:15)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localResidueTruth.test.js:147:22)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)

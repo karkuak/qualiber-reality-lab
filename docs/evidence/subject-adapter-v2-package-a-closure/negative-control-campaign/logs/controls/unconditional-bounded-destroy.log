@@ -1,0 +1,258 @@
+✖ BOUNDED-CLEANUP: a frontier-unsafe resource survives, and is reported as skipped (6997.832917ms)
+✖ BOUNDED-CLEANUP: no whole-environment destroy is dispatched on the bounded route (4331.050291ms)
+✔ BOUNDED-CLEANUP: every safe action has exactly one receipt, and every skip none (4321.216459ms)
+✖ BOUNDED-CLEANUP: a foreign resource does not prevent the run reaching a terminal (4178.809459ms)
+✖ BOUNDED-CLEANUP: the owned resources are cleaned up around the foreign one (4134.419417ms)
+✔ BOUNDED-CLEANUP: a baseline failure's finding names the baseline gate (4300.783375ms)
+✖ BOUNDED-CLEANUP: the cleanup consequence never replaces the original cause (4072.474916ms)
+✖ BOUNDED-CLEANUP: the unmutated bounded terminal derives cleanly (4339.258416ms)
+✖ BOUNDED-CLEANUP: a fabricated empty residue is refused as undeclared destruction (4428.397791ms)
+✔ BOUNDED-CLEANUP: a probe that authorizes what the frontier did not is refused (4346.455375ms)
+✔ BOUNDED-CLEANUP: a probe whose `before` is a post-destruction inventory is refused (4484.981417ms)
+✔ BOUNDED-CLEANUP: a probe belonging to another run or another substrate is refused (4200.153541ms)
+✖ BOUNDED-CLEANUP: an action claiming success over a resource that is still there is refused (4301.934084ms)
+✖ BOUNDED-CLEANUP: a residue the observation does not see is refused (4318.521833ms)
+✔ BOUNDED-CLEANUP: a finding naming another phase's gate is refused (4127.4295ms)
+✔ BOUNDED-CLEANUP: a subject-attributed finding on a Lab environment failure is refused (4312.193333ms)
+✖ BOUNDED-CLEANUP: the verifier's entry point requires the residue probe (4235.158625ms)
+✖ BOUNDED-CLEANUP: a cleanup status that disagrees with the residue is refused (4062.533584ms)
+✔ BOUNDED-CLEANUP: the verifier's entry point requires the pre-action frontier (4529.384583ms)
+✔ BOUNDED-CLEANUP: no attestation and no public bundle descend from a bounded terminal (4342.144584ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 9
+ℹ fail 11
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 88976.242667
+
+✖ failing tests:
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:127:1
+✖ BOUNDED-CLEANUP: a frontier-unsafe resource survives, and is reported as skipped (6997.832917ms)
+  AssertionError [ERR_ASSERTION]: volume-019ffb8b was classified contain_residual and must still be there
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:136:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:145:1
+✖ BOUNDED-CLEANUP: no whole-environment destroy is dispatched on the bounded route (4331.050291ms)
+  AssertionError [ERR_ASSERTION]: the bounded route dispatched the whole-environment operation op-invalid-destroy
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:151:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:189:1
+✖ BOUNDED-CLEANUP: a foreign resource does not prevent the run reaching a terminal (4178.809459ms)
+  AssertionError [ERR_ASSERTION]: exactly one invalid record, and exactly one
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:196:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:202:1
+✖ BOUNDED-CLEANUP: the owned resources are cleaned up around the foreign one (4134.419417ms)
+  Error: ENOENT: no such file or directory, open '/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-nc-stage-suite-iFmWny/erl2-mid-rzd8oS/retained/environment/cleanup-residue-probe.json'
+      at readFileSync (node:fs:539:20)
+      at retained (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:72:23)
+      at probeOf (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:78:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:211:19)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-nc-stage-suite-iFmWny/erl2-mid-rzd8oS/retained/environment/cleanup-residue-probe.json'
+  }
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:228:1
+✖ BOUNDED-CLEANUP: the cleanup consequence never replaces the original cause (4072.474916ms)
+  Error: ENOENT: no such file or directory, open '/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-nc-stage-suite-iFmWny/erl2-mid-3w40vb/retained/invalid-run-record.json'
+      at readFileSync (node:fs:539:20)
+      at retained (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:72:23)
+      at recordOf (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:84:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:234:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-nc-stage-suite-iFmWny/erl2-mid-3w40vb/retained/invalid-run-record.json'
+  }
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:242:1
+✖ BOUNDED-CLEANUP: the unmutated bounded terminal derives cleanly (4339.258416ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'RESIDUE_UNDECLARED_DESTRUCTION'
+  - undefined
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:247:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'RESIDUE_UNDECLARED_DESTRUCTION',
+    expected: undefined,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:251:1
+✖ BOUNDED-CLEANUP: a fabricated empty residue is refused as undeclared destruction (4428.397791ms)
+  AssertionError [ERR_ASSERTION]: the outcome no longer follows from the observations
+  + actual - expected
+  
+  + 'RESIDUE_UNDECLARED_DESTRUCTION'
+  - 'RESIDUE_PROBE_MISSING'
+             ^
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:259:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'RESIDUE_UNDECLARED_DESTRUCTION',
+    expected: 'RESIDUE_PROBE_MISSING',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:309:1
+✖ BOUNDED-CLEANUP: an action claiming success over a resource that is still there is refused (4301.934084ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'RESIDUE_DETECTED'
+  - 'EMERGENCY_CLEANUP_INCOMPLETE'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:324:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'RESIDUE_DETECTED',
+    expected: 'EMERGENCY_CLEANUP_INCOMPLETE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:330:1
+✖ BOUNDED-CLEANUP: a residue the observation does not see is refused (4318.521833ms)
+  AssertionError [ERR_ASSERTION]: the observation still sees a survivor the verification does not account for
+  + actual - expected
+  
+  + undefined
+  - 'RESIDUE_DETECTED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:335:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'RESIDUE_DETECTED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:404:1
+✖ BOUNDED-CLEANUP: the verifier's entry point requires the residue probe (4235.158625ms)
+  AssertionError [ERR_ASSERTION]: the unmutated terminal passes the entry point
+  + actual - expected
+  
+  + 'RESIDUE_UNDECLARED_DESTRUCTION'
+  - undefined
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:409:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'RESIDUE_UNDECLARED_DESTRUCTION',
+    expected: undefined,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/invalidCleanupDiscipline.test.js:416:1
+✖ BOUNDED-CLEANUP: a cleanup status that disagrees with the residue is refused (4062.533584ms)
+  Error: ENOENT: no such file or directory, open '/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-nc-stage-suite-iFmWny/erl2-mid-ivOnRu/retained/invalid-run-record.json'
+      at readFileSync (node:fs:539:20)
+      at retained (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:72:23)
+      at recordOf (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:84:12)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/invalidCleanupDiscipline.test.js:422:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-nc-stage-suite-iFmWny/erl2-mid-ivOnRu/retained/invalid-run-record.json'
+  }

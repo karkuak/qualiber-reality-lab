@@ -1,0 +1,45 @@
+✔ SUBSTRATE-SUBSTITUTION: the exploit's own commands are refused before any cleanup evidence freezes (16273.108ms)
+✔ SUBSTRATE-SUBSTITUTION: substrate A remains uncleared and no valid attestation is emitted (14429.781166ms)
+✔ SUBSTRATE-SUBSTITUTION: a run bound to a substrate reaches it without being told where it is (16109.296959ms)
+✔ SUBSTRATE-SUBSTITUTION: a mutated retained binding is refused offline (15692.568542ms)
+✔ SUBSTRATE-SUBSTITUTION: a reservation-namespace redirect is refused independently (13547.701958ms)
+✖ SUBSTRATE-SUBSTITUTION: the locator flags are unreachable on the release surface (4277.186833ms)
+✔ SUBSTRATE-SUBSTITUTION: a substrate with no identity cannot stand in for the bound one (13914.045792ms)
+✔ SUBSTRATE-SUBSTITUTION: every bound identity refuses independently, offline (15873.588083ms)
+✔ SUBSTRATE-SUBSTITUTION: a binding signed by the wrong role is refused offline (15688.090417ms)
+✔ SUBSTRATE-SUBSTITUTION: an invalid binding signature is refused offline (15689.631416ms)
+✔ SUBSTRATE-SUBSTITUTION: the same path with a different instance marker is a mismatch (13416.475542ms)
+✔ SUBSTRATE-SUBSTITUTION: a different established substrate is a mismatch, not a fresh start (18478.918625ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 11
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 174074.652792
+
+✖ failing tests:
+
+test at tests/dist/adversarial/substrateSubstitution.test.js:142:1
+✖ SUBSTRATE-SUBSTITUTION: the locator flags are unreachable on the release surface (4277.186833ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"ENV_SUBSTRATE_LOCATOR_CONFLICT","message":"--substrate-root names /var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-nc-stage-suite-b8jXkI/erl2-substitute-release-YW2dkz, but this run is bound to the substrate at /var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-nc-stage-suite-b8jXkI/erl2-mid-QTG4n2.substrate; a binding may be established once, never replaced"}]
+  + actual - expected
+  
+  + 'ENV_SUBSTRATE_LOCATOR_CONFLICT'
+  - 'CFG_DEVELOPMENT_FLAG_UNAVAILABLE'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/substrateSubstitution.test.js:151:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'ENV_SUBSTRATE_LOCATOR_CONFLICT',
+    expected: 'CFG_DEVELOPMENT_FLAG_UNAVAILABLE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

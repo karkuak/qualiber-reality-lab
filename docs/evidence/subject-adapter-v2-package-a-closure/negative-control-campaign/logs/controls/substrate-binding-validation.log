@@ -1,0 +1,86 @@
+✔ SUBSTRATE-SUBSTITUTION: the exploit's own commands are refused before any cleanup evidence freezes (15999.34ms)
+✔ SUBSTRATE-SUBSTITUTION: substrate A remains uncleared and no valid attestation is emitted (14038.395792ms)
+✔ SUBSTRATE-SUBSTITUTION: a run bound to a substrate reaches it without being told where it is (16178.524ms)
+✔ SUBSTRATE-SUBSTITUTION: a mutated retained binding is refused offline (15735.419708ms)
+✔ SUBSTRATE-SUBSTITUTION: a reservation-namespace redirect is refused independently (13184.370709ms)
+✔ SUBSTRATE-SUBSTITUTION: the locator flags are unreachable on the release surface (4214.502875ms)
+✖ SUBSTRATE-SUBSTITUTION: a substrate with no identity cannot stand in for the bound one (13615.71875ms)
+✔ SUBSTRATE-SUBSTITUTION: every bound identity refuses independently, offline (15340.836792ms)
+✔ SUBSTRATE-SUBSTITUTION: a binding signed by the wrong role is refused offline (15545.117208ms)
+✔ SUBSTRATE-SUBSTITUTION: an invalid binding signature is refused offline (15409.409666ms)
+✖ SUBSTRATE-SUBSTITUTION: the same path with a different instance marker is a mismatch (13685.848625ms)
+✖ SUBSTRATE-SUBSTITUTION: a different established substrate is a mismatch, not a fresh start (17921.16875ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 9
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 171536.231958
+
+✖ failing tests:
+
+test at tests/dist/adversarial/substrateSubstitution.test.js:154:1
+✖ SUBSTRATE-SUBSTITUTION: a substrate with no identity cannot stand in for the bound one (13615.71875ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"SCHEMA_VALIDATION_FAILED","message":"EnvironmentBaselineFingerprintV1 failed validation at /probes: must NOT have fewer than 1 items"}]
+  + actual - expected
+  
+  + 'SCHEMA_VALIDATION_FAILED'
+  - 'ENV_SUBSTRATE_BINDING_MISSING'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/substrateSubstitution.test.js:170:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'SCHEMA_VALIDATION_FAILED',
+    expected: 'ENV_SUBSTRATE_BINDING_MISSING',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/substrateSubstitution.test.js:267:1
+✖ SUBSTRATE-SUBSTITUTION: the same path with a different instance marker is a mismatch (13685.848625ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/substrateSubstitution.test.js:277:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/substrateSubstitution.test.js:281:1
+✖ SUBSTRATE-SUBSTITUTION: a different established substrate is a mismatch, not a fresh start (17921.16875ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"SCHEMA_VALIDATION_FAILED","message":"EnvironmentBaselineFingerprintV1 failed validation at /probes: must NOT have fewer than 1 items"}]
+  + actual - expected
+  
+  + 'SCHEMA_VALIDATION_FAILED'
+  - 'ENV_SUBSTRATE_BINDING_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/substrateSubstitution.test.js:294:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'SCHEMA_VALIDATION_FAILED',
+    expected: 'ENV_SUBSTRATE_BINDING_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

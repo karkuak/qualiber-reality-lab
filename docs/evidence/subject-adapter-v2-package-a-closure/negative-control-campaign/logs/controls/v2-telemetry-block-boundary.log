@@ -1,0 +1,62 @@
+✔ DURABLE-TELEMETRY: current-run spans are observed and attributed (1.442042ms)
+✔ DURABLE-TELEMETRY: another run's spans never satisfy this run (0.431667ms)
+✔ DURABLE-TELEMETRY: no trace data at all is reported as not emitted (0.2685ms)
+✔ DURABLE-TELEMETRY: an unreadable capture claims nothing about telemetry (0.3975ms)
+✔ DURABLE-TELEMETRY: traces received but observation unavailable stays distinct from none received (0.065083ms)
+✔ DURABLE-TELEMETRY: a partial trailing write is read as a smaller observation, not a malformed one (0.281667ms)
+✔ DURABLE-TELEMETRY: malformed output yields no count rather than a wrong one (0.21625ms)
+✔ DURABLE-TELEMETRY: an unrepresentable span count is refused as a total (0.220083ms)
+✔ DURABLE-TELEMETRY: an oversized capture is bounded from the end (0.359959ms)
+✔ DURABLE-TELEMETRY: a flush that lands inside the deadline is observed (0.577834ms)
+✔ DURABLE-TELEMETRY: no flush before the deadline is a bounded, named absence (0.329625ms)
+✔ DURABLE-TELEMETRY: a previous project's capture never satisfies this run (0.232166ms)
+✔ DURABLE-TELEMETRY: dispose removes the task-owned capture file (0.4235ms)
+✔ DURABLE-TELEMETRY: rotation of the container log does not affect the durable observation (0.27675ms)
+✔ DURABLE-TELEMETRY: the capture directory is task-owned and holds only this run's stream (0.37675ms)
+✔ DURABLE-TELEMETRY: a follower that cannot start is unavailable, not silent (0.267209ms)
+✔ DURABLE-TELEMETRY: a follower that exits with an error is unavailable, not silent (0.293291ms)
+✔ DURABLE-TELEMETRY: an attach that fails asynchronously is unavailable (0.226125ms)
+✔ DURABLE-TELEMETRY: a stream failure mid-run is a truncated observation, not an absence (0.263792ms)
+✔ DURABLE-TELEMETRY: an attached follower that sees nothing still reports not emitted (0.298291ms)
+✔ DURABLE-TELEMETRY: a follower that dies after an empty read is unavailable, not silent (0.306292ms)
+✔ DURABLE-TELEMETRY: an attached follower that sees this run's spans succeeds (0.281333ms)
+✔ DURABLE-TELEMETRY: a follower that ends cleanly leaves a usable capture (0.280708ms)
+✔ DURABLE-TELEMETRY: the follower we asked to stop is not reported as a failure (0.247833ms)
+✔ DURABLE-TELEMETRY: cleanup removes the capture after every failure mode (0.541583ms)
+✖ DURABLE-TELEMETRY: an earlier run's batch is not absorbed by a later run (0.454625ms)
+✔ DURABLE-TELEMETRY: the block boundary is load-bearing in both directions (0.046542ms)
+✔ DURABLE-TELEMETRY: this run's marker appearing later never rescues an earlier batch (0.041458ms)
+✔ DURABLE-TELEMETRY: a non-trace summary ends a trace block without being counted (0.039291ms)
+✔ DURABLE-TELEMETRY: a summary-only terminal block is incomplete, not empty (0.211333ms)
+✔ DURABLE-TELEMETRY: a complete terminal block is not treated as truncated (0.206584ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 30
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 69.810458
+
+✖ failing tests:
+
+test at tests/dist/integration/durableTelemetryObservation.test.js:526:1
+✖ DURABLE-TELEMETRY: an earlier run's batch is not absorbed by a later run (0.454625ms)
+  AssertionError [ERR_ASSERTION]: only the spans inside this run's own block may be credited to it
+  
+  107 !== 7
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/durableTelemetryObservation.test.js:529:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 107,
+    expected: 7,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,20 @@
+✔ ENV-CLI: a run advances from case_selected to a finalized environment terminal (17849.923666ms)
+✔ ENV-VERIFY: the environment public bundle verifies offline, as an external reader (15526.278583ms)
+✔ ENV-VERIFY: a verifier without the pinned beacon cannot authorize the selection chain (15340.958875ms)
+✔ ENV-CLI: the environment is really torn down and the reservations released (15359.129583ms)
+✔ ENV-CLI: the plan executes exactly the persona the selection opened (4363.230458ms)
+✔ ENV-CLI: an unsupported step is a retained outcome, never a removed case (15463.024167ms)
+✔ ENV-CLI-CRASH: every phase boundary resumes from retained evidence (320921.801292ms)
+✔ ENV-CLI: replaying a finished run adds nothing, whether the phase is idempotent or refused (22306.361709ms)
+✔ ENV-NO-WRITE: every refused environment command adds zero retained evidence (19575.4955ms)
+✔ ENV-ORDER: a named step command may not reorder the committed journey (4605.271334ms)
+✔ ENV-SUBSTRATE: the driver's substrate lives outside the run root (3854.892708ms)
+✔ ENV-ORACLE: a canary in the subject's output bytes invalidates the run before it freezes (11945.861416ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 468707.970875

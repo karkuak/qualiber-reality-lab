@@ -1,0 +1,33 @@
+✖ LOCAL-ARCH: the coordinator delegates execution exclusively to AdapterHost (0.807583ms)
+✔ LOCAL-ARCH: Package A added one production observation module and no second engine/store/supervisor (1.743458ms)
+✔ LOCAL-ARCH: no product token, converter, local governed role or trusted-status vocabulary entered the implementation (1.5895ms)
+✔ LOCAL-ARCH: governed V1 composition does not import local-observation coordination (2.005125ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 55.874208
+
+✖ failing tests:
+
+test at tests/dist/architecture/localObservationBoundary.test.js:19:1
+✖ LOCAL-ARCH: the coordinator delegates execution exclusively to AdapterHost (0.807583ms)
+  AssertionError [ERR_ASSERTION]: coordinator directly contains node:child_process
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/architecture/localObservationBoundary.test.js:28:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

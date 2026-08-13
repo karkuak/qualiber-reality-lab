@@ -1,0 +1,107 @@
+✔ DURABLE-TELEMETRY: current-run spans are observed and attributed (1.577125ms)
+✔ DURABLE-TELEMETRY: another run's spans never satisfy this run (0.4145ms)
+✔ DURABLE-TELEMETRY: no trace data at all is reported as not emitted (0.253875ms)
+✔ DURABLE-TELEMETRY: an unreadable capture claims nothing about telemetry (0.378083ms)
+✔ DURABLE-TELEMETRY: traces received but observation unavailable stays distinct from none received (0.063959ms)
+✔ DURABLE-TELEMETRY: a partial trailing write is read as a smaller observation, not a malformed one (0.275917ms)
+✔ DURABLE-TELEMETRY: malformed output yields no count rather than a wrong one (0.21825ms)
+✔ DURABLE-TELEMETRY: an unrepresentable span count is refused as a total (0.221042ms)
+✔ DURABLE-TELEMETRY: an oversized capture is bounded from the end (0.353ms)
+✔ DURABLE-TELEMETRY: a flush that lands inside the deadline is observed (0.406333ms)
+✔ DURABLE-TELEMETRY: no flush before the deadline is a bounded, named absence (0.262958ms)
+✔ DURABLE-TELEMETRY: a previous project's capture never satisfies this run (0.205125ms)
+✔ DURABLE-TELEMETRY: dispose removes the task-owned capture file (0.380958ms)
+✔ DURABLE-TELEMETRY: rotation of the container log does not affect the durable observation (0.251875ms)
+✔ DURABLE-TELEMETRY: the capture directory is task-owned and holds only this run's stream (0.371708ms)
+✔ DURABLE-TELEMETRY: a follower that cannot start is unavailable, not silent (0.254084ms)
+✖ DURABLE-TELEMETRY: a follower that exits with an error is unavailable, not silent (0.584833ms)
+✖ DURABLE-TELEMETRY: an attach that fails asynchronously is unavailable (0.262333ms)
+✔ DURABLE-TELEMETRY: a stream failure mid-run is a truncated observation, not an absence (0.277834ms)
+✔ DURABLE-TELEMETRY: an attached follower that sees nothing still reports not emitted (0.319375ms)
+✖ DURABLE-TELEMETRY: a follower that dies after an empty read is unavailable, not silent (0.446459ms)
+✔ DURABLE-TELEMETRY: an attached follower that sees this run's spans succeeds (0.283583ms)
+✔ DURABLE-TELEMETRY: a follower that ends cleanly leaves a usable capture (0.271417ms)
+✔ DURABLE-TELEMETRY: the follower we asked to stop is not reported as a failure (0.254917ms)
+✔ DURABLE-TELEMETRY: cleanup removes the capture after every failure mode (0.553583ms)
+✔ DURABLE-TELEMETRY: an earlier run's batch is not absorbed by a later run (0.035875ms)
+✔ DURABLE-TELEMETRY: the block boundary is load-bearing in both directions (0.044917ms)
+✔ DURABLE-TELEMETRY: this run's marker appearing later never rescues an earlier batch (0.039916ms)
+✔ DURABLE-TELEMETRY: a non-trace summary ends a trace block without being counted (0.036291ms)
+✔ DURABLE-TELEMETRY: a summary-only terminal block is incomplete, not empty (0.192458ms)
+✔ DURABLE-TELEMETRY: a complete terminal block is not treated as truncated (0.203625ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 28
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 68.549041
+
+✖ failing tests:
+
+test at tests/dist/integration/durableTelemetryObservation.test.js:331:1
+✖ DURABLE-TELEMETRY: a follower that exits with an error is unavailable, not silent (0.584833ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /exited early with status 1/. Input:
+  
+  'TRACE_OBSERVATION_UNAVAILABLE: the durable collector capture could not be read, so nothing is claimed about telemetry — source=collector-log-stream current=0 other=0 receivedTraceData=false complete=false refs='
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/durableTelemetryObservation.test.js:346:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'TRACE_OBSERVATION_UNAVAILABLE: the durable collector capture could not be read, so nothing is claimed about telemetry — source=collector-log-stream current=0 other=0 receivedTraceData=false complete=false refs=',
+    expected: /exited early with status 1/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/durableTelemetryObservation.test.js:349:1
+✖ DURABLE-TELEMETRY: an attach that fails asynchronously is unavailable (0.262333ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /failed to attach/. Input:
+  
+  'TRACE_OBSERVATION_UNAVAILABLE: the durable collector capture could not be read, so nothing is claimed about telemetry — source=collector-log-stream current=0 other=0 receivedTraceData=false complete=false refs='
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/durableTelemetryObservation.test.js:360:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'TRACE_OBSERVATION_UNAVAILABLE: the durable collector capture could not be read, so nothing is claimed about telemetry — source=collector-log-stream current=0 other=0 receivedTraceData=false complete=false refs=',
+    expected: /failed to attach/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/durableTelemetryObservation.test.js:396:1
+✖ DURABLE-TELEMETRY: a follower that dies after an empty read is unavailable, not silent (0.446459ms)
+  AssertionError [ERR_ASSERTION]: a follower that died mid-look must not be reported as the collector emitting nothing
+  + actual - expected
+  
+  + 'TRACE_NOT_EMITTED'
+  - 'TRACE_OBSERVATION_UNAVAILABLE'
+           ^
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/durableTelemetryObservation.test.js:435:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'TRACE_NOT_EMITTED',
+    expected: 'TRACE_OBSERVATION_UNAVAILABLE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

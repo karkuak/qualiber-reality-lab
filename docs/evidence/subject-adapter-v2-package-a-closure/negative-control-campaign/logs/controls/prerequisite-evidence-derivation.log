@@ -1,0 +1,84 @@
+✔ REFUSAL-ATOMIC: this is P1-10 — journey with a missing comparison policy freezes no cutoff policy (12034.361917ms)
+✔ REFUSAL-ATOMIC: every representative refusal cause leaves the run byte-identical (42755.092417ms)
+✔ REFUSAL-ATOMIC: a refused environment command creates no substrate or reservation directory (3924.4375ms)
+✔ REFUSAL-ATOMIC: nothing is written after the valid terminal, refused or replayed (17013.177541ms)
+✖ PREREQ-CLI: this is P1-9 — a committed post-capture step cannot run before activation (7781.6725ms)
+✔ CANCEL-BRANCH: a live environment never receives a pre-environment cleanup terminal (39493.43525ms)
+✔ CANCEL-BRANCH: the branch is not decided by one file's existence (4052.007958ms)
+✔ CANCEL-BRANCH: an unreadable binding refuses rather than answering pre-environment (4397.882792ms)
+✔ CANCEL-BRANCH: a pre-environment run still takes the pre-environment branch (3734.225ms)
+✔ CANCEL-BRANCH: cancelling a cleanup interrupted mid-flight continues it, not restarts it (14922.105459ms)
+✔ CANCEL-BRANCH: cancelling after emergency cleanup completed returns its terminal (14841.449209ms)
+✔ CANCEL-BRANCH: cancelling a cancelled run returns the same record and writes nothing (5229.980292ms)
+✔ PREREQ-MATRIX: every canonical journey intent has exactly one row (0.931208ms)
+✔ PREREQ-MATRIX: the pre-environment intents cannot run as environment steps (0.336125ms)
+✔ PREREQ-MATRIX: post-capture intents require activation, the cutoff and the bundle (0.112208ms)
+✔ PREREQ-MATRIX: setup intents do not require activation or the cutoff (0.07175ms)
+✔ PREREQ-MATRIX: every environment intent accepts its own departure states (0.1ms)
+✔ PREREQ-MATRIX: every environment intent refuses every state it does not depart from (3.4735ms)
+✖ PREREQ-MATRIX: withholding any single prerequisite refuses the intent that owes it (0.42125ms)
+✖ PREREQ-MATRIX: this is P1-9 — a post-capture intent refuses in the pre-activation state (0.090125ms)
+✔ PREREQ-MATRIX: no intent departs from a state where subject execution is forbidden (0.075625ms)
+✔ PREREQ-MATRIX: the pre-reveal subject cleanup edge is recorded and not enabled (0.590584ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 19
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 171056.865208
+
+✖ failing tests:
+
+test at tests/dist/adversarial/lifecycleOrdering.test.js:184:1
+✖ PREREQ-CLI: this is P1-9 — a committed post-capture step cannot run before activation (7781.6725ms)
+  AssertionError [ERR_ASSERTION]: the committed exercise step must not run before activation
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/lifecycleOrdering.test.js:190:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/journeyPrerequisites.test.js:98:1
+✖ PREREQ-MATRIX: withholding any single prerequisite refuses the intent that owes it (0.42125ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception: install from execution_plan_frozen must refuse when verified_package is missing
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/journeyPrerequisites.test.js:107:24)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/journeyPrerequisites.test.js:116:1
+✖ PREREQ-MATRIX: this is P1-9 — a post-capture intent refuses in the pre-activation state (0.090125ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception: exercise must refuse before activation and before the cutoff
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/journeyPrerequisites.test.js:133:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }

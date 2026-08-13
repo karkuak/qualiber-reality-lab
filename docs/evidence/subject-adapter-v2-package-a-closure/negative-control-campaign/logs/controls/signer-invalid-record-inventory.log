@@ -1,0 +1,55 @@
+✔ INV-BASELINE: an honest CLI terminal lists every applicable signed member (10434.785084ms)
+✔ INV-HARNESS: re-sealing the chain unchanged still verifies (271.704375ms)
+✔ INV-MISSING: an inventory that omits generic-run-policy/v1 is refused (327.9935ms)
+✔ INV-MISSING: an inventory that omits trust-policy-manifest/v2 is refused (238.194375ms)
+✔ INV-MISSING: an inventory that omits trusted-timestamp-checkpoint/v1 is refused (234.581209ms)
+✔ INV-MISSING: an inventory that omits acquisition-preregistration/v1 is refused (377.733459ms)
+✔ INV-MISSING: a false completeness claim is not a separate rule — it is never read (685.709875ms)
+✔ INV-MISSING: a manipulated completeness flag is not representable at all (384.124334ms)
+✔ INV-WRONG: an entry naming a retained artifact that is not an applicable member is refused (457.540666ms)
+✔ INV-WRONG: an entry whose schema contradicts the artifact is refused (350.60725ms)
+✔ INV-WRONG: an entry whose key contradicts the artifact is refused (315.540125ms)
+✔ INV-WRONG: an entry whose signature hash contradicts the artifact is refused (304.61725ms)
+✔ INV-WRONG: the correct key under an unauthorized role is refused (278.607625ms)
+✔ INV-WRONG: a signed member from another run is refused (3192.023708ms)
+✔ INV-WRONG: a lifecycle-unreachable signed member is refused (196.980167ms)
+✔ INV-WRONG: a member created after the inventory cutoff cannot be listed (187.977709ms)
+✔ INV-SET: a duplicated entry is refused (198.7475ms)
+✔ INV-SET: an inventory naming another run is refused even when every hash resolves (3381.228041ms)
+✔ INV-SET: the right count with one member substituted is refused (211.995708ms)
+✔ INV-SET: the verifier declares its own exclusions rather than reading the inventory's (218.086916ms)
+✔ INV-SET: entry order is not normative (230.091042ms)
+✖ INV-INVALID: an invalid record that retains a signer inventory is refused (206.297042ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 21
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 23301.642416
+
+✖ failing tests:
+
+test at tests/dist/adversarial/signerInventoryCompleteness.test.js:423:1
+✖ INV-INVALID: an invalid record that retains a signer inventory is refused (206.297042ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'GRAPH_CLOSURE_EXTRA_ARTIFACT'
+  - 'INVENTORY_ENTRY_EXTRA'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/signerInventoryCompleteness.test.js:453:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'GRAPH_CLOSURE_EXTRA_ARTIFACT',
+    expected: 'INVENTORY_ENTRY_EXTRA',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

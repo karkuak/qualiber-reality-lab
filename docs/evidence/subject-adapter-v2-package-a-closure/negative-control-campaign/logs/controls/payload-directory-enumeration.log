@@ -1,0 +1,72 @@
+✔ PAYLOAD-BASELINE: the unmutated run's payload root is completely accounted (7677.59975ms)
+✔ PAYLOAD-MUT: a declared payload that is not retained is refused (270.862167ms)
+✖ PAYLOAD-MUT: an undeclared extra file in the payload root is refused (194.745084ms)
+✔ PAYLOAD-MUT: an extra file that is itself a well-formed artifact is still refused (206.061666ms)
+✖ PAYLOAD-MUT: an orphan freeze marker in the payload root is refused (285.340375ms)
+✔ PAYLOAD-MUT: a declared payload replaced by a symlink is refused (346.046625ms)
+✖ PAYLOAD-MUT: a subdirectory of undeclared files in the payload root is refused (262.0985ms)
+✔ PAYLOAD-ORDER: altered payload bytes are caught by the referenced-bytes layer (210.015625ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 5
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9945.055
+
+✖ failing tests:
+
+test at tests/dist/adversarial/subjectOutputPayloads.test.js:63:1
+✖ PAYLOAD-MUT: an undeclared extra file in the payload root is refused (194.745084ms)
+  AssertionError [ERR_ASSERTION]: an undeclared payload-root file must be rejected
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/subjectOutputPayloads.test.js:70:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/subjectOutputPayloads.test.js:84:1
+✖ PAYLOAD-MUT: an orphan freeze marker in the payload root is refused (285.340375ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/subjectOutputPayloads.test.js:90:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/subjectOutputPayloads.test.js:109:1
+✖ PAYLOAD-MUT: a subdirectory of undeclared files in the payload root is refused (262.0985ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/subjectOutputPayloads.test.js:114:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

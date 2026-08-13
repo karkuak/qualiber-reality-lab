@@ -1,0 +1,37 @@
+✔ EMERGENCY-ADV: a restoration failure reaches an emergency terminal that verifies (16888.097875ms)
+✔ EMERGENCY-ADV: every independently safe action is attempted, each with its own receipt (13811.262625ms)
+✔ EMERGENCY-ADV: an unsafe skip carries a reason and no receipt (14106.516041ms)
+✔ EMERGENCY-ADV: the unmutated cleanup derives cleanly (14402.601208ms)
+✔ EMERGENCY-ADV: an omitted safe action is refused by the verifier's own derivation (14005.103583ms)
+✔ EMERGENCY-ADV: a safe action relabelled as an unsafe skip is refused (13809.424417ms)
+✔ EMERGENCY-ADV: an attempted action with no receipt is refused (14107.18425ms)
+✖ EMERGENCY-ADV: a skip carrying a receipt is refused (14259.786834ms)
+✔ EMERGENCY-ADV: a cleanup citing a frontier the run never froze is refused (14024.340167ms)
+✔ EMERGENCY-ADV: a frontier whose actions its own resources do not imply is refused (14097.376ms)
+✔ EMERGENCY-ADV: post-cleanup residue must account for every unresolved action (13868.949708ms)
+✔ EMERGENCY-ADV: an unsafe resource does not prevent safe cleanup of the run's own (14451.011833ms)
+✔ EMERGENCY-ADV: a mixed frontier still accounts for its residue (13869.523917ms)
+✔ EMERGENCY-ADV: a genuinely foreign resource does not abort the branch either (14399.3785ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 13
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 200867.949084
+
+✖ failing tests:
+
+test at tests/dist/adversarial/emergencyCleanupAdversarial.test.js:205:1
+✖ EMERGENCY-ADV: a skip carrying a receipt is refused (14259.786834ms)
+  TypeError: Cannot read properties of undefined (reading 'attempt_receipt_hash')
+      at file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/emergencyCleanupAdversarial.test.js:214:53
+      at Array.map (<anonymous>)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/emergencyCleanupAdversarial.test.js:213:34)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
