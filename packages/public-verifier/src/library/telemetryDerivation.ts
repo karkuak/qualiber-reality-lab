@@ -7,7 +7,14 @@
  * whether this run declared the observation obtainable, whether exactly one
  * observation was produced where declared, whether it is this run's, and
  * whether every count it declares is the count its own inline log excerpt
- * derives. The parsing arithmetic (`parseCollectorTelemetry`,
+ * derives, and whether those counts are *coherent* — whether the excerpt
+ * actually carries a trace batch that stated a count for records naming this
+ * run. What is **not** independently derivable here is window completeness:
+ * `collectorWindowComplete` reads the raw window, and the excerpt keeps only
+ * counting lines. That is sound rather than a gap, because completeness only
+ * ever chooses between refusal shapes for a window with no attribution at all,
+ * and an observation with no attribution fails the floor below regardless.
+ * The parsing arithmetic (`parseCollectorTelemetry`,
  * `excerptCollectorTelemetry`) is shared with the producer on purpose: it is a
  * *definition*, not a judgement (ADR-ERL2-024 §7.2). Every refusal on this
  * page is verifier-owned and shared with nothing.
@@ -222,6 +229,48 @@ export function deriveAttributableTelemetry(options: {
         `batches, ${String(observation.spans)} spans and ${String(observation.run_attributed_records)} ` +
         `run-attributed records, but the verifier derives ${String(derived.traceBatches)}, ` +
         `${String(derived.spans)} and ${String(derived.runAttributedRecords)} from its own retained excerpt`,
+    );
+  }
+
+  // -- coherence, recomputed rather than taken on the producer's word --------
+  //
+  // The producer accepts a window only when at least one trace batch kept its
+  // summary record *and* a record naming this run inside one read. That is the
+  // invariant the whole correction turns on, and until now it lived only in the
+  // producer: an artifact frozen as `spans: 0` beside `run_attributed_records:
+  // 2` — the literal shape the failed gate recorded — verified clean offline,
+  // because nothing here re-derived the relationship between the two.
+  //
+  // These three refusals are that invariant restated on retained bytes, and
+  // every one of them is derived from the excerpt this verifier already parses.
+  // None of them reads a producer-supplied counter to decide.
+  if (derived.forgedBoundaries > 0) {
+    throw new Erl2Error(
+      CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+      `the retained telemetry log excerpt carries ${String(derived.forgedBoundaries)} line(s) shaped ` +
+        "like a console record inside a record's payload; a window whose record boundaries are " +
+        "ambiguous states no count",
+    );
+  }
+  if (derived.malformedSummaries > 0) {
+    throw new Erl2Error(
+      CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+      `the retained telemetry log excerpt carries ${String(derived.malformedSummaries)} trace-summary ` +
+        "record(s) whose span count is not a representable integer; an unreadable summary is not a " +
+        "summary that counted nothing",
+    );
+  }
+  // The coherence floor. Attribution without a batch that carried its own
+  // summary is precisely the pre-correction artifact: records naming this run
+  // whose counting line was never in the window. A window that genuinely
+  // received nothing states zero with no attribution at all, and is untouched
+  // by this.
+  if (derived.runAttributedRecords >= 1 && derived.runAttributedBatches < 1) {
+    throw new Erl2Error(
+      CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+      `the retained telemetry observation declares ${String(derived.runAttributedRecords)} record(s) ` +
+        "naming this run but its excerpt carries no trace batch whose summary and whose marked " +
+        "records were both readable; the span count it states was never read for this run",
     );
   }
 
