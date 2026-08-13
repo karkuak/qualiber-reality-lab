@@ -650,10 +650,14 @@ export const CONTROLS = [
     replace: "    if (String(1) === \"2\") {\n      return R.countNotRepresentable;\n    }",
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
-    mustFailCases: [
-      "ATTR-TELEM-RETAIN: a count the canonicalizer cannot represent demotes",
-      "ATTR-TELEM-RETAIN: a count outside the contract's range demotes",
-    ],
+    // This named two cases. The second one — a digit run long enough to reach
+    // `Infinity` — no longer belongs to this guard: the trace-summary parser
+    // refuses an unrepresentable count before it can be summed into a total, so
+    // that case now passes under this mutation and is killed by
+    // `telemetry-malformed-summary-is-not-a-zero` instead. The property did not
+    // move out of the campaign, it moved earlier in the pipeline, and this row
+    // is narrowed rather than left naming a case it cannot kill.
+    mustFailCases: ["ATTR-TELEM-RETAIN: a count outside the contract's range demotes"],
     expect: "fail",
   },
   {

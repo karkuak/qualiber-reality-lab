@@ -140,6 +140,17 @@ Discovery goes from **150 to 155**. Nothing was deleted, merged or renamed.
 Each mutation is a single narrow edit with exactly one replacement, and each
 kill is named at case level.
 
+**One existing control was narrowed, and not silently.**
+`telemetry-count-representable` named two cases. The second — a digit run long
+enough to reach `Infinity` — no longer belongs to the retention guard it
+defends: the trace-summary parser refuses an unrepresentable count before it can
+be summed into a total, so that case now passes under this control's mutation.
+It is killed by `telemetry-malformed-summary-is-not-a-zero` instead. The
+property moved earlier in the pipeline rather than out of the campaign, and the
+row was narrowed to the case it can still kill rather than left naming one it
+cannot. The campaign harness is what caught this: a control naming a renamed
+case is a harness error, not a pass.
+
 ### Corrected affected-control inventory
 
 The previous inventory was derived by **mutation-target file only**, which the
