@@ -2437,6 +2437,104 @@ export const CONTROLS = [
     ],
     expect: "fail",
   },
+  {
+    id: "telemetry-summary-must-be-a-framed-record",
+    what: "a span count is read only from a line the collector framed as a whole console record, never from payload text a subject wrote",
+    file: "packages/core/src/environment/telemetryObservation.ts",
+    // P1 of the independent review. The pattern here was
+    // `/\bTraces\b.*"spans":\s*(\d+)/` — unanchored, matching anywhere on any
+    // line. The Lab's overlay pipes subject logs through the same debug
+    // exporter, and the pinned collector renders a log body at column zero, so
+    // `Body: Str(...Traces ... "spans": 9999)` matched. One of those turned a
+    // correctly refused rotated window into a retained observation stating a
+    // count no collector ever wrote.
+    //
+    // The mutation drops the record-boundary requirement, which is the whole of
+    // the anchoring. The named case is the payload table: the reviewed exploit
+    // must classify as `not_summary`, and without the anchor it does not.
+    find: "  if (!CONSOLE_RECORD_LINE.test(line)) return NOT_SUMMARY;",
+    replace: "  if (false) return NOT_SUMMARY;",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-PARSE: only a whole console record the collector framed states a span count",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-record-payload-is-not-summary-text",
+    what: "text inside a record's payload states nothing, even when it is a byte-exact copy of an authentic summary",
+    file: "packages/core/src/environment/telemetryObservation.ts",
+    // The residual the anchoring alone leaves: a subject's *multi-line* log body
+    // puts its continuation at column zero, so it can carry a whole copied
+    // summary record. Framing is what answers it — a record whose message runs
+    // on opens a payload region, and nothing in that region is read as a
+    // summary. The mutation stops any region from ever opening.
+    find: "    if (CONSOLE_RECORD_LINE.test(line) && !isCompleteRecordLine(line)) open = true;",
+    replace: "    if (false) open = true;",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-PARSE: a payload line shaped like a record boundary makes the window ambiguous",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-ambiguous-window-is-refused",
+    what: "a window carrying a record boundary inside payload is refused, not read as though its framing were known",
+    file: "packages/core/src/environment/telemetryObservation.ts",
+    // Detecting the forged boundary is only half of it: the window must then be
+    // refused. Without this guard the scan falls through and states whatever
+    // its lines happen to total, which is the shape of the original defect.
+    find: "  if (input.counts.forgedBoundaries > 0) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-PARSE: a payload line shaped like a record boundary makes the window ambiguous",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-malformed-summary-is-not-a-zero",
+    what: "a summary record whose count cannot be read refuses the window instead of totalling to zero",
+    file: "packages/core/src/environment/telemetryObservation.ts",
+    // The count used to be a digit run handed to `Number.parseInt`, so a long
+    // enough one reached `Infinity`. The parser refuses it now — but a refused
+    // summary that merely went uncounted would leave the window stating a zero
+    // it never observed, which is the exact conflation this module exists to
+    // prevent.
+    find: "  if (input.counts.malformedSummaries > 0) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-PARSE: a record shaped like a summary and unreadable as one is malformed, never a zero",
+      "ATTR-TELEM-RETAIN: a digit run too long to represent never becomes a count",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-verifier-recomputes-coherence",
+    what: "the offline verifier re-derives the coherence of a retained observation instead of trusting the producer that wrote it",
+    file: "packages/public-verifier/src/library/telemetryDerivation.ts",
+    // P2 of the same review. The producer enforced the coherent-window
+    // invariant and the verifier did not re-derive it, so the literal artifact
+    // the failed clean gate recorded — `spans: 0` beside
+    // `run_attributed_records: 2` — still verified clean: every counter agreed
+    // with the excerpt, and nothing checked the relationship between them.
+    //
+    // A retained artifact is durable evidence with two authorities. The
+    // mutation removes the second one.
+    find: "  if (derived.runAttributedRecords >= 1 && derived.runAttributedBatches < 1) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-TELEM-VERIFY: the literal pre-correction artifact is refused on its own bytes",
+    ],
+    expect: "fail",
+  },
 ];
 
 // -- result classification ---------------------------------------------------

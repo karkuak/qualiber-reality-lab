@@ -169,6 +169,60 @@ test("NC-DISCOVERY: the boundaries closed by the reliability correction each hav
   }
 });
 
+/**
+ * The boundaries closed by the parser-authentication and verifier-independence
+ * remediation.
+ *
+ * Pinned by boundary rather than by name, like every other row here: a control
+ * that is renamed away is a property silently dropped, and these five are the
+ * ones an independent review had to prove were missing.
+ */
+test("NC-DISCOVERY: the parser and verifier integrity boundaries each have a control", () => {
+  const byId = new Map(CONTROLS.map((control) => [control.id, control]));
+  const boundaries: readonly (readonly [string, string])[] = [
+    // Only a line the collector framed as a whole record may state a count.
+    [
+      "telemetry-summary-must-be-a-framed-record",
+      "packages/core/src/environment/telemetryObservation.ts",
+    ],
+    // Payload text states nothing, even copied byte for byte.
+    [
+      "telemetry-record-payload-is-not-summary-text",
+      "packages/core/src/environment/telemetryObservation.ts",
+    ],
+    // A window whose framing is ambiguous, or whose summary cannot be read, is
+    // refused rather than totalled.
+    [
+      "telemetry-ambiguous-window-is-refused",
+      "packages/core/src/environment/telemetryObservation.ts",
+    ],
+    [
+      "telemetry-malformed-summary-is-not-a-zero",
+      "packages/core/src/environment/telemetryObservation.ts",
+    ],
+    // The offline verifier re-derives coherence rather than trusting it.
+    [
+      "telemetry-verifier-recomputes-coherence",
+      "packages/public-verifier/src/library/telemetryDerivation.ts",
+    ],
+  ];
+  for (const [id, file] of boundaries) {
+    const control = byId.get(id);
+    assert.ok(control !== undefined, `${id} is missing from canonical discovery`);
+    assert.equal(control.file, file, `${id} no longer defends ${file}`);
+    assert.equal(
+      existsSync(path.join(repoRoot, control.file)),
+      true,
+      `${id} targets a missing file ${control.file}`,
+    );
+    assert.equal(control.expect, "fail", `${id} must declare an expected kill`);
+    assert.ok(
+      (control.mustFailCases ?? []).length > 0,
+      `${id} does not name the cases that must fail`,
+    );
+  }
+});
+
 test("NC-DISCOVERY: the boundaries closed by the Package A review each have a control", () => {
   // Keyed on the boundary rather than the id, so renaming a control does not
   // quietly drop the property it was standing for.
