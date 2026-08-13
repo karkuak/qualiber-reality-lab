@@ -2299,9 +2299,17 @@ export const CONTROLS = [
   },
   {
     id: "v2-governed-port-refusal",
-    what: "a v2 local-observation host cannot enter the governed SubjectPort",
+    what: "the governed SubjectPort refuses a v2 local-observation host at construction, before a port exists to dispatch through",
     file: "packages/core/src/adapter/hostedSubjectPort.ts",
     // The mutation an independent review ran, which the suite did not notice.
+    //
+    // What it kills is the port's own early refusal, and only that. Enforcement
+    // is layered: with this guard gone the host's execution-mode binding still
+    // refuses every port method, so no adapter dispatch becomes observable and
+    // the suite's sentinel does not move. An earlier note here claimed the
+    // sentinel would move; a second review disproved it by experiment. The
+    // narrower claim is the true one, and `HOST-MODE-BINDING` in the same suite
+    // pins the layer that makes it true.
     find: '    if (host.manifest.schema_version !== "subject-adapter-manifest/v1") {',
     replace: '    if (String(1) === "2") {',
     tests: ["tests/dist/integration/governedPortRefusal.test.js"],
@@ -2309,8 +2317,16 @@ export const CONTROLS = [
   },
   {
     id: "v2-telemetry-follower-readiness",
-    what: "a follower that never attached is an unavailable observation, not an absent one",
+    what: "a follower that never attached or died mid-look yields TRACE_OBSERVATION_UNAVAILABLE, never TRACE_NOT_EMITTED",
     file: "tests/support/durableTelemetry.ts",
+    // Pinned at the diagnostic code, not at an explanation string. The cases
+    // this control originally killed all stayed classified
+    // `TRACE_OBSERVATION_UNAVAILABLE` under the mutation — the `unreadable`
+    // fallback caught them — so only their wording changed, which a second
+    // review found and is not a boundary. `a follower that dies after an empty
+    // read` is the fixture where the classification itself flips to
+    // `TRACE_NOT_EMITTED`: the capture is present, readable and honestly empty,
+    // so nothing else in the verdict chain can stand in for readiness.
     find: "    if (!readiness.usable) {",
     replace: '    if (String(1) === "2" && !readiness.usable) {',
     tests: ["tests/dist/integration/durableTelemetryObservation.test.js"],

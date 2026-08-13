@@ -465,6 +465,59 @@ test("DURABLE-TELEMETRY: an attached follower that sees nothing still reports no
   capture.dispose();
 });
 
+test("DURABLE-TELEMETRY: a follower that dies after an empty read is unavailable, not silent", () => {
+  // The case the readiness decision exists for, and the only one where getting
+  // it wrong changes the *classification* rather than the wording.
+  //
+  // Everything here looks like a successful observation of nothing: the follower
+  // attached, the capture is present and readable, and it parses cleanly to zero
+  // trace batches. The one fact that makes "the collector emitted nothing" a
+  // claim we cannot support is that the follower died before the deadline — so
+  // the look never finished, and an unfinished look cannot report an absence.
+  //
+  // Its sibling above is the contrast that keeps this honest: same empty
+  // capture, same zero spans, follower still attached at the end, and that one
+  // *is* TRACE_NOT_EMITTED. The follower's fate is the only difference between
+  // them, which is what makes this a test of the boundary rather than a rule
+  // that every empty observation is unavailable.
+  const dir = ownedTempDir("erl2-durable-telemetry-");
+  const follower = fakeFollower();
+  const capture = startCollectorCapture({
+    containerName: "erl2-collector",
+    directory: dir,
+    spawnProcess: () => follower.child,
+  });
+  writeFileSync(capture.capturePath, "2026-08-12T19:44:00.000Z\tinfo\tservice started\n");
+  assert.equal(capture.readiness().usable, true, "the follower must genuinely attach first");
+
+  // Deterministic ordering via the sleep seam: the first poll reads the capture
+  // successfully, and the follower dies before the second.
+  let deaths = 0;
+  const observation = awaitDurableTelemetry({
+    capture,
+    runId: RUN,
+    attempts: 3,
+    sleep: () => {
+      if (deaths === 0) follower.exit(1);
+      deaths += 1;
+    },
+  });
+
+  assert.equal(deaths > 0, true, "the fixture must have reached the death it stages");
+  assert.equal(capture.readiness().usable, false);
+  assert.equal(
+    observation.diagnosticCode,
+    "TRACE_OBSERVATION_UNAVAILABLE",
+    "a follower that died mid-look must not be reported as the collector emitting nothing",
+  );
+  assert.notEqual(observation.diagnosticCode, "TRACE_NOT_EMITTED");
+  assert.equal(observation.observationComplete, false);
+  assert.deepEqual(observation.evidenceRefs, []);
+  assert.equal(observation.collectorReceivedTraceData, false);
+  capture.dispose();
+  assert.equal(existsSync(capture.capturePath), false);
+});
+
 test("DURABLE-TELEMETRY: an attached follower that sees this run's spans succeeds", () => {
   const dir = ownedTempDir("erl2-durable-telemetry-");
   const follower = fakeFollower();
