@@ -94,7 +94,13 @@ export interface StubBehaviour {
   readonly afterUp?: (world: StubWorld) => void;
 }
 
-const COLLECTOR_READY_LOG = "2026-08-03T00:00:00.000Z\tinfo\tservice@v0.157.0/service.go\tEverything is ready. Begin running and processing data.\n";
+// A whole console record, context field included. Every record the collector
+// writes carries one as its final tab-separated field, and that is what tells a
+// complete record from the opening line of a multi-line one — so a fixture that
+// omitted it would read as an unterminated record and swallow whatever followed.
+const COLLECTOR_READY_LOG =
+  "2026-08-03T00:00:00.000Z\tinfo\tservice@v0.157.0/service.go\tEverything is ready. " +
+  'Begin running and processing data.\t{"resource": {"service.name": "otelcol-contrib"}}\n';
 
 export function newStubWorld(options: { readonly platform?: string } = {}): StubWorld {
   return {

@@ -41,6 +41,7 @@ import {
   excerptCollectorTelemetry,
   MAX_TELEMETRY_EXCERPT_CHARS,
   parseCollectorTelemetry,
+  parseTraceSummaryRecord,
   retainAttributableTelemetryObservation,
   supportsAttributableTelemetry,
   TELEMETRY_RETENTION_REASONS,
@@ -59,14 +60,40 @@ const OTHER_RUN_ID = "00000000-0000-7000-8000-000000000222";
 
 /** A collector log in the debug exporter's shape, with one marked record. */
 function collectorLog(marker: string): string {
+  // Every record carries its structured context, because every record the
+  // collector writes does: a console record's last tab-separated field is that
+  // context, and it is what tells a complete record from the opening line of a
+  // multi-line one. A fixture without it is a shape the collector never emits.
   return [
-    "2026-08-03T00:00:00.000Z\tinfo\tservice@v0.0.1/service.go\tEverything is ready.",
+    '2026-08-03T00:00:00.000Z\tinfo\tservice@v0.0.1/service.go\tEverything is ready.\t{"resource": {}}',
     '2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"otelcol.signal": "traces", "resource spans": 1, "spans": 3}',
     "     -> service.name: Str(quote)",
     `     -> url.full: Str(http://127.0.0.1:18090/getquote?erl2_run=${marker})`,
-    "2026-08-03T00:00:02.000Z\tinfo\tsome unrelated collector chatter",
+    '2026-08-03T00:00:02.000Z\tinfo\tsome unrelated collector chatter\t{"resource": {}}',
   ].join("\n");
 }
+
+/**
+ * A trace-batch summary exactly as the collector's debug exporter writes one:
+ * a complete console record whose message is `Traces` and whose context names
+ * the `traces` signal. Anything looser is a shape the collector never emits,
+ * and since the parser authenticates the record rather than matching a
+ * substring, a looser fixture would be testing something that cannot occur.
+ */
+function traceSummary(spans: number): string {
+  return (
+    `2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"otelcol.signal": "traces", ` +
+    `"resource spans": 1, "spans": ${String(spans)}}`
+  );
+}
+
+/**
+ * The context line that closes a console record whose message ran over several
+ * lines — and, in a window that lost its head, the line that ends the record it
+ * began inside. A rotated window always carries one: the cut takes bytes from
+ * the front, never the terminator of the record it landed in.
+ */
+const RECORD_END = '\t{"resource": {"service.name": "otelcol-contrib"}}';
 
 // -- 1. the definitions ------------------------------------------------------
 
@@ -93,10 +120,12 @@ test("ATTR-TELEM: excerpting preserves which batch a marked record falls under",
   // excerpt, and a count whose *meaning* changed under excerpting would make
   // the producer and the verifier disagree about what they are counting.
   const orphan = `     -> url.full: Str(http://x/?erl2_run=${RUN_ID})`;
-  const summary = '2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"spans": 7}';
+  const summary = traceSummary(7);
   for (const logs of [
     collectorLog(RUN_ID),
-    [orphan, summary, "     -> service.name: Str(quote)"].join("\n"),
+    // A window that lost its head: the orphaned dump, the record end that
+    // closes it, and only then a summary the collector actually wrote.
+    [orphan, RECORD_END, summary, "     -> service.name: Str(quote)"].join("\n"),
     [summary, "chatter", orphan].join("\n"),
     [summary, orphan, summary, orphan].join("\n"),
     [orphan, orphan].join("\n"),
@@ -113,12 +142,17 @@ test("ATTR-TELEM: excerpting preserves which batch a marked record falls under",
   assert.equal(parseCollectorTelemetry([summary, orphan].join("\n"), RUN_ID).runAttributedBatches, 1);
   // Two marked lines under one summary are one attributed batch, not two.
   assert.equal(parseCollectorTelemetry([summary, orphan, orphan].join("\n"), RUN_ID).runAttributedBatches, 1);
+  // And the new half of the same property: a summary the collector did not
+  // frame is not a summary at all, so it opens no batch for the marker under it.
+  const forged = `Body: Str(${traceSummary(7)})`;
+  assert.equal(parseCollectorTelemetry([forged, orphan].join("\n"), RUN_ID).runAttributedBatches, 0);
+  assert.equal(parseCollectorTelemetry([forged, orphan].join("\n"), RUN_ID).spans, 0);
 });
 
 test("ATTR-TELEM: the window decision is the single condition, and it fails closed", () => {
   const counts = (logs: string): CollectorTelemetryCounts => parseCollectorTelemetry(logs, RUN_ID);
   const orphan = `     -> url.full: Str(http://x/?erl2_run=${RUN_ID})`;
-  const summary = '2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"spans": 7}';
+  const summary = traceSummary(7);
 
   // A coherent batch is accepted whatever else is true, including with budget
   // left: waiting longer cannot make an already-complete observation truer.
@@ -137,7 +171,7 @@ test("ATTR-TELEM: the window decision is the single condition, and it fails clos
 
   // With budget left and no coherent batch, the answer is always to wait —
   // never to conclude from half a window.
-  for (const logs of ["", summary, orphan, [orphan, summary].join("\n")]) {
+  for (const logs of ["", summary, orphan, [orphan, RECORD_END, summary].join("\n")]) {
     assert.deepEqual(
       decideTelemetryObservationWindow({
         counts: counts(logs),
@@ -179,6 +213,128 @@ test("ATTR-TELEM: the window decision is the single condition, and it fails clos
     TELEMETRY_WINDOW_REASONS.spanCountOutsideWindow,
     TELEMETRY_WINDOW_REASONS.windowTruncated,
   );
+});
+
+/**
+ * The hostile line an independent review captured from the pinned collector.
+ *
+ * It is an ordinary OTLP log record's body, rendered by `otelcol-contrib`
+ * v0.157.0 at column zero. Under the unanchored pattern this replaced it was a
+ * trace-batch summary, and one of them turned a correctly refused rotated
+ * window into a retained observation carrying `spans: 9999`.
+ */
+const REVIEWED_EXPLOIT =
+  'Body: Str(2026-08-13T21:33:32.634Z\tinfo\tTraces\t{"resource spans": 1, "spans": 9999})';
+
+test("ATTR-PARSE: only a whole console record the collector framed states a span count", () => {
+  // Authentic, and read exactly.
+  assert.deepEqual(parseTraceSummaryRecord(traceSummary(7)), { kind: "summary", spans: 7 });
+  // A genuine zero is a fact the window states, not an absence.
+  assert.deepEqual(parseTraceSummaryRecord(traceSummary(0)), { kind: "summary", spans: 0 });
+  for (const spans of [1, 42, 100_000_000]) {
+    assert.deepEqual(parseTraceSummaryRecord(traceSummary(spans)), { kind: "summary", spans });
+  }
+  // CRLF is the same record.
+  assert.deepEqual(parseTraceSummaryRecord(`${traceSummary(7)}\r`), { kind: "summary", spans: 7 });
+
+  // Payload — whatever it contains, and wherever on the line it sits.
+  for (const line of [
+    REVIEWED_EXPLOIT,
+    `     -> ${REVIEWED_EXPLOIT}`,
+    `     -> Body: Str(${traceSummary(5)})`,
+    "Body: Str(Everything is ready. Begin running and processing data.)",
+    ` ${traceSummary(7)}`,
+    `\t${traceSummary(7)}`,
+    // Another signal's summary is not a trace batch's.
+    '2026-08-03T00:00:01.000Z\tinfo\tLogs\t{"otelcol.signal": "logs", "spans": 9999}',
+    '2026-08-03T00:00:01.000Z\tinfo\tMetrics\t{"otelcol.signal": "metrics", "spans": 9999}',
+    // A record the collector wrote, but not a summary.
+    '2026-08-03T00:00:01.000Z\tinfo\tResourceSpans #0',
+  ]) {
+    assert.equal(parseTraceSummaryRecord(line).kind, "not_summary", line.slice(0, 60));
+  }
+});
+
+test("ATTR-PARSE: a record shaped like a summary and unreadable as one is malformed, never a zero", () => {
+  const claim = (context: string): string =>
+    `2026-08-03T00:00:01.000Z\tinfo\tTraces\t${context}`;
+  for (const [why, context] of [
+    ["truncated context", '{"otelcol.signal": "traces", "spans"'],
+    ["duplicated count", '{"otelcol.signal": "traces", "spans": 1, "spans": 9999}'],
+    ["negative count", '{"otelcol.signal": "traces", "spans": -1}'],
+    ["fractional count", '{"otelcol.signal": "traces", "spans": 1.5}'],
+    ["exponent count", '{"otelcol.signal": "traces", "spans": 1e3}'],
+    ["leading-zero count", '{"otelcol.signal": "traces", "spans": 007}'],
+    ["absent count", '{"otelcol.signal": "traces", "resource spans": 1}'],
+    ["past MAX_SAFE_INTEGER", `{"otelcol.signal": "traces", "spans": ${"9".repeat(400)}}`],
+  ] as readonly (readonly [string, string])[]) {
+    assert.equal(parseTraceSummaryRecord(claim(context)).kind, "malformed", why);
+  }
+  // A whole authentic record with hostile text appended is not the record.
+  assert.equal(
+    parseTraceSummaryRecord(`${traceSummary(7)} and then Traces "spans": 9999`).kind,
+    "malformed",
+  );
+  // And a malformed summary refuses the window rather than totalling to zero.
+  const counts = parseCollectorTelemetry(claim('{"otelcol.signal": "traces", "spans": -1}'), RUN_ID);
+  assert.equal(counts.spans, 0);
+  assert.equal(counts.malformedSummaries, 1);
+  assert.deepEqual(
+    decideTelemetryObservationWindow({ counts, windowComplete: true, budgetExhausted: true }),
+    { decision: "refuse", reasonCode: TELEMETRY_WINDOW_REASONS.summaryMalformed },
+  );
+});
+
+test("ATTR-PARSE: a payload line shaped like a record boundary makes the window ambiguous", () => {
+  // A subject's multi-line log body: its continuation lands at column zero, and
+  // can therefore carry a whole copied authentic summary. The collector never
+  // writes a record boundary inside a record, so the window says it cannot be
+  // framed rather than reading the copy.
+  const window = [
+    "2026-08-03T00:00:01.000Z\tinfo\tResourceLog #0",
+    "Body: Str(panic: boom",
+    traceSummary(9999),
+    ")",
+    RECORD_END,
+  ].join("\n");
+  const counts = parseCollectorTelemetry(window, RUN_ID);
+  assert.equal(counts.forgedBoundaries, 1);
+  assert.equal(counts.spans, 0, "a copied summary inside payload states nothing");
+  assert.equal(counts.traceBatches, 0);
+  assert.deepEqual(
+    decideTelemetryObservationWindow({ counts, windowComplete: true, budgetExhausted: true }),
+    { decision: "refuse", reasonCode: TELEMETRY_WINDOW_REASONS.windowAmbiguous },
+  );
+
+  // A window cut mid-record opens *in* payload, so the same copy cannot be read
+  // there either — which is the case rotation actually produces.
+  const cut = ["     -> service.name: Str(quote)", traceSummary(9999), RECORD_END].join("\n");
+  assert.equal(parseCollectorTelemetry(cut, RUN_ID).spans, 0);
+  assert.equal(parseCollectorTelemetry(cut, RUN_ID).forgedBoundaries, 1);
+});
+
+test("ATTR-PARSE: the reviewed exploit cannot restore a count to a rotated window", () => {
+  const orphan = `     -> url.full: Str(http://x/?erl2_run=${RUN_ID})`;
+  // The window the correction refuses: this run's records, no summary counting
+  // them. Adding the reviewed hostile body must change nothing about it.
+  const rotated = [orphan, RECORD_END, orphan].join("\n");
+  const attacked = [orphan, RECORD_END, REVIEWED_EXPLOIT, orphan].join("\n");
+  const decide = (logs: string): unknown =>
+    decideTelemetryObservationWindow({
+      counts: parseCollectorTelemetry(logs, RUN_ID),
+      windowComplete: collectorWindowComplete(logs),
+      budgetExhausted: true,
+    });
+  const refusal = {
+    decision: "refuse",
+    reasonCode: TELEMETRY_WINDOW_REASONS.spanCountOutsideWindow,
+  };
+  assert.deepEqual(decide(rotated), refusal);
+  assert.deepEqual(decide(attacked), refusal, "the hostile body changed the outcome");
+  assert.equal(parseCollectorTelemetry(attacked, RUN_ID).spans, 0);
+  assert.equal(parseCollectorTelemetry(attacked, RUN_ID).runAttributedBatches, 0);
+  // And a legitimate window is still observed, so the refusal is not blanket.
+  assert.deepEqual(decide([traceSummary(7), orphan].join("\n")), { decision: "retain" });
 });
 
 test("ATTR-TELEM: window completeness is a line prefix, because a payload can contain anything", () => {
@@ -623,6 +779,121 @@ test("ATTR-TELEM-VERIFY: counts that contradict the retained excerpt are refused
   );
 });
 
+/**
+ * The literal artifact the failed clean gate recorded: records naming this run,
+ * and a span count of zero that no readable summary ever stated.
+ *
+ * The producer cannot mint one any more. These cases are about the *other*
+ * authority: an artifact is durable evidence, and the offline verifier must
+ * refuse an incoherent one on the retained bytes alone, without asking the
+ * producer whether it was careful.
+ */
+function preFixArtifact(): AttributableTelemetryObservationV1 {
+  const orphan = `     -> url.full: Str(http://x/?erl2_run=${RUN_ID})`;
+  const excerpt = [orphan, orphan].join("\n");
+  const counts = parseCollectorTelemetry(excerpt, RUN_ID);
+  assert.equal(counts.runAttributedRecords, 2, "the fixture must carry attribution");
+  assert.equal(counts.runAttributedBatches, 0, "and no batch that counted it");
+  return observedRecord((base) => {
+    base["log_excerpt"] = excerpt;
+    base["trace_batches"] = counts.traceBatches;
+    base["spans"] = counts.spans;
+    base["service_names"] = counts.serviceNames;
+    base["run_attributed_records"] = counts.runAttributedRecords;
+  });
+}
+
+test("ATTR-TELEM-VERIFY: the literal pre-correction artifact is refused on its own bytes", () => {
+  const observation = preFixArtifact();
+  // Every producer-supplied counter agrees with the excerpt — this artifact is
+  // self-consistent, which is exactly why cross-checking counters was not
+  // enough. What refuses it is the *relationship* the verifier now re-derives.
+  assert.equal(observation.spans, 0);
+  assert.equal(observation.run_attributed_records, 2);
+  const tree = syntheticTree({ observation });
+  assert.equal(
+    refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
+    CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+  );
+});
+
+test("ATTR-TELEM-VERIFY: a forged summary in the excerpt is refused, not counted", () => {
+  // The reviewed exploit, retained. Under the pattern this replaced, the
+  // verifier would have re-derived 9999 from these same bytes and agreed with a
+  // producer that had also been fooled — two authorities, one shared mistake.
+  const orphan = `     -> url.full: Str(http://x/?erl2_run=${RUN_ID})`;
+  const excerpt = [orphan, REVIEWED_EXPLOIT, orphan].join("\n");
+  const counts = parseCollectorTelemetry(excerpt, RUN_ID);
+  assert.equal(counts.spans, 0, "the forged line states nothing");
+  const observation = observedRecord((base) => {
+    base["log_excerpt"] = excerpt;
+    base["trace_batches"] = counts.traceBatches;
+    base["spans"] = counts.spans;
+    base["service_names"] = counts.serviceNames;
+    base["run_attributed_records"] = counts.runAttributedRecords;
+  });
+  const tree = syntheticTree({ observation });
+  assert.equal(
+    refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
+    CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+  );
+});
+
+test("ATTR-TELEM-VERIFY: an excerpt whose framing is ambiguous or unreadable is refused", () => {
+  const cases: readonly (readonly [string, string])[] = [
+    // A record boundary inside payload: the excerpt cannot be framed.
+    [
+      "forged boundary",
+      ["2026-08-03T00:00:01.000Z\tinfo\tResourceLog #0", traceSummary(7), RECORD_END].join("\n"),
+    ],
+    // A summary record nobody can read is not a summary that counted nothing.
+    [
+      "malformed summary",
+      '2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"otelcol.signal": "traces", "spans": -1}',
+    ],
+  ];
+  for (const [why, excerpt] of cases) {
+    const counts = parseCollectorTelemetry(excerpt, RUN_ID);
+    const observation = observedRecord((base) => {
+      base["log_excerpt"] = excerpt;
+      base["trace_batches"] = counts.traceBatches;
+      base["spans"] = counts.spans;
+      base["service_names"] = counts.serviceNames;
+      base["run_attributed_records"] = counts.runAttributedRecords;
+    });
+    const tree = syntheticTree({ observation });
+    assert.equal(
+      refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
+      CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+      why,
+    );
+  }
+});
+
+test("ATTR-TELEM-VERIFY: an honest complete zero still verifies, because zero is not incoherence", () => {
+  // A whole window that genuinely received nothing states zero with no
+  // attribution at all. The coherence floor is about *attribution* without a
+  // counting batch, so it must leave this untouched.
+  const excerpt = "";
+  const counts = parseCollectorTelemetry(excerpt, RUN_ID);
+  assert.equal(counts.runAttributedRecords, 0);
+  const observation = observedRecord((base) => {
+    base["log_excerpt"] = excerpt;
+    base["trace_batches"] = counts.traceBatches;
+    base["spans"] = counts.spans;
+    base["service_names"] = counts.serviceNames;
+    base["run_attributed_records"] = counts.runAttributedRecords;
+  });
+  // Undeclared, because a *declared* run with no attribution is refused by the
+  // floor that already existed. What is under test here is that the new
+  // coherence refusal does not fire on an honest zero.
+  const tree = syntheticTree({ observation, exerciseStatus: "failed" });
+  const report = deriveAttributableTelemetry({ ...tree, runId: RUN_ID });
+  assert.equal(report.declared, false);
+  assert.equal(report.observed, true);
+  assert.equal(report.runAttributedRecords, 0);
+});
+
 test("ATTR-TELEM-VERIFY: an excerpt padded with non-contributing lines is refused", () => {
   const excerpt = excerptCollectorTelemetry(collectorLog(RUN_ID), RUN_ID);
   const observation = observedRecord((base) => {
@@ -885,15 +1156,22 @@ test("ATTR-TELEM-RETAIN: a service name the canonicalizer refuses demotes", () =
   assert.equal(retain(material({ counts: { serviceNames: [""] } })).evidence, "observed");
 });
 
-test("ATTR-TELEM-RETAIN: a count the canonicalizer cannot represent demotes", () => {
-  // A count is parsed out of the collector's text, so a long enough digit run
-  // reaches `Infinity` before it reaches any bound the schema states — and a
-  // subject writes the text a `Traces` line is matched in.
-  const injected = parseCollectorTelemetry(`\tTraces\t{"spans": ${"9".repeat(400)}}`, RUN_ID);
-  assert.equal(Number.isFinite(injected.spans), false);
-  assertDemoted(
-    material({ counts: { spans: injected.spans } }),
-    TELEMETRY_RETENTION_REASONS.countNotRepresentable,
+test("ATTR-TELEM-RETAIN: a digit run too long to represent never becomes a count", () => {
+  // This used to reach `Infinity`: the count was matched as a digit run and
+  // handed to `Number.parseInt`, so the *retention* bound was the first thing
+  // that noticed. The parser notices now, which is a stronger place for it —
+  // an unreadable count is refused before it is ever summed into a total.
+  const overflowing = `2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"otelcol.signal": "traces", "spans": ${"9".repeat(400)}}`;
+  assert.equal(parseTraceSummaryRecord(overflowing).kind, "malformed");
+
+  const counts = parseCollectorTelemetry(overflowing, RUN_ID);
+  assert.equal(counts.spans, 0);
+  assert.equal(Number.isFinite(counts.spans), true);
+  assert.equal(counts.malformedSummaries, 1);
+  // And it is refused rather than retained as the zero it now totals to.
+  assert.deepEqual(
+    decideTelemetryObservationWindow({ counts, windowComplete: true, budgetExhausted: true }),
+    { decision: "refuse", reasonCode: TELEMETRY_WINDOW_REASONS.summaryMalformed },
   );
 });
 

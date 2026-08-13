@@ -142,6 +142,7 @@ export {
   contributesToTelemetryCounts,
   decideTelemetryObservationWindow,
   excerptCollectorTelemetry,
+  parseTraceSummaryRecord,
   MAX_TELEMETRY_EXCERPT_CHARS,
   parseCollectorTelemetry,
   retainAttributableTelemetryObservation,
@@ -154,6 +155,7 @@ export {
   type CollectorTelemetryCounts,
   type ObservedCollectorIdentity,
   type TelemetryObservationStore,
+  type TraceSummaryRecord,
   type TelemetryWindowDecision,
 } from "./environment/telemetryObservation.js";
 export {

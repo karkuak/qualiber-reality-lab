@@ -1030,7 +1030,8 @@ test("COMPOSE-ADV: a verified collector that received nothing this run is observ
 
 /** The collector's own start-up record, which precedes anything it exports. */
 const COLLECTOR_ORIGIN =
-  "2026-08-03T00:00:00.000Z\tinfo\tservice@v0.157.0/service.go\tEverything is ready. Begin running and processing data.\n";
+  "2026-08-03T00:00:00.000Z\tinfo\tservice@v0.157.0/service.go\tEverything is ready. " +
+  'Begin running and processing data.\t{"resource": {"service.name": "otelcol-contrib"}}\n';
 
 /** One complete exported batch: the summary line, then its own detailed dump. */
 function batch(spans: number, marker: string | undefined): string {
@@ -1043,11 +1044,19 @@ function batch(spans: number, marker: string | undefined): string {
   );
 }
 
-/** The dump half of a batch whose summary line has already rotated away. */
+/**
+ * The dump half of a batch whose summary line has already rotated away.
+ *
+ * It ends with the record's own context line, because a window cut from the
+ * head keeps the tail of the record it landed in: the eviction takes bytes off
+ * the front, never the terminator. That line is also what tells the parser
+ * where the cut record stops and the collector's next whole record begins.
+ */
 function orphanedDump(marker: string): string {
   return (
     "     -> service.name: Str(quote)\n" +
-    `     -> url.full: Str(http://127.0.0.1:18090/getquote?erl2_run=${marker})\n`
+    `     -> url.full: Str(http://127.0.0.1:18090/getquote?erl2_run=${marker})\n` +
+    '\t{"resource": {"service.name": "otelcol-contrib"}}\n'
   );
 }
 
