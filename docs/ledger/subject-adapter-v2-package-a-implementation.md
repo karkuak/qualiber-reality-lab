@@ -103,7 +103,7 @@ Two corrections to this record itself:
 
 - The twelve mutations tabulated above ran in a separate script that
   `npm run negative-control` could not discover. They are now canonical controls;
-  canonical discovery reports 146.
+  canonical discovery reports 147.
 - A `targeted regression total: 199/199` figure circulated alongside this record
   in the handoff status. It is not stated in this file, it is supported by no
   retained evidence, and it does not reconcile with the totals above

@@ -82,6 +82,49 @@ this branch. No v1 schema, request, receipt, envelope, golden or core hash
 moved, and the doctor transcript's `registered_contracts` remains 166 because no
 contract was registered.
 
+## F-1b — the second property shipped correct and unmeasured
+
+F-1 corrected two things. The second was the more general: an operation
+satisfies a cleanup obligation only when its record is `completed` *and* its
+`response_status` is `supported`. A `stop` the adapter reported as `failed` had
+been discharging the obligation a successful `start` created.
+
+The reducer was fixed. Nothing measured it. A focused independent re-review
+mutated `succeeded()` to drop the adapter-verdict conjunct and ran the entire
+test tree: **1,371 tests, 1,347 passed, 0 failed**. No test and no canonical
+control observed the property, so it sat outside the campaign's published scope
+— the same shape as F-2, and the same standard applies: correct and unproven is,
+for a claim boundary, the same as unguarded.
+
+`tests/integration/localOperationSuccess.test.ts` closes it. Two neutral
+adapters — `neutral-lifecycle-stop-succeeded` and `neutral-lifecycle-stop-failed`
+— differ only in the verdict they return for `stop`, and run through the real
+`AdapterHost` subprocess over the smallest lifecycle that reaches the decision:
+`start`, then `stop` as the frozen cleanup suffix. Separate certified bytes per
+behaviour, for the same reason the residue shapes are separate files.
+
+What is asserted, on reduced evidence rather than on `succeeded()` itself:
+
+| | `stop` record | `response_status` | `cleanup.stop` | `cleanup.status` |
+|---|---|---|---|---|
+| adapter failed the stop | `completed` | `failed` | `failed` | `cleanup_incomplete` |
+| adapter supported the stop | `completed` | `supported` | `completed` | `cleanup_complete` |
+
+The two reduce to different `LocalObservationResultV1.core_hash` values, so the
+verdict reaches frozen evidence. The failing case also asserts coherence — that
+the reduced result cannot report the stop as done and the cleanup as unfinished
+in the same breath — because `cleanupResult()` reads the verdict twice, once
+positively in `succeeded()` and once negatively in `unsuccessful()`, and removing
+it from only the first produces exactly that self-contradiction.
+
+The new control is `v2-operation-success-requires-adapter-success`. It removes
+the conjunct and retains lifecycle completion, so it asks precisely "does the
+adapter's verdict decide?" and nothing else. Under it, a stop the adapter failed
+is reported as `completed`.
+
+Production behaviour was already correct and is unchanged. This closure is test
+and control only.
+
 ## F-2 — the governed-port refusal was unproven
 
 `HostedSubjectPort`'s refusal of a v2 host is the one execution-path expression
@@ -100,6 +143,33 @@ refusal is about the seam and not about a broken host.
 
 No second production guard was added. The existing authoritative check is what
 the control mutates.
+
+### Corrected: what this control proves, and what it does not
+
+An earlier version of this section said the mutation makes adapter dispatch
+observable. **It does not, and that claim is withdrawn.** A second independent
+review ran the mutation and drove all three port methods with a v2 host:
+`acquire`, `validatePackage` and `step` were each still refused with
+`ADAPTER_EXECUTION_MODE_UNSUPPORTED`, and the sentinel did not move.
+
+Enforcement is layered. `HostedSubjectPort` never dispatches with
+`executionMode: "local_observation"`, so `AdapterHost.run`'s execution-mode
+binding refuses a v2 host on every port method regardless of the constructor
+guard. That layer is itself covered by `v2-local-mode-accepts-v1`.
+
+So the honest statement of the boundary is:
+
+- **Proven** — the governed port performs its own early refusal, at
+  construction, deterministically, with a typed code, before a port exists to
+  dispatch through. The mutation is killed because that refusal disappears.
+- **Not proven by this mutation** — that this guard alone is what keeps adapter
+  bytes from executing. It is not; the host's mode binding is.
+
+The sentinel is kept, with the narrower reading it can support: it shows no
+adapter bytes ran *while layered enforcement held*. A new `HOST-MODE-BINDING`
+case pins that second layer directly, so the reason the sentinel stays still is
+measured rather than assumed. This is a correction to the validation claim, not
+to the boundary — the boundary is stronger than the original text described.
 
 ## F-3 — a failed telemetry follower was reported as silence
 
@@ -122,6 +192,41 @@ existing `spawnProcess` seam, so they are exercised on hosts with no Docker.
 No production package, adapter, environment, fixture, overlay, collector
 configuration, timeout, retention limit or pinned OTel release changed. The
 poll count (40) and interval (1s) are unchanged.
+
+### Corrected: the control is now pinned at the diagnostic code
+
+The behaviour above is right, but `v2-telemetry-follower-readiness` was not
+measuring it. A second independent review found that under the mutation every
+case this control killed **stayed classified `TRACE_OBSERVATION_UNAVAILABLE`** —
+the `unreadable` fallback caught them — and only their explanation strings
+changed. A control killed by wording is not pinned to a boundary.
+
+The missing fixture is the one where the classification actually turns:
+
+1. the follower attaches;
+2. one poll reads a capture that is present, readable and honestly empty;
+3. the follower dies before the deadline.
+
+Nothing else in the verdict chain can stand in for readiness there — the capture
+is readable, so `unreadable` is false, and it parses cleanly, so
+`terminalBlockTruncated` is false. `a follower that dies after an empty read is
+unavailable, not silent` asserts the diagnostic code, and under the mutation it
+flips to `TRACE_NOT_EMITTED`: the exact defect, now measured.
+
+The contrast is retained deliberately. `an attached follower that sees nothing
+still reports not emitted` has the same empty capture and the same zero spans,
+with the follower still attached at the end, and it **is** `TRACE_NOT_EMITTED`.
+The follower's fate is the only difference between the two, which makes this a
+test of the boundary rather than a rule that every empty observation is
+unavailable.
+
+One further correction to the record: `62fa257`'s message said the poll loop's
+early exit "decides nothing". It does. `last.available` is initialised `false`
+and only a successful read sets it true, so an early `break` on the first poll is
+what yields `TRACE_OBSERVATION_UNAVAILABLE` for a spawn failure — demonstrated by
+that case still passing under the authoritative-block mutation. The verdict is
+made in one place for the attach-then-die path; it is not made in one place for
+every path.
 
 ## F-4 — block termination had no load-bearing control
 
@@ -164,17 +269,31 @@ measure. Scope was silently wrong once because there was no cheap way to ask.
 |---|---|
 | Pre-existing controls | 129 |
 | Previously separate v2 controls, now discoverable | 12 |
-| New controls for the closures above | 5 |
-| **Total, derived from `--list`** | **146** |
+| New controls for the closures above | 6 |
+| **Total, derived from `--list`** | **147** |
 
-The five new controls are `v2-residue-requires-report`,
+The six new controls are `v2-residue-requires-report`,
 `v2-residue-report-validated`, `v2-governed-port-refusal`,
-`v2-telemetry-follower-readiness` and `v2-telemetry-block-boundary`. The count
-is derived from discovery, not targeted: the earlier estimate of "at least 147"
-assumed at least six new controls, and six were not needed, because
-`v2-cleanup-requires-evidence` already covers the completed-without-residue
-boundary once it also names the residue suite. Padding the table to reach a
-number would measure nothing.
+`v2-telemetry-follower-readiness`, `v2-telemetry-block-boundary` and
+`v2-operation-success-requires-adapter-success`.
+
+The count is derived from discovery, never targeted. It reached 147 by a route
+worth recording, because the arithmetic alone is misleading:
+
+- This package first shipped **five** new controls and argued that a sixth for
+  "completed without residue" would be redundant, since
+  `v2-cleanup-requires-evidence` already covers that boundary. **That argument
+  was correct**, and an independent re-review confirmed it by surgically removing
+  only the `(!finalResiduePlanned || residue === "observed_clean")` conjunct and
+  watching three cases fail. The originally estimated sixth control was genuinely
+  not needed.
+- The sixth control that *was* needed is a different one, for a different
+  property: F-1b above, which no one had counted because the record described the
+  fix without noticing it was unmeasured.
+
+So 147 matches the original "at least 147" estimate by coincidence rather than
+by that estimate being right about which control was missing. The number is an
+output of `--list`; padding the table to reach it would measure nothing.
 
 `tests/architecture/negativeControlDiscovery.test.ts` fails if any v2 control
 stops being discoverable, if two rows mutate the same preimage, or if the
@@ -206,6 +325,26 @@ evidence directory with `negative-control-campaign/ is missing`. That refusal is
 expected and correct while the campaign is pending, and no campaign record was
 fabricated to silence it.
 
+### Validation-closure pass
+
+The six remediation controls were run through the canonical harness at the
+closure commit. All six agreed, each patching exactly one site:
+
+| Control | Baseline | Mutated | Failing case observed |
+|---|---|---|---|
+| `v2-residue-requires-report` | 4 pass | 3 fail | dirty report reduces to `observed_clean` |
+| `v2-residue-report-validated` | 5 pass | 2 fail | contradictory report believed |
+| `v2-governed-port-refusal` | 3 pass | 2 fail | the port's early refusal disappears |
+| `v2-telemetry-follower-readiness` | 28 pass | 3 fail | attach-then-die reclassifies to `TRACE_NOT_EMITTED` |
+| `v2-telemetry-block-boundary` | 30 pass | 1 fail | an earlier run's batch absorbed by a later run |
+| `v2-operation-success-requires-adapter-success` | 3 pass | 1 fail | a failed stop reported as `completed` |
+
+`6 discovered = 6 agreed + 0 disagreed + 0 unmeasured + 0 harness errors`, no
+output truncated, working tree byte-identical afterwards, zero residue.
+
+**Still pending, and not claimed anywhere in this repository:** the full
+147-control campaign and the exact-final-HEAD clean gate. Neither has run.
+
 ## What this package does not claim
 
 - It is not campaign-ready until a focused independent re-review approves these
@@ -214,3 +353,8 @@ fabricated to silence it.
 - The full negative-control campaign at the corrected commit is still required,
   and Package A changes the adapter host and protocol boundary, so the earlier
   129-control campaign may not be carried forward.
+- Two validation claims in this ledger were withdrawn after they were found to
+  overstate what their mutations demonstrated (F-2 and F-3 above). The boundaries
+  they describe hold; the corrections are to the evidence, not the behaviour. A
+  reader should treat the corrected sections as authoritative and assume nothing
+  from the withdrawn wording.
