@@ -2363,6 +2363,80 @@ export const CONTROLS = [
     tests: ["tests/dist/integration/localOperationSuccess.test.js"],
     expect: "fail",
   },
+  {
+    id: "compose-observation-requires-coherent-span-count",
+    what: "a retained telemetry observation states a span count only from a window that carried the counting line and this run's records together",
+    file: "packages/core/src/environment/telemetryObservation.ts",
+    // The defect an independently classified clean-gate failure exposed. The
+    // observer settled on `runAttributedRecords >= 1` and froze the span count
+    // from the same read, but the two survive rotation differently: marked
+    // records live in a batch's detailed dump and the count lives in the summary
+    // line above it, and the collector's `json-file` log evicts from the head. A
+    // run whose spans were emitted, exported and marked could therefore freeze
+    // `evidence: observed, spans: 0` beside `run_attributed_records: 2`.
+    //
+    // The mutation is exactly the pre-correction condition, so a survivor means
+    // the false-zero artifact is retainable again. The named case reads the
+    // *frozen artifact* through the production retention path, not a helper's
+    // return value: the lie was in the retained evidence.
+    find: "  if (input.counts.runAttributedBatches >= 1) return { decision: \"retain\" };",
+    replace: "  if (input.counts.runAttributedRecords >= 1) return { decision: \"retain\" };",
+    tests: ["tests/dist/adversarial/composeSubstrate.test.js"],
+    mustFail: ["tests/dist/adversarial/composeSubstrate.test.js"],
+    mustFailCases: [
+      "COMPOSE-WINDOW: the failed-gate signature cannot be retained as a definitive zero",
+      "COMPOSE-WINDOW: another run's summary does not supply a count for this run's records",
+    ],
+    // The same pre-declared skip the suite's three other controls carry: the
+    // extracted upstream configuration is git-ignored, so a fresh clone does
+    // not have it and that one case declines rather than pretending.
+    expectedSkips: [
+      {
+        case: "COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else",
+        reason: "RENDERED TOPOLOGY UNPROVEN",
+      },
+    ],
+    expect: "fail",
+  },
+  {
+    id: "nc-marker-published-atomically",
+    what: "a marker's final path is never the file being written to, so no reader can observe it at length zero",
+    file: "tests/support/atomicMarker.ts",
+    // The second failure the same gate recorded. `writeFileSync` opens the final
+    // path with O_CREAT|O_TRUNC and *then* writes, so the path exists, empty,
+    // before it carries a byte; an independent probe caught it at size zero in
+    // 300 of 300 attempts. The mutation restores exactly that shape — the bytes
+    // go straight to the final name — and the named case notices structurally,
+    // between staging and committing, rather than by racing anything.
+    find: '  const fd = openSync(temporary, "wx", MARKER_MODE);',
+    replace: '  const fd = openSync(finalPath, "w", MARKER_MODE);',
+    tests: ["tests/dist/integration/atomicMarkerPublication.test.js"],
+    mustFail: ["tests/dist/integration/atomicMarkerPublication.test.js"],
+    mustFailCases: ["MARKER-WRITE: the final path is never the file being written to"],
+    expect: "fail",
+  },
+  {
+    id: "nc-marker-readiness-requires-valid-content",
+    what: "a marker is ready only when its bytes read whole, parse, and name the writer the reader is waiting for — never merely because the path exists",
+    file: "tests/support/atomicMarker.ts",
+    // The reader half of the same defect, and the half that makes the outcome
+    // deterministic rather than merely unlikely: the original loop's readiness
+    // condition was `existsSync`, so it proceeded to `JSON.parse` on a file that
+    // existed and was empty. The mutation makes an existing empty file ready
+    // again, which is that condition exactly.
+    find: '  if (bytes.length === 0) return { ready: false, why: { state: "empty" } };',
+    replace:
+      "  if (bytes.length === 0) {\n" +
+      "    return { ready: true, envelope: { kind: expected.kind, id: expected.id, payload: {} as T } };\n" +
+      "  }",
+    tests: ["tests/dist/integration/atomicMarkerPublication.test.js"],
+    mustFail: ["tests/dist/integration/atomicMarkerPublication.test.js"],
+    mustFailCases: [
+      "MARKER-READ: an empty file is never a marker",
+      "MARKER-READ: the exact failed-gate failure is unreachable through the reader",
+    ],
+    expect: "fail",
+  },
 ];
 
 // -- result classification ---------------------------------------------------

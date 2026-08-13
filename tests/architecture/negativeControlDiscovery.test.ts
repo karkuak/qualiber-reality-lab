@@ -37,6 +37,7 @@ interface Control {
   readonly replace: string;
   readonly tests: readonly string[];
   readonly expect: string;
+  readonly mustFailCases?: readonly string[];
 }
 
 const { CONTROLS } = (await import(
@@ -118,6 +119,53 @@ test("NC-DISCOVERY: every v2 control names a file and suites that exist", () => 
       assert.equal(existsSync(source), true, `${control.id} names a suite with no source: ${suite}`);
     }
     assert.equal(control.expect, "fail", `${control.id} must declare an expected kill`);
+  }
+});
+
+/**
+ * The boundaries closed by the bounded reliability correction.
+ *
+ * Not `v2-` prefixed, because they are not that package's: they are Reality Lab
+ * reliability guards, and they take their names from the families they join
+ * (`compose-*` for the driver's observation, `nc-*` for the campaign harness's
+ * own instrumentation). They are pinned here for the same reason the v2 rows
+ * are — a control that is renamed away is a property silently dropped.
+ */
+test("NC-DISCOVERY: the boundaries closed by the reliability correction each have a control", () => {
+  const byId = new Map(CONTROLS.map((control) => [control.id, control]));
+  const boundaries: readonly (readonly [string, string])[] = [
+    // The retained telemetry observation may not state a span count derived
+    // from a window that did not carry the counting line.
+    [
+      "compose-observation-requires-coherent-span-count",
+      "packages/core/src/environment/telemetryObservation.ts",
+    ],
+    // The campaign harness's own marker: published atomically, and read as
+    // content rather than as a path that exists.
+    ["nc-marker-published-atomically", "tests/support/atomicMarker.ts"],
+    ["nc-marker-readiness-requires-valid-content", "tests/support/atomicMarker.ts"],
+  ];
+  for (const [id, file] of boundaries) {
+    const control = byId.get(id);
+    assert.ok(control !== undefined, `${id} is missing from canonical discovery`);
+    assert.equal(control.file, file, `${id} no longer defends ${file}`);
+    assert.equal(
+      existsSync(path.join(repoRoot, control.file)),
+      true,
+      `${id} targets a missing file ${control.file}`,
+    );
+    assert.equal(control.expect, "fail", `${id} must declare an expected kill`);
+    assert.ok(control.tests.length > 0, `${id} names no suite`);
+    for (const suite of control.tests) {
+      const source = path.join(repoRoot, suite.replace("tests/dist/", "tests/").replace(/\.js$/, ".ts"));
+      assert.equal(existsSync(source), true, `${id} names a suite with no source: ${suite}`);
+    }
+    // Case-level granularity: a control that names only a file scores a kill on
+    // any failure in it, which is what review R-05 removed.
+    assert.ok(
+      (control.mustFailCases ?? []).length > 0,
+      `${id} does not name the cases that must fail`,
+    );
   }
 });
 
