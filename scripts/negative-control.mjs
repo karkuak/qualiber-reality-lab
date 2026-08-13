@@ -2327,6 +2327,26 @@ export const CONTROLS = [
     tests: ["tests/dist/integration/durableTelemetryObservation.test.js"],
     expect: "fail",
   },
+  {
+    id: "v2-operation-success-requires-adapter-success",
+    what: "an operation counts as successful only when the adapter said it succeeded, never merely because its record completed",
+    file: "packages/core/src/observation/localObservation.ts",
+    // The residue remediation corrected two properties, and only the first got a
+    // control. This is the second: `completed` means the exchange completed and
+    // its evidence froze, and has never meant the adapter succeeded. An
+    // independent review ran exactly this mutation and the entire test tree
+    // stayed green, so the property was outside the campaign's scope.
+    //
+    // The conjunct is removed rather than the branch around it: lifecycle
+    // completion is retained, so the mutation asks precisely "does the adapter's
+    // verdict decide?" and nothing else.
+    find:
+      '          record.state === "completed" &&\n' +
+      '          record.response_status === "supported",',
+    replace: '          record.state === "completed",',
+    tests: ["tests/dist/integration/localOperationSuccess.test.js"],
+    expect: "fail",
+  },
 ];
 
 // -- result classification ---------------------------------------------------

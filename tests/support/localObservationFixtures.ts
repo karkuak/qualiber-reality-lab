@@ -33,6 +33,17 @@ export interface LocalFixtureShape {
   readonly packageKind: PackageKind;
   readonly payload: Record<string, unknown>;
   readonly entryName: string;
+  /**
+   * Every operation the manifest and receipt certify, when that is wider than
+   * the single operation the one-shot plan dispatches. A lifecycle fixture
+   * declares `start` and `stop`; everything else certifies exactly what it runs.
+   */
+  readonly certifiedOperations?: readonly AdapterOperation[];
+}
+
+/** The operations a shape's manifest and receipt certify. */
+function certifiedOperationsOf(shape: LocalFixtureShape): readonly AdapterOperation[] {
+  return shape.certifiedOperations ?? [shape.operation];
 }
 
 export const ARCHIVE_SHAPE: LocalFixtureShape = {
@@ -78,7 +89,7 @@ export function localManifest(shape: LocalFixtureShape): SubjectAdapterManifestV
           {
             protocol_version: "subject-adapter/v2" as const,
             execution_modes: ["local_observation"] as const,
-            operations: [shape.operation],
+            operations: [...certifiedOperationsOf(shape)],
             supported_package_kinds: [shape.packageKind],
             required_controls: [...controls],
           },
@@ -101,7 +112,7 @@ export function localReceipt(
   const profile = {
     protocol_version: "subject-adapter/v2" as const,
     execution_modes: ["local_observation"] as const,
-    operations: [shape.operation],
+    operations: [...certifiedOperationsOf(shape)],
     supported_package_kinds: [shape.packageKind],
     required_controls: [...controls],
   };
@@ -116,7 +127,7 @@ export function localReceipt(
     adapter_version: manifest.version,
     certified_profiles: [profile],
     certified_modes: ["local_observation"] as const,
-    certified_operations: [shape.operation],
+    certified_operations: [...certifiedOperationsOf(shape)],
     certified_package_kinds: [shape.packageKind],
     checks: [
       {
@@ -316,6 +327,104 @@ export function residueShape(
     payload: { schema_version: "report-residue-payload/v1", checkpoint },
     entryName: `${RESIDUE_SHAPES[kind]}.mjs`,
   };
+}
+
+/**
+ * One neutral adapter per stop verdict, for the same reason the residue shapes
+ * are separate files: a running adapter cannot be told what to answer.
+ */
+export const LIFECYCLE_SHAPES = {
+  succeeded: "neutral-lifecycle-stop-succeeded",
+  failed: "neutral-lifecycle-stop-failed",
+} as const;
+
+const LIFECYCLE_OPERATIONS = ["start", "stop"] as const;
+
+const LIFECYCLE_PAYLOADS = {
+  start: { schema_version: "start-payload/v1", input_ids: ["package-input"] },
+  stop: { schema_version: "stop-payload/v1", start_operation_id: "op-start" },
+} as const;
+
+export function lifecycleShape(kind: keyof typeof LIFECYCLE_SHAPES): LocalFixtureShape {
+  return {
+    adapterId: LIFECYCLE_SHAPES[kind],
+    operation: "start",
+    packageKind: "archive",
+    payload: { ...LIFECYCLE_PAYLOADS.start },
+    entryName: `${LIFECYCLE_SHAPES[kind]}.mjs`,
+    certifiedOperations: [...LIFECYCLE_OPERATIONS],
+  };
+}
+
+/**
+ * A two-operation plan — `start`, then `stop` as the frozen cleanup suffix.
+ *
+ * The smallest sequence that reaches the reducer's authoritative "did this
+ * operation succeed?" decision: `start` creates the obligation and `stop` is the
+ * only operation that can discharge it.
+ */
+export function lifecycleFixture(kind: keyof typeof LIFECYCLE_SHAPES) {
+  const shape = lifecycleShape(kind);
+  const manifest = localManifest(shape);
+  const receipt = localReceipt(manifest, shape);
+  const onePlan = localPlan(manifest, receipt, shape);
+
+  const specs = [
+    { sequence: 0, operation_id: "op-start", operation: "start" as const, payload: { ...LIFECYCLE_PAYLOADS.start }, timeout_ms: 4_000, cleanup: false },
+    { sequence: 1, operation_id: "op-stop", operation: "stop" as const, payload: { ...LIFECYCLE_PAYLOADS.stop }, timeout_ms: 4_000, cleanup: true },
+  ];
+  const planBase = { ...onePlan, operations: specs } as unknown as Record<string, unknown>;
+  delete planBase["core_hash"];
+  const plan = assertContract<LocalObservationPlanV1>("LocalObservationPlanV1", {
+    ...planBase,
+    core_hash: coreHash(planBase),
+  });
+
+  const oneRequest = localRequest(manifest, plan, shape);
+  /**
+   * `predecessor` is the real completed `start` record rather than a placeholder,
+   * so the stop request the adapter answers is the one a coordinator would
+   * actually have built at that cursor.
+   */
+  const request = (
+    which: "start" | "stop",
+    predecessor: Record<string, unknown> | null = null,
+  ): AdapterRequestV2 => {
+    const spec = specs[which === "start" ? 0 : 1];
+    if (spec === undefined) throw new Error("lifecycle fixture operation missing");
+    const base = {
+      ...oneRequest,
+      operation_id: spec.operation_id,
+      operation: spec.operation,
+      operation_payload: spec.payload,
+      ancestry: { sequence: spec.sequence, predecessor },
+      execution_context: { ...oneRequest.execution_context, observation_plan_hash: plan.core_hash },
+    } as unknown as Record<string, unknown>;
+    delete base["core_hash"];
+    return assertContract<AdapterRequestV2>("AdapterRequestV2", { ...base, core_hash: coreHash(base) });
+  };
+
+  return { shape, manifest, receipt, plan, request };
+}
+
+export function newLocalLifecycleHost(kind: keyof typeof LIFECYCLE_SHAPES) {
+  const fixture = lifecycleFixture(kind);
+  const workspaceRoot = ownedTempDir("erl2-local-lifecycle-ws-");
+  const storeRoot = ownedTempDir("erl2-local-lifecycle-store-");
+  const host = new AdapterHost({
+    runId: LOCAL_RUN_ID,
+    adapterManifest: fixture.manifest,
+    certificationReceiptV2: fixture.receipt,
+    localObservationPlan: fixture.plan,
+    adapterEntryPath: localEntry(fixture.shape),
+    workspaceRoot,
+    store: new ArtifactStore(storeRoot),
+    clock: new SteppingClock(LOCAL_NOW, 1000),
+    wallClockMs: 10_000,
+    maxRequestBytes: 1024 * 1024,
+    maxResponseBytes: 1024 * 1024,
+  });
+  return { ...fixture, host, workspaceRoot, storeRoot };
 }
 
 export function localFixture(shape: LocalFixtureShape = ARCHIVE_SHAPE) {

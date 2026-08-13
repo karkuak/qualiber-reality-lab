@@ -72,6 +72,9 @@ const REQUIRED_V2_CONTROLS = [
   "v2-governed-port-refusal",
   "v2-telemetry-follower-readiness",
   "v2-telemetry-block-boundary",
+  // The closure from the focused re-review: the residue remediation's second
+  // property, which shipped correct and unmeasured.
+  "v2-operation-success-requires-adapter-success",
 ] as const;
 
 test("NC-DISCOVERY: every v2 control is reachable from canonical discovery", () => {
@@ -128,6 +131,10 @@ test("NC-DISCOVERY: the boundaries closed by the Package A review each have a co
     ["v2-governed-port-refusal", "packages/core/src/adapter/hostedSubjectPort.ts"],
     ["v2-telemetry-follower-readiness", "tests/support/durableTelemetry.ts"],
     ["v2-telemetry-block-boundary", "tests/support/durableTelemetry.ts"],
+    [
+      "v2-operation-success-requires-adapter-success",
+      "packages/core/src/observation/localObservation.ts",
+    ],
   ];
   for (const [id, file] of boundaries) {
     const control = byId.get(id);
