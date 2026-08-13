@@ -112,6 +112,8 @@ import {
 } from "./composeSubstrate.js";
 import { SpawnDockerCli, type DockerCli } from "./dockerCli.js";
 import {
+  collectorWindowComplete,
+  decideTelemetryObservationWindow,
   excerptCollectorTelemetry,
   parseCollectorTelemetry,
   type AttributableTelemetryMaterial,
@@ -1591,10 +1593,18 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
    * exists only over a verified collector; anything else is an `absent` with a
    * typed reason, so a non-observation cannot be dressed as one.
    *
-   * The collector's exporter flushes on its own schedule, so while zero
-   * run-marked records are visible this retries briefly and then records
-   * honestly whatever it last saw. Waiting longer can only *add* records to an
-   * append-only log, never remove one, so the retry biases nothing.
+   * The collector's exporter flushes on its own schedule, so while no batch of
+   * this run's is fully readable this retries briefly, and then describes what
+   * it last saw rather than trusting it.
+   *
+   * Every read is one window and every decision is taken over that one window:
+   * the counts, the excerpt, the collector identity and the completeness check
+   * all come from the same `docker container logs` output, so a retained
+   * observation never pairs a span count from one read with an attribution from
+   * another. `decideTelemetryObservationWindow` is the only acceptance test —
+   * the container's log rotates from the head, and waiting cannot bring an
+   * evicted line back, so the settling is what gives the exporter room and the
+   * condition is what makes the result honest.
    */
   observeAttributableTelemetry(marker: string): AttributableTelemetryMaterial {
     for (let attempt = 1; ; attempt += 1) {
@@ -1608,7 +1618,15 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
         };
       }
       const counts = parseCollectorTelemetry(observed.logs, marker);
-      if (counts.runAttributedRecords >= 1 || attempt >= this.telemetrySettleAttempts) {
+      const window = decideTelemetryObservationWindow({
+        counts,
+        windowComplete: collectorWindowComplete(observed.logs),
+        budgetExhausted: attempt >= this.telemetrySettleAttempts,
+      });
+      if (window.decision === "refuse") {
+        return { evidence: "absent", marker, reasonCode: window.reasonCode };
+      }
+      if (window.decision === "retain") {
         const image = observed.collector.image;
         return {
           evidence: "observed",

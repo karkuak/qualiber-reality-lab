@@ -138,7 +138,9 @@ export {
 export {
   attributableTelemetryDeclared,
   attributableTelemetryGatePassed,
+  collectorWindowComplete,
   contributesToTelemetryCounts,
+  decideTelemetryObservationWindow,
   excerptCollectorTelemetry,
   MAX_TELEMETRY_EXCERPT_CHARS,
   parseCollectorTelemetry,
@@ -146,11 +148,13 @@ export {
   supportsAttributableTelemetry,
   TELEMETRY_RETENTION_REASONS,
   telemetryRetentionRefusal,
+  TELEMETRY_WINDOW_REASONS,
   type AttributableTelemetryMaterial,
   type AttributableTelemetryObserver,
   type CollectorTelemetryCounts,
   type ObservedCollectorIdentity,
   type TelemetryObservationStore,
+  type TelemetryWindowDecision,
 } from "./environment/telemetryObservation.js";
 export {
   assertSubstrateBinding,

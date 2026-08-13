@@ -51,6 +51,26 @@ export interface CollectorTelemetryCounts {
   readonly spans: number;
   readonly serviceNames: readonly string[];
   readonly runAttributedRecords: number;
+  /**
+   * Trace batches whose summary line *and* at least one record naming `marker`
+   * were both inside this window, the summary first.
+   *
+   * `runAttributedRecords` alone survives what the span count does not. The
+   * collector's debug exporter writes a batch's `Traces … "spans": N` summary
+   * and *then* dumps that batch's resources and attributes, and the run marker
+   * rides in the dump. The container's log rotates from the head, so a loaded
+   * run can leave a window holding a batch's marked records with the summary
+   * that counts them already evicted. Counting the batches that kept *both*
+   * halves is what makes "this window states a span count for this run" a fact
+   * the window itself carries, rather than an inference from two numbers that
+   * were never checked against each other.
+   *
+   * Preserved by excerpting, like every other count here: the excerpt keeps
+   * every trace-batch summary line and every marker-bearing line in order, so
+   * which batch a marked record falls under is identical in the excerpt and in
+   * the full log.
+   */
+  readonly runAttributedBatches: number;
 }
 
 /**
@@ -79,22 +99,35 @@ export function parseCollectorTelemetry(logs: string, marker: string): Collector
   let spans = 0;
   const serviceNames = new Set<string>();
   let runAttributedRecords = 0;
+  let runAttributedBatches = 0;
+  // The batch the scan is currently inside — the most recent summary line — and
+  // whether it has already been credited with a record naming this run. A
+  // marked record before the first summary line belongs to no batch in this
+  // window: its own summary is exactly what rotation took.
+  let openBatchAttributed = true;
   for (const line of logs.split("\n")) {
     const batch = TRACE_BATCH_LINE.exec(line);
     if (batch?.[1] !== undefined) {
       traceBatches += 1;
       spans += Number.parseInt(batch[1], 10);
+      openBatchAttributed = false;
     }
     for (const match of line.matchAll(new RegExp(SERVICE_NAME_LINE, "g"))) {
       serviceNames.add(match[1] ?? "");
     }
-    runAttributedRecords += occurrences(line, marker);
+    const marked = occurrences(line, marker);
+    runAttributedRecords += marked;
+    if (marked > 0 && !openBatchAttributed) {
+      openBatchAttributed = true;
+      runAttributedBatches += 1;
+    }
   }
   return {
     traceBatches,
     spans,
     serviceNames: [...serviceNames].sort(),
     runAttributedRecords,
+    runAttributedBatches,
   };
 }
 
@@ -121,6 +154,144 @@ export function excerptCollectorTelemetry(logs: string, marker: string): string 
     .split("\n")
     .filter((line) => contributesToTelemetryCounts(line, marker))
     .join("\n");
+}
+
+// -- the observation window: when a count may be stated at all ---------------
+
+/**
+ * Why a readable window cannot support the span count it appears to state.
+ *
+ * These join `TELEMETRY_RETENTION_REASONS` on the same open `reason_code`
+ * string (ERL2-C-160, ADR-ERL2-035 §3), and for the same reason: a reader of
+ * the retained bytes must be able to tell *the collector received nothing* from
+ * *the line carrying the count was no longer readable*, because those are
+ * different facts about the run with different owners.
+ */
+export const TELEMETRY_WINDOW_REASONS = {
+  /**
+   * Records naming this run were readable and no summary line counting their
+   * spans was — the signature of a log that rotated from the head while the run
+   * was still emitting.
+   */
+  spanCountOutsideWindow: "telemetry_span_count_outside_readable_window",
+  /**
+   * Nothing of this run was readable and the window does not begin at a whole
+   * record, so neither a positive count nor a zero is established by it.
+   */
+  windowTruncated: "telemetry_observation_window_truncated",
+} as const;
+
+/**
+ * A console record as the collector's exporter stamps one: an RFC-3339 instant
+ * and a tab. Every record it writes begins with this and nothing else does —
+ * a batch's detailed dump is written as unstamped continuation lines
+ * (`ResourceSpans #0`, `Resource attributes:`, `     -> service.name: …`).
+ */
+const CONSOLE_RECORD_LINE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\t/;
+
+/**
+ * Whether a readable window begins where the collector began a record.
+ *
+ * The container's `json-file` log rotates from the head, so a window that has
+ * lost bytes almost always begins *inside* a batch's detailed dump — on a
+ * continuation line, which no console record ever starts with. That makes this
+ * a positive, structural statement about the bytes in hand: the window starts
+ * at a record boundary, so no record was cut in half to produce it.
+ *
+ * ## Why not the collector's own start-up line
+ *
+ * A first attempt anchored on `Everything is ready` / `Starting GRPC server`,
+ * reasoning that the collector writes those once, before it can have exported
+ * anything. A live loaded run refuted it: at `verbosity: detailed` the
+ * collector exports its **own** logs back through the same debug exporter, so
+ * those very sentences reappear throughout the stream as `Body: Str(…)` inside
+ * later dumps — nine times in one 74 kB window. A substring test for them is
+ * true in a window whose head is long gone. The lesson is in the shape of the
+ * check, not the string: a completeness signal must be something a payload
+ * cannot contain, and a line *prefix* is, where a substring is not.
+ *
+ * Derived from the raw window rather than from the excerpt, because the excerpt
+ * keeps only lines that contribute to a count and the collector's first record
+ * usually contributes to none. It is therefore an acceptance input, not a
+ * retained claim: every count in the artifact stays derivable from the excerpt.
+ */
+export function collectorWindowComplete(logs: string): boolean {
+  for (const line of logs.split("\n")) {
+    if (line.length === 0) continue;
+    return CONSOLE_RECORD_LINE.test(line);
+  }
+  // Nothing was written at all. That is an empty window, not a cut one.
+  return true;
+}
+
+/** What to do with one readable window: retain it, wait, or refuse it. */
+export type TelemetryWindowDecision =
+  | { readonly decision: "retain" }
+  | { readonly decision: "settle" }
+  | { readonly decision: "refuse"; readonly reasonCode: string };
+
+/**
+ * The single condition under which a collector window may be frozen as an
+ * observation — the one this module exists to make explicit.
+ *
+ * ## What was wrong before
+ *
+ * The observer settled on `runAttributedRecords >= 1` and retained the span
+ * count from the same read. Those two numbers survive rotation differently: the
+ * marked records live in a batch's detailed dump, the count lives in the
+ * summary line *above* it, and a `json-file` log evicts from the head. So the
+ * loop waited for the half that survives and published the half that does not,
+ * and a run whose spans were emitted, exported and marked could be retained as
+ * `spans: 0`. Nothing in the loop ever waited for, or checked, the number it
+ * was about to freeze.
+ *
+ * ## The condition
+ *
+ * `runAttributedBatches >= 1` — at least one trace batch whose summary line and
+ * whose marked records were *both* inside this one window, the summary first.
+ * It is deliberately the only acceptance test here, and it is strictly stronger
+ * than the one it replaces:
+ *
+ * - it implies `runAttributedRecords >= 1`, so the settling the exporter's
+ *   flush schedule needs is unchanged;
+ * - it implies `traceBatches >= 1`, so the count is stated by a line that was
+ *   actually read rather than defaulted;
+ * - both halves come from one snapshot, so no count is ever paired with an
+ *   attribution taken from a different read;
+ * - the marker must fall *under* a batch's own summary, so another run's
+ *   summary cannot supply a count for this run's records, and this run's
+ *   summary cannot be attributed by another run's dump.
+ *
+ * ## When the budget runs out
+ *
+ * Waiting cannot restore an evicted line, so at exhaustion the window is
+ * described rather than trusted, in the order the evidence is strongest.
+ *
+ * Records naming this run that no readable summary counts are themselves the
+ * proof that the summary was evicted: that is the failed-gate signature, and it
+ * is refused rather than retained as a zero. Otherwise nothing of this run was
+ * in the window at all, and the only remaining question is whether the window
+ * is whole — `collectorWindowComplete` answers it from the bytes, and a window
+ * that begins mid-record establishes no count, not even a zero.
+ *
+ * What is left is a window that starts at a record boundary and carries nothing
+ * of this run. Its counts are what its own lines say, including a zero, and the
+ * gate refuses it on the attribution floor exactly as before.
+ */
+export function decideTelemetryObservationWindow(input: {
+  readonly counts: CollectorTelemetryCounts;
+  readonly windowComplete: boolean;
+  readonly budgetExhausted: boolean;
+}): TelemetryWindowDecision {
+  if (input.counts.runAttributedBatches >= 1) return { decision: "retain" };
+  if (!input.budgetExhausted) return { decision: "settle" };
+  if (input.counts.runAttributedRecords >= 1) {
+    return { decision: "refuse", reasonCode: TELEMETRY_WINDOW_REASONS.spanCountOutsideWindow };
+  }
+  if (!input.windowComplete) {
+    return { decision: "refuse", reasonCode: TELEMETRY_WINDOW_REASONS.windowTruncated };
+  }
+  return { decision: "retain" };
 }
 
 /** The Docker-proven identity of the container the logs were read from. */

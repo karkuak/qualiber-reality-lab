@@ -36,12 +36,15 @@ import { ArtifactStore, coreHash, hashBytes } from "@erl2/integrity";
 import {
   attributableTelemetryDeclared,
   attributableTelemetryGatePassed,
+  collectorWindowComplete,
+  decideTelemetryObservationWindow,
   excerptCollectorTelemetry,
   MAX_TELEMETRY_EXCERPT_CHARS,
   parseCollectorTelemetry,
   retainAttributableTelemetryObservation,
   supportsAttributableTelemetry,
   TELEMETRY_RETENTION_REASONS,
+  TELEMETRY_WINDOW_REASONS,
   type AttributableTelemetryMaterial,
   type CollectorTelemetryCounts,
   type ObservedCollectorIdentity,
@@ -82,6 +85,128 @@ test("ATTR-TELEM: parsing the excerpt reproduces the counts of the full log", ()
     // The excerpt is a fixed point: excerpting it again changes nothing.
     assert.equal(excerptCollectorTelemetry(excerpt, RUN_ID), excerpt);
   }
+});
+
+test("ATTR-TELEM: excerpting preserves which batch a marked record falls under", () => {
+  // The coherence condition is derived from block membership, so the excerpt
+  // invariant has to cover it too: the offline verifier recomputes over the
+  // excerpt, and a count whose *meaning* changed under excerpting would make
+  // the producer and the verifier disagree about what they are counting.
+  const orphan = `     -> url.full: Str(http://x/?erl2_run=${RUN_ID})`;
+  const summary = '2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"spans": 7}';
+  for (const logs of [
+    collectorLog(RUN_ID),
+    [orphan, summary, "     -> service.name: Str(quote)"].join("\n"),
+    [summary, "chatter", orphan].join("\n"),
+    [summary, orphan, summary, orphan].join("\n"),
+    [orphan, orphan].join("\n"),
+    [`${summary} ${RUN_ID}`].join("\n"),
+  ]) {
+    const full = parseCollectorTelemetry(logs, RUN_ID);
+    const excerpt = excerptCollectorTelemetry(logs, RUN_ID);
+    assert.deepEqual(parseCollectorTelemetry(excerpt, RUN_ID), full);
+  }
+  // And the property the condition rests on: a marked record before the first
+  // readable summary line belongs to no batch in this window.
+  assert.equal(parseCollectorTelemetry([orphan, orphan].join("\n"), RUN_ID).runAttributedBatches, 0);
+  assert.equal(parseCollectorTelemetry([orphan, orphan].join("\n"), RUN_ID).runAttributedRecords, 2);
+  assert.equal(parseCollectorTelemetry([summary, orphan].join("\n"), RUN_ID).runAttributedBatches, 1);
+  // Two marked lines under one summary are one attributed batch, not two.
+  assert.equal(parseCollectorTelemetry([summary, orphan, orphan].join("\n"), RUN_ID).runAttributedBatches, 1);
+});
+
+test("ATTR-TELEM: the window decision is the single condition, and it fails closed", () => {
+  const counts = (logs: string): CollectorTelemetryCounts => parseCollectorTelemetry(logs, RUN_ID);
+  const orphan = `     -> url.full: Str(http://x/?erl2_run=${RUN_ID})`;
+  const summary = '2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"spans": 7}';
+
+  // A coherent batch is accepted whatever else is true, including with budget
+  // left: waiting longer cannot make an already-complete observation truer.
+  for (const budgetExhausted of [false, true]) {
+    for (const windowComplete of [false, true]) {
+      assert.deepEqual(
+        decideTelemetryObservationWindow({
+          counts: counts([summary, orphan].join("\n")),
+          windowComplete,
+          budgetExhausted,
+        }),
+        { decision: "retain" },
+      );
+    }
+  }
+
+  // With budget left and no coherent batch, the answer is always to wait —
+  // never to conclude from half a window.
+  for (const logs of ["", summary, orphan, [orphan, summary].join("\n")]) {
+    assert.deepEqual(
+      decideTelemetryObservationWindow({
+        counts: counts(logs),
+        windowComplete: false,
+        budgetExhausted: false,
+      }),
+      { decision: "settle" },
+    );
+  }
+
+  // At exhaustion, records no readable summary counts are themselves the proof
+  // that the summary was evicted — refused whether or not the window looks whole.
+  for (const windowComplete of [false, true]) {
+    assert.deepEqual(
+      decideTelemetryObservationWindow({ counts: counts(orphan), windowComplete, budgetExhausted: true }),
+      { decision: "refuse", reasonCode: TELEMETRY_WINDOW_REASONS.spanCountOutsideWindow },
+    );
+  }
+  // Nothing of this run, and a window that begins mid-record: no count at all.
+  assert.deepEqual(
+    decideTelemetryObservationWindow({
+      counts: counts("     -> service.name: Str(other)"),
+      windowComplete: false,
+      budgetExhausted: true,
+    }),
+    { decision: "refuse", reasonCode: TELEMETRY_WINDOW_REASONS.windowTruncated },
+  );
+  // Nothing of this run, and a whole window: its own lines are the answer.
+  assert.deepEqual(
+    decideTelemetryObservationWindow({ counts: counts(""), windowComplete: true, budgetExhausted: true }),
+    { decision: "retain" },
+  );
+  assert.deepEqual(
+    decideTelemetryObservationWindow({ counts: counts(summary), windowComplete: true, budgetExhausted: true }),
+    { decision: "retain" },
+  );
+  // The two reason codes are distinct facts and stay distinct.
+  assert.notEqual(
+    TELEMETRY_WINDOW_REASONS.spanCountOutsideWindow,
+    TELEMETRY_WINDOW_REASONS.windowTruncated,
+  );
+});
+
+test("ATTR-TELEM: window completeness is a line prefix, because a payload can contain anything", () => {
+  const record = "2026-08-03T00:00:01.000Z\tinfo\tservice.go\tStarting GRPC server";
+  const dump = "     -> service.name: Str(quote)";
+  assert.equal(collectorWindowComplete(`${record}\n${dump}\n`), true);
+  assert.equal(collectorWindowComplete(`${dump}\n${record}\n`), false);
+  assert.equal(collectorWindowComplete("ResourceSpans #0\n"), false);
+  // An empty window is an empty window, not a cut one.
+  assert.equal(collectorWindowComplete(""), true);
+  assert.equal(collectorWindowComplete("\n\n"), true);
+
+  // The case a live loaded run found, and the reason the check is a prefix
+  // rather than a substring: at `verbosity: detailed` the collector exports its
+  // own logs back through the debug exporter, so its start-up sentences reappear
+  // as record bodies inside later dumps. A window whose head is long gone still
+  // contains them, and a substring test would call it whole.
+  const reExported = [
+    "Body: Str(Everything is ready. Begin running and processing data.)",
+    "     -> service.name: Str(otelcol-contrib)",
+    record,
+  ].join("\n");
+  assert.equal(reExported.includes("Everything is ready"), true);
+  assert.equal(
+    collectorWindowComplete(reExported),
+    false,
+    "a re-exported start-up sentence was mistaken for the collector's own start",
+  );
 });
 
 test("ATTR-TELEM: two markers on one line count as two run-attributed records", () => {
