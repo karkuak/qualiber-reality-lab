@@ -3029,11 +3029,19 @@ export const CONTROLS = [
   {
     // P2-1. The planted symlink. Dropping the type check restores the copy
     // primitive that read the host's /etc/passwd.
+    // Anchored on the *classification*, not on the channel's guard.
+    //
+    // The guard in `copyTrustedDirectory` refuses a non-regular entry twice
+    // over — by type, and because the reader attaches no payload to one — so
+    // mutating it alone changes no outcome and the control measured nothing.
+    // Measured: it survived. The load-bearing decision is here, where the
+    // archive's typeflag becomes a classification, and misreading a symlink as
+    // a regular file is exactly the defect P2-1 describes.
     id: "trusted-channel-source-entry-must-be-regular",
     what: "the trusted source entry is proved a regular file from the archive's own header before any byte is used, so a planted symlink cannot be dereferenced into the artifact (Package 2 remediation P2-1)",
-    file: "packages/core/src/environment/trustedChannel.ts",
-    find: "    if (entry === undefined || entry.type !== \"regular-file\" || entry.bytes === undefined) {",
-    replace: "    if (entry === undefined || entry.bytes === undefined) {",
+    file: "packages/core/src/environment/trustedArchive.ts",
+    find: "  \"2\": \"symlink\",",
+    replace: "  \"2\": \"regular-file\",",
     tests: ["tests/dist/adversarial/trustedRemediation.test.js"],
     mustFail: ["tests/dist/adversarial/trustedRemediation.test.js"],
     mustFailCases: [
