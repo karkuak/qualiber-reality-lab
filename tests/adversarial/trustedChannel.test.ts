@@ -17,7 +17,8 @@
 
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import os from "node:os";
 import path from "node:path";
 import { validateContract, type AttributableTelemetryObservationV2 } from "@erl2/contracts";
@@ -34,7 +35,10 @@ import {
   TrustedTelemetryChannel,
   TRUSTED_CHANNEL_FILE_NAME,
   TRUSTED_CHANNEL_REASONS,
+  TRUSTED_RESOURCE_KEYS,
+  TRUSTED_SPAN_KEYS,
   TRUSTED_TELEMETRY_MAX_BYTES,
+  TRUSTED_TELEMETRY_MAX_FIELD_CHARS,
   type DockerInvocation,
   type DockerResult,
   type TrustedChannelBinding,
@@ -714,4 +718,111 @@ test("TRUSTED-CHANNEL: the freeze copies are working material and do not outlive
     false,
     "the freeze root outlived the channel",
   );
+});
+
+// -- the collector configuration is part of the trust argument ----------------
+
+/**
+ * The applied collector extras, read from the repository.
+ *
+ * Parsed shallowly and deliberately: this asserts the properties the trust
+ * argument rests on, not the whole file. A YAML parser would be a dependency
+ * added to check four things that are visible as text, and the four things are
+ * exactly the ones a well-meaning edit gets wrong.
+ */
+function collectorExtras(): string {
+  return readFileSync(
+    path.join(
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".."),
+      "environments",
+      "otel-demo",
+      "compose",
+      "erl2-otelcol-extras.yaml",
+    ),
+    "utf8",
+  );
+}
+
+/** The `service.pipelines.<name>` block's body, or `undefined`. */
+function pipelineBlock(extras: string, name: string): string | undefined {
+  const match = new RegExp(`\\n    ${name.replace("/", "\\/")}:\\n((?:      .*\\n)+)`).exec(extras);
+  return match?.[1];
+}
+
+test("TRUSTED-CONFIG: the trusted pipeline minimizes before it exports, and the allowlist is the parser's", () => {
+  const extras = collectorExtras();
+  const trusted = pipelineBlock(extras, "traces/trusted");
+  assert.ok(trusted !== undefined, "the trusted traces pipeline is absent from the collector extras");
+
+  // R2. Without the transform the channel is not merely leakier — it is
+  // unusable: one realistic unminimized record measured 1 000 590 bytes against
+  // a 262 144 ceiling, so every realistic run would retain nothing.
+  assert.ok(
+    /processors:\s*\[[^\]]*transform\/trusted[^\]]*\]/.test(trusted),
+    `the trusted pipeline exports without minimizing: ${trusted}`,
+  );
+  assert.ok(
+    /exporters:\s*\[[^\]]*file\/trusted[^\]]*\]/.test(trusted),
+    `the trusted pipeline does not feed the trusted exporter: ${trusted}`,
+  );
+
+  // The allowlist the processor applies must be the allowlist the parser
+  // enforces. Two allowlists that drift apart give a channel that retains what
+  // no reader will accept, or accepts what the channel never bounded.
+  for (const key of TRUSTED_RESOURCE_KEYS) {
+    assert.ok(
+      extras.includes(`keep_keys(resource.attributes, ["${key}"])`),
+      `the processor does not keep the resource key the parser allows: ${key}`,
+    );
+  }
+  for (const key of TRUSTED_SPAN_KEYS) {
+    assert.ok(
+      extras.includes(`keep_keys(span.attributes, ["${key}"])`),
+      `the processor does not keep the span key the parser allows: ${key}`,
+    );
+  }
+  // Events carry a second attribute map that `keep_keys` on span attributes does
+  // not reach. A live run retained an exception stack trace through exactly this
+  // gap before the statement below existed.
+  assert.ok(
+    extras.includes("keep_keys(spanevent.attributes, [])"),
+    "span event attributes are not stripped; a stack trace can reach the artifact",
+  );
+  assert.ok(
+    extras.includes(`truncate_all(span.attributes, ${TRUSTED_TELEMETRY_MAX_FIELD_CHARS})`),
+    "retained span values are not bounded at the length the parser enforces",
+  );
+});
+
+test("TRUSTED-CONFIG: the trusted exporter shares its channel with nothing that renders subject bytes", () => {
+  const extras = collectorExtras();
+  const trusted = pipelineBlock(extras, "traces/trusted");
+  assert.ok(trusted !== undefined);
+
+  // R3, and the whole reason the channel is trustworthy. `debug` renders subject
+  // bytes unescaped at column zero; on a shared stream a subject log body forged
+  // a complete trusted record reading 9999 spans. Structural framing does not
+  // survive that, so the two must not meet.
+  assert.equal(
+    /exporters:\s*\[[^\]]*\bdebug\b[^\]]*\]/.test(trusted),
+    false,
+    `debug is on the trusted pipeline: ${trusted}`,
+  );
+
+  // And nothing but traces reaches the trusted exporter. Nothing ERL2-C-171
+  // derives comes from a log or a metric, and a subject *log body* is the exact
+  // vector the mixed stream was forged through.
+  for (const signal of ["logs", "metrics", "profiles"]) {
+    const block = pipelineBlock(extras, signal);
+    assert.ok(block !== undefined, `the ${signal} pipeline is absent`);
+    assert.equal(
+      block.includes("file/trusted"),
+      false,
+      `the ${signal} pipeline feeds the trusted exporter: ${block}`,
+    );
+  }
+
+  // No rotation (R6): the exporter is configured with no rotation block, so it
+  // writes exactly one file and `segment_count: 1` describes reality.
+  assert.equal(/file\/trusted:[\s\S]{0,300}?rotation:/.test(extras), false, "the trusted exporter rotates");
 });
