@@ -2933,14 +2933,18 @@ export const CONTROLS = [
     // is the line that makes the handle load-bearing: refuse every handle here
     // and cleanup is blind again, exactly as it was.
     //
-    // The mutation is `if (true) return undefined` rather than assigning the
-    // read away, because the latter narrows the local to `never` and the
-    // campaign scores a build failure as a harness error rather than a kill.
+    // The mutation withholds the handle from every caller. Two earlier attempts
+    // did not survive contact with the type checker — assigning the read away
+    // narrows the local to `never`, and an always-true early return discards the
+    // narrowing for the lines below it — and the campaign scores a build failure
+    // as a harness error rather than a kill, so a control anchored either way
+    // measures nothing. Returning `undefined` from the accessor is the same
+    // defect and type-checks.
     id: "trusted-channel-cleanup-scoped-to-created",
     what: "cleanup acts only on a durable ownership handle bound to this run, so a refused pre-existing volume is never deleted and a volume created in an earlier process is still removable (Package 2 closure)",
     file: "packages/core/src/environment/trustedChannel.ts",
-    find: "    if (handle.run_id !== this.runId) return undefined;",
-    replace: "    if (true) return undefined;",
+    find: "    return handle;",
+    replace: "    return undefined;",
     tests: [
       "tests/dist/adversarial/trustedOwnership.test.js",
       "tests/dist/integration/trustedCrossProcess.test.js",
@@ -3010,9 +3014,16 @@ export const CONTROLS = [
       "tests/dist/adversarial/trustedOwnership.test.js",
       "tests/dist/integration/trustedCrossProcess.test.js",
     ],
-    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFail: [
+      "tests/dist/adversarial/trustedOwnership.test.js",
+      "tests/dist/integration/trustedCrossProcess.test.js",
+    ],
     mustFailCases: [
       "TRUSTED-OWNERSHIP: a volume with the right labels and the wrong capability survives",
+      // The same spoof staged against the real daemon. Both must be declared, or
+      // the harness reads the second failure as collateral and scores the
+      // control `unrelated_tests_failed` — a kill it will not credit.
+      "XPROC: a volume carrying the right name and a foreign capability is not removed",
     ],
     expect: "fail",
   },
