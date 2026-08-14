@@ -234,9 +234,27 @@ export function decideTrustedTelemetryAuthority(
   if (coreHash(coreOf(observation)) !== observation.core_hash) {
     return refuse(TELEMETRY_AUTHORITY_REASONS.freezeBroken);
   }
-  const incoherent = trustedTelemetryCoherenceRefusal(observation);
-  if (incoherent !== undefined) return refuse(incoherent);
   return { authoritative: true, observation };
+}
+
+/**
+ * Why no retained record may support a new trusted telemetry claim, or
+ * `undefined`.
+ *
+ * Authority *and* coherence, in that order — and they are deliberately two
+ * functions rather than one. Authority is a question about the record's
+ * version and provenance, and both authorities must answer it identically or
+ * the migration has a hole. Coherence is a question about the record's
+ * *content*, and each authority must answer that one **for itself**: a
+ * verifier that delegated its arithmetic to a shared helper would be agreeing
+ * with the producer rather than checking it, which is exactly the failure
+ * ADR-ERL2-038 §4 recorded. So the producer's gate composes the two here, and
+ * the offline verifier composes authority with its own recomputation.
+ */
+export function trustedTelemetryClaimRefusal(retained: readonly unknown[]): string | undefined {
+  const authority = decideTrustedTelemetryAuthority(retained);
+  if (!authority.authoritative) return authority.refusal;
+  return trustedTelemetryCoherenceRefusal(authority.observation);
 }
 
 /**

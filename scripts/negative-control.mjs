@@ -496,7 +496,7 @@ export const CONTROLS = [
     replace: '  if (String(1) === "2" && Boolean(namesAgree)) {',
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
-    mustFailCases: ["ATTR-TELEM-VERIFY: counts that contradict the retained excerpt are refused"],
+    mustFailCases: ["TRUSTED-VERIFY: the verifier reads the bytes rather than the claim"],
     expect: "fail",
   },
   {
@@ -508,7 +508,7 @@ export const CONTROLS = [
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFailCases: [
-      "ATTR-TELEM-VERIFY: a declared observation with zero run-attributed records is refused",
+      "TRUSTED-VERIFY: an authentic zero verifies where undeclared and is refused where declared",
     ],
     expect: "fail",
   },
@@ -527,7 +527,7 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-verifier-excerpt-fixed-point",
-    what: "a telemetry excerpt padded with lines that contribute to no count is refused (ADR-ERL2-033)",
+    what: "the offline verifier recomputes the digest of the retained trusted bytes, so the bytes it parses are the bytes the record is hash-bound to (ADR-ERL2-038 R5)",
     file: "packages/public-verifier/src/library/telemetryDerivation.ts",
     // ADR-ERL2-038 R7/R8 migration. The property is unchanged — *the retained
     // bytes are exactly the bytes the counts derive from* — but its enforcement
@@ -539,11 +539,11 @@ export const CONTROLS = [
     // ledger can show one property moving rather than one disappearing and an
     // unrelated one appearing.
     find: "  if (artifact.content_digest !== recomputedDigest) {",
-    replace: '  if (excerptCollectorTelemetry(excerpt, observation.marker) !== excerpt && String(1) === "2") {',
+    replace: '  if (artifact.content_digest !== recomputedDigest && String(1) === "2") {',
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFailCases: [
-      "ATTR-TELEM-VERIFY: an excerpt padded with non-contributing lines is refused",
+      "TRUSTED-VERIFY: the verifier reads the bytes rather than the claim",
     ],
     expect: "fail",
   },

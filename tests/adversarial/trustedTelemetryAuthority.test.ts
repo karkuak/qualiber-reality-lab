@@ -37,6 +37,7 @@ import {
   TRUSTED_TELEMETRY_MAX_BYTES,
   TRUSTED_TELEMETRY_MAX_FIELD_CHARS,
   TRUSTED_TELEMETRY_REASONS,
+  trustedTelemetryClaimRefusal,
 } from "@erl2/core";
 import {
   absentV2,
@@ -296,9 +297,10 @@ test("TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1
 
   assert.equal(rows.length, 28, "the inventory is twenty-eight cases");
   for (const [why, retained, reason] of rows) {
-    const authority = decideTrustedTelemetryAuthority(retained);
-    assert.equal(authority.authoritative, false, why);
-    assert.equal(authority.authoritative === false && authority.refusal, reason, why);
+    // The composed refusal: authority first, then coherence. They are separate
+    // functions because the verifier must own its own arithmetic (see
+    // `trustedTelemetryClaimRefusal`), and the gate is where the two meet.
+    assert.equal(trustedTelemetryClaimRefusal(retained), reason, why);
     // Behavioural, not helper-shaped: the run is ineligible, not merely
     // reported as such.
     assert.equal(

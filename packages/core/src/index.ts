@@ -176,6 +176,7 @@ export {
   TELEMETRY_AUTHORITY_REASONS,
   decideTrustedTelemetryAuthority,
   trustedTelemetryCoherenceRefusal,
+  trustedTelemetryClaimRefusal,
   readHistoricalTelemetryObservation,
   type TrustedTelemetryAuthority,
 } from "./environment/telemetryAuthority.js";
