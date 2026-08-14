@@ -202,3 +202,157 @@ merge-ready, not clean-gate-ready and not Qualiber-ready.** A full 155-control
 campaign remains required, and remains pending independent review of the parser
 authentication, the verifier's independence, the corrected affected-control
 inventory, and the final discovery count.
+
+---
+
+# Corrections — this remediation was overturned by independent review
+
+Independent re-review of `6d28d5436705c59c854fb2faee570716c6dcd7a5`
+(`reality-lab-6d28d543-parser-verifier-rereview.md`, SHA-256
+`26c60019a1332d90cc75bfd69c641f9fb5300f7b697b2672c3ddd2892f157508`) returned
+**`CHANGES REQUIRED`**. The sections above are kept as written, because a ledger
+that edits away what it claimed is not a record. Everything below corrects them.
+
+## 1. The framing above is forgeable — P1 and P2 are both still open
+
+The payload-region state machine closes a region on a line matching `^\t\{`.
+**That token is subject-controlled.** The exporter renders a subject's bytes
+verbatim at column zero, so a subject writes `\t{…}`, the region closes, and its
+next line is read as an authentic collector record.
+
+Reproduced live against the pinned collector, on the bytes it actually rendered:
+
+| window | decision | retained spans |
+|---|---|---|
+| rotated, this run's records, **no hostile payload** | `refuse` / `telemetry_span_count_outside_readable_window` | — |
+| **same window + subject payload** | **`retain`** | **9999** |
+| complete window + subject payload | **`retain`** | **9999** |
+
+`forgedBoundaries` stays `0`, so `telemetry_observation_window_ambiguous` never
+fires. **Rotation is not required** — a complete window is forgeable too.
+
+The claim in §"Framing, because anchoring alone was not enough" that framing
+answers the multi-line residual is **withdrawn**. It answers the two shapes it
+was tested against and not the one that closes the region.
+
+## 2. The verifier is not independent for this vector
+
+The forged artifact verifies clean on its own hash-covered excerpt: excerpt
+fixed-point, count equality, `forgedBoundaries`, `malformedSummaries` and the
+coherence floor **all pass**, and the offline verifier accepts `spans: 9999`.
+
+The §P2 claim that the verifier "does not read a producer-supplied counter to
+decide" is accurate and is **not** withdrawn. What is withdrawn is the
+conclusion drawn from it. Producer and verifier share the framing definition, so
+the verifier re-derives the attacker's framing and agrees with it. Independence
+in the *arithmetic* is not independence in the *framing*. See ADR-ERL2-038 §4.
+
+## 3. Architecture feasibility result
+
+Measured against the pinned image, not argued:
+
+| question | answer |
+|---|---|
+| does the mixed debug stream expose a framing token subject payload cannot reproduce? | **no** |
+| does the Docker log API preserve per-record boundaries? | no — `json-file` splits on newlines; frames are stream chunks, not records |
+| does the Docker driver expose trusted metadata separate from message bytes? | only per-line timestamps, which prefix continuations too |
+| does the exporter offer a structured mode with machine-readable boundaries? | **yes** — the contrib `file` exporter, but on a different channel |
+| can traces and logs be separated before the observation channel? | yes, and **it does not help**: `verbosity: detailed` renders subject *span attributes* the same way |
+| can rotation begin mid-payload, making initial state unknowable? | yes |
+| would any proposed close token also be subject-writable? | **yes — every one tested** |
+| valid across supported macOS/Linux Docker? | the weakness is platform-independent |
+
+Classification: **`NO NON-FORGEABLE FRAMING IN CURRENT STREAM`.**
+
+The text parser is closed to further extension as a security boundary
+(ADR-ERL2-038 §2). The record grammar `parseTraceSummaryRecord` is retained
+because it reads well-formed collector output correctly — not because it
+resists forgery.
+
+## 4. Privacy — the §"excerpt now keeps record-context lines" claim is wrong
+
+That section states the retained context lines are "collector metadata … not
+subject payload, so keeping them widens no privacy surface." **False.**
+`contributesToTelemetryCounts` retains any line matching `^\t\{`, and a subject
+can write one. A retained excerpt from the live exploit begins:
+
+```
+<TAB>{"closed": "region"}
+```
+
+— entirely subject-controlled bytes, inside `log_excerpt`, covered by
+`core_hash`. **Subject-controlled bytes can be retained in `log_excerpt`.**
+Privacy here is **bounded, not absent**: the `maxLength: 262144` ceiling and the
+demote-rather-than-truncate rule still hold, and those are unchanged.
+
+## 5. Fixture availability — the archive is present, not absent
+
+§14 and §21.6 of the implementation report say the pinned OpenTelemetry Demo
+3.0.0 archive is "absent on this host". It is **present**:
+`environments/otel-demo/upstream/opentelemetry-demo-3.0.0.tar.gz`, 3 054 524
+bytes. It is git-ignored (`.gitignore:16`), so it is absent from *disposable
+clones*, which is why `substrate-loopback-only-rendered` was unmeasurable by
+that method. The control was correctly recorded `UNMEASURED HERE` and claimed
+for nothing; only the stated reason was wrong. Correcting the method may make
+the control measurable.
+
+## 6. Broad-suite totals
+
+The prior broad run was:
+
+| | |
+|---|---:|
+| total | 1 285 |
+| **passed** | **1 265** |
+| skipped | **20** |
+| failed | 0 |
+
+It is **not** "1 285 passed". The 20 skips are pre-declared. **No durable
+record of that run exists** anywhere in the repository — `docs/evidence/` is
+byte-identical to `270321c5` — so the only account of it is prose, and it
+cannot be audited. Any future broad run must retain a durable record.
+
+## 7. What still stands
+
+Independently reproduced by the re-review and not disturbed:
+
+- the single-record grammar, including rejection of negative, decimal,
+  exponent, hexadecimal, leading-zero, duplicate and overflow counts;
+- genuine zero positively parsed, never inferred;
+- the five new controls, all killing deterministically with exact restoration
+  and kill counts 50/2, 51/1, 51/1, 50/2, 51/1;
+- discovery 150 → 155 as an exact ordered prefix, zero removed, renamed or
+  reordered;
+- the narrowing of `telemetry-count-representable`;
+- fixture corrections, which made records realistic and weakened no assertion;
+- the union-of-two-axes affected-control derivation (24 / 29 / union 29 /
+  focused 33 / unaffected 122), including the two formerly omitted controls;
+- the 33-control accounting, with `substrate-loopback-only-rendered` explicitly
+  unmeasured;
+- historical evidence byte-identity, `docs/evidence/` tree
+  `cc64c2fdf67fced12692bfa27a407656c6d69e61` at both `270321c5` and `6d28d543`;
+- the atomic marker correction.
+
+**One coverage gap, and it is why the campaign did not catch this.** No control
+in the canonical 155 mutates the region-**close** decision. Searching every
+control's `find` string for `RECORD_CONTEXT_LINE` or `open = false` returns
+none. `telemetry-record-payload-is-not-summary-text` mutates only the region
+*open*. The boundary that failed had no control, so no mutation could survive to
+report it.
+
+## 8. Status
+
+No production code changed in this package. The framing feasibility gate
+(ADR-ERL2-038) returned `NO NON-FORGEABLE FRAMING IN CURRENT STREAM`, and the
+smallest trusted correction is a substrate, driver, contract and campaign change
+beyond a bounded remediation (ADR-ERL2-038 §7).
+
+Canonical discovery is **unchanged at 155**: no control was added, removed,
+renamed or reordered, and no mutation target or designated suite changed.
+
+**The `6d28d543` defect remains open.** This candidate is not
+campaign-certified, not publication-ready, not merge-ready, not
+clean-gate-ready and not Qualiber-ready. The 147-control campaign remains bound
+to `25aea768a09ff6ba2011e25a00000d5b152990d1` and no other candidate. A full
+campaign and the clean gate remain pending, and are not authorized while
+attributable telemetry rests on a forgeable channel.
