@@ -251,10 +251,18 @@ export function decideTrustedTelemetryAuthority(
  * ADR-ERL2-038 §4 recorded. So the producer's gate composes the two here, and
  * the offline verifier composes authority with its own recomputation.
  */
-export function trustedTelemetryClaimRefusal(retained: readonly unknown[]): string | undefined {
+export function trustedTelemetryClaim(retained: readonly unknown[]): TrustedTelemetryAuthority {
   const authority = decideTrustedTelemetryAuthority(retained);
-  if (!authority.authoritative) return authority.refusal;
-  return trustedTelemetryCoherenceRefusal(authority.observation);
+  if (!authority.authoritative) return authority;
+  const incoherent = trustedTelemetryCoherenceRefusal(authority.observation);
+  if (incoherent !== undefined) return refuse(incoherent);
+  return authority;
+}
+
+/** The same decision as a reason, for callers that only need to say why. */
+export function trustedTelemetryClaimRefusal(retained: readonly unknown[]): string | undefined {
+  const claim = trustedTelemetryClaim(retained);
+  return claim.authoritative ? undefined : claim.refusal;
 }
 
 /**

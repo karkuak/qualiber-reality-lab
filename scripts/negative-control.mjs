@@ -2535,7 +2535,7 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-verifier-recomputes-coherence",
-    what: "the offline verifier re-derives the coherence of a retained observation instead of trusting the producer that wrote it",
+    what: "the offline verifier re-derives the retained artifact's byte length, record count and termination instead of trusting the producer that declared them (ADR-ERL2-038 R5)",
     file: "packages/public-verifier/src/library/telemetryDerivation.ts",
     // P2 of the same review. The producer enforced the coherent-window
     // invariant and the verifier did not re-derive it, so the literal artifact
@@ -2552,8 +2552,14 @@ export const CONTROLS = [
     // attribution that exceeds the spans it was drawn from. Same property —
     // *the verifier re-derives the relationship between two counts instead of
     // trusting the producer that wrote them* — at the boundary that now exists.
-    find: "  if (derived.runAttributedRecords > derived.spans) {",
-    replace: "  if (false) {",
+    find: [
+      "  if (",
+      "    artifact.byte_length !== derived.byteLength ||",
+      "    artifact.record_count !== derived.recordCount ||",
+      "    artifact.final_record_terminated !== derived.finalRecordTerminated",
+      "  ) {",
+    ].join("\n"),
+    replace: '  if (String(1) === "2") {',
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFailCases: [
@@ -2568,8 +2574,8 @@ export const CONTROLS = [
     // The whole migration in one line. Mutating it restores exactly the
     // dual authority R8 exists to prevent: any retained record, of any
     // version and any validity, becomes good enough.
-    find: "  if (!authority.authoritative) return false;",
-    replace: "  if (!authority.authoritative) return input.observations.length > 0;",
+    find: "  if (!claim.authoritative) return false;",
+    replace: "  if (!claim.authoritative) return input.observations.length > 0;",
     tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
     mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
     mustFailCases: [
@@ -2598,10 +2604,13 @@ export const CONTROLS = [
     file: "packages/core/src/environment/telemetryAuthority.ts",
     find: "    return refuse(TELEMETRY_AUTHORITY_REASONS.unknownVersion);",
     replace: "    continue;",
+    // Only the inventory distinguishes this. The truth table asks whether the
+    // run is eligible, and an ignored unknown-version record leaves it
+    // ineligible either way — a weaker refusal is still a refusal, so the row
+    // that must move is the one asserting *which* refusal.
     tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
     mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
     mustFailCases: [
-      "TRUSTED-AUTHORITY: the migration truth table, observed at the gate",
       "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
     ],
     expect: "fail",
@@ -2748,14 +2757,19 @@ export const CONTROLS = [
   },
   {
     id: "trusted-telemetry-genuine-zero-not-inferred",
-    what: "an artifact carrying no records and a non-zero span count is refused, so a zero is read rather than asserted (ADR-ERL2-038 R5)",
-    file: "packages/public-verifier/src/library/telemetryDerivation.ts",
-    find: "  if (derived.recordCount === 0 && derived.spans !== 0) {",
-    replace: "  if (false) {",
-    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
-    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    what: "an empty finalized artifact is positively read as an authentic zero rather than conflated with bytes that could not be read (ADR-ERL2-038 R5)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    // The property is *a zero is read, never inferred*. Mutating the branch
+    // makes an empty artifact fall through to the termination check and refuse,
+    // which turns "the collector received nothing" into "nothing readable
+    // arrived" — the exact conflation ADR-ERL2-033 exists to prevent.
+    find: "  if (bytes.length === 0) {",
+    replace: '  if (bytes.length === 0 && String(1) === "2") {',
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
     mustFailCases: [
-      "TRUSTED-VERIFY: an authentic zero verifies where undeclared and is refused where declared",
+      "TRUSTED-PARSE: an authentic zero is read, and a claimed zero over records is not",
+      "TRUSTED-FIXTURE: every valid fixture satisfies ERL2-C-171 and governs its run",
     ],
     expect: "fail",
   },

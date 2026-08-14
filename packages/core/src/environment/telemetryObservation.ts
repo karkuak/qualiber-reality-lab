@@ -12,10 +12,7 @@
 
 import { assertContract, CODES, Erl2Error, type Classification } from "@erl2/contracts";
 import { coreHash, isCanonicalizableString } from "@erl2/integrity";
-import {
-  decideTrustedTelemetryAuthority,
-  trustedTelemetryClaimRefusal,
-} from "./telemetryAuthority.js";
+import { trustedTelemetryClaim } from "./telemetryAuthority.js";
 import type {
   AttributableTelemetryObservationV1,
   EnvironmentArchetypeV1,
@@ -944,10 +941,9 @@ export function attributableTelemetryGatePassed(input: {
   readonly observations: readonly unknown[];
 }): boolean {
   if (!input.declared) return true;
-  if (trustedTelemetryClaimRefusal(input.observations) !== undefined) return false;
-  const authority = decideTrustedTelemetryAuthority(input.observations);
-  if (!authority.authoritative) return false;
-  const observation = authority.observation;
+  const claim = trustedTelemetryClaim(input.observations);
+  if (!claim.authoritative) return false;
+  const observation = claim.observation;
   return (
     observation.evidence === "observed" &&
     observation.run_id === input.runId &&

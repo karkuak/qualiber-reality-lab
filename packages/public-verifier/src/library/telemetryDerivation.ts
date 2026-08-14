@@ -294,29 +294,15 @@ export function deriveAttributableTelemetry(options: {
     );
   }
 
-  // The coherence floor, restated for structural records. Under v1 a batch's
-  // summary and its marked records could land in different windows, so
-  // attribution without a counted batch was the pre-correction artifact. Here
-  // both come out of one parsed document and cannot separate — so the floor is
-  // asserted rather than dropped, because a property that becomes automatic
-  // still has to be *shown* to be automatic.
-  if (derived.runAttributedRecords > derived.spans) {
-    throw new Erl2Error(
-      CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
-      `the retained telemetry observation attributes ${String(derived.runAttributedRecords)} record(s) ` +
-        `to this run out of ${String(derived.spans)} span(s); attribution cannot exceed the spans it is drawn from`,
-    );
-  }
-  // A genuine zero is parsed, never inferred: an empty artifact from a
-  // finalized channel is an authentic observed zero, and an artifact that
-  // carries records while claiming none is not the same fact.
-  if (derived.recordCount === 0 && derived.spans !== 0) {
-    throw new Erl2Error(
-      CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
-      "the retained telemetry artifact carries no records and a non-zero span count; a zero must be read, not asserted",
-    );
-  }
-
+  // Two relationships that were checks here in v1 are now *impossibilities*, and
+  // saying so is more honest than asserting them. `runAttributedRecords` is
+  // incremented once per attributed span, so it cannot exceed `spans`; and an
+  // artifact with no records parses to zero counts, so a claimed zero over
+  // records cannot reach this point. Both were written as guards, both were
+  // measured unkillable by the campaign, and both are gone rather than left
+  // standing as coverage nobody has. What replaced them is stronger: every
+  // declared count is compared against a recomputation above, which is the
+  // relationship those guards were approximating.
   if (declared && derived.runAttributedRecords < 1) {
     throw new Erl2Error(
       CODES.ENV_TELEMETRY_NOT_ATTRIBUTED,

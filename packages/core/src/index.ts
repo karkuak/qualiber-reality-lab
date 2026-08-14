@@ -176,6 +176,7 @@ export {
   TELEMETRY_AUTHORITY_REASONS,
   decideTrustedTelemetryAuthority,
   trustedTelemetryCoherenceRefusal,
+  trustedTelemetryClaim,
   trustedTelemetryClaimRefusal,
   readHistoricalTelemetryObservation,
   type TrustedTelemetryAuthority,
