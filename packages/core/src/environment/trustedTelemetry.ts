@@ -182,6 +182,42 @@ function attributeRefusal(
   return undefined;
 }
 
+/**
+ * Refuses a span's events or links carrying any attribute, or an over-long
+ * structural string on one.
+ *
+ * `nameKey` names the one structural string the child may carry — an event's
+ * `name` — which is bounded rather than forbidden because it is instrumentation
+ * structure, not payload. Absent children are absent, not malformed: a span with
+ * no events omits the key entirely, which is the overwhelmingly common shape.
+ */
+function childAttributeRefusal(children: unknown, nameKey: string | undefined): string | undefined {
+  if (children === undefined) return undefined;
+  if (!Array.isArray(children)) return TRUSTED_TELEMETRY_REASONS.malformed;
+  for (const entry of children) {
+    if (typeof entry !== "object" || entry === null) return TRUSTED_TELEMETRY_REASONS.malformed;
+    const child = entry as Record<string, unknown>;
+    if (nameKey !== undefined) {
+      const name = child[nameKey];
+      if (name !== undefined && typeof name !== "string") {
+        return TRUSTED_TELEMETRY_REASONS.malformed;
+      }
+      if (typeof name === "string" && name.length > TRUSTED_TELEMETRY_MAX_FIELD_CHARS) {
+        return TRUSTED_TELEMETRY_REASONS.fieldOverBound;
+      }
+    }
+    const attributes = child["attributes"] ?? [];
+    if (!Array.isArray(attributes)) return TRUSTED_TELEMETRY_REASONS.malformed;
+    // The allowlist is empty, so `attributeRefusal` refuses every key it is
+    // given — with the forbidden-field code where the key is also sensitive,
+    // which is the difference between "this pipeline did not minimize" and
+    // "this artifact is a privacy incident".
+    const refusal = attributeRefusal(attributes, []);
+    if (refusal !== undefined) return refusal;
+  }
+  return undefined;
+}
+
 function stringValuesOf(attributes: readonly unknown[], key: string): readonly string[] {
   const found: string[] = [];
   for (const entry of attributes) {
@@ -293,7 +329,22 @@ export function parseTrustedTelemetryRecords(
       if (typeof resource !== "object" || resource === null) {
         return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
       }
-      const resourceAttributes = (resource as Record<string, unknown>)["attributes"];
+      // Absent is empty, exactly as it already is for span attributes below.
+      //
+      // Package 1 required the key and package 2 measured why it cannot: when
+      // the trusted pipeline's `keep_keys` removes every resource attribute —
+      // which is what happens to a resource carrying no `service.name` — the
+      // collector's OTLP-JSON marshaller emits `"resource":{}` with no
+      // `attributes` key at all. Requiring the key refused a record the trusted
+      // channel legitimately produces, and refusing a valid artifact is a
+      // different defect from accepting an invalid one, not a safer version of
+      // it.
+      //
+      // No security property moves. An absent attribute array carries no key to
+      // check against the allowlist, no value to bound, and no marker to
+      // attribute — so this resource contributes zero service names and zero
+      // attributed spans, which is what an attribute-less resource is.
+      const resourceAttributes = (resource as Record<string, unknown>)["attributes"] ?? [];
       if (!Array.isArray(resourceAttributes)) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
       const resourceRefusal = attributeRefusal(resourceAttributes, TRUSTED_RESOURCE_KEYS);
       if (resourceRefusal !== undefined) return refuse(resourceRefusal);
@@ -319,10 +370,32 @@ export function parseTrustedTelemetryRecords(
           // bytes that a subject could write and a reader could believe.
           spans += 1;
 
-          const spanAttributes = (spanEntry as Record<string, unknown>)["attributes"] ?? [];
+          const span = spanEntry as Record<string, unknown>;
+          const spanAttributes = span["attributes"] ?? [];
           if (!Array.isArray(spanAttributes)) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
           const spanRefusal = attributeRefusal(spanAttributes, TRUSTED_SPAN_KEYS);
           if (spanRefusal !== undefined) return refuse(spanRefusal);
+
+          // Events and links carry their own attribute maps, and the allowlist
+          // for both is empty.
+          //
+          // Package 2 measured why this is here rather than assumed. A span's
+          // events were not inspected, and `keep_keys(span.attributes, …)` does
+          // not reach them, so a live run retained an `exception` event carrying
+          // `exception.message` and a full `exception.stacktrace` with host file
+          // paths — unbounded, unallowlisted, subject-influenced bytes sitting
+          // inside an artifact whose privacy bound never accounted for them.
+          //
+          // Nothing ERL2-C-171 derives comes from an event or a link, so nothing
+          // is lost by refusing every one of their attributes; and refusing here
+          // rather than only configuring the processor is the same discipline the
+          // span allowlist already follows. A record carrying an event attribute
+          // is a record the trusted pipeline did not minimize, whatever the
+          // collector configuration currently says.
+          const eventRefusal = childAttributeRefusal(span["events"], "name");
+          if (eventRefusal !== undefined) return refuse(eventRefusal);
+          const linkRefusal = childAttributeRefusal(span["links"], undefined);
+          if (linkRefusal !== undefined) return refuse(linkRefusal);
 
           let attributed = false;
           for (const value of spanValues(spanAttributes)) {
