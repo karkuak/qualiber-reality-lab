@@ -132,16 +132,38 @@ export const TRUSTED_TELEMETRY_REASONS = {
    */
   unminimized: "telemetry_trusted_record_unminimized_field",
   /**
-   * A span link arrived carrying attributes or a trace state.
+   * The artifact contains a span carrying at least one link, and this MVP
+   * cannot minimize link content at the pinned collector version.
    *
-   * Its own code because its cause is its own: `otelcol-contrib` v0.157.0 has
-   * no span-link OTTL context, so unlike every other surface here the collector
-   * cannot strip these before export. The refusal keeps subject-controlled
-   * bytes out of the artifact; what it cannot do is minimize a legitimately
-   * linked span, which is a stated limitation of the pinned image rather than a
-   * property of this grammar.
+   * Its own code because its cause is its own, and because a reader has to be
+   * able to tell it from every neighbour it would otherwise be confused with.
+   * This is **not** malformed data — the record parses and its shape is exactly
+   * what the collector emits. It is **not** a privacy violation — nothing
+   * leaked; the refusal is what stops one. It is **not** cross-run
+   * contamination, **not** an absence of telemetry, and emphatically **not** an
+   * authentic zero. It is a declared capability limit: `otelcol-contrib`
+   * v0.157.0 exposes no span-link OTTL context, so the trusted pipeline has no
+   * mechanism to remove link attributes or link trace state before export, and
+   * an artifact carrying links therefore cannot be minimized to the bound this
+   * channel's privacy claim rests on.
+   *
+   * Measured against the pinned image: `spanlink`, `link`, `links` and
+   * `span_link` are all `unknown context` in both the explicit and inferred
+   * forms; `set(span.links, [])` fails at runtime with
+   * `expects ptrace.SpanLinkSlice but got []interface {}`; indexed link paths
+   * are refused outright; and the `redaction` processor does not traverse links.
+   *
+   * The refusal is whole-artifact and deliberately not per-span. A linked span
+   * cannot be dropped and the rest counted: the count would then be a number
+   * this grammar chose rather than the length of the structure the collector
+   * wrote, which is the one property ADR-ERL2-038 §4 exists to hold. Partial
+   * credit here would be a forged count with an honest face.
+   *
+   * Closing it requires a collector version with a span-link context. That is an
+   * image-pin move with its own qualification and its own design review, and it
+   * is recorded as a follow-up rather than taken here.
    */
-  linkNotMinimized: "telemetry_trusted_record_link_not_minimized",
+  spanLinksUnsupported: "telemetry_trusted_record_span_links_unsupported",
 } as const;
 
 // -- the minimized record specification ---------------------------------------
@@ -225,15 +247,6 @@ const SHAPE = {
     removed: {
       name: TRUSTED_TELEMETRY_REASONS.unminimized,
       attributes: TRUSTED_TELEMETRY_REASONS.unminimized,
-    },
-  },
-  link: {
-    allowed: ["traceId", "spanId", "flags", "droppedAttributesCount"],
-    // The pinned collector cannot strip these (no span-link OTTL context), so
-    // unlike every other entry here the refusal is the only enforcement point.
-    removed: {
-      attributes: TRUSTED_TELEMETRY_REASONS.linkNotMinimized,
-      traceState: TRUSTED_TELEMETRY_REASONS.linkNotMinimized,
     },
   },
   attribute: {
@@ -383,6 +396,28 @@ function childRefusal(
     if (refusal !== undefined) return refusal;
   }
   return undefined;
+}
+
+/**
+ * Refuses a span that carries any link at all.
+ *
+ * The MVP capability boundary, and the one refusal in this grammar that is not
+ * about what the bytes contain but about what the pinned collector can do to
+ * them. The three accepted shapes are the three the trusted pipeline actually
+ * produces for an unlinked span: the key absent, the key present as an empty
+ * array, and nothing else.
+ *
+ * There is deliberately no way for a caller to declare links safe. The
+ * limitation is a property of the collector image the artifact was exported
+ * through, not of the run observing it, so no run-level assertion could be true;
+ * and an override would be the one lever a subject could aim at, since the
+ * subject is the OTLP producer and chooses whether to emit links at all.
+ */
+function spanLinkRefusal(links: unknown): string | undefined {
+  if (links === undefined || links === null) return undefined;
+  if (!Array.isArray(links)) return TRUSTED_TELEMETRY_REASONS.malformed;
+  if (links.length === 0) return undefined;
+  return TRUSTED_TELEMETRY_REASONS.spanLinksUnsupported;
 }
 
 function stringValuesOf(attributes: readonly unknown[], key: string): readonly string[] {
@@ -544,6 +579,22 @@ export function parseTrustedTelemetryRecords(
           if (spanShape === undefined) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
           const spanShapeRefusal = shapeRefusal(spanShape, SHAPE.span);
           if (spanShapeRefusal !== undefined) return refuse(spanShapeRefusal);
+
+          // Span links: an unsupported capability at this collector pin, and the
+          // refusal is placed here — before attributes, status, events and the
+          // marker scan — so that a linked artifact always refuses for the
+          // reason that actually blocks it. A linked span that also carries an
+          // oversized attribute would otherwise report the bound violation and
+          // send a reader to fix the wrong thing, and one belonging to another
+          // run would report cross-run contamination for an artifact that was
+          // never evaluable in the first place.
+          //
+          // Absent and empty both pass: a span with no links omits the key, and
+          // the pinned exporter's canonical empty representation is `[]`. Only a
+          // link that is actually there refuses.
+          const linkRefusal = spanLinkRefusal(spanShape["links"]);
+          if (linkRefusal !== undefined) return refuse(linkRefusal);
+
           // The count is the length of a structure, never a rendered number.
           // This is the whole difference from v1: there is no numeral in these
           // bytes that a subject could write and a reader could believe.
@@ -565,15 +616,14 @@ export function parseTrustedTelemetryRecords(
             if (statusRefusal !== undefined) return refuse(statusRefusal);
           }
 
-          // Events and links are now pure structure — a timestamp and a pair of
-          // identifiers. Nothing ERL2-C-171 derives comes from either, so nothing
-          // is lost by refusing every name, attribute map and trace state on
-          // them; and refusing here rather than only configuring the processor is
-          // the same discipline the span allowlist already follows.
+          // A span event is pure structure: a timestamp and a dropped count.
+          // Nothing ERL2-C-171 derives comes from one, so nothing is lost by
+          // refusing every name and attribute map on them; and refusing here
+          // rather than only configuring the processor is the same discipline
+          // the span allowlist already follows. Links are handled above, for a
+          // different reason — the processor *cannot* be configured for them.
           const eventRefusal = childRefusal(span["events"], SHAPE.event);
           if (eventRefusal !== undefined) return refuse(eventRefusal);
-          const linkRefusal = childRefusal(span["links"], SHAPE.link);
-          if (linkRefusal !== undefined) return refuse(linkRefusal);
 
           let attributed = false;
           for (const value of spanValues(spanAttributes)) {

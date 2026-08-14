@@ -193,17 +193,21 @@ const MINIMIZATION_MATRIX: readonly {
     }),
     reason: TRUSTED_TELEMETRY_REASONS.unminimized,
   },
+  // A link carrying subject content refuses on the capability limit rather than
+  // on the content, because the content is not what makes it unusable: this
+  // collector pin cannot minimize *any* link, so the artifact was never
+  // evaluable and the reason a reader needs is the one they can act on.
   {
     label: "link attribute carrying a token",
     bytes: recordWith({
       link: { attributes: [{ key: "session.token", value: { stringValue: HOSTILE } }] },
     }),
-    reason: TRUSTED_TELEMETRY_REASONS.linkNotMinimized,
+    reason: TRUSTED_TELEMETRY_REASONS.spanLinksUnsupported,
   },
   {
     label: "link trace state oversized",
     bytes: recordWith({ link: { traceState: HOSTILE } }),
-    reason: TRUSTED_TELEMETRY_REASONS.linkNotMinimized,
+    reason: TRUSTED_TELEMETRY_REASONS.spanLinksUnsupported,
   },
   // -- unknown keys at every nesting level ----------------------------------
   {
@@ -246,10 +250,13 @@ const MINIMIZATION_MATRIX: readonly {
     bytes: recordWith({ event: { unknownKey: HOSTILE } }),
     reason: TRUSTED_TELEMETRY_REASONS.unexpectedField,
   },
+  // No unknown-link-key row: there is no longer a link shape to be unknown
+  // against. Any link at all refuses on the capability limit before its keys are
+  // ever examined, which is the row below rather than an allowlist row.
   {
-    label: "unknown link key",
+    label: "a link carrying an unknown key",
     bytes: recordWith({ link: { unknownKey: HOSTILE } }),
-    reason: TRUSTED_TELEMETRY_REASONS.unexpectedField,
+    reason: TRUSTED_TELEMETRY_REASONS.spanLinksUnsupported,
   },
   {
     label: "unknown attribute key",
@@ -296,7 +303,9 @@ test("TRUSTED-REMEDIATION: the minimized shape the pinned collector emits stays 
       status: { code: 2 },
     },
     event: { droppedAttributesCount: 1 },
-    link: { flags: 1, droppedAttributesCount: 1 },
+    // Deliberately no link: the shape the trusted pipeline can actually produce
+    // for an evaluable artifact is an unlinked one, and that is what "the shape
+    // the pinned collector emits" now means for this MVP.
   });
   for (const [label, bytes] of [
     ["sparse", sparse],
@@ -313,19 +322,24 @@ test("TRUSTED-REMEDIATION: the minimized shape the pinned collector emits stays 
   }
 });
 
-// -- P2-2: span links, minimized consistently ---------------------------------
+// -- P2-2: span links are an unsupported MVP capability ------------------------
 
-test("TRUSTED-REMEDIATION: a link stripped to its identifiers is accepted, and counts are unmoved", () => {
-  // The consistency half of P2-2. The pinned collector has no span-link OTTL
-  // context, so the parser is the only enforcement point — but it must accept
-  // the shape a linked span reduces to, or every linked span is refused for its
-  // structure rather than for its payload.
+test("TRUSTED-REMEDIATION: a link stripped to its identifiers is still refused", () => {
+  // The disposition P2-2 was closed with, and the reversal of what this test
+  // used to assert. Accepting an identifier-only link was the availability half
+  // of a compromise that only worked if the collector could strip the *other*
+  // half — and at this pin it cannot strip any of it. A link whose payload
+  // happens to be absent in one artifact says nothing about the next one, so
+  // the capability, not the sample, is what the refusal is about.
+  //
+  // The full disposition is exercised in `trustedSpanLinks.test.ts`.
   const linked = recordWith({ link: { flags: 1, droppedAttributesCount: 1 } });
   const parsed = parseTrustedTelemetryRecords(linked, RUN_ID);
-  assert.equal(parsed.ok, true, "a minimized span link was refused");
-  const counts = (parsed as { counts: { spans: number; runAttributedRecords: number } }).counts;
-  assert.equal(counts.spans, 1, "a link moved the structural span count");
-  assert.equal(counts.runAttributedRecords, 1, "a link moved run attribution");
+  assert.equal(parsed.ok, false, "a span link was accepted at a pin that cannot minimize one");
+  assert.equal(
+    (parsed as { reasonCode: string }).reasonCode,
+    TRUSTED_TELEMETRY_REASONS.spanLinksUnsupported,
+  );
 });
 
 // -- P1-1: the false authentic zero -------------------------------------------
