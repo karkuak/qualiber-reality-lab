@@ -283,7 +283,16 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
         "the qualified subset is exactly two containers",
       );
       assert.deepEqual([...live.networks], [`${run.project}-net`]);
-      assert.equal(result.body.data?.["resource_count"], 5);
+      // Six, not five: the project, the network, both containers, the published
+      // port — and, since package 2, the run's trusted telemetry volume, which
+      // the driver owns and therefore inventories and reaps.
+      //
+      // `157cf04` admitted the volume into the live *driver contract* test and
+      // did not reach this one, so this expectation stayed at the pre-package-2
+      // inventory and this suite has been failing here since. Found by running
+      // the broad suite during the package 2 remediation, and reproduced at
+      // `8485b8a` itself to confirm it is not a remediation regression.
+      assert.equal(result.body.data?.["resource_count"], 6);
       // Live execution really was linux/arm64-or-amd64, and the container really
       // is the digest the lock pins for it.
       const platform = docker(["version", "--format", "{{.Server.Os}}/{{.Server.Arch}}"]).stdout.trim();
