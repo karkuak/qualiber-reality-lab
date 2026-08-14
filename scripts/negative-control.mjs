@@ -2925,24 +2925,134 @@ export const CONTROLS = [
     expect: "fail",
   },
   {
+    // The anchor moved from `this.created` to the durable read, because the
+    // property moved with it. "Only a volume this channel created" used to mean
+    // "only while the creating process is still alive", which is why every real
+    // multi-process teardown left the volume behind. It now means "only a volume
+    // this run holds a durable, capability-bearing handle for", and this is the
+    // line that makes the handle load-bearing: stop reading it and cleanup is
+    // blind again, exactly as it was.
     id: "trusted-channel-cleanup-scoped-to-created",
-    what: "cleanup removes only a volume this channel created, so a refused pre-existing volume is never deleted by the run that refused it",
+    what: "cleanup acts only on a volume this run holds a durable ownership handle for, so a refused pre-existing volume is never deleted and a volume created in an earlier process is still removable (Package 2 closure)",
     file: "packages/core/src/environment/trustedChannel.ts",
-    find: "    if (!this.created) {",
-    replace: "    if (false) {",
-    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
-    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    find: "      handle = this.ownership.read();",
+    replace: "      handle = undefined;",
+    tests: [
+      "tests/dist/adversarial/trustedOwnership.test.js",
+      "tests/dist/integration/trustedCrossProcess.test.js",
+    ],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
     mustFailCases: [
-      "TRUSTED-CHANNEL: a volume of this run's name that already exists is refused, never adopted",
+      "TRUSTED-OWNERSHIP: ownership is read from the handle, never from this object's memory",
+      "TRUSTED-OWNERSHIP: a successful removal tombstones the handle",
     ],
     expect: "fail",
   },
   {
+    // The handle is the only thing standing between a second process and a
+    // guessed deletion, so a handle that verifies without being sealed is a
+    // capability anyone with write access to a temporary directory can mint.
+    id: "trusted-channel-ownership-handle-integrity",
+    what: "an ownership handle is accepted only when it hashes to what it claims, so an edited or hand-written handle cannot authorize removing a resource (Package 2 closure)",
+    file: "packages/core/src/environment/trustedOwnership.ts",
+    find: "  return coreHash(core) === claimed;",
+    replace: "  return claimed === claimed;",
+    tests: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFailCases: ["TRUSTED-OWNERSHIP: a tampered handle is not a handle"],
+    expect: "fail",
+  },
+  {
+    // The crash-window ordering. Persisting the intent *after* the resource
+    // exists reopens the one window that cannot be recovered from: a volume
+    // nobody can prove they own.
+    id: "trusted-channel-ownership-intent-precedes-creation",
+    what: "the ownership intent is durable before the volume is created, so a crash between the two leaves a recoverable handle rather than an unattributable resource (Package 2 closure)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    this.ownership.write(intent);",
+    replace: "    void intent;",
+    tests: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFailCases: [
+      "TRUSTED-OWNERSHIP: a crash after the intent and before the volume is recoverable",
+    ],
+    expect: "fail",
+  },
+  {
+    // Label validation, immediately before removal.
+    id: "trusted-channel-ownership-labels-verified",
+    what: "a volume is removed only when its label set is exactly the one this run's handle requires, so a resource carrying this run's name and another run's labels is never deleted (Package 2 closure)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (!labelsMatch(handle.labels, observed)) return false;",
+    replace: "    if (false) return false;",
+    tests: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFailCases: [
+      "TRUSTED-OWNERSHIP: a volume with the right name and wrong labels survives",
+    ],
+    expect: "fail",
+  },
+  {
+    // Capability validation. Separate from the labels because it is a separate
+    // claim: the labels say what the resource is, and this says the remover
+    // holds the value that created it.
+    id: "trusted-channel-ownership-capability-verified",
+    what: "a volume is removed only when its ownership label carries the digest of the capability in this run's handle, so a resource spoofed under a predictable name is never deleted (Package 2 closure)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find:
+      "    if (observed?.[TRUSTED_VOLUME_LABEL_KEYS.ownership] !== trustedCapabilityDigest(handle.capability)) {",
+    replace: "    if (false) {",
+    tests: [
+      "tests/dist/adversarial/trustedOwnership.test.js",
+      "tests/dist/integration/trustedCrossProcess.test.js",
+    ],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFailCases: [
+      "TRUSTED-OWNERSHIP: a volume with the right labels and the wrong capability survives",
+    ],
+    expect: "fail",
+  },
+  {
+    // The one place this module removes a resource it did not watch being
+    // created. Widening it is how a recovery path becomes a garbage collector.
+    id: "trusted-channel-ownership-reconciliation-exact",
+    what: "a pending ownership intent reconciles only the exact resource it names and proves, so recovery never removes a volume the intent does not describe (Package 2 closure)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (!this.resourceProvenOwned(intent)) return false;",
+    replace: "    if (false) return false;",
+    tests: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFailCases: [
+      "TRUSTED-OWNERSHIP: reconciliation refuses a mismatched resource rather than deleting it",
+    ],
+    expect: "fail",
+  },
+  {
+    // Without the tombstone a destroyed run keeps a live claim on a name, and a
+    // later resource under that name inherits it.
+    id: "trusted-channel-cleanup-tombstones-ownership",
+    what: "a successful removal retires the ownership handle, so a repeated destroy is idempotent and a live claim can never reach a resource created later under the same name (Package 2 closure)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find:
+      "    this.ownership.write(sealTrustedVolumeOwnership({ ...withoutHash(handle), phase: \"released\" }));\n    return { attempted: true, removed: true, surviving: [] };",
+    replace: "    return { attempted: true, removed: true, surviving: [] };",
+    tests: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFailCases: [
+      "TRUSTED-OWNERSHIP: a successful removal tombstones the handle",
+      "TRUSTED-OWNERSHIP: repeated destroy is idempotent and cannot reach a later resource",
+    ],
+    expect: "fail",
+  },
+  {
+    // The anchor moved with the code: the post-removal re-check is now one
+    // expression rather than a second `volumeExists` block, and the mutation
+    // says the same thing — treat every removal as having succeeded.
     id: "trusted-channel-cleanup-failure-reported",
     what: "a volume that is still present after a failed removal is reported as surviving rather than as removed, so cleanup outcome stays an observation (ADR-ERL2-038)",
     file: "packages/core/src/environment/trustedChannel.ts",
-    find: "    if (!this.volumeExists()) {",
-    replace: "    if (true) {",
+    find: "    if (removed.status === 0 || !this.volumeExists()) return this.releaseHandle(handle);",
+    replace: "    if (true) return this.releaseHandle(handle);",
     tests: ["tests/dist/adversarial/trustedChannel.test.js"],
     mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
     mustFailCases: [
@@ -3046,6 +3156,26 @@ export const CONTROLS = [
     mustFail: ["tests/dist/adversarial/trustedRemediation.test.js"],
     mustFailCases: [
       "TRUSTED-REMEDIATION: a non-regular source entry is refused before anything dereferences it",
+    ],
+    expect: "fail",
+  },
+  {
+    // P2-2, closed as an explicitly unsupported MVP capability. The pinned
+    // collector has no span-link OTTL context, so nothing upstream of this line
+    // can remove link content — which makes this the only enforcement point
+    // there is, and a silent acceptance here retains subject-controlled bytes
+    // the artifact's privacy bound never accounted for.
+    id: "trusted-telemetry-span-links-unsupported",
+    what: "an artifact carrying any nonempty span link is refused whole with its own capability reason, so no linked span contributes evidence at a collector pin that cannot minimize link content (Package 2 closure P2-2)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "  return TRUSTED_TELEMETRY_REASONS.spanLinksUnsupported;",
+    replace: "  return undefined;",
+    tests: ["tests/dist/adversarial/trustedSpanLinks.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedSpanLinks.test.js"],
+    mustFailCases: [
+      "TRUSTED-LINKS: any nonempty link refuses the artifact with the capability reason",
+      "TRUSTED-LINKS: a mixed artifact contributes nothing, not a reduced count",
+      "TRUSTED-LINKS: the sealed record refuses the gate and retains no link bytes",
     ],
     expect: "fail",
   },
