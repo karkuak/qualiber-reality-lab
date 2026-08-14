@@ -2945,14 +2945,27 @@ export const CONTROLS = [
     file: "packages/core/src/environment/trustedChannel.ts",
     find: "    return handle;",
     replace: "    return undefined;",
-    tests: [
-      "tests/dist/adversarial/trustedOwnership.test.js",
-      "tests/dist/integration/trustedCrossProcess.test.js",
-    ],
+    // Scoped to the ownership suite rather than to both, and every case it kills
+    // is declared. This is the most central guard in the module — withhold the
+    // handle and nothing downstream can prove anything — so a broad kill is the
+    // honest result rather than a sign the mutation is too coarse. Declaring the
+    // full list is what keeps it a measurement: an undeclared failure would be
+    // scored as collateral and the control would not be credited at all. The
+    // cross-process suite is left to the controls whose mutations discriminate
+    // within it.
+    tests: ["tests/dist/adversarial/trustedOwnership.test.js"],
     mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
     mustFailCases: [
-      "TRUSTED-OWNERSHIP: ownership is read from the handle, never from this object's memory",
+      "TRUSTED-OWNERSHIP: a crash after the volume and before confirmation reconciles the exact resource",
+      "TRUSTED-OWNERSHIP: a failed removal keeps the handle and reports the daemon's words",
+      "TRUSTED-OWNERSHIP: a live claim is never overwritten by a second provision",
+      "TRUSTED-OWNERSHIP: a removal that succeeded without a tombstone is recovered honestly",
       "TRUSTED-OWNERSHIP: a successful removal tombstones the handle",
+      "TRUSTED-OWNERSHIP: a volume with the right labels and the wrong capability survives",
+      "TRUSTED-OWNERSHIP: a volume with the right name and wrong labels survives",
+      "TRUSTED-OWNERSHIP: ownership is read from the handle, never from this object's memory",
+      "TRUSTED-OWNERSHIP: reconciliation refuses a mismatched resource rather than deleting it",
+      "TRUSTED-OWNERSHIP: repeated destroy is idempotent and cannot reach a later resource",
     ],
     expect: "fail",
   },
