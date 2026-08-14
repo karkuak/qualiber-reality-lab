@@ -405,6 +405,23 @@ test("TRUSTED-AUTHORITY: the migration truth table, observed at the gate", () =>
     ["mixed-version fields", [mutate(v2, (d) => { d["log_excerpt"] = "x"; })], false],
     ["nothing retained", [], false],
     ["two v2 records", [v2, v2], false],
+    // Self-consistent in every way the authority decision checks — its marker
+    // *is* its run id — and still not this run's. The authority answers "which
+    // record governs"; whether the governing record is ours is the gate's
+    // question, and this row is what keeps it one.
+    [
+      "a wholly self-consistent v2 belonging to another run",
+      [
+        observedV2({
+          bytes: trustedRecords([trustedRecord({ markers: [FIXTURE_OTHER_RUN_ID] })]),
+          runId: FIXTURE_OTHER_RUN_ID,
+          spans: 1,
+          serviceNames: ["quote"],
+          runAttributedRecords: 1,
+        }),
+      ],
+      false,
+    ],
   ];
   for (const [why, retained, eligible] of rows) {
     assert.equal(

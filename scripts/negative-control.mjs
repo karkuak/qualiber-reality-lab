@@ -447,12 +447,18 @@ export const CONTROLS = [
       "  );",
     ].join("\n"),
     replace: ["  void observation;", "  return String(1) === String(1);"].join("\n"),
-    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
-    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    // ADR-ERL2-038 R8 moved the suite, not the property. The arithmetic is
+    // unchanged and still decides whether a declared run is satisfied; what
+    // changed is that only an ERL2-C-171 record now reaches it, so the cases
+    // that exercise it live with the v2 fixtures. Its v1 cases were not
+    // dropped — they still run, and they still fail the gate, one step earlier
+    // and for a stronger reason.
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
     mustFailCases: [
-      "ATTR-TELEM: a declared run with an absent observation fails the gate",
-      "ATTR-TELEM: a declared run with zero run-attributed records fails the gate",
-      "ATTR-TELEM: another run's observation, a foreign marker, or a second observation fails the gate",
+      "TRUSTED-AUTHORITY: an authentic zero governs, and authorizes no positive claim",
+      "TRUSTED-AUTHORITY: an absent v2 governs its own refusal rather than being ignored",
+      "TRUSTED-AUTHORITY: the migration truth table, observed at the gate",
     ],
     expect: "fail",
   },
