@@ -2886,8 +2886,19 @@ export const CONTROLS = [
     id: "trusted-telemetry-field-bound-enforced",
     what: "an attribute value longer than the pre-export truncation bound is refused, so the privacy bound is measured rather than assumed (ADR-ERL2-038 R2)",
     file: "packages/core/src/environment/trustedTelemetry.ts",
-    find: "      return TRUSTED_TELEMETRY_REASONS.fieldOverBound;",
-    replace: "      return undefined;",
+    // Anchored on the comparison rather than on the bare `return`. Package 2
+    // added a second `fieldOverBound` return for a span event's name, at a
+    // deeper indentation — which *contains* the one-line anchor as a substring,
+    // so the patch target stopped being unique and the harness said so instead
+    // of patching the wrong one.
+    find: [
+      "    if (stringValue.length > TRUSTED_TELEMETRY_MAX_FIELD_CHARS) {",
+      "      return TRUSTED_TELEMETRY_REASONS.fieldOverBound;",
+    ].join("\n"),
+    replace: [
+      "    if (false) {",
+      "      return TRUSTED_TELEMETRY_REASONS.fieldOverBound;",
+    ].join("\n"),
     tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
     mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
     mustFailCases: [
