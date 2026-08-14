@@ -318,3 +318,239 @@ controls. Declaring it publishes it rather than excusing it.
 - `linux/amd64` volume-option qualification is **outstanding**
 - the full campaign, the clean gate and `evidence:update` remain **not run**
 - exploratory Qualiber testing is **still not authorized** (ADR-ERL2-038 §11)
+
+---
+
+## 9. Remediation — the four defects an independent review found (2026-08-14)
+
+The independent Package 2 substrate and security review
+(`reality-lab-package2-substrate-and-security-review.md`,
+`sha256:5cea081d…c85028`) returned **CHANGES REQUIRED**. It approved the
+architecture in substance — physical separation, volume isolation, exact-byte
+hashing, the failure matrix and the lock — and found four implementation
+defects. This section records their closure. It **appends**; nothing above is
+rewritten, and no historical evidence changed.
+
+### P0-1 — minimization was not recursive
+
+The review ran one hostile OTLP payload through the pinned collector with this
+package's own trusted pipeline. It correctly removed `host.name`, both
+`session.token` attributes and the exception stack trace. It **retained**, whole
+and unbounded, in an artifact the parser then **accepted**:
+
+| surface | what it carried |
+|---|---|
+| `scope.attributes` | a `session.token`, 1 200 chars |
+| `span.status.message` | `/Users/…/quote.php:42` + 1 200 chars |
+| `span.name` | a URL with a token |
+| `span.traceState` | subject-settable via the inbound `tracestate` header |
+| `resourceSpans[].schemaUrl` | 1 200 chars |
+| `scopeSpans[].schemaUrl` | 1 200 chars |
+
+The subject is the OTLP producer, so every one is subject-controlled. Same class
+as the span-event leak §2 records — a second attribute map, or a plain string,
+that the allowlist did not name.
+
+**The allowlist is now the whole record.** `transform/trusted` gained the
+`scope` context and statements removing the span name, status message, trace
+state, event name and both schema URLs. Removal rather than bounding, wherever
+no ERL2-C-171 count reads the field: a bound keeps a privacy-bearing field for a
+reader that does not exist.
+
+`error_mode` is now **`propagate`**. `ignore` is precisely how
+`set(span.events, [])` became a silent no-op, and every statement here is
+load-bearing for a privacy bound, so one that cannot be applied must stop the
+batch rather than quietly export more.
+
+Measured against the pinned image, before → after on the same hostile payload:
+
+```
+8 118 B  →  695 B      13/13 sentinels removed
+spans 1 → 1            run attribution 1/1 preserved
+```
+
+The retained record is now `service.name`, `url.full`, and structure.
+
+### The recursive allowlist, stated exactly
+
+| level | retained | removed | unknown key |
+|---|---|---|---|
+| document | `resourceSpans` only | — | refused (`malformed`) |
+| resourceSpan | `resource`, `scopeSpans` | `schemaUrl` | refused |
+| resource | `attributes` (`service.name`, ≤512), `droppedAttributesCount` | — | refused |
+| scopeSpan | `scope`, `spans` | `schemaUrl` | refused |
+| scope | `droppedAttributesCount` | `name`, `version`, `attributes` | refused |
+| span | ids, `flags`, `kind`, timestamps, `attributes` (`url.full`, ≤512), dropped counts, `events`, `links`, `status` | `name`, `traceState` | refused |
+| status | `code` | `message` | refused |
+| event | `timeUnixNano`, `droppedAttributesCount` | `name`, `attributes` | refused |
+| link | `traceId`, `spanId`, `flags`, `droppedAttributesCount` | `attributes`, `traceState` | refused |
+| attribute | `key`, `value` | — | refused |
+
+Forward compatibility is **fail-closed and versioned**, not implicit key
+tolerance: a collector that starts emitting a new field changes the retained
+bytes, and the privacy bound is a claim about exactly those bytes. The refusal
+is the signal to review the field, not something to route around.
+
+`url.full` remains the disclosed bounded MVP limit, unchanged and still the one
+place a subject-derived value may appear.
+
+### P1-1 — a settle timeout could become an authoritative zero
+
+`close` ended its budget by finalizing whatever was stable, and the producer read
+that as an observation. The review reproduced the consequence: telemetry arriving
+after roughly twenty-two seconds was sealed as `evidence: observed, spans: 0` —
+byte-identical to a genuine zero and indistinguishable from it by any reader. The
+comment beside that line said asserting "the collector received nothing" when it
+did is intolerable, and the next line did it.
+
+**The distinction is in the type now.** A freeze carries `settledBy:
+"attribution" | "budget"`, and exactly two things reach the `observed`
+constructor:
+
+| condition | result |
+|---|---|
+| this run's telemetry demonstrably arrived | `observed`, positive |
+| run declared `zero-eligible` before observation, artifact empty | `observed` zero |
+| budget expired, artifact empty, telemetry expected | `absent` · `telemetry_channel_expected_telemetry_missing` |
+| budget expired, artifact non-empty, never attributed | `absent` · `telemetry_channel_settle_timeout` |
+| foreign run's telemetry present | `absent` · `telemetry_foreign_run_record_present` |
+| no trusted file / crash / copy failure | `absent`, as before |
+
+Elapsed time, byte stability and an absence of spans justify nothing on their
+own. `EXPECTS_TELEMETRY` is the default, so a caller that says nothing gets the
+fail-closed answer.
+
+**Two stable reads were never quiescence, and §4 should not have implied
+otherwise.** They establish that the bytes stopped moving and nothing more. What
+ends the wait positively is attribution; what ends it otherwise is a budget, and
+a budget now yields an absence with a cause.
+
+**Zero-eligibility is a typed input, and the one seam package 3 must supply.**
+`TrustedChannelZeroEligibility` is bound *before* observation, by the caller that
+knows the scenario's contract. Package 2 defines it and never wires it —
+`environmentRun` is untouched.
+
+**Residual, stated rather than hidden.** A run *declared* zero-eligible whose
+telemetry arrives late still freezes a zero. That is inside its declared
+contract, and no adversary can use it to bypass a positive telemetry requirement
+because such a run is `expects-telemetry` and gets an absence. A stronger proof —
+a quiesced source lifecycle plus a collector-derived completion signal — needs
+lifecycle information Package 2 does not have. Deferred to Package 3 explicitly
+rather than synthesized here.
+
+### P2-1 — the copy path followed a symlink
+
+The review planted a `traces.jsonl` symlink to `/etc/passwd`. `docker cp`
+preserved it, `readdirSync` reported one entry with the expected name, and
+`readFileSync` **followed it** — 9 350 bytes of the host's password file arrived
+where the artifact should have been. Every check ran on the host, after the bytes
+were materialised, against a name that told the truth.
+
+`docker cp <container>:<path> -` answers with a **tar stream**, and a tar header
+carries the entry type as a field. The channel now reads that archive and
+classifies the entry from its own header, before anything is opened — and because
+the payload rides in the same archive, the entry that is type-checked is the
+entry the bytes come from. There is no window between the two, because there is
+no second lookup.
+
+Nothing is extracted. No name the collector chose ever becomes a path on this
+host. Measured live against the exact reproduction:
+
+| source entry | result |
+|---|---|
+| regular file | frozen, bytes are the entry's |
+| symlink → `/etc/passwd` | `telemetry_channel_source_entry_not_regular` |
+| relative symlink, dangling symlink | same |
+| directory, FIFO, char/block device, undefined ustar type | same |
+| two entries | `telemetry_channel_unexpected_file` |
+| unexpected filename, empty directory | `telemetry_channel_artifact_missing` |
+
+Absolute names and `..` traversal are refused, though with no extraction they had
+nowhere to go. A hard link is refused when tar marks it type `1`; when its target
+is outside the archive tar emits an ordinary regular file, and because a hard link
+cannot cross devices it can only ever reference bytes already inside the trusted
+tmpfs — measured, and not an escape.
+
+The Docker-daemon administrator remains outside the threat boundary. What changes
+is that a collector compromise, a configuration defect or a future topology change
+can no longer turn a name into a host file read.
+
+### P2-2 — span links: **partially closed, and the residue is stated**
+
+The parser forbade link attributes the collector never stripped, so legitimately
+linked instrumentation refused an otherwise valid artifact.
+
+Measured against the pinned image, `otelcol-contrib` v0.157.0 **cannot** reach a
+span link:
+
+- `spanlink`, `link`, `links`, `span_link` are all `unknown context`, in the
+  explicit `context:` form and the inferred flat form;
+- `set(span.links, [])` parses and fails at runtime —
+  `expects ptrace.SpanLinkSlice but got []interface {}` — the same silent-no-op
+  class as `set(span.events, [])`, now loud under `propagate`;
+- `keep_keys(span.links[0].attributes, [])` is refused: links do not support
+  indexing;
+- the `redaction` processor reaches scope and span-event attributes but does not
+  traverse links.
+
+Moving the collector pin is out of scope for this remediation.
+
+So: **privacy is closed, availability is not.** The parser refuses link
+attributes and link trace state with their own code
+(`telemetry_trusted_record_link_not_minimized`), and accepts the minimized link
+shape — identifiers, flags, dropped counts — with span count and run attribution
+unmoved. No unbounded subject value survives. A span carrying link attributes
+still refuses the artifact, and closing that needs a collector version with a
+span-link context, which is an image-pin move and its own design review.
+
+### Controls
+
+Discovery **184 → 192**. Eight added, none removed, renamed or reordered.
+
+| control | boundary |
+|---|---|
+| `trusted-telemetry-unknown-key-refused` | parser: unknown key at any depth |
+| `trusted-telemetry-unminimized-field-refused` | parser: a stripped field arriving with content |
+| `trusted-channel-settle-timeout-is-not-a-zero` | budget exhaustion cannot reach the observed constructor |
+| `trusted-channel-zero-requires-declared-eligibility` | a zero needs a declaration bound before observation |
+| `trusted-channel-source-entry-must-be-regular` | archive classification of a symlink |
+| `trusted-channel-scope-minimized` | collector: scope statements |
+| `trusted-channel-span-fields-minimized` | collector: span name / status message / trace state |
+| `trusted-channel-minimization-fails-closed` | collector: `error_mode: propagate` |
+
+`trusted-telemetry-event-attributes-refused` kept its meaning and moved its
+anchor and named case: the event name is removed now rather than bounded.
+
+One control had to be re-anchored after it **survived its own mutation**.
+`trusted-channel-source-entry-must-be-regular` first targeted the channel's
+`entry.type !== "regular-file"` guard, which is redundant — the archive reader
+attaches no payload to a non-regular entry, so the guard refuses twice and
+removing half of it changes no outcome. The redundancy is worth keeping; pointing
+a control at the redundant half is not. It is anchored on the reader's typeflag
+table, where the classification actually happens. Recorded because a control that
+measures nothing is worse than one that does not exist.
+
+### Configuration and lock
+
+| file | before | after |
+|---|---|---|
+| `erl2-otelcol-extras.yaml` | `sha256:c206e406…5018595f` | `sha256:0468ab32…7a50f8c2` |
+| lock `core_hash` | `sha256:be7ff2fc…6307efe4` | `sha256:a815e35f…c7152ea2` |
+
+`erl2-overlay.yaml` is unchanged. Re-locked through `--relock-config`. **No image
+pin moved, no archive, SBOM, SPDX or provenance record changed**, and the
+collector digest is still `sha256:1fef9f07…98ea6`. Signer unchanged and still not
+an independent authority. `recorded_at` moved, as a re-lock requires.
+
+### Status after remediation
+
+- P0-1 **closed** — recursive allowlist, both enforcement points, measured live
+- P1-1 **closed** — a timeout is an absence with a cause; a zero needs a
+  declaration; residual zero-eligible case stated and deferred
+- P2-1 **closed** — classification before dereference, nothing extracted
+- P2-2 **partially closed** — privacy closed, availability blocked on the pinned
+  collector version
+- `environmentRun` **untouched**; C-160 still authoritative there; Package 3
+  unchanged in scope
+- the full campaign, the clean gate and `evidence:update` remain **not run**
+- Package 3 remains **blocked** pending focused re-review
