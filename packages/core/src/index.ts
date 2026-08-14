@@ -159,6 +159,14 @@ export {
   type TelemetryWindowDecision,
 } from "./environment/telemetryObservation.js";
 export {
+  readTrustedArchive,
+  unsafeArchiveName,
+  TAR_ENTRY_TYPES,
+  type TrustedArchiveEntry,
+  type TrustedArchiveRead,
+} from "./environment/trustedArchive.js";
+export {
+  EXPECTS_TELEMETRY,
   buildTrustedTelemetryObservation,
   observeTrustedTelemetry,
   trustedFreezeRoot,
@@ -182,6 +190,8 @@ export {
   type TrustedChannelFreeze,
   type TrustedChannelOptions,
   type TrustedChannelProvision,
+  type TrustedChannelSettleCause,
+  type TrustedChannelZeroEligibility,
   type TrustedTelemetryMaterial,
   type VerifiedTrustedCollector,
 } from "./environment/trustedChannel.js";
@@ -252,6 +262,7 @@ export {
   type DockerCli,
   type DockerInvocation,
   type DockerResult,
+  type DockerBinaryResult,
 } from "./environment/dockerCli.js";
 export {
   fileSha256,

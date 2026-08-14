@@ -22,6 +22,7 @@ import { fileURLToPath } from "node:url";
 import os from "node:os";
 import path from "node:path";
 import { validateContract, type AttributableTelemetryObservationV2 } from "@erl2/contracts";
+import { tarArchive, trustedDirectoryArchive } from "../support/tarArchive.js";
 import { coreHash, coreOf } from "@erl2/integrity";
 import {
   attributableTelemetryGatePassed,
@@ -41,6 +42,7 @@ import {
   TRUSTED_TELEMETRY_MAX_FIELD_CHARS,
   type DockerInvocation,
   type DockerResult,
+  type DockerBinaryResult,
   type TrustedChannelBinding,
   type VerifiedTrustedCollector,
 } from "@erl2/core";
@@ -83,6 +85,8 @@ function record(marker: string, spans = 1, service = "quote"): string {
 }
 
 interface StubOptions {
+  /** A verbatim archive, for entry-type cases a file map cannot express. */
+  readonly archive?: Buffer;
   /** The trusted directory's contents, by file name. `undefined` means no directory. */
   readonly files?: Record<string, string | Buffer> | undefined;
   /** Successive directory states, one per `docker cp`. Models bytes still arriving. */
@@ -96,6 +100,7 @@ interface StubOptions {
 
 interface Stub {
   run(invocation: DockerInvocation): DockerResult;
+  runBinary(invocation: DockerInvocation): DockerBinaryResult;
   readonly commands: string[][];
   copies: number;
 }
@@ -129,21 +134,31 @@ function stubDocker(options: StubOptions = {}): Stub {
         return ok();
       }
       if (args[0] === "cp") {
-        if (options.copyFails === true) return no("stub: copy refused");
-        const state =
-          options.sequence === undefined
-            ? options.files
-            : (options.sequence[Math.min(stub.copies, options.sequence.length - 1)] ?? undefined);
-        stub.copies += 1;
-        if (state === undefined) return no("Could not find the file");
-        const destination = args[2] as string;
-        mkdirSync(destination, { recursive: true, mode: 0o700 });
-        for (const [name, bytes] of Object.entries(state)) {
-          writeFileSync(path.join(destination, name), bytes);
-        }
-        return ok();
+        // The channel reads the archive through `runBinary`; a text `cp` here
+        // would mean the caller took a path that cannot classify entry types.
+        return no("stub: cp must be read as an archive");
       }
       return no(`stub: unhandled ${args.join(" ")}`);
+    },
+    runBinary(invocation: DockerInvocation): DockerBinaryResult {
+      const args = [...invocation.args];
+      stub.commands.push(args);
+      if (args[0] !== "cp") {
+        return { args, status: 1, stdout: Buffer.alloc(0), stderr: "stub: unhandled", timedOut: false };
+      }
+      if (options.copyFails === true) {
+        return { args, status: 1, stdout: Buffer.alloc(0), stderr: "stub: copy refused", timedOut: false };
+      }
+      const state =
+        options.sequence === undefined
+          ? options.files
+          : (options.sequence[Math.min(stub.copies, options.sequence.length - 1)] ?? undefined);
+      stub.copies += 1;
+      // A stopped collector's tmpfs is gone, and `docker cp` of the directory
+      // answers with an empty archive rather than an error — measured.
+      const archive =
+        options.archive ?? trustedDirectoryArchive(state ?? {});
+      return { args, status: 0, stdout: archive, stderr: "", timedOut: false };
     },
   };
   return stub;
@@ -268,12 +283,20 @@ test("TRUSTED-CHANNEL: a missing artifact and a failed copy stay different refus
   );
   // A copy that could not be taken at all is a different fact, and stays one:
   // "I could not look" must not be reported as "I looked and there was nothing".
-  for (const options of [{ files: undefined }, { copyFails: true }]) {
-    assert.equal(
-      (channelFor(options).channel.close(COLLECTOR) as { reasonCode: string }).reasonCode,
-      TRUSTED_CHANNEL_REASONS.copyFailed,
-    );
-  }
+  assert.equal(
+    (channelFor({ copyFails: true }).channel.close(COLLECTOR) as { reasonCode: string }).reasonCode,
+    TRUSTED_CHANNEL_REASONS.copyFailed,
+  );
+  // An archive the daemon sent but this reader cannot frame is also "I could not
+  // look" — truncated headers are not an empty trusted directory.
+  assert.equal(
+    (
+      channelFor({ archive: Buffer.from("not a tar stream at all") }).channel.close(
+        COLLECTOR,
+      ) as { reasonCode: string }
+    ).reasonCode,
+    TRUSTED_CHANNEL_REASONS.artifactMissing,
+  );
 });
 
 test("TRUSTED-CHANNEL: bytes that never stop moving are refused, never half-frozen", () => {
@@ -331,12 +354,16 @@ test("TRUSTED-CHANNEL: an artifact over the retention bound fails closed and is 
 // -- the material and the record ----------------------------------------------
 
 test("TRUSTED-CHANNEL: an empty artifact is an authentic observed zero, not an absence", () => {
+  // Only for a run whose contract permitted zero, and only because that was
+  // bound before the channel was observed. The same empty file for a run that
+  // expects telemetry is a refusal — see the settle-semantics test below.
   const { channel } = channelFor({ files: { [TRUSTED_CHANNEL_FILE_NAME]: "" } });
   const material = observeTrustedTelemetry({
     channel,
     collector: COLLECTOR,
     binding: BINDING,
     marker: RUN_ID,
+    zeroEligibility: { kind: "zero-eligible", justification: "scenario emits no telemetry" },
   });
   assert.equal(material.evidence, "observed");
   const observation = buildTrustedTelemetryObservation({
@@ -513,7 +540,7 @@ test("TRUSTED-CHANNEL: a sensitive attribute in the retained bytes refuses with 
   }
 });
 
-test("TRUSTED-CHANNEL: a span event's attributes are refused, and its name is bounded", () => {
+test("TRUSTED-CHANNEL: a span event's attributes and name are both refused", () => {
   // The hole package 2 measured: `keep_keys(span.attributes, …)` does not reach
   // a span's events, and a live run retained an `exception` event carrying a
   // full stack trace with host file paths.
@@ -545,28 +572,31 @@ test("TRUSTED-CHANNEL: a span event's attributes are refused, and its name is bo
   assert.equal(refused.ok, false, "a stack trace survived minimization into the artifact");
   assert.equal(
     (refused as { reasonCode: string }).reasonCode,
-    "telemetry_trusted_record_unexpected_field",
+    "telemetry_trusted_record_unminimized_field",
   );
 
-  // A minimized event — name and timestamp, no attributes — is the shape the
-  // trusted pipeline actually produces, and it must remain readable.
+  // A minimized event — a timestamp and nothing else — is the shape the trusted
+  // pipeline now actually produces, and it must remain readable. The remediation
+  // removes the event name rather than bounding it: no ERL2-C-171 count reads it,
+  // and a bound would keep an instrumentation-chosen string for no reader.
   const minimized = `${JSON.stringify({
     resourceSpans: [
       {
         resource: { attributes: [{ key: "service.name", value: { stringValue: "quote" } }] },
-        scopeSpans: [{ spans: [{ attributes: [], events: [{ timeUnixNano: "1", name: "exception" }] }] }],
+        scopeSpans: [{ spans: [{ attributes: [], events: [{ timeUnixNano: "1" }] }] }],
       },
     ],
   })}\n`;
   assert.equal(parseTrustedTelemetryRecords(minimized, RUN_ID).ok, true);
 
-  // An unbounded event name is bounded like every other retained string.
-  const longName = minimized.replace('"name":"exception"', `"name":"${"e".repeat(600)}"`);
-  const bounded = parseTrustedTelemetryRecords(longName, RUN_ID);
-  assert.equal(bounded.ok, false);
+  // An event name is now refused outright, at any length, because the pipeline
+  // is configured to remove it.
+  const named = minimized.replace('"timeUnixNano":"1"', '"timeUnixNano":"1","name":"exception"');
+  const namedResult = parseTrustedTelemetryRecords(named, RUN_ID);
+  assert.equal(namedResult.ok, false);
   assert.equal(
-    (bounded as { reasonCode: string }).reasonCode,
-    "telemetry_trusted_record_field_exceeds_bound",
+    (namedResult as { reasonCode: string }).reasonCode,
+    "telemetry_trusted_record_unminimized_field",
   );
 });
 
@@ -710,7 +740,10 @@ test("TRUSTED-CHANNEL: the freeze copies are working material and do not outlive
   });
   channel.provision();
   assert.equal(channel.close(COLLECTOR).frozen, true);
-  assert.ok(readdirSync(root).length > 0, "the freeze took no copy");
+  // The freeze reads `docker cp` as an archive on stdout and never extracts it,
+  // so the corrected copy path materialises nothing at all — which is stronger
+  // than "the copies are cleaned up", and is what removes the symlink primitive.
+  assert.equal(readdirSync(root).length, 0, "the freeze wrote to the filesystem");
   channel.cleanup();
   // The evidence is the bytes retained inside the record, never a path on disk.
   assert.equal(
@@ -791,6 +824,35 @@ test("TRUSTED-CONFIG: the trusted pipeline minimizes before it exports, and the 
   assert.ok(
     extras.includes(`truncate_all(span.attributes, ${TRUSTED_TELEMETRY_MAX_FIELD_CHARS})`),
     "retained span values are not bounded at the length the parser enforces",
+  );
+
+  // The Package 2 remediation surfaces. Each of these was measured surviving
+  // verbatim into a verified artifact by the independent review, in a field the
+  // first candidate's allowlist simply did not name.
+  for (const statement of [
+    "keep_keys(scope.attributes, [])",
+    'set(scope.name, "")',
+    'set(scope.version, "")',
+    'set(scope.schema_url, "")',
+    'set(resource.schema_url, "")',
+    'set(span.name, "")',
+    'set(span.status.message, "")',
+    'set(span.trace_state, "")',
+    'set(spanevent.name, "")',
+  ]) {
+    assert.ok(
+      extras.includes(statement),
+      `the trusted pipeline no longer removes a subject-controlled surface: ${statement}`,
+    );
+  }
+
+  // `error_mode: ignore` is how `set(span.events, [])` became a silent no-op —
+  // the statement that looked like it removed the most removed nothing. Every
+  // statement above is load-bearing for a privacy bound, so one that cannot be
+  // applied must stop the batch rather than quietly export more.
+  assert.ok(
+    /transform\/trusted:\s*\n\s*error_mode: propagate/.test(extras),
+    "the trusted transform swallows statement failures; a no-op minimization would pass unnoticed",
   );
 });
 

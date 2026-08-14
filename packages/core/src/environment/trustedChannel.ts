@@ -61,7 +61,7 @@
  * about what the collector was doing at the time.
  */
 
-import { readFileSync, readdirSync, rmSync, mkdirSync, existsSync } from "node:fs";
+import { rmSync, mkdirSync, existsSync } from "node:fs";
 import path from "node:path";
 import {
   CODES,
@@ -73,10 +73,12 @@ import {
 } from "@erl2/contracts";
 import { coreHash, hashBytes } from "@erl2/integrity";
 import type { DockerCli } from "./dockerCli.js";
+import { readTrustedArchive, unsafeArchiveName } from "./trustedArchive.js";
 import {
   parseTrustedTelemetryRecords,
   utf8ByteLength,
   TRUSTED_TELEMETRY_MAX_BYTES,
+  type TrustedTelemetryCounts,
 } from "./trustedTelemetry.js";
 
 // -- channel identity ---------------------------------------------------------
@@ -169,12 +171,43 @@ export const TRUSTED_CHANNEL_REASONS = {
   collectorNotVerified: "collector_not_verified",
   /** The trusted directory could not be copied out of the collector. */
   copyFailed: "telemetry_channel_copy_failed",
+  /**
+   * The trusted directory holds an entry that is not a regular file.
+   *
+   * A symlink, a directory, a FIFO, a socket, a device or an archive type ustar
+   * does not define. An independent review planted a symlink named
+   * `traces.jsonl` and the previous copy path followed it into the host's
+   * `/etc/passwd`; the type is now read from the archive's own header before
+   * anything can dereference it.
+   */
+  sourceEntryNotRegular: "telemetry_channel_source_entry_not_regular",
   /** The expected artifact is not in the copied directory. */
   artifactMissing: "telemetry_channel_artifact_missing",
   /** More than the one expected file: rotation, a segment, or something unaccounted for. */
   unexpectedFile: "telemetry_channel_unexpected_file",
   /** Two consecutive reads disagreed: the exporter is still writing. */
   notFinalized: "telemetry_channel_not_finalized",
+  /**
+   * The settle budget expired with a stable artifact that never carried this
+   * run's telemetry.
+   *
+   * The artifact is real and its bytes did stop moving — what is missing is any
+   * reason to believe more was not coming. An independent review reproduced the
+   * defect this replaces: telemetry arriving after the budget produced an
+   * `observed` record asserting zero spans, byte-identical to a genuine zero and
+   * indistinguishable from it by any reader. Elapsed time is not evidence, so
+   * this is `absent` with a cause rather than a count.
+   */
+  settleTimeout: "telemetry_channel_settle_timeout",
+  /**
+   * The budget expired on an empty artifact for a run that was never declared
+   * eligible to observe zero.
+   *
+   * Separate from `settleTimeout` because the remedy differs: this run either
+   * emitted nothing it should have, or the channel never saw it. Either way the
+   * one thing it is not is a proven zero.
+   */
+  expectedTelemetryMissing: "telemetry_channel_expected_telemetry_missing",
   /** The bytes are not valid UTF-8, which the channel's encoding constant asserts they are. */
   encodingInvalid: "telemetry_channel_encoding_invalid",
   /** The artifact is larger than ERL2-C-171 retains. Never truncated to fit. */
@@ -208,6 +241,50 @@ export type TrustedChannelProvision =
     }
   | { readonly provisioned: false; readonly reasonCode: string };
 
+/**
+ * What ended the settle wait.
+ *
+ * The distinction the first Package 2 candidate did not carry, and the reason a
+ * timed-out zero could wear a genuine zero's face. `attribution` means the wait
+ * ended because this run's telemetry demonstrably arrived; `budget` means it
+ * ended because the clock ran out, which proves nothing about what was still in
+ * flight. Only the first is grounds for a positive claim about counts.
+ */
+export type TrustedChannelSettleCause = "attribution" | "budget";
+
+/**
+ * Whether this run is contractually permitted to observe zero telemetry.
+ *
+ * Bound **before** observation, by the caller that knows the scenario's
+ * contract, and deliberately not inferable from the bytes: an empty file looks
+ * identical whether zero was expected or the exporter was slow. It is a typed
+ * input rather than a boolean so that a later reader can see *why* zero was
+ * permitted, and so that "nobody said" is the default rather than a falsy
+ * value someone forgot to set.
+ *
+ * This is the one seam package 3 must supply. Package 2 defines it and defaults
+ * to `expects-telemetry`, so a caller that says nothing gets the fail-closed
+ * answer rather than a convenient one.
+ */
+export type TrustedChannelZeroEligibility =
+  | {
+      /** The run's contract requires attributable telemetry. Zero is a failure, never a fact. */
+      readonly kind: "expects-telemetry";
+    }
+  | {
+      /**
+       * The run's contract permits zero, and said so before the channel was
+       * observed. `justification` is retained in the diagnostic rather than the
+       * artifact — ERL2-C-171 has no field for it — so the reason a zero was
+       * allowed survives in the log even though the record cannot carry it.
+       */
+      readonly kind: "zero-eligible";
+      readonly justification: string;
+    };
+
+/** The default, and the fail-closed one: nothing said means telemetry is expected. */
+export const EXPECTS_TELEMETRY: TrustedChannelZeroEligibility = { kind: "expects-telemetry" };
+
 /** The frozen artifact, or why nothing was frozen. */
 export type TrustedChannelFreeze =
   | {
@@ -220,6 +297,8 @@ export type TrustedChannelFreeze =
       readonly finalRecordTerminated: boolean;
       /** Every file the trusted directory held. Exactly one, or this is not a freeze. */
       readonly fileNames: readonly string[];
+      /** Why the wait ended. Never inferred from the bytes; see the type. */
+      readonly settledBy: TrustedChannelSettleCause;
     }
   | { readonly frozen: false; readonly reasonCode: string };
 
@@ -443,7 +522,7 @@ export class TrustedTelemetryChannel {
       if (stable) {
         lastStable = { bytes: read.bytes, fileNames: read.fileNames };
         if (isSettled(read.bytes.toString("utf8"))) {
-          return this.finalize(read.bytes, read.fileNames);
+          return this.finalize(read.bytes, read.fileNames, "attribution");
         }
       }
       previous = read.bytes;
@@ -451,20 +530,22 @@ export class TrustedTelemetryChannel {
       this.sleep(TRUSTED_CHANNEL_FLUSH_INTERVAL_MS);
     }
 
-    // The budget is spent. A stable artifact that never satisfied `isSettled` is
-    // still a frozen artifact: those exact bytes were read twice and did not
-    // move, which is everything the freeze claims about them. What it is *not*
-    // is a claim that nothing more was coming — and that distinction is why the
-    // predicate exists rather than a bare stability check.
+    // The budget is spent, and this branch is now honest about what that means.
     //
-    // The failure this budget prevents is specific and was measured: reading two
-    // seconds after the last request finds an empty file, two identical empty
-    // reads look perfectly stable, and the channel would freeze an authentic
-    // observed zero for a run that emitted spans. An undercount is a tolerable
-    // error here; asserting "the collector received nothing" when it did is not,
-    // because a genuine zero is a positive claim the contract lets a reader act
-    // on.
-    if (lastStable !== undefined) return this.finalize(lastStable.bytes, lastStable.fileNames);
+    // Those exact bytes were read twice and did not move, so they are still a
+    // frozen artifact and the caller may still want them — but they carry
+    // `settledBy: "budget"`, and the producer above refuses to build a positive
+    // count claim from that. The previous candidate returned this indistinguishable
+    // from an attributed freeze, and an independent review reproduced the
+    // consequence: telemetry arriving after the budget was sealed as
+    // `evidence: observed, spans: 0`, byte-identical to a genuine zero.
+    //
+    // The comment that used to sit here said asserting "the collector received
+    // nothing" when it did is intolerable, and then the next line did exactly
+    // that. The distinction is carried in the type now rather than in a comment.
+    if (lastStable !== undefined) {
+      return this.finalize(lastStable.bytes, lastStable.fileNames, "budget");
+    }
     return { frozen: false, reasonCode: TRUSTED_CHANNEL_REASONS.notFinalized };
   }
 
@@ -480,7 +561,11 @@ export class TrustedTelemetryChannel {
    * because a truncated artifact is a different observation wearing this one's
    * digest.
    */
-  private finalize(bytes: Buffer, fileNames: readonly string[]): TrustedChannelFreeze {
+  private finalize(
+    bytes: Buffer,
+    fileNames: readonly string[],
+    settledBy: TrustedChannelSettleCause,
+  ): TrustedChannelFreeze {
     // The channel declares `encoding: "utf-8"` as a schema constant. Bytes that
     // do not survive a UTF-8 round trip are not what that constant says they
     // are, and retaining them as a string would silently substitute U+FFFD for
@@ -513,6 +598,7 @@ export class TrustedTelemetryChannel {
       recordCount,
       finalRecordTerminated: terminated,
       fileNames,
+      settledBy,
     };
   }
 
@@ -531,26 +617,42 @@ export class TrustedTelemetryChannel {
   ):
     | { readonly ok: true; readonly bytes: Buffer; readonly fileNames: readonly string[] }
     | { readonly ok: false; readonly reasonCode: string } {
-    const into = path.join(this.freezeRoot, label);
-    rmSync(into, { recursive: true, force: true });
-    mkdirSync(into, { recursive: true, mode: 0o700 });
-    const copied = this.docker.run({
-      args: [
-        "cp",
-        `${collector.containerName}:${TRUSTED_CHANNEL_MOUNT_PATH}`,
-        path.join(into, "trusted"),
-      ],
+    // `-` makes `docker cp` write the archive to stdout instead of extracting
+    // it. Nothing touches this host's filesystem on this path at all, so the
+    // `label` no longer names a directory — it names the read, for diagnostics.
+    void label;
+    if (this.docker.runBinary === undefined) {
+      // A CLI that cannot answer in bytes cannot be type-checked, and the
+      // fallback would be exactly the dereferencing read this replaced.
+      return { ok: false, reasonCode: TRUSTED_CHANNEL_REASONS.copyFailed };
+    }
+    const copied = this.docker.runBinary({
+      args: ["cp", `${collector.containerName}:${TRUSTED_CHANNEL_MOUNT_PATH}`, "-"],
       timeoutMs: 120_000,
     });
     if (copied.status !== 0) {
       return { ok: false, reasonCode: TRUSTED_CHANNEL_REASONS.copyFailed };
     }
-    const directory = path.join(into, "trusted");
-    let fileNames: readonly string[];
-    try {
-      fileNames = readdirSync(directory).sort();
-    } catch {
+    // The archive is bounded well above the contract ceiling: an artifact over
+    // that ceiling must be refused as `overSizeBound` with its real length, not
+    // lost here as an unreadable archive.
+    const archive = readTrustedArchive(copied.stdout, TRUSTED_TELEMETRY_MAX_BYTES * 4);
+    if (!archive.ok) {
       return { ok: false, reasonCode: TRUSTED_CHANNEL_REASONS.copyFailed };
+    }
+
+    // `docker cp` of a directory includes the directory itself as the first
+    // entry. That one is expected; everything below it is the trusted
+    // directory's actual contents.
+    const contents = archive.entries.filter(
+      (entry) => entry.name.replace(/\/+$/, "") !== "trusted",
+    );
+    const fileNames = contents
+      .map((entry) => entry.name.replace(/^trusted\//, "").replace(/\/+$/, ""))
+      .sort();
+
+    if (contents.some((entry) => unsafeArchiveName(entry.name))) {
+      return { ok: false, reasonCode: TRUSTED_CHANNEL_REASONS.sourceEntryNotRegular };
     }
     if (fileNames.length === 0 || !fileNames.includes(TRUSTED_CHANNEL_FILE_NAME)) {
       return { ok: false, reasonCode: TRUSTED_CHANNEL_REASONS.artifactMissing };
@@ -558,15 +660,16 @@ export class TrustedTelemetryChannel {
     if (fileNames.length !== 1) {
       return { ok: false, reasonCode: TRUSTED_CHANNEL_REASONS.unexpectedFile };
     }
-    try {
-      return {
-        ok: true,
-        bytes: readFileSync(path.join(directory, TRUSTED_CHANNEL_FILE_NAME)),
-        fileNames,
-      };
-    } catch {
-      return { ok: false, reasonCode: TRUSTED_CHANNEL_REASONS.copyFailed };
+    const entry = contents[0];
+    // The type check, and the whole point of reading the archive: it happens
+    // here, on the header, before any byte of the payload is used and without
+    // anything ever resolving the name.
+    if (entry === undefined || entry.type !== "regular-file" || entry.bytes === undefined) {
+      return { ok: false, reasonCode: TRUSTED_CHANNEL_REASONS.sourceEntryNotRegular };
     }
+    // The bytes come from the entry that was just classified. There is no second
+    // lookup to disagree with the first.
+    return { ok: true, bytes: Buffer.from(entry.bytes), fileNames };
   }
 
   // -- 4. cleanup -----------------------------------------------------------
@@ -625,8 +728,19 @@ export function observeTrustedTelemetry(input: {
   readonly collector: VerifiedTrustedCollector | undefined;
   readonly binding: TrustedChannelBinding;
   readonly marker: string;
+  /**
+   * Whether this run may observe zero, bound before the channel is read.
+   *
+   * Defaults to `EXPECTS_TELEMETRY`, so a caller that supplies nothing gets the
+   * fail-closed answer. It is read only *after* the freeze, but it must have
+   * been decided before — a flag set in response to an empty artifact is the
+   * caller convenience this exists to prevent, and package 3 is where it gets
+   * bound to the scenario's own contract.
+   */
+  readonly zeroEligibility?: TrustedChannelZeroEligibility;
 }): TrustedTelemetryMaterial {
   const { channel, collector, binding, marker } = input;
+  const zeroEligibility = input.zeroEligibility ?? EXPECTS_TELEMETRY;
   if (collector === undefined) {
     return {
       evidence: "absent",
@@ -652,21 +766,81 @@ export function observeTrustedTelemetry(input: {
     return { evidence: "absent", marker, reasonCode: parsed.reasonCode };
   }
   const counts = parsed.counts;
+
   // The parser and the freeze must agree about the shape of the same bytes. They
   // are computed independently — one by splitting, one by parsing — so a
   // disagreement means one of them is wrong about the artifact, and neither is
-  // entitled to win.
+  // entitled to win. Checked before any verdict below, so no branch can build a
+  // claim on bytes the two readers describe differently.
   if (
     counts.byteLength !== freeze.byteLength ||
     counts.recordCount !== freeze.recordCount ||
     counts.finalRecordTerminated !== freeze.finalRecordTerminated
   ) {
+    return { evidence: "absent", marker, reasonCode: TRUSTED_CHANNEL_REASONS.notFinalized };
+  }
+
+  // The zero decision, and the only place it is made.
+  //
+  // A freeze that ended on `budget` proves the bytes stopped moving and nothing
+  // else. If this run's telemetry is in those bytes the wait would have ended on
+  // `attribution`, so reaching here with `budget` means it is not — and the
+  // question becomes whether *this run was allowed to observe zero*, which is a
+  // fact about its contract rather than about the file.
+  //
+  // Neither branch below can reach the `observed` constructor unless a positive
+  // fact justifies it: either attribution (the telemetry arrived) or a
+  // zero-eligibility bound before observation (the contract permits none).
+  // Elapsed time, byte stability and an absence of spans justify nothing on
+  // their own, which is exactly what the reproduced defect assumed they did.
+  if (freeze.settledBy === "budget") {
+    if (counts.runAttributedRecords > 0) {
+      // Unreachable through `close`'s own predicate, and deliberately not
+      // trusted to be: if attribution is present the artifact is positive
+      // regardless of which branch produced it, and falling through to a zero
+      // here would be the same defect wearing the opposite sign.
+      return observedMaterial(collector, binding, marker, freeze, counts);
+    }
+    if (zeroEligibility.kind === "zero-eligible") {
+      // A positively justified zero: the contract said before observation that
+      // this run may legitimately emit nothing, and the artifact is empty and
+      // finalized. That is the authentic observed zero ADR-ERL2-033 protects,
+      // and it stays a different fact from `absent`.
+      if (counts.recordCount === 0) {
+        return observedMaterial(collector, binding, marker, freeze, counts);
+      }
+      // Zero was permitted; what arrived is neither zero nor this run's. The
+      // artifact is not empty, so "the collector received nothing" is false, and
+      // the run's own telemetry never appeared.
+      return { evidence: "absent", marker, reasonCode: TRUSTED_CHANNEL_REASONS.settleTimeout };
+    }
     return {
       evidence: "absent",
       marker,
-      reasonCode: TRUSTED_CHANNEL_REASONS.notFinalized,
+      reasonCode:
+        counts.recordCount === 0
+          ? TRUSTED_CHANNEL_REASONS.expectedTelemetryMissing
+          : TRUSTED_CHANNEL_REASONS.settleTimeout,
     };
   }
+  return observedMaterial(collector, binding, marker, freeze, counts);
+}
+
+/**
+ * The one construction site for `observed` material.
+ *
+ * A single constructor so every path that claims counts is visible in one
+ * place: the settle branches above decide *whether* a positive claim is
+ * justified, and this decides nothing at all. Splitting the two is what stops a
+ * future branch from quietly acquiring the ability to assert a zero.
+ */
+function observedMaterial(
+  collector: VerifiedTrustedCollector,
+  binding: TrustedChannelBinding,
+  marker: string,
+  freeze: Extract<TrustedChannelFreeze, { frozen: true }>,
+  counts: TrustedTelemetryCounts,
+): TrustedTelemetryMaterial {
   return {
     evidence: "observed",
     marker,
