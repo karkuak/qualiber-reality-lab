@@ -70,14 +70,29 @@
 #   span attributes:     `url.full`         — carries this run's marker
 #   every retained value: truncated to 512 characters
 #
-# Nothing else survives. Attributes are retained because the allowlist names
-# them, never because they are available. This does **not** claim subject bytes
-# are absent from the artifact: `url.full` is a subject-reachable value, and it
-# remains — JSON-escaped and bounded — because run attribution is derived from
-# it. Saying where subject bytes may remain is the honest bound; saying they are
-# gone would be false. `ERL2-C-171`'s parser re-checks this allowlist over the
-# retained bytes rather than trusting that this file was configured correctly,
-# so a record carrying a key nobody allowed is refused rather than read.
+# Every other subject-controlled field in the record is **removed**, not bounded:
+# scope attributes, scope name and version, span name, span status message, span
+# trace state, span-event names and attributes, and the schema URL at both the
+# resource and the scope level. A bound would keep a privacy-bearing field for a
+# reader that does not exist; removal is the rule wherever no ERL2-C-171 count
+# reads the field.
+#
+# Two honest exceptions, both stated rather than hidden:
+#
+#   1. `url.full` is a subject-reachable value and it remains — JSON-escaped and
+#      bounded to 512 characters — because run attribution is derived from it.
+#      This is the disclosed bounded MVP limit.
+#   2. Span **link** attributes and link trace state are not removed here,
+#      because this pinned collector version has no span-link context. The
+#      parser refuses them rather than retaining them, so no unbounded subject
+#      value survives — but a legitimately linked span is refused rather than
+#      minimized. See the `transform/trusted` block for the measurements.
+#
+# `ERL2-C-171`'s parser re-derives this whole allowlist over the retained bytes
+# rather than trusting that this file was configured correctly, and refuses an
+# unknown key at every nesting level — so a record carrying a key nobody allowed
+# is refused rather than read, and a regression in this file is caught rather
+# than exported.
 #
 # ## Why `logs` and `metrics` stay out of the trusted pipeline
 #
@@ -119,44 +134,114 @@ exporters:
     flush_interval: 1s
 
 processors:
-  # R2. `keep_keys` first, then `truncate_all` over what survived — the order
-  # matters only for cost, not for the result, but bounding a value the
-  # allowlist already dropped would be work with no reader.
+  # R2, widened to the whole record by the Package 2 remediation.
+  #
+  # ## Why every context is named, not just the two that were
+  #
+  # The first Package 2 candidate minimized `resource.attributes`,
+  # `span.attributes` and `spanevent.attributes` and nothing else. An
+  # independent review submitted one hostile OTLP payload through this exact
+  # pinned collector and measured six further surfaces surviving verbatim into
+  # the retained artifact: instrumentation-scope attributes (carrying a
+  # `session.token`), the span status message (carrying a host file path), the
+  # span name, the span trace state, and the schema URL at both the resource and
+  # the scope level. The subject is the OTLP producer, so every one of those is
+  # subject-controlled — not trusted collector metadata — and each was accepted
+  # by the verifier.
+  #
+  # That is the same defect class as the span-event leak this file already
+  # records: a second attribute map, or a plain string field, that the allowlist
+  # simply did not name. The rule is now the whole record rather than the fields
+  # someone remembered, and the parser re-derives the same allowlist over the
+  # retained bytes (`trustedTelemetry.ts`) so a regression here is refused rather
+  # than trusted.
+  #
+  # ## `propagate`, not `ignore`
+  #
+  # `error_mode: ignore` was how `set(span.events, [])` came to be silently a
+  # no-op: the statement parsed, failed at runtime, and the error was swallowed,
+  # so the statement that looked like it removed the most removed nothing. Every
+  # statement below is load-bearing for a privacy bound, so a statement that
+  # cannot be applied must stop the batch rather than quietly export more than
+  # the allowlist says. `propagate` makes an inapplicable minimization statement
+  # fail the trusted pipeline closed — the artifact is then absent with a reason,
+  # which is a refusal a reader can act on, rather than an artifact carrying
+  # bytes nobody allowed.
+  #
+  # Measured against the pinned image on both a maximal hostile payload and a
+  # minimal sparse span (no status, no events, no links, no scope version): every
+  # statement applies cleanly, and neither payload fails the pipeline.
   transform/trusted:
-    # `ignore`: a statement that cannot apply to one span must not discard the
-    # batch. The parser is the enforcement point, not this processor — a record
-    # that reaches the artifact unminimized is refused there, so an error mode
-    # that silently kept more would be caught rather than trusted.
-    error_mode: ignore
+    error_mode: propagate
     trace_statements:
       - context: resource
         statements:
           - keep_keys(resource.attributes, ["service.name"])
           - truncate_all(resource.attributes, 512)
+          # Emitted by the instrumentation, unbounded, and read by nothing
+          # ERL2-C-171 derives. `""` is omitted entirely by the proto3 JSON
+          # marshaller, so the key disappears rather than being retained empty.
+          - set(resource.schema_url, "")
+      - context: scope
+        statements:
+          # The scope's own attribute map — a third map, reached by none of the
+          # statements above. The review retained a 1 200-character
+          # `session.token` here, through a forbidden-key check that never saw it.
+          - keep_keys(scope.attributes, [])
+          - set(scope.name, "")
+          - set(scope.version, "")
+          - set(scope.schema_url, "")
       - context: span
         statements:
           - keep_keys(span.attributes, ["url.full"])
           - truncate_all(span.attributes, 512)
-      # Span *events* are a second attribute map, and `keep_keys` on
-      # `span.attributes` does not touch them. Measured on a live run before
-      # this statement existed: the quote service's PHP instrumentation attached
-      # an `exception` event carrying `exception.message` and a full
-      # `exception.stacktrace` with host file paths, and every byte of it
-      # survived minimization into the retained artifact. Unbounded, unallowlisted
-      # and subject-influenced — exactly what R2 exists to prevent, hiding in the
-      # one field the allowlist did not name.
-      #
-      # An empty allowlist is the whole rule: no event attribute is needed by any
-      # count ERL2-C-171 derives, so none is kept. The event's name and timestamp
-      # remain, which is structure rather than payload, and the parser bounds the
-      # name rather than trusting that.
-      #
-      # `set(span.events, [])` was tried first and is silently a no-op here —
-      # `error_mode: ignore` swallows it — so the statement that looks like it
-      # removes the most is the one that removes nothing. Measured, not assumed.
+          # The span name is instrumentation-chosen and routinely carries the
+          # request target — the review put a token in it and it survived whole.
+          # Nothing ERL2-C-171 derives reads it, so it is removed rather than
+          # bounded: a bound would keep a privacy-bearing field for no reader.
+          - set(span.name, "")
+          # Where an instrumentation puts an exception message. The review
+          # retained `/Users/…/quote.php:42` here — the identical payload to the
+          # span-event stack trace, in the field next door.
+          - set(span.status.message, "")
+          # W3C `tracestate` propagates from an inbound request header, so it is
+          # directly settable by whatever reaches the subject.
+          - set(span.trace_state, "")
       - context: spanevent
         statements:
+          # Kept from the original fix, which was measured against a live run:
+          # the quote service's PHP instrumentation attached an `exception` event
+          # carrying `exception.message` and a full `exception.stacktrace` with
+          # host file paths, and every byte survived into the artifact.
           - keep_keys(spanevent.attributes, [])
+          # The event name is subject-influenced too and no count reads it, so it
+          # goes the same way as the span name rather than being bounded.
+          - set(spanevent.name, "")
+      # ## The one surface this pinned collector cannot reach: span links
+      #
+      # A span's `links[]` carry their own attribute map and their own
+      # `traceState`, and both are subject-controlled. They are NOT minimized
+      # here, and that is a measured limitation of the pinned image rather than
+      # an oversight:
+      #
+      #   - `otelcol-contrib` v0.157.0 has no span-link OTTL context. `spanlink`,
+      #     `link`, `links` and `span_link` are all rejected as `unknown context`,
+      #     in both the explicit `context:` form and the inferred flat form.
+      #   - `set(span.links, [])` parses and then fails at runtime with
+      #     `expects ptrace.SpanLinkSlice but got []interface {}` — the same
+      #     silent-no-op class as `set(span.events, [])`, and now loud under
+      #     `propagate`.
+      #   - `keep_keys(span.links[0].attributes, [])` is refused: links do not
+      #     support indexing.
+      #   - the `redaction` processor reaches scope and span-event attributes but
+      #     does not traverse links.
+      #
+      # So the parser refuses a link that carries attributes or a trace state,
+      # with its own reason code, and privacy is preserved. What is NOT closed is
+      # the availability asymmetry: instrumentation that legitimately attaches
+      # link attributes makes the whole artifact refuse. Closing that needs a
+      # collector version with a span-link context, which is an image-pin move
+      # and its own design review. Stated here rather than discovered again.
 
 service:
   pipelines:

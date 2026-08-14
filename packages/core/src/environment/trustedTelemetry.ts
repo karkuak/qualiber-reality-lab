@@ -118,7 +118,179 @@ export const TRUSTED_TELEMETRY_REASONS = {
   fieldOverBound: "telemetry_trusted_record_field_exceeds_bound",
   /** A record naming a run that is not this one. */
   foreignRun: "telemetry_foreign_run_record_present",
+  /**
+   * A field the trusted pipeline is configured to remove arrived carrying
+   * content.
+   *
+   * Distinct from `unexpectedField` on purpose. An unknown key is a record
+   * shape nobody described; this is a key the specification below explicitly
+   * removes — a scope attribute, a span name, a status message, a trace state,
+   * a schema URL — arriving anyway. That means the minimizing processor did not
+   * run, ran with the wrong configuration, or ran against a collector whose
+   * output shape changed. Reading it would retain exactly the subject-controlled
+   * bytes the privacy bound exists to exclude.
+   */
+  unminimized: "telemetry_trusted_record_unminimized_field",
+  /**
+   * A span link arrived carrying attributes or a trace state.
+   *
+   * Its own code because its cause is its own: `otelcol-contrib` v0.157.0 has
+   * no span-link OTTL context, so unlike every other surface here the collector
+   * cannot strip these before export. The refusal keeps subject-controlled
+   * bytes out of the artifact; what it cannot do is minimize a legitimately
+   * linked span, which is a stated limitation of the pinned image rather than a
+   * property of this grammar.
+   */
+  linkNotMinimized: "telemetry_trusted_record_link_not_minimized",
 } as const;
+
+// -- the minimized record specification ---------------------------------------
+
+/**
+ * The exact shape of a minimized trusted record, at every nesting level.
+ *
+ * This is the single reviewed specification the two enforcement points are
+ * derived from: `erl2-otelcol-extras.yaml` removes these fields before export,
+ * and this grammar refuses a record that carries them anyway. The two are
+ * deliberately separate — a configuration regression must be caught rather than
+ * trusted — but they describe one shape, and the collector-configuration
+ * controls and the parser controls both fail if they drift apart.
+ *
+ * Every list below was measured against the pinned collector
+ * (`otelcol-contrib` v0.157.0, arm64) on two payloads: a maximal hostile record
+ * with every field populated, and a minimal sparse span with no status, no
+ * events, no links and no scope version. Both shapes are accepted; anything
+ * outside them is not.
+ *
+ * `ALLOWED` is what may appear. `REMOVED` maps a key the pipeline strips to the
+ * reason its presence is refused — a named cause rather than the generic
+ * unknown-key code, because "the processor did not run" and "this record has a
+ * shape nobody described" are different failures with different remedies.
+ *
+ * Absent is the normal case for most of these: the proto3 JSON marshaller omits
+ * a field set to its zero value, which is why `set(span.name, "")` makes the
+ * key disappear rather than appear empty. A key present but *empty* is
+ * tolerated anyway, so a marshaller that materialises zero values does not
+ * refuse a record that carries no content.
+ */
+const SHAPE = {
+  resourceSpan: {
+    allowed: ["resource", "scopeSpans"],
+    removed: { schemaUrl: TRUSTED_TELEMETRY_REASONS.unminimized },
+  },
+  resource: {
+    allowed: ["attributes", "droppedAttributesCount"],
+    removed: {},
+  },
+  scopeSpan: {
+    allowed: ["scope", "spans"],
+    removed: { schemaUrl: TRUSTED_TELEMETRY_REASONS.unminimized },
+  },
+  scope: {
+    allowed: ["droppedAttributesCount"],
+    removed: {
+      name: TRUSTED_TELEMETRY_REASONS.unminimized,
+      version: TRUSTED_TELEMETRY_REASONS.unminimized,
+      attributes: TRUSTED_TELEMETRY_REASONS.unminimized,
+    },
+  },
+  span: {
+    allowed: [
+      "traceId",
+      "spanId",
+      "parentSpanId",
+      "flags",
+      "kind",
+      "startTimeUnixNano",
+      "endTimeUnixNano",
+      "attributes",
+      "droppedAttributesCount",
+      "events",
+      "droppedEventsCount",
+      "links",
+      "droppedLinksCount",
+      "status",
+    ],
+    removed: {
+      name: TRUSTED_TELEMETRY_REASONS.unminimized,
+      traceState: TRUSTED_TELEMETRY_REASONS.unminimized,
+    },
+  },
+  status: {
+    allowed: ["code"],
+    removed: { message: TRUSTED_TELEMETRY_REASONS.unminimized },
+  },
+  event: {
+    allowed: ["timeUnixNano", "droppedAttributesCount"],
+    removed: {
+      name: TRUSTED_TELEMETRY_REASONS.unminimized,
+      attributes: TRUSTED_TELEMETRY_REASONS.unminimized,
+    },
+  },
+  link: {
+    allowed: ["traceId", "spanId", "flags", "droppedAttributesCount"],
+    // The pinned collector cannot strip these (no span-link OTTL context), so
+    // unlike every other entry here the refusal is the only enforcement point.
+    removed: {
+      attributes: TRUSTED_TELEMETRY_REASONS.linkNotMinimized,
+      traceState: TRUSTED_TELEMETRY_REASONS.linkNotMinimized,
+    },
+  },
+  attribute: {
+    allowed: ["key", "value"],
+    removed: {},
+  },
+} as const satisfies Record<
+  string,
+  { readonly allowed: readonly string[]; readonly removed: Readonly<Record<string, string>> }
+>;
+
+/** Whether a value carries nothing — an emptied field is not an unminimized one. */
+function isEmpty(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  if (typeof value === "string") return value.length === 0;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === "object") return Object.keys(value as object).length === 0;
+  return false;
+}
+
+/**
+ * Refuses any key on this object that the specification does not permit.
+ *
+ * The whole point of the recursion: an unknown key at *any* depth is a refusal,
+ * not something to skip. The first Package 2 grammar checked four attribute
+ * maps and ignored every other key at every level, so six subject-controlled
+ * surfaces reached the artifact and verified clean. Ignoring an unknown nested
+ * key is how that happens, so nothing here ignores one.
+ *
+ * Forward compatibility is deliberately not "tolerate keys we do not know".
+ * A collector that starts emitting a new field is a change to the retained
+ * bytes, and the artifact's privacy bound is a claim about exactly those bytes.
+ * The fail-closed refusal is the signal to review the new field and version the
+ * specification — not something to route around with implicit key tolerance.
+ */
+function shapeRefusal(
+  value: Record<string, unknown>,
+  spec: { readonly allowed: readonly string[]; readonly removed: Readonly<Record<string, string>> },
+): string | undefined {
+  for (const key of Object.keys(value)) {
+    if (spec.allowed.includes(key)) continue;
+    const removedReason = spec.removed[key];
+    if (removedReason !== undefined) {
+      if (isEmpty(value[key])) continue;
+      return removedReason;
+    }
+    return TRUSTED_TELEMETRY_REASONS.unexpectedField;
+  }
+  return undefined;
+}
+
+/** An object, or `undefined` if this is not one. Arrays are not objects here. */
+function asObject(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  return value as Record<string, unknown>;
+}
+
 
 /** Counts recomputed structurally from the retained bytes. */
 export interface TrustedTelemetryCounts {
@@ -162,8 +334,12 @@ function attributeRefusal(
   allowed: readonly string[],
 ): string | undefined {
   for (const entry of attributes) {
-    if (typeof entry !== "object" || entry === null) return TRUSTED_TELEMETRY_REASONS.malformed;
-    const attribute = entry as Record<string, unknown>;
+    const attribute = asObject(entry);
+    if (attribute === undefined) return TRUSTED_TELEMETRY_REASONS.malformed;
+    // An attribute is `{key, value}` and nothing else. A third key here would be
+    // an unchecked string riding inside a map the allowlist believes it bounds.
+    const shape = shapeRefusal(attribute, SHAPE.attribute);
+    if (shape !== undefined) return shape;
     const key = attribute["key"];
     if (typeof key !== "string") return TRUSTED_TELEMETRY_REASONS.malformed;
     const lowered = key.toLowerCase();
@@ -183,36 +359,27 @@ function attributeRefusal(
 }
 
 /**
- * Refuses a span's events or links carrying any attribute, or an over-long
- * structural string on one.
+ * Refuses a span's events or links whose shape is not the minimized one.
  *
- * `nameKey` names the one structural string the child may carry — an event's
- * `name` — which is bounded rather than forbidden because it is instrumentation
- * structure, not payload. Absent children are absent, not malformed: a span with
- * no events omits the key entirely, which is the overwhelmingly common shape.
+ * Both collections are now pure structure: an event keeps its timestamp and a
+ * link keeps its identifiers, and neither keeps a name, an attribute map or a
+ * trace state. Absent children are absent, not malformed — a span with no
+ * events omits the key entirely, which is the overwhelmingly common shape.
+ *
+ * `spec` decides which reason a stripped field refuses with, which is what
+ * separates "the processor did not run" (events, where it can) from "this
+ * collector version cannot strip it" (links, where it cannot).
  */
-function childAttributeRefusal(children: unknown, nameKey: string | undefined): string | undefined {
+function childRefusal(
+  children: unknown,
+  spec: { readonly allowed: readonly string[]; readonly removed: Readonly<Record<string, string>> },
+): string | undefined {
   if (children === undefined) return undefined;
   if (!Array.isArray(children)) return TRUSTED_TELEMETRY_REASONS.malformed;
   for (const entry of children) {
-    if (typeof entry !== "object" || entry === null) return TRUSTED_TELEMETRY_REASONS.malformed;
-    const child = entry as Record<string, unknown>;
-    if (nameKey !== undefined) {
-      const name = child[nameKey];
-      if (name !== undefined && typeof name !== "string") {
-        return TRUSTED_TELEMETRY_REASONS.malformed;
-      }
-      if (typeof name === "string" && name.length > TRUSTED_TELEMETRY_MAX_FIELD_CHARS) {
-        return TRUSTED_TELEMETRY_REASONS.fieldOverBound;
-      }
-    }
-    const attributes = child["attributes"] ?? [];
-    if (!Array.isArray(attributes)) return TRUSTED_TELEMETRY_REASONS.malformed;
-    // The allowlist is empty, so `attributeRefusal` refuses every key it is
-    // given — with the forbidden-field code where the key is also sensitive,
-    // which is the difference between "this pipeline did not minimize" and
-    // "this artifact is a privacy incident".
-    const refusal = attributeRefusal(attributes, []);
+    const child = asObject(entry);
+    if (child === undefined) return TRUSTED_TELEMETRY_REASONS.malformed;
+    const refusal = shapeRefusal(child, spec);
     if (refusal !== undefined) return refusal;
   }
   return undefined;
@@ -321,14 +488,14 @@ export function parseTrustedTelemetryRecords(
     if (!Array.isArray(resourceSpans)) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
 
     for (const resourceEntry of resourceSpans) {
-      if (typeof resourceEntry !== "object" || resourceEntry === null) {
-        return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
-      }
-      const resourceSpan = resourceEntry as Record<string, unknown>;
-      const resource = resourceSpan["resource"];
-      if (typeof resource !== "object" || resource === null) {
-        return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
-      }
+      const resourceSpan = asObject(resourceEntry);
+      if (resourceSpan === undefined) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
+      const resourceSpanRefusal = shapeRefusal(resourceSpan, SHAPE.resourceSpan);
+      if (resourceSpanRefusal !== undefined) return refuse(resourceSpanRefusal);
+      const resource = asObject(resourceSpan["resource"]);
+      if (resource === undefined) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
+      const resourceRefusalShape = shapeRefusal(resource, SHAPE.resource);
+      if (resourceRefusalShape !== undefined) return refuse(resourceRefusalShape);
       // Absent is empty, exactly as it already is for span attributes below.
       //
       // Package 1 required the key and package 2 measured why it cannot: when
@@ -344,7 +511,7 @@ export function parseTrustedTelemetryRecords(
       // check against the allowlist, no value to bound, and no marker to
       // attribute — so this resource contributes zero service names and zero
       // attributed spans, which is what an attribute-less resource is.
-      const resourceAttributes = (resource as Record<string, unknown>)["attributes"] ?? [];
+      const resourceAttributes = resource["attributes"] ?? [];
       if (!Array.isArray(resourceAttributes)) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
       const resourceRefusal = attributeRefusal(resourceAttributes, TRUSTED_RESOURCE_KEYS);
       if (resourceRefusal !== undefined) return refuse(resourceRefusal);
@@ -355,46 +522,57 @@ export function parseTrustedTelemetryRecords(
       const scopeSpans = resourceSpan["scopeSpans"];
       if (!Array.isArray(scopeSpans)) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
       for (const scopeEntry of scopeSpans) {
-        if (typeof scopeEntry !== "object" || scopeEntry === null) {
-          return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
+        const scopeSpan = asObject(scopeEntry);
+        if (scopeSpan === undefined) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
+        const scopeSpanRefusal = shapeRefusal(scopeSpan, SHAPE.scopeSpan);
+        if (scopeSpanRefusal !== undefined) return refuse(scopeSpanRefusal);
+        // The instrumentation scope is now pure structure. Its attribute map was
+        // the third one the first grammar never looked at, and it retained a
+        // 1 200-character `session.token` through a forbidden-key check that
+        // never reached it.
+        if (scopeSpan["scope"] !== undefined) {
+          const scope = asObject(scopeSpan["scope"]);
+          if (scope === undefined) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
+          const scopeRefusal = shapeRefusal(scope, SHAPE.scope);
+          if (scopeRefusal !== undefined) return refuse(scopeRefusal);
         }
-        const scopeSpanList = (scopeEntry as Record<string, unknown>)["spans"];
+        const scopeSpanList = scopeSpan["spans"];
         if (!Array.isArray(scopeSpanList)) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
 
         for (const spanEntry of scopeSpanList) {
-          if (typeof spanEntry !== "object" || spanEntry === null) {
-            return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
-          }
+          const spanShape = asObject(spanEntry);
+          if (spanShape === undefined) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
+          const spanShapeRefusal = shapeRefusal(spanShape, SHAPE.span);
+          if (spanShapeRefusal !== undefined) return refuse(spanShapeRefusal);
           // The count is the length of a structure, never a rendered number.
           // This is the whole difference from v1: there is no numeral in these
           // bytes that a subject could write and a reader could believe.
           spans += 1;
 
-          const span = spanEntry as Record<string, unknown>;
+          const span = spanShape;
           const spanAttributes = span["attributes"] ?? [];
           if (!Array.isArray(spanAttributes)) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
           const spanRefusal = attributeRefusal(spanAttributes, TRUSTED_SPAN_KEYS);
           if (spanRefusal !== undefined) return refuse(spanRefusal);
 
-          // Events and links carry their own attribute maps, and the allowlist
-          // for both is empty.
-          //
-          // Package 2 measured why this is here rather than assumed. A span's
-          // events were not inspected, and `keep_keys(span.attributes, …)` does
-          // not reach them, so a live run retained an `exception` event carrying
-          // `exception.message` and a full `exception.stacktrace` with host file
-          // paths — unbounded, unallowlisted, subject-influenced bytes sitting
-          // inside an artifact whose privacy bound never accounted for them.
-          //
-          // Nothing ERL2-C-171 derives comes from an event or a link, so nothing
-          // is lost by refusing every one of their attributes; and refusing here
-          // rather than only configuring the processor is the same discipline the
-          // span allowlist already follows. A record carrying an event attribute
-          // is a record the trusted pipeline did not minimize, whatever the
-          // collector configuration currently says.
-          const eventRefusal = childAttributeRefusal(span["events"], "name");
+          // The span's status: a code is structure, a message is an exception
+          // string. The review retained a host file path here, which is the same
+          // payload as the span-event stack trace in the field next door.
+          if (span["status"] !== undefined) {
+            const status = asObject(span["status"]);
+            if (status === undefined) return refuse(TRUSTED_TELEMETRY_REASONS.malformed);
+            const statusRefusal = shapeRefusal(status, SHAPE.status);
+            if (statusRefusal !== undefined) return refuse(statusRefusal);
+          }
+
+          // Events and links are now pure structure — a timestamp and a pair of
+          // identifiers. Nothing ERL2-C-171 derives comes from either, so nothing
+          // is lost by refusing every name, attribute map and trace state on
+          // them; and refusing here rather than only configuring the processor is
+          // the same discipline the span allowlist already follows.
+          const eventRefusal = childRefusal(span["events"], SHAPE.event);
           if (eventRefusal !== undefined) return refuse(eventRefusal);
-          const linkRefusal = childAttributeRefusal(span["links"], undefined);
+          const linkRefusal = childRefusal(span["links"], SHAPE.link);
           if (linkRefusal !== undefined) return refuse(linkRefusal);
 
           let attributed = false;

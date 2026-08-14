@@ -57,14 +57,14 @@
     "sha256:517055b93534de0b38e6d4e9a0fff8cfaa3145083d8089e1bb503beedd2d3c99",
     "sha256:6eddab9bd51a2aaea0b98af04c4233a18a9795cf4314ee32a3def9344f3611ff",
     "sha256:5bf984b2a506b96869f1e61f485c210cda5bc681ed42719c1df8c17513da273c",
-    "sha256:c206e4062b6cb2ba5763c304d0eeaa168d0b80e6bfd263b927bee9245018595f"
+    "sha256:0468ab32f54ddbf366bca0537dedba6cc410244e6912292d29acf81a7a50f8c2"
   ],
-  "recorded_at": "2026-08-14T14:08:19Z",
-  "core_hash": "sha256:be7ff2fc72ee2f45869b16a4a6b413f9f2453efaaeb160a89832192c6307efe4",
+  "recorded_at": "2026-08-14T19:02:00Z",
+  "core_hash": "sha256:a815e35f79528a394b69362f4975ff5d807176c2e9bca55a8c582994c7152ea2",
   "signature": {
     "algorithm": "Ed25519",
     "key_id": "erl2-dev-challenge-governor-ed25519-1",
-    "signed_hash": "sha256:be7ff2fc72ee2f45869b16a4a6b413f9f2453efaaeb160a89832192c6307efe4",
-    "signature_base64": "ndv3diMHFBzcsjF4FjuyRs2tRRZmS2NGq9/vwwVJIOzbpcMEc9D0F6CA7D/WPErUIqe57HykegWGzdkyd3I5AQ=="
+    "signed_hash": "sha256:a815e35f79528a394b69362f4975ff5d807176c2e9bca55a8c582994c7152ea2",
+    "signature_base64": "rp1EfhlKYXXGwBGB9MxJGRYAoVbVeIOC600bh2uUHxhcLj/ZyjETObW1QpZoEMPpTP5KSkX5mR0dIjNhh9xuDg=="
   }
 }
