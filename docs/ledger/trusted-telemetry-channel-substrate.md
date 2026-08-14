@@ -542,6 +542,37 @@ pin moved, no archive, SBOM, SPDX or provenance record changed**, and the
 collector digest is still `sha256:1fef9f07…98ea6`. Signer unchanged and still not
 an independent authority. `recorded_at` moved, as a re-lock requires.
 
+### Two pre-existing Package 2 defects the broad suite surfaced
+
+Neither is among the four findings; both were found by running the broad suite at
+the remediated candidate, and both reproduce at `8485b8a`.
+
+**The `environmentRun` e2e inventory was stale.** `157cf04` admitted the trusted
+volume into the live driver-contract test and did not reach
+`tests/e2e/composeEnvironmentRun.test.ts`, which still expected five resources
+against the six the driver has inventoried since this package added the volume.
+Reproduced at `8485b8a`: the same `6 !== 5`. **Package 2's recorded broad run of
+1 328 tests passed / 0 failed is therefore not reproducible**, and the
+independent review that accepted that figure did not rerun the suite. Corrected
+here.
+
+**The trusted volume survives teardown, on every run — open.** With the count
+corrected the run reaches `destroy` and fails
+`TEARDOWN_FAILED: teardown left 2 resource(s)`. `TrustedTelemetryChannel#created`
+is in-memory, and the CLI runs each lifecycle step in its own process, so the
+`destroy` process builds a fresh channel with `created === false`, `cleanup()`
+returns `{attempted: false, removed: false}`, and the memory-backed volume is
+never removed. Measured: one `erl2-trusted-<uuid>` volume left behind per run.
+
+This is left open deliberately. The fix is either persisting volume ownership in
+`ComposeRunStore`, or letting cleanup remove a volume on name-ownership alone —
+and the second weakens the property that a channel whose `provision` *refused* a
+pre-existing name removes nothing, which §4 records as deliberate. That is a
+design decision rather than a remediation one, and it is outside the four
+findings this package was scoped to close. It means **cleanup cannot currently be
+proven for a real environment run**, and it should be closed before Package 3
+connects the lifecycle.
+
 ### Status after remediation
 
 - P0-1 **closed** — recursive allowlist, both enforcement points, measured live
