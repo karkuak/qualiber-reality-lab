@@ -2925,18 +2925,22 @@ export const CONTROLS = [
     expect: "fail",
   },
   {
-    // The anchor moved from `this.created` to the durable read, because the
-    // property moved with it. "Only a volume this channel created" used to mean
-    // "only while the creating process is still alive", which is why every real
-    // multi-process teardown left the volume behind. It now means "only a volume
-    // this run holds a durable, capability-bearing handle for", and this is the
-    // line that makes the handle load-bearing: stop reading it and cleanup is
-    // blind again, exactly as it was.
+    // The anchor moved from `this.created` to the durable handle's run binding,
+    // because the property moved with it. "Only a volume this channel created"
+    // used to mean "only while the creating process is still alive", which is
+    // why every real multi-process teardown left the volume behind. It now means
+    // "only a volume this run holds a durable, run-bound handle for", and this
+    // is the line that makes the handle load-bearing: refuse every handle here
+    // and cleanup is blind again, exactly as it was.
+    //
+    // The mutation is `if (true) return undefined` rather than assigning the
+    // read away, because the latter narrows the local to `never` and the
+    // campaign scores a build failure as a harness error rather than a kill.
     id: "trusted-channel-cleanup-scoped-to-created",
-    what: "cleanup acts only on a volume this run holds a durable ownership handle for, so a refused pre-existing volume is never deleted and a volume created in an earlier process is still removable (Package 2 closure)",
+    what: "cleanup acts only on a durable ownership handle bound to this run, so a refused pre-existing volume is never deleted and a volume created in an earlier process is still removable (Package 2 closure)",
     file: "packages/core/src/environment/trustedChannel.ts",
-    find: "      handle = this.ownership.read();",
-    replace: "      handle = undefined;",
+    find: "    if (handle.run_id !== this.runId) return undefined;",
+    replace: "    if (true) return undefined;",
     tests: [
       "tests/dist/adversarial/trustedOwnership.test.js",
       "tests/dist/integration/trustedCrossProcess.test.js",

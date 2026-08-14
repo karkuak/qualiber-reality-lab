@@ -224,7 +224,7 @@ test("TRUSTED-OWNERSHIP: the volume carries exactly the labels the handle requir
   assert.equal(volume.labels[TRUSTED_VOLUME_LABEL_KEYS.channelVersion], TRUSTED_CHANNEL_VERSION);
 });
 
-test("TRUSTED-OWNERSHIP: label comparison is set equality, not containment", () => {
+test("TRUSTED-OWNERSHIP: label comparison is key-set equality, not containment", () => {
   const expected = trustedVolumeLabels({
     runId: RUN_ID,
     capabilityDigest: trustedCapabilityDigest("c"),
@@ -241,6 +241,20 @@ test("TRUSTED-OWNERSHIP: label comparison is set equality, not containment", () 
     labelsMatch(expected, { ...expected, [TRUSTED_VOLUME_LABEL_KEYS.runId]: `${RUN_ID}x` }),
     false,
     "a run id that merely contains the expected one matched",
+  );
+  // The ownership digest's *key* is required and its *value* is not this
+  // function's business — it is the capability proof, checked separately so the
+  // two questions can fail, and be measured, independently.
+  assert.equal(
+    labelsMatch(expected, { ...expected, [TRUSTED_VOLUME_LABEL_KEYS.ownership]: "sha256:whatever" }),
+    true,
+    "the label comparison absorbed the capability check",
+  );
+  const { [TRUSTED_VOLUME_LABEL_KEYS.ownership]: _gone, ...withoutOwnership } = expected;
+  assert.equal(
+    labelsMatch(expected, withoutOwnership),
+    false,
+    "a volume carrying no ownership label at all matched",
   );
 });
 
@@ -324,8 +338,18 @@ test("TRUSTED-OWNERSHIP: a volume with the right name and wrong labels survives"
   const root = newRoot("wronglabels");
   const daemon = new FakeDaemon();
   channel(daemon, root).provision();
+  const handle = readHandle(root);
   // The volume is replaced under this run's nose by one that is not this run's.
-  daemon.volumes.set(VOLUME, { labels: { "com.erl2.run_id": OTHER_RUN }, options: "" });
+  //
+  // It carries the *correct* capability digest, so this fixture isolates the
+  // label check: if the only thing wrong is which run the labels name, the
+  // capability proof cannot be what refuses it. A fixture that got both wrong
+  // would pass whichever guard survived a mutation, which is how a redundant
+  // check reads as a measured one.
+  daemon.volumes.set(VOLUME, {
+    labels: { ...handle.labels, [TRUSTED_VOLUME_LABEL_KEYS.runId]: OTHER_RUN },
+    options: "",
+  });
 
   const cleanup = channel(daemon, root).cleanup();
   assert.equal(cleanup.removed, false, "a mislabelled volume was removed");
@@ -344,7 +368,9 @@ test("TRUSTED-OWNERSHIP: a volume with the right labels and the wrong capability
   // Every label right except the one that cannot be guessed. This is the spoof
   // the digest exists to defeat: an attacker who can read labels can reproduce
   // all of them but this one, because the value it hashes from never left the
-  // handle file.
+  // handle file. The label *set* is therefore correct, which isolates the
+  // capability check — nothing about which run this claims to belong to is
+  // wrong, so the label comparison has nothing to object to.
   daemon.volumes.set(VOLUME, {
     labels: {
       ...handle.labels,

@@ -186,10 +186,20 @@ export function trustedVolumeLabels(input: {
 /**
  * Whether an observed label set is exactly the one this handle requires.
  *
- * Exact set equality, not containment and never a substring test. A volume with
- * the right name and one missing label is not this run's volume, and a volume
- * carrying an extra label is a resource something else has an opinion about.
- * Both refuse.
+ * Exact key-set equality, not containment and never a substring test. A volume
+ * with the right name and one missing label is not this run's volume, and a
+ * volume carrying an extra label is a resource something else has an opinion
+ * about. Both refuse.
+ *
+ * **The ownership digest's key is required and its value is deliberately not
+ * compared here.** That value is the capability proof, and it is checked
+ * separately by the caller against the digest re-derived from the retained
+ * nonce. Keeping the two apart is not tidiness: with the digest folded in here,
+ * "the labels say this is someone else's resource" and "I do not hold the
+ * capability that created this resource" become one check, a single mistake
+ * disables both, and neither can be measured on its own. A campaign proved
+ * exactly that — with one combined comparison, removing *either* guard changed
+ * no outcome and both controls survived their own mutation.
  */
 export function labelsMatch(
   expected: Readonly<Record<string, string>>,
@@ -201,6 +211,7 @@ export function labelsMatch(
   if (expectedKeys.length !== observedKeys.length) return false;
   for (const [index, key] of expectedKeys.entries()) {
     if (observedKeys[index] !== key) return false;
+    if (key === TRUSTED_VOLUME_LABEL_KEYS.ownership) continue;
     if (observed[key] !== expected[key]) return false;
   }
   return true;
