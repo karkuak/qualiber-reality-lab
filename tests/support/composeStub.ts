@@ -248,6 +248,10 @@ export class StubDockerCli implements DockerCli {
       const volume = this.world.volumes.get(args[2] as string);
       if (volume === undefined) return this.no();
       const format = args.includes("--format") ? (args[args.indexOf("--format") + 1] as string) : "";
+      // The labels the volume was created with, because ownership is proved from
+      // them immediately before every removal. A stub that could not answer this
+      // would refuse every provision on a read-back the daemon passes.
+      if (format.includes("Labels")) return this.ok(`${JSON.stringify(volume.labels)}\n`);
       return this.ok(`${format.includes("Options") ? (volume.mountOptions ?? "") : (args[2] as string)}\n`);
     }
     if (head === "volume" && second === "create") {

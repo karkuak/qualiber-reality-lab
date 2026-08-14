@@ -528,13 +528,19 @@ test("COMPOSE-E2E: a run may not substitute its driver after it has bound one", 
     assert.equal(resumed.exitCode, 0, JSON.stringify(resumed.body.errors));
   } finally {
     // The environment is real, so this test cleans up after itself by exact name.
+    //
+    // Including the trusted volume, which `provision` creates and which nothing
+    // here ever asks the channel to remove: this case never runs `destroy`, so
+    // the lifecycle that owns the volume never reaches its teardown. That is a
+    // gap in this test rather than in the channel — but it left one
+    // `erl2-trusted-<run>` behind on every execution, and a suite that leaks a
+    // volume cannot be evidence that the lifecycle does not.
     for (const service of ["quote", "otel-collector"]) {
       docker(["container", "rm", "--force", `${run.project}-${service}`]);
     }
     docker(["network", "rm", `${run.project}-net`]);
+    docker(["volume", "rm", "--force", `erl2-trusted-${run.runId}`]);
   }
-  assert.deepEqual(
-    [...projectObjects(run.project).containers, ...projectObjects(run.project).networks],
-    [],
-  );
+  const after = projectObjects(run.project);
+  assert.deepEqual([...after.containers, ...after.networks, ...after.volumes], []);
 });
