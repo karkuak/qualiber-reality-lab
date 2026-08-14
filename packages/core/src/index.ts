@@ -196,6 +196,22 @@ export {
   type VerifiedTrustedCollector,
 } from "./environment/trustedChannel.js";
 export {
+  fileTrustedOwnershipStore,
+  isTrustedVolumeOwnership,
+  labelsMatch,
+  newTrustedVolumeCapability,
+  sealTrustedVolumeOwnership,
+  trustedCapabilityDigest,
+  trustedVolumeLabels,
+  TRUSTED_CHANNEL_VERSION,
+  TRUSTED_OWNERSHIP_SCHEMA_VERSION,
+  TRUSTED_VOLUME_LABEL_KEYS,
+  TRUSTED_VOLUME_RESOURCE_TYPE,
+  type TrustedOwnershipStore,
+  type TrustedVolumeOwnership,
+  type TrustedVolumeOwnershipPhase,
+} from "./environment/trustedOwnership.js";
+export {
   TRUSTED_TELEMETRY_MAX_BYTES,
   TRUSTED_TELEMETRY_MAX_RECORDS,
   TRUSTED_TELEMETRY_MAX_FIELD_CHARS,

@@ -28,6 +28,7 @@ import {
   attributableTelemetryGatePassed,
   buildTrustedTelemetryObservation,
   decideTrustedTelemetryAuthority,
+  fileTrustedOwnershipStore,
   observeTrustedTelemetry,
   parseTrustedTelemetryRecords,
   trustedTelemetryClaimRefusal,
@@ -107,6 +108,11 @@ interface Stub {
 
 function stubDocker(options: StubOptions = {}): Stub {
   const volumes = new Set(options.existingVolumes ?? []);
+  // Labels the stub daemon remembers per volume, so `volume inspect` can answer
+  // the ownership question the channel asks immediately before every removal.
+  // A pre-existing volume carries none, which is exactly why this run may not
+  // remove one.
+  const labels = new Map<string, Record<string, string>>();
   const stub: Stub = {
     commands: [],
     copies: 0,
@@ -118,14 +124,26 @@ function stubDocker(options: StubOptions = {}): Stub {
 
       if (args[0] === "volume" && args[1] === "inspect") {
         if (!volumes.has(args[2] as string)) return no();
-        const format = args[args.indexOf("--format") + 1] ?? "";
+        const format = String(args[args.indexOf("--format") + 1] ?? "");
+        if (format.includes("Labels")) {
+          return ok(`${JSON.stringify(labels.get(args[2] as string) ?? null)}\n`);
+        }
         return ok(
-          `${String(format).includes("Options") ? (options.reportedOptions ?? trustedVolumeMountOptions()) : args[2]}\n`,
+          `${format.includes("Options") ? (options.reportedOptions ?? trustedVolumeMountOptions()) : args[2]}\n`,
         );
       }
       if (args[0] === "volume" && args[1] === "create") {
         if (options.createFails === true) return no("stub: create refused");
-        volumes.add(args.at(-1) as string);
+        const name = args.at(-1) as string;
+        const applied: Record<string, string> = {};
+        for (const [index, value] of args.entries()) {
+          if (value !== "--label") continue;
+          const entry = args[index + 1] as string;
+          const split = entry.indexOf("=");
+          applied[entry.slice(0, split)] = entry.slice(split + 1);
+        }
+        volumes.add(name);
+        labels.set(name, applied);
         return ok();
       }
       if (args[0] === "volume" && args[1] === "rm") {
@@ -178,6 +196,7 @@ function channelFor(options: StubOptions = {}, runId = RUN_ID): {
       runId,
       docker,
       freezeRoot: root,
+      ownership: fileTrustedOwnershipStore({ root, runId }),
       project: `erl2-${runId}`,
       sleep: () => undefined,
       stabilityAttempts: 4,
@@ -730,11 +749,18 @@ test("TRUSTED-CHANNEL: cleanup does not confer evidence validity, and validity d
 test("TRUSTED-CHANNEL: the freeze copies are working material and do not outlive cleanup", () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "erl2-trusted-freeze-"));
   roots.push(root);
+  // The ownership handle lives somewhere else, as it does in the driver: the
+  // freeze root is working material that cleanup deletes, and durable ownership
+  // is state that has to survive the process. Putting them in one directory
+  // would make this test assert that cleanup destroys its own proof.
+  const stateRoot = mkdtempSync(path.join(os.tmpdir(), "erl2-trusted-state-"));
+  roots.push(stateRoot);
   const docker = stubDocker({ files: { [TRUSTED_CHANNEL_FILE_NAME]: record(RUN_ID, 2) } });
   const channel = new TrustedTelemetryChannel({
     runId: RUN_ID,
     docker,
     freezeRoot: root,
+    ownership: fileTrustedOwnershipStore({ root: stateRoot, runId: RUN_ID }),
     sleep: () => undefined,
     stabilityAttempts: 4,
   });

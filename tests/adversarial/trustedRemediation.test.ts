@@ -23,6 +23,7 @@ import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+  fileTrustedOwnershipStore,
   observeTrustedTelemetry,
   parseTrustedTelemetryRecords,
   readTrustedArchive,
@@ -365,6 +366,7 @@ function delayedChannel(arrivesAt: number | undefined): TrustedTelemetryChannel 
     runId: RUN_ID,
     docker: stub,
     freezeRoot: root,
+    ownership: fileTrustedOwnershipStore({ root, runId: RUN_ID }),
     sleep: () => undefined,
     stabilityAttempts: 6,
   });
@@ -446,6 +448,7 @@ test("TRUSTED-REMEDIATION: a zero-eligible run that receives foreign traffic sti
       }),
     },
     freezeRoot: root,
+    ownership: fileTrustedOwnershipStore({ root, runId: RUN_ID }),
     sleep: () => undefined,
     stabilityAttempts: 4,
   });
@@ -482,6 +485,7 @@ function archiveChannel(archive: Buffer): TrustedTelemetryChannel {
       }),
     },
     freezeRoot: root,
+    ownership: fileTrustedOwnershipStore({ root, runId: RUN_ID }),
     sleep: () => undefined,
     stabilityAttempts: 3,
   });
@@ -544,6 +548,7 @@ test("TRUSTED-REMEDIATION: the copy path writes nothing to this host's filesyste
       }),
     },
     freezeRoot: root,
+    ownership: fileTrustedOwnershipStore({ root, runId: RUN_ID }),
     sleep: () => undefined,
     stabilityAttempts: 3,
   });
@@ -573,6 +578,7 @@ test("TRUSTED-REMEDIATION: `docker cp` is asked for the archive, never for an ex
       },
     },
     freezeRoot: root,
+    ownership: fileTrustedOwnershipStore({ root, runId: RUN_ID }),
     sleep: () => undefined,
     stabilityAttempts: 3,
   }).close(COLLECTOR);

@@ -136,6 +136,10 @@ import {
   type VerifiedTrustedCollector,
 } from "./trustedChannel.js";
 import {
+  fileTrustedOwnershipStore,
+  type TrustedOwnershipStore,
+} from "./trustedOwnership.js";
+import {
   assertDriverEnabled,
   assertNarrowSelector,
   assertOperationSupported,
@@ -385,6 +389,20 @@ class ComposeRunStore {
   /** Deletes the endpoint record. Absent is success: the point is that it is gone. */
   removeEndpoint(): void {
     rmSync(path.join(this.endpointDirectory(), "endpoint.json"), { force: true });
+  }
+
+  /**
+   * Where the trusted volume's ownership is proved from.
+   *
+   * Rooted here, beside the receipts and the identity marker, because it is the
+   * same class of fact: bytes that cannot be re-derived by observing Docker. It
+   * is a separate document rather than a field on the run record because the
+   * ownership intent has to be written in the window before the volume exists,
+   * and that write must be one atomic rename of a small file rather than a
+   * rewrite of every receipt the run has accumulated.
+   */
+  trustedOwnership(): TrustedOwnershipStore {
+    return fileTrustedOwnershipStore({ root: this.root, runId: this.runId });
   }
 }
 
@@ -660,6 +678,10 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
       docker: this.docker,
       freezeRoot: trustedFreezeRoot(options.trustedFreezeRoot ?? os.tmpdir(), options.runId),
       project: this.project,
+      // The durable seam. Every lifecycle step runs in its own process, so the
+      // channel `destroy` builds is a different object from the one `provision`
+      // created — and this is where it learns what that one did.
+      ownership: this.store.trustedOwnership(),
       ...(options.trustedStabilityAttempts === undefined
         ? {}
         : { stabilityAttempts: options.trustedStabilityAttempts }),

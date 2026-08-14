@@ -67,6 +67,7 @@ import {
   CODES,
   Erl2Error,
   assertContract,
+  parseStrictJson,
   type AttributableTelemetryObservationV2,
   type Hash,
   type Instant,
@@ -74,6 +75,18 @@ import {
 import { coreHash, hashBytes } from "@erl2/integrity";
 import type { DockerCli } from "./dockerCli.js";
 import { readTrustedArchive, unsafeArchiveName } from "./trustedArchive.js";
+import {
+  labelsMatch,
+  newTrustedVolumeCapability,
+  sealTrustedVolumeOwnership,
+  trustedCapabilityDigest,
+  trustedVolumeLabels,
+  TRUSTED_CHANNEL_VERSION,
+  TRUSTED_OWNERSHIP_SCHEMA_VERSION,
+  TRUSTED_VOLUME_LABEL_KEYS,
+  type TrustedOwnershipStore,
+  type TrustedVolumeOwnership,
+} from "./trustedOwnership.js";
 import {
   parseTrustedTelemetryRecords,
   utf8ByteLength,
@@ -167,6 +180,33 @@ export const TRUSTED_CHANNEL_REASONS = {
   unprovisioned: "telemetry_channel_unprovisioned",
   /** The volume exists but its driver options are not the ones that were asked for. */
   mountOptionsUnexpected: "telemetry_channel_mount_options_unexpected",
+  /**
+   * The volume exists but does not carry exactly the labels this run's handle
+   * requires.
+   *
+   * Separate from `mountOptionsUnexpected` because the two say different things:
+   * the options are how the volume behaves, and the labels are who it belongs
+   * to. A resource whose ownership labels do not match is never removed and
+   * never adopted — it is refused, and it survives.
+   */
+  labelsUnexpected: "telemetry_channel_volume_labels_unexpected",
+  /**
+   * This run already holds a live ownership handle.
+   *
+   * A second provision over a live claim would mint a second capability and
+   * orphan the first, so the resource the run already created would become
+   * unremovable. Refused rather than overwritten.
+   */
+  ownershipConflict: "telemetry_channel_ownership_conflict",
+  /**
+   * A pending ownership intent could not be safely reconciled.
+   *
+   * The recorded name resolves to a resource whose labels or capability digest
+   * are not this handle's, so it is not the volume the intent describes and this
+   * process has no proof it may touch it. Fail closed: the intent stays, the
+   * resource stays, and an operator gets a name rather than a guess.
+   */
+  reconciliationRefused: "telemetry_channel_ownership_reconciliation_refused",
   /** The collector is not a container Docker proves is this run's. */
   collectorNotVerified: "collector_not_verified",
   /** The trusted directory could not be copied out of the collector. */
@@ -330,6 +370,16 @@ export interface TrustedChannelOptions {
   readonly runId: string;
   readonly docker: DockerCli;
   /**
+   * Where ownership of the volume is proved from.
+   *
+   * Required, and deliberately not defaulted: a channel without a durable store
+   * is exactly the channel whose `created` flag evaporated between `provision`
+   * and `destroy`. Making it an argument means every construction site has to
+   * answer the question "which process will prove this?", and there is no
+   * convenient in-memory fallback for one to fall into.
+   */
+  readonly ownership: TrustedOwnershipStore;
+  /**
    * A task-scoped directory the freeze copies into.
    *
    * Outside the collector, outside the substrate, and removed by `cleanup`. Two
@@ -375,7 +425,7 @@ export class TrustedTelemetryChannel {
   private readonly project: string | undefined;
   private readonly sleep: (ms: number) => void;
   private readonly stabilityAttempts: number;
-  private created = false;
+  private readonly ownership: TrustedOwnershipStore;
 
   constructor(options: TrustedChannelOptions) {
     this.runId = options.runId;
@@ -383,13 +433,47 @@ export class TrustedTelemetryChannel {
     this.docker = options.docker;
     this.freezeRoot = options.freezeRoot;
     this.project = options.project;
+    this.ownership = options.ownership;
     this.sleep = options.sleep ?? blockingSleep;
     this.stabilityAttempts = options.stabilityAttempts ?? DEFAULT_STABILITY_ATTEMPTS;
   }
 
-  /** Whether this channel created the volume. Cleanup removes nothing it did not create. */
+  /**
+   * Whether this run holds a live claim on the volume.
+   *
+   * Read from the durable handle, never from this object's memory. That is the
+   * whole correction: the process that answers this question is usually not the
+   * process that created the resource, and a field on an instance cannot survive
+   * the exit of the process that set it.
+   */
   get ownsVolume(): boolean {
-    return this.created;
+    const handle = this.readOwnership();
+    return handle !== undefined && handle.phase !== "released";
+  }
+
+  /**
+   * The handle, or `undefined` if there is nothing readable to act on.
+   *
+   * A corrupt or foreign handle is `undefined` *here* and refused by every
+   * caller, rather than throwing out of a getter: the callers below each have a
+   * fail-closed answer for "no provable ownership", and they are better places
+   * to decide than an exception thrown through a lifecycle step.
+   */
+  private readOwnership(): TrustedVolumeOwnership | undefined {
+    let handle: TrustedVolumeOwnership | undefined;
+    try {
+      handle = this.ownership.read();
+    } catch {
+      // Unreadable is not absent. The caller treats it as "cannot prove
+      // ownership", which removes nothing — see `cleanup`.
+      return undefined;
+    }
+    if (handle === undefined) return undefined;
+    // A handle for another run authorizes nothing here, however well-formed it
+    // is. This is the check that makes a copied or misplaced record inert.
+    if (handle.run_id !== this.runId) return undefined;
+    if (handle.volume_name !== this.volumeName) return undefined;
+    return handle;
   }
 
   // -- 1. provision ---------------------------------------------------------
@@ -413,17 +497,65 @@ export class TrustedTelemetryChannel {
    * this channel did not account for are caught before they can be read.
    */
   provision(): TrustedChannelProvision {
+    // 0. A live claim is never overwritten.
+    //
+    // Minting a second capability over a resource the first one owns would
+    // orphan it: the handle that could remove it would be gone, and the volume
+    // would outlive every process that could prove the right to delete it. That
+    // is the defect this whole module closes, arriving by a different door.
+    const prior = this.readOwnership();
+    if (prior !== undefined && prior.phase === "created") {
+      return { provisioned: false, reasonCode: TRUSTED_CHANNEL_REASONS.ownershipConflict };
+    }
+    if (prior !== undefined && prior.phase === "pending-create") {
+      // A crash landed between the intent and the confirmation. Whatever the
+      // previous process managed to create is reconciled here — against the
+      // exact name, labels and capability that intent recorded, and against
+      // nothing else.
+      if (!this.reconcilePending(prior)) {
+        return { provisioned: false, reasonCode: TRUSTED_CHANNEL_REASONS.reconciliationRefused };
+      }
+    }
+
+    // 1. A name already taken is refused, never adopted, and never removed.
     if (this.volumeExists()) {
       return { provisioned: false, reasonCode: TRUSTED_CHANNEL_REASONS.volumeStale };
     }
-    const labels: string[] = [
-      "--label",
-      `com.erl2.run_id=${this.runId}`,
-      "--label",
-      "com.erl2.driver_id=compose-driver",
-    ];
-    if (this.project !== undefined) {
-      labels.push("--label", `com.docker.compose.project=${this.project}`);
+
+    // 2. The intent is durable *before* the resource exists.
+    //
+    // This ordering is the crash-safety property. A process that dies after this
+    // write and before `volume create` leaves a handle naming a volume that does
+    // not exist — recoverable, and harmless. A process that died after creating
+    // the volume and before recording anything would leave the opposite: a
+    // resource nobody can prove they own, which is unrecoverable without
+    // guessing. The window is one atomic rename wide, and it is on the safe side
+    // of the resource.
+    const capability = newTrustedVolumeCapability();
+    const capabilityDigest = trustedCapabilityDigest(capability);
+    const intent = sealTrustedVolumeOwnership({
+      schema_version: TRUSTED_OWNERSHIP_SCHEMA_VERSION,
+      run_id: this.runId,
+      volume_name: this.volumeName,
+      channel_version: TRUSTED_CHANNEL_VERSION,
+      mount_options: trustedVolumeMountOptions(),
+      labels: trustedVolumeLabels({
+        runId: this.runId,
+        capabilityDigest,
+        project: this.project,
+      }),
+      capability,
+      capability_digest: capabilityDigest,
+      phase: "pending-create",
+    });
+    this.ownership.write(intent);
+
+    // 3. Create it, carrying the digest rather than the capability. A label is
+    //    readable by anything that can list volumes; the value it hashes from is
+    //    not, which is what makes possession of the handle mean something.
+    const labelArgs: string[] = [];
+    for (const [key, value] of Object.entries(intent.labels)) {
+      labelArgs.push("--label", `${key}=${value}`);
     }
     const created = this.docker.run({
       args: [
@@ -437,20 +569,24 @@ export class TrustedTelemetryChannel {
         "device=tmpfs",
         "--opt",
         `o=${trustedVolumeMountOptions()}`,
-        ...labels,
+        ...labelArgs,
         this.volumeName,
       ],
       timeoutMs: 60_000,
     });
     if (created.status !== 0) {
+      // The intent stays. Either nothing was created, or something was and a
+      // later reconciliation will find it by exact match and remove it.
       return { provisioned: false, reasonCode: TRUSTED_CHANNEL_REASONS.unprovisioned };
     }
-    this.created = true;
 
-    // Read the options back rather than trusting the create succeeded with
-    // them. A daemon that silently ignored an option would otherwise hand the
+    // 4. Read the resource back rather than trusting the create.
+    //
+    // A daemon that silently ignored an option would otherwise hand the
     // collector a root-owned volume and the failure would surface as an
-    // unexplained start-up crash instead of a named refusal.
+    // unexplained start-up crash instead of a named refusal — and a daemon that
+    // dropped a label would leave a volume this run could no longer prove it
+    // owns.
     const observed = this.observedMountOptions();
     if (observed !== trustedVolumeMountOptions()) {
       return {
@@ -458,11 +594,98 @@ export class TrustedTelemetryChannel {
         reasonCode: TRUSTED_CHANNEL_REASONS.mountOptionsUnexpected,
       };
     }
+    if (!labelsMatch(intent.labels, this.observedLabels())) {
+      return { provisioned: false, reasonCode: TRUSTED_CHANNEL_REASONS.labelsUnexpected };
+    }
+
+    // 5. Only now is ownership asserted. Before this line the handle promises
+    //    nothing about a resource existing; after it, cleanup is entitled to act.
+    this.ownership.write(sealTrustedVolumeOwnership({ ...withoutHash(intent), phase: "created" }));
     return {
       provisioned: true,
       volumeName: this.volumeName,
       mountOptions: observed,
     };
+  }
+
+  /**
+   * Resolves a pending intent left by a process that did not finish.
+   *
+   * The only place this module removes a resource it did not watch being
+   * created, and it is deliberately the narrowest possible act: the volume must
+   * exist under the *exact* recorded name, carry the *exact* recorded labels,
+   * and carry the digest of the capability in the *same* handle. A resource that
+   * fails any of those is not the one the intent describes — it may be a
+   * stranger's, or a spoof planted under a predicted name — and this returns
+   * `false` rather than deleting it.
+   *
+   * Returns whether provisioning may proceed.
+   */
+  private reconcilePending(intent: TrustedVolumeOwnership): boolean {
+    if (!this.volumeExists()) return true;
+    if (!this.resourceProvenOwned(intent)) return false;
+    const removed = this.docker.run({
+      args: ["volume", "rm", intent.volume_name],
+      timeoutMs: 60_000,
+    });
+    if (removed.status === 0) return true;
+    return !this.volumeExists();
+  }
+
+  /**
+   * Whether the volume Docker currently reports is provably this handle's.
+   *
+   * Two independent questions, deliberately answered by two statements rather
+   * than one:
+   *
+   * **Is it the right kind of resource, belonging to this run?** — the observed
+   * label set must equal the handle's exactly. Set equality, so a missing label
+   * and an extra label both refuse; and never a substring test, because
+   * `com.erl2.run_id` matching *within* a longer value would let a run id that
+   * is a prefix of another satisfy it.
+   *
+   * **Does this process hold the capability that created it?** — the ownership
+   * label must equal the digest re-derived from the handle's raw capability.
+   * Re-derived, not read from the handle's own `capability_digest` field: a
+   * record that carries a digest it cannot produce proves nothing, and this way
+   * possession of the *value* is what the check consumes.
+   *
+   * Called immediately before every removal, so the answer cannot go stale
+   * between an inspection and an action. A volume that is replaced in the
+   * remaining window would have to be replaced by one carrying a digest of a
+   * capability that has never left this file.
+   */
+  private resourceProvenOwned(handle: TrustedVolumeOwnership): boolean {
+    const observed = this.observedLabels();
+    if (!labelsMatch(handle.labels, observed)) return false;
+    if (observed?.[TRUSTED_VOLUME_LABEL_KEYS.ownership] !== trustedCapabilityDigest(handle.capability)) {
+      return false;
+    }
+    return true;
+  }
+
+  /** Every label the daemon reports for this volume, or `undefined` if there is none. */
+  private observedLabels(): Readonly<Record<string, string>> | undefined {
+    const result = this.docker.run({
+      args: ["volume", "inspect", this.volumeName, "--format", "{{json .Labels}}"],
+      timeoutMs: 60_000,
+    });
+    if (result.status !== 0) return undefined;
+    let value: unknown;
+    try {
+      value = parseStrictJson(result.stdout.trim());
+    } catch {
+      return undefined;
+    }
+    // A volume with no labels at all reports `null`, which is a label set this
+    // handle can never match rather than an error.
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+    const labels: Record<string, string> = {};
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      if (typeof entry !== "string") return undefined;
+      labels[key] = entry;
+    }
+    return labels;
   }
 
   /** Whether a volume of this run's name is present. Exact name, never a pattern. */
@@ -684,24 +907,58 @@ export class TrustedTelemetryChannel {
    * evidence validity and evidence validity is not cleanup success.
    */
   cleanup(): TrustedChannelCleanup {
+    // The handle is read before anything is deleted. The freeze root is
+    // caller-supplied working material and the ownership store is caller-supplied
+    // durable state, and this module is not in a position to prove they are not
+    // the same directory — so it reads the proof it needs first and removes
+    // afterwards, rather than depending on a separation it cannot check.
+    const handle = this.readOwnership();
     rmSync(this.freezeRoot, { recursive: true, force: true });
-    if (!this.created) {
+    // Nothing was ever claimed, or what is on disk is not a handle this process
+    // can read as one. Both mean the same thing to this function — there is no
+    // proof of ownership — and the response to no proof is to remove nothing.
+    // The distinction between them is preserved for the operator in `detail`.
+    if (handle === undefined) {
+      const detail = this.unprovableOwnershipDetail();
+      return {
+        attempted: false,
+        removed: false,
+        surviving: [],
+        ...(detail === undefined ? {} : { detail }),
+      };
+    }
+    // A tombstone. Destroy is idempotent because this is a fact about a
+    // resource that was already removed, and it names a fixed volume, so a
+    // repeated destroy can never reach forward to something created later.
+    if (handle.phase === "released") {
       return { attempted: false, removed: false, surviving: [] };
+    }
+    // The resource is already gone — a prior removal whose tombstone write did
+    // not land, or a daemon that lost it. Honest outcome: there is nothing
+    // surviving, and the handle is retired so the next destroy is a no-op.
+    if (!this.volumeExists()) return this.releaseHandle(handle);
+    // The proof, taken immediately before the removal rather than at any earlier
+    // point in the lifecycle.
+    if (!this.resourceProvenOwned(handle)) {
+      return {
+        attempted: true,
+        removed: false,
+        surviving: [this.volumeName],
+        detail:
+          "a volume of this run's name exists but does not carry this run's ownership labels " +
+          "and capability digest; it is not this channel's to remove",
+      };
     }
     const removed = this.docker.run({
       args: ["volume", "rm", this.volumeName],
       timeoutMs: 60_000,
     });
-    if (removed.status === 0) {
-      this.created = false;
-      return { attempted: true, removed: true, surviving: [] };
-    }
-    // A volume that is gone anyway is removed, however it went. A volume that
-    // is still there is reported as surviving, with the daemon's own words.
-    if (!this.volumeExists()) {
-      this.created = false;
-      return { attempted: true, removed: true, surviving: [] };
-    }
+    // A volume that is gone anyway is removed, however it went. A volume that is
+    // still there is reported as surviving, with the daemon's own words — and
+    // the handle is *kept*, in the phase it was in, so the next attempt still
+    // holds the capability. Tombstoning a failed removal would strand the
+    // resource exactly as the in-memory flag did.
+    if (removed.status === 0 || !this.volumeExists()) return this.releaseHandle(handle);
     return {
       attempted: true,
       removed: false,
@@ -709,6 +966,50 @@ export class TrustedTelemetryChannel {
       detail: removed.stderr.trim().slice(0, 512),
     };
   }
+
+  /**
+   * Retires the handle and reports the removal.
+   *
+   * The single tombstone site, deliberately: every path that concludes the
+   * resource is gone goes through here, so "removed" and "the claim is retired"
+   * cannot come apart. A second destroy then finds a `released` handle and does
+   * nothing — and because the handle names one fixed volume, it can never reach
+   * a resource created later under the same name.
+   */
+  private releaseHandle(handle: TrustedVolumeOwnership): TrustedChannelCleanup {
+    this.ownership.write(sealTrustedVolumeOwnership({ ...withoutHash(handle), phase: "released" }));
+    return { attempted: true, removed: true, surviving: [] };
+  }
+
+  /**
+   * Why ownership could not be proved, for an operator who has to act on it.
+   *
+   * "Never claimed" and "claimed, and this process cannot read the claim" lead
+   * to different next steps, so they are different sentences — but neither is a
+   * licence to delete anything, which is why they share a return shape.
+   */
+  private unprovableOwnershipDetail(): string | undefined {
+    let raw: TrustedVolumeOwnership | undefined;
+    try {
+      raw = this.ownership.read();
+    } catch {
+      return (
+        "the trusted volume's ownership handle could not be read; " +
+        "no resource was removed, because a resource this process cannot prove it owns is not its to remove"
+      );
+    }
+    if (raw === undefined) return undefined;
+    return (
+      "the trusted volume's ownership handle names another run or another volume; " +
+      "no resource was removed"
+    );
+  }
+}
+
+/** A handle body without its integrity hash, ready to be re-sealed after a phase change. */
+function withoutHash(handle: TrustedVolumeOwnership): Omit<TrustedVolumeOwnership, "core_hash"> {
+  const { core_hash: _ignored, ...body } = handle;
+  return body;
 }
 
 // -- 5. producing the ERL2-C-171 material -------------------------------------
