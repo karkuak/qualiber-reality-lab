@@ -378,8 +378,8 @@ evidence.
 | package | scope | status |
 |---|---|---|
 | **1 — contract and authority** | ERL2-C-160 v2 artifact format, validation, structured-record recomputation, the single authority decision point, fixtures and controls | **this package** |
-| **2 — collector and storage** | trusted `file` exporter, the R2 minimizing processor, the tmpfs-backed named volume, overlay, extras, substrate lock | not started |
-| **3 — driver, producer, verifier integration** | volume lifecycle, `docker cp` read path, live freeze, producer/verifier wiring, removal of the mixed-stream parser and of the R7 control | not started |
+| **2 — collector and storage** | trusted `file` exporter, the R2 minimizing processor, the tmpfs-backed named volume, overlay, extras, substrate lock — **and**, by the amendment below, the volume lifecycle, the `docker cp` read path and the live freeze | **landed** — see `docs/ledger/trusted-telemetry-channel-substrate.md` |
+| **3 — producer and verifier integration** | `environmentRun`'s release from ERL2-C-160, producer/verifier wiring, removal of the mixed-stream parser and of the R7 control | not started |
 
 Package 3 may be combined with Package 2 only if the combined change can be
 reviewed without an intermediate state in which both channels can authorize
@@ -388,6 +388,28 @@ evidence.
 **The trusted channel does not exist until Package 2 and Package 3 land.**
 Defining its contract does not create it, and no artifact conforming to v2 has
 been produced by a collector.
+
+> **Amended 2026-08-14, on Package 2 landing.** The sentence above was true when
+> written and the first half of it is now false: the channel exists, and live
+> ERL2-C-171 artifacts **have** been produced by the pinned collector. The
+> second half stands — **no environment run can reach the channel**, because
+> `environmentRun`'s validity composition still reads retained observations as
+> ERL2-C-160 and throws on a v2 record. Every declaring run still fails its
+> `attributable-telemetry-retained` gate. The `6d28d543` defect is therefore
+> still open at the level that matters to a claim.
+>
+> Two boundaries moved between the packages, and both are recorded rather than
+> absorbed. The **volume lifecycle, `docker cp` read path and live freeze**
+> moved from Package 3 into Package 2, so that the substrate and the producer
+> that exercises it could be reviewed together; what Package 3 retains is the
+> `environmentRun` wiring and the retirement of the mixed-stream parser. And
+> **R5's finalization order is corrected by measurement**: it specifies flush,
+> close, then read, but the volume is tmpfs-backed and the kernel unmounts it
+> when the collector stops, so `docker cp` after a stop finds nothing at all.
+> The copy is taken from the *running* collector after the observation cutoff
+> and the container is stopped afterwards. What R5 requires — that nothing is
+> authoritative until the artifact is complete and frozen — is unchanged; how
+> "the collector is no longer writing" is established is not.
 
 ## 11. Earliest exploratory Qualiber milestone
 

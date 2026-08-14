@@ -118,6 +118,15 @@ const RENDERED_TOPOLOGY_SKIP = Object.freeze([
     case: "COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else",
     reason: "RENDERED TOPOLOGY UNPROVEN",
   }),
+  // Package 2 added a second assertion over the same rendered merge — that the
+  // trusted telemetry volume is mounted into the collector and into nothing
+  // else — so it is unobservable under exactly the same missing fixture, for
+  // exactly the same controls, and is declared here for exactly the same
+  // reason. An undeclared skip in a campaign row reads as coverage.
+  Object.freeze({
+    case: "COMPOSE-ADV: the RENDERED configuration mounts the trusted volume into the collector alone",
+    reason: "RENDERED TOPOLOGY UNPROVEN",
+  }),
 ]);
 
 export const CONTROLS = [

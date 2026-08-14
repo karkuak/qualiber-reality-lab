@@ -173,3 +173,51 @@ never accounted for.
 - the full campaign and the clean gate remain **pending**
 - exploratory Qualiber testing is **not yet authorized** (ADR-ERL2-038 §11)
 - **Package 2 and Package 3 are still required**
+
+---
+
+## 10. Corrections appended by Package 2 (2026-08-14)
+
+Nothing above is rewritten. The independent Package 1 review
+(`reality-lab-package1-independent-contract-and-authority-review.md`, SHA-256
+`c02cbf4e66a27b4bc7e2204af02ab6f869dea93fce2dbc112d2bfe774a36c941`, verdict
+`PACKAGE 1 APPROVED — PACKAGE 2 AUTHORIZED`) recorded four **P2** findings
+against this record and the report beside it. They are corrected here, in
+place, because this ledger is the document written to outlive the report.
+
+| # | what this ledger said | what is true |
+|---|---|---|
+| 1 | §3: registry entries **165 → 166** | **166 → 167.** Runtime `CONTRACTS.length` was 166 before ERL2-C-171 and is 167 after. The delta (+1), the uniqueness (167 unique ids) and the generated-type count (279 → 280) were all correct; only the endpoints were wrong. |
+| 2 | §6: **three** controls moved their enforcement points | **Two** moved. `telemetry-gate-satisfaction`'s `find`/`replace` are byte-identical to the parent's — only its *declared cases* migrated from v1 to v2 names. |
+| 3 | §6 named four existing controls as changed | **Five** changed. `telemetry-verifier-count-derivation` and `telemetry-verifier-attribution-floor` also had their declared cases migrated to `TRUSTED-VERIFY: …`, and were not disclosed at all. |
+| 4 | §6: `telemetry-verifier-recomputes-coherence`'s new enforcement point is *"attribution exceeding the spans it was drawn from"* | That is the `runAttributedRecords > spans` guard **deleted as structurally unreachable in the same commit** (`aeebdc4`). The control's actual target is the **artifact-block recomputation** — byte length, record count and final-record termination. This ledger claimed coverage that did not exist. |
+
+Two further corrections to the Package 1 record, neither of which this ledger
+made but both of which a reader of it should have:
+
+- **The reproducible broad result at Package 1 was 1 300 total / 1 280 passed /
+  20 fixture-dependent skips / zero failures**, not 1 300 / 1 300. The
+  zero-skip result depended on a git-ignored, network-fetched archive under
+  `environments/otel-demo/upstream/` that a fresh checkout does not carry. Every
+  skip is self-declaring, none touches contract, authority, grammar or verifier
+  code, and there were no failures either way — but "green on the first run,
+  zero skipped" described the author's machine rather than the commit.
+- **ERL2-C-160 is contract compatibility, not an operational
+  historical-verification workflow.** `readHistoricalTelemetryObservation` is
+  exported and unit-tested and has **no production caller**;
+  `deriveAttributableTelemetry` applies the v2 authority rule unconditionally.
+  A previously frozen bundle that declared attributable telemetry and retained a
+  valid v1 record would fail offline verification today. No such bundle exists
+  in this repository, and the exposure is any bundle frozen outside it. §8's
+  "v1 verifies in its original scope" is evidenced by contract registration and
+  evidence immutability — which is not the same as a verification path.
+
+## 11. What Package 2 changed about §9's status
+
+§9 is superseded on two lines and stands on the rest. The live trusted channel
+**is** now implemented and live v2 artifacts **have** been produced by the
+pinned collector — see
+`docs/ledger/trusted-telemetry-channel-substrate.md`. Everything else in §9
+still holds: the full campaign and the clean gate remain pending, exploratory
+Qualiber testing is still not authorized, and **Package 3 is still required**
+before an environment run can reach the channel at all.
