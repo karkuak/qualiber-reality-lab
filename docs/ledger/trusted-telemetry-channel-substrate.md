@@ -585,3 +585,450 @@ connects the lifecycle.
   unchanged in scope
 - the full campaign, the clean gate and `evidence:update` remain **not run**
 - Package 3 remains **blocked** pending focused re-review
+
+---
+
+## 10. Closure — the cross-process teardown defect and the span-link decision (2026-08-14)
+
+§9 closed four review findings and left two facts on the table: the trusted
+volume survived every real teardown, and span links were closed for privacy and
+open for availability. This section closes both. Nothing here moves the collector
+pin, touches `environmentRun`, or begins package 3.
+
+### 10.1 Why the volume survived every run
+
+The proof that a channel had created the volume was a field on the channel
+object:
+
+```ts
+private created = false;   // set in provision(), read in cleanup()
+```
+
+That is a correct proof inside one process and no proof at all across two. The
+ERL2 CLI runs each lifecycle step in its own process — `environmentCommands.ts`
+says so in as many words, "a run selects its driver once, at `provision`, and
+every later process reads it from here" — so the process that runs `destroy`
+constructs a fresh `TrustedTelemetryChannel`, reads `created === false`, returns
+`{attempted: false, removed: false}` and removes nothing.
+
+Measured on a clean daemon, one surviving object per run:
+
+```
+containers: []      networks: []
+volumes:    erl2-trusted-01a001f5-48a0-7d19-9c2e-fa3545079b9f
+```
+
+and the environment's own teardown then failed on residue it had produced
+itself: `TEARDOWN_FAILED: teardown left 2 resource(s)`.
+
+**The fix is not "remove it by name anyway."** A name says what a volume is
+called, not who created it. Cleanup that deletes on a name alone deletes the
+pre-existing volume this run explicitly *refused* to adopt — which is the
+property §4 records as deliberate, and the reason `provision` refuses a taken
+name rather than reusing it. What was needed is a proof of ownership that
+outlives the process that acquired it and that a different run, a stale record or
+a spoofed resource cannot satisfy.
+
+### 10.2 The ownership handle
+
+A durable capability, in `packages/core/src/environment/trustedOwnership.ts`:
+
+| field | why it cannot be re-derived |
+|---|---|
+| `schema_version` | a handle a later build cannot read is refused, not interpreted |
+| `run_id` | binds the claim to one run; another run's handle authorizes nothing |
+| `volume_name` | the exact resource. Never a prefix, never a pattern |
+| `channel_version` | a build with a different notion of the resource does not inherit the claim |
+| `mount_options` | what the daemon must echo back |
+| `labels` | every label the resource must carry, exactly |
+| `capability` | the raw nonce — retained **here and nowhere else** |
+| `capability_digest` | what the Docker label carries |
+| `phase` | `pending-create` → `created` → `released` |
+| `core_hash` | integrity over all of the above |
+
+There is deliberately **no timestamp**: nothing here is decided by elapsed time,
+and a clock in this record would be a new source of nondeterminism for no gain.
+
+**The capability is the proof.** `provision` mints 32 CSPRNG bytes, keeps the raw
+value in a mode-0600 file beside the substrate, and publishes only
+`hashBytes(capability)` as a Docker label. Removal re-derives the digest from the
+retained nonce and must find it on the resource. So a different run holds a
+different nonce; a volume spoofed under this run's (already unguessable,
+UUID-bearing) name cannot carry the right digest, because the value it hashes
+from was never published; and a stale handle whose volume is gone deletes
+nothing. The raw value never enters a label, a command line, an environment
+variable, the Compose graph, the inventory or any evidence record — the artifact
+a run produces must not carry the value that authorizes deleting the resource it
+came from.
+
+**Where it lives, and why not in the run record.** `ComposeRunStore` is the
+driver's existing durable record and this store is rooted in the same directory,
+keyed by the same base64url run id, written by the same atomic temp-then-rename,
+and handed to the channel by `ComposeRunStore.trustedOwnership()`. It is a
+separate *document* because the intent has to be persisted in the narrow window
+before `docker volume create`, and folding it into the receipts blob would make
+that window a read-modify-write of every receipt the run has accumulated.
+
+### 10.3 The sequence, and the crash windows
+
+1. refuse if a live claim already exists — a second capability would orphan the
+   first and strand the resource;
+2. reconcile a pending intent, against the exact recorded resource and nothing
+   else;
+3. refuse a pre-existing name — never adopt, never remove;
+4. **persist the intent**, atomically, *before* the resource exists;
+5. create the volume with the labels and the digest;
+6. read back name, options and labels; refuse on any mismatch;
+7. **only then** mark ownership `created`.
+
+Step 4 before step 5 is the whole crash-safety argument. Dying between them
+leaves a handle naming a volume that may not exist — recoverable. The other order
+would leave a resource nobody could prove they owned, which is not.
+
+| crash window | what a later process finds | what it does |
+|---|---|---|
+| before the intent | no handle, no volume | nothing to clean up |
+| after intent, before create | `pending-create`, no volume | reconciles to nothing, provisions |
+| after create, before confirmation | `pending-create`, exact volume | removes that exact resource, provisions |
+| after confirmation | `created`, volume | ordinary teardown |
+| during use | `created`, volume | ordinary teardown |
+| before destroy | `created`, volume | ordinary teardown |
+| during destroy | `created`, volume | retries; capability intact |
+| removal succeeded, tombstone lost | `created`, no volume | reports removed, retires the handle |
+| tombstone written, process reported failure | `released` | no-op |
+| repeated destroy | `released` | no-op |
+| stale handle, no volume | `created`, no volume | reports removed, retires the handle |
+| stale handle naming a spoofed volume | `created`, mismatched volume | **refuses**, reports it surviving |
+
+Reconciliation is the only place this module removes a resource it did not watch
+being created, and it is the narrowest possible act: exact name, exact labels,
+exact capability. Anything else refuses with
+`telemetry_channel_ownership_reconciliation_refused`.
+
+### 10.4 Two checks, not one
+
+Validation happens immediately before every removal, and it is **two** questions
+answered by two statements:
+
+- **is this the right resource?** — the observed label set must equal the
+  handle's, by exact key-set equality. A missing label and an extra label both
+  refuse; never a substring test, so a run id that merely *contains* the expected
+  one does not match.
+- **do I hold the capability?** — the ownership label must equal the digest
+  re-derived from the handle's raw nonce. Re-derived, not read from the handle's
+  own digest field: a record carrying a digest it cannot produce proves nothing.
+
+They were one check to begin with, and the campaign caught it. With the digest
+folded into the label comparison, removing *either* guard changed no outcome and
+**both controls survived their own mutation** — and the fixtures made it worse by
+getting two things wrong at once, so whichever guard survived still caught them.
+Each fixture now gets exactly one thing wrong. This is the second redundant guard
+in this package mistaken for a measured one; the first was
+`trusted-channel-source-entry-must-be-regular` in §9.
+
+New reason codes: `telemetry_channel_volume_labels_unexpected`,
+`telemetry_channel_ownership_conflict`,
+`telemetry_channel_ownership_reconciliation_refused`.
+
+### 10.5 Cleanup semantics
+
+- a missing or unreadable handle removes **nothing** and says which it was;
+- a `released` handle is a no-op, so destroy is idempotent — and because the
+  handle names one fixed volume, it can never reach a resource created later
+  under the same name;
+- a successful removal retires the handle through a single tombstone site, so
+  "removed" and "the claim is retired" cannot come apart;
+- a **failed** removal keeps the handle in its phase, reports the daemon's own
+  words and lists the surviving resource. Tombstoning a failure would strand the
+  capability exactly as the in-memory flag did;
+- cleanup outcome remains a separate return value that no verdict consults.
+
+The handle is read *before* the freeze root is deleted. The freeze root is
+caller-supplied working material and the ownership store is caller-supplied
+durable state, and this module cannot prove they are different directories — so
+it reads the proof it needs first rather than depending on a separation it cannot
+check.
+
+### 10.6 Span links: an unsupported MVP capability
+
+§9 left P2-2 half-closed: link attributes and link trace state refused, an
+identifier-only link accepted. **That compromise only works if the collector can
+strip the other half, and at this pin it cannot strip any of it.** Re-measured
+against `otelcol-contrib` v0.157.0 at the locked arm64 digest: `spanlink`,
+`link`, `links` and `span_link` are all unknown OTTL contexts in both forms;
+`set(span.links, [])` fails at runtime against `ptrace.SpanLinkSlice`; indexed
+link paths are refused; the `redaction` processor does not traverse links.
+
+Accepting an identifier-only link was therefore accepting a *sample* rather than
+a capability. Whether one link happens to carry a payload says nothing about the
+next, and nothing upstream can make it not carry one.
+
+**Decision: refuse, and do not move the pin.** Any nonempty `links` array refuses
+the whole artifact with `telemetry_trusted_record_span_links_unsupported`.
+
+| shape | result |
+|---|---|
+| `links` key absent | accepted, counts unmoved |
+| `"links": []` — the exporter's canonical empty form | accepted, counts unmoved |
+| a link reduced to identifiers | **refused** |
+| a link carrying attributes or trace state | **refused** |
+| some spans linked, others not | **refused whole** |
+
+The code is deliberately none of its neighbours. The record parses, so this is
+not malformed data. Nothing escaped, so it is not a privacy incident. It is not
+cross-run contamination, not an absence of telemetry, and emphatically not an
+authentic zero — the one misreading a reader is entitled to act on. It is a
+declared limit of the image the bytes were exported through.
+
+The refusal is checked before attributes, status, events and the marker scan, so
+a linked artifact always reports the thing that actually blocks it rather than
+sending a reader to fix a payload that was never the problem. It is
+whole-artifact and not per-span: dropping the linked span and counting the rest
+would make the count a number this grammar chose rather than the length of the
+structure the collector wrote, which is the one property ADR-ERL2-038 §4 exists
+to hold. Partial credit here is a forged count with an honest face.
+
+There is no caller input that declares links safe. The limitation is a property
+of the collector image, not of the run observing it, so no run-level assertion
+could be true — and an override would be the one lever a subject could aim at,
+since the subject is the OTLP producer and chooses whether to emit links.
+`telemetry_trusted_record_link_not_minimized` is retired: it described a
+distinction that no longer exists.
+
+**No collector image, digest, SBOM, SPDX, provenance or qualification changed.**
+`erl2-otelcol-extras.yaml` and `erl2-overlay.yaml` are byte-identical, the lock's
+`core_hash` is still `sha256:a815e35f…c7152ea2`, and the collector digest is
+still `sha256:1fef9f07…98ea6`. Moving the pin to a version with a span-link OTTL
+context is a separate, separately approved package.
+
+### 10.7 Prerequisite for the first exploratory run
+
+Before the first exploratory run against any real subject, verify **from the
+trusted structured output** that the selected scenario emits no span links. If it
+does, the run is unsupported: evidence remains unavailable, no quality conclusion
+may be drawn from it, and a collector-version upgrade becomes a separately
+approved package rather than an in-flight fix.
+
+### 10.8 Controls
+
+Discovery **192 → 199**. Seven added, none removed, renamed or reordered —
+derived mechanically by comparing the two ordered id lists; removing the seven
+additions from the new list yields a list byte-identical in order to the old one.
+
+| control | boundary |
+|---|---|
+| `trusted-channel-ownership-handle-integrity` | a handle must hash to what it claims |
+| `trusted-channel-ownership-intent-precedes-creation` | the intent is durable before the resource |
+| `trusted-channel-ownership-labels-verified` | the label set must match exactly |
+| `trusted-channel-ownership-capability-verified` | the digest must match the retained nonce |
+| `trusted-channel-ownership-reconciliation-exact` | recovery removes only what it proves |
+| `trusted-channel-cleanup-tombstones-ownership` | a removal retires the claim |
+| `trusted-telemetry-span-links-unsupported` | a linked artifact is refused whole |
+
+Two anchors moved with the code they measure.
+`trusted-channel-cleanup-scoped-to-created` targeted `this.created`; it targets
+the durable handle now, because "only a volume this channel created" used to mean
+"only while the creating process is alive" and now means "only a volume this run
+holds a run-bound handle for". `trusted-channel-cleanup-failure-reported`
+targeted a second `volumeExists` block that is a single expression now.
+
+**Three controls needed correcting after the campaign measured them**, and all
+three are recorded rather than quietly fixed:
+
+- two survived their own mutation (§10.4);
+- the durable-ownership anchor produced mutants the type checker rejected —
+  twice. Assigning the read away narrows the local to `never`; an always-true
+  early return discards the narrowing below it. A build failure is a harness
+  error rather than a kill, so the control measured nothing. Withholding the
+  handle from the accessor's return is the same defect and type-checks;
+- `trusted-channel-ownership-capability-verified` killed on both its suites but
+  declared one, so the harness scored the live spoof as collateral.
+
+The durable-ownership mutation kills ten cases. That breadth is the honest result
+for the most central guard in the module — withhold the handle and nothing
+downstream can prove anything — and all ten are declared, because an undeclared
+failure is not credited as a kill.
+
+### 10.9 Affected-control map
+
+Derived mechanically on both axes from the changed non-doc paths.
+
+| path | role | mutation target? | designated suite? | discovery dep? |
+|---|---|---|---|---|
+| `trustedOwnership.ts` | **new** — durable ownership | yes (1) | no | no |
+| `trustedChannel.ts` | lifecycle / producer | yes (17) | no | no |
+| `trustedTelemetry.ts` | parser / verifier | yes (12) | no | no |
+| `composeDriver.ts` | driver / store wiring | yes (6) | no | no |
+| `index.ts` | exports | no | no | no |
+| `negative-control.mjs` | mutation table | no | no | **yes** |
+| `trustedOwnership.test.ts` | **new** — test | no | yes | no |
+| `trustedSpanLinks.test.ts` | **new** — test | no | yes | no |
+| `trustedCrossProcess.test.ts` | **new** — test | no | yes | no |
+| `trustedChannel.test.ts` | test | no | yes | no |
+| `trustedRemediation.test.ts` | test | no | yes | no |
+| `composeEnvironmentRun.test.ts` | test | no | yes | no |
+| `composeStub.ts` | fixture/stub | no | yes (via `composeSubstrate`, `composeEndpointEgress`) | no |
+
+```
+discovery 199 | mutation-target 36 | designated-suite 39 | UNION 47
+```
+
+Campaign at the final candidate, disposable clone, pinned archive supplied
+through `ERL2_CAMPAIGN_OTEL_ARCHIVE`:
+
+```
+negative controls: 47 of 199
+the working tree is byte-identical to how the campaign started
+accounting: 47 discovered = 47 agreed + 0 disagreed + 0 unmeasured + 0 harness error(s)
+all 47 measured control(s) matched their recorded expectation
+```
+
+Three controls report the declared `RENDERED_TOPOLOGY_SKIP` pair, unchanged from
+§9. The full 199-control campaign was **not** run.
+
+### 10.10 Cross-process measurement
+
+`tests/integration/trustedCrossProcess.test.ts` drives each lifecycle step in a
+child `node` process that exits before the next begins, against a real daemon.
+Constructing two channel objects in one test process is exactly what let the
+original defect through, so the boundary here is real and a regression to
+in-memory ownership cannot be made to pass by sharing more state inside the test.
+
+| case | result |
+|---|---|
+| provision in A, destroy in B | removed, zero residue |
+| the prior defect's shape — destroy with no durable handle | **refuses**, volume survives, and the owning process still recovers it |
+| repeated destroy in a third process | idempotent |
+| a wrong-run handle against another run's volume | refuses; the other volume survives |
+| a volume with the right name and a foreign capability digest | refuses, reported surviving |
+| an unrelated labelled volume beside the run's | untouched |
+| in-use volume, then retry once free | reported surviving with the daemon's words; removed on retry |
+| full provision-and-destroy | daemon volume inventory unchanged |
+
+### 10.11 Live matrix
+
+Pinned collector at the locked arm64 digest, the committed `transform/trusted`
+and `file/trusted` blocks, task-scoped names, all removed afterwards.
+
+| case | ownership | C-171 | gate | diagnostic | cleanup | surviving |
+|---|---|---|---|---|---|---|
+| crash immediately after creation | `pending-create` | n/a | — | — | not attempted | the volume |
+| recovery from pending intent | `pending-create` → reconciled → `created` | n/a | — | recovered | — | — |
+| normal teardown | `created` → `released` | — | — | — | removed | none |
+| repeated destroy | `released` | — | — | — | not attempted | none |
+| wrong-label volume | `created`, retained | — | — | not this channel's to remove | refused | the volume |
+| wrong-nonce volume | `created`, retained | — | — | not this channel's to remove | refused | the volume |
+| cleanup while in use | `created`, retained | — | — | `volume is in use - [...]` | refused | the volume |
+| retry once free | `created` → `released` | — | — | — | removed | none |
+| **no-link telemetry** | full lifecycle | `observed` spans=1 attributed=1, 458 B, `settledBy: attribution` | **true** | — | removed | none |
+| **linked-span telemetry** | full lifecycle | `absent` | false | `…_span_links_unsupported` | removed | none |
+| **mixed linked and unlinked** | full lifecycle | `absent` | false | `…_span_links_unsupported` | removed | none |
+| **hostile link attributes** | full lifecycle | `absent` | false | `…_span_links_unsupported` | removed | none |
+
+Docker volume count before and after every case: **0 → 0**. No task-created
+Docker resource remained.
+
+The three linked cases are also the live confirmation that the pinned collector
+does not strip links: the link content reached the trusted file, and the parser
+is what refused it.
+
+### 10.12 Broad suite
+
+Run **once** at the final candidate, canonical checkout, `TMPDIR=/tmp`, pinned
+fixture present at `sha256:1bf3ef8f…c051c`, **no retry**.
+
+```
+TMPDIR=/tmp npm test
+ℹ tests 1520 · pass 1517 · fail 1 · cancelled 0 · skipped 2 · duration_ms 1 037 052
+```
+
+| field | value |
+|---|---|
+| total | 1 520 |
+| passed | 1 517 |
+| **failed** | **1** |
+| cancelled | 0 |
+| skipped | 2 |
+| fixture state | pinned archive present, verified by digest |
+| duration | 1 037 052 ms (~17.3 min) |
+| truncation | none — the log terminates on its own trailer |
+| retries | none |
+| task-created volumes before / after | **0 / 0** |
+
+The two skips are the self-declaring `EXTERNAL SUBJECT UNPROVEN: no external
+adapter entry was supplied` pair. The single failure is §10.13.
+
+This is the first broad run at this candidate and it is reported as run. Two
+earlier broad attempts are reported rather than folded in: one was aborted by
+hand once it had shown a stub gap that made its result meaningless (§10.13), and
+one predates the control corrections. Neither is offered as evidence.
+
+**Package 2's earlier recorded broad results remain not reproducible**, as §9
+already records for the 1 328-test figure; the 1 477-test remediation figure is
+likewise superseded rather than reproduced.
+
+### 10.13 A third pre-existing defect, and two test-side gaps
+
+Correcting the teardown unmasks the next layer, exactly as correcting the stale
+resource count unmasked the teardown. `COMPOSE-E2E: a run reaches an
+offline-valid terminal through a real Compose substrate` now reaches
+`finalize-generic` and fails there:
+
+```
+EVALUATOR_INVALID_VALIDITY_IN_GENERIC_INDEX
+retained/finding-environment-gate-attributable-telemetry-retained.json
+```
+
+**The failing gate is `attributable-telemetry-retained` — the ERL2-C-160 path in
+`environmentRun`, which this package does not touch.** The retained v1
+observation is `evidence: "observed"` over a `log_excerpt` containing only the
+collector's own self-telemetry: the debug stream's window had moved past the
+subject's spans. That is the rotating-mixed-stream fragility ADR-ERL2-038 §2
+closed as a security boundary and package 3 retires.
+
+**Measured at the parent rather than assumed.** At `adfe24e` the run cannot reach
+`finalize-generic` at all — it fails one step earlier at `destroy` with
+`TEARDOWN_FAILED: teardown left 2 resource(s)`, the exact leak §10.1 describes,
+and no telemetry finding exists at that point because the finding is written at
+`finalize-generic`. Clearing the leaked volume externally at the parent, so its
+`destroy` succeeds, the parent's run reaches `finalize-generic` and fails with
+**the same code and the same finding**. `telemetryObservation.ts`,
+`telemetryAuthority.ts` and `environmentRun.ts` are byte-identical between
+`adfe24e` and this candidate, and the only `composeDriver.ts` change is the
+ownership-store wiring. So this is a pre-existing condition newly exposed, not a
+regression — the third layer of masking in one test.
+
+It is left open deliberately, and it is the one thing this package may not fix:
+the gate is composed in `environmentRun`, and the remedy is the C-171 wiring that
+is package 3's declared scope. Extending the v1 debug parser to make it pass
+would be re-opening the boundary ADR-ERL2-038 §2 closed.
+
+Two test-side gaps were corrected:
+
+- `tests/support/composeStub.ts` recorded the labels a volume was created with
+  and could not report them, so the driver's ownership read-back saw none and
+  refused every provision the real daemon accepts. Thirty-four
+  `COMPOSE-ADV`/`COMPOSE-WINDOW` cases failed on a fiction until the stub could
+  answer `volume inspect --format '{{json .Labels}}'`.
+- `COMPOSE-E2E: a run may not substitute its driver` provisions a real
+  environment and never runs `destroy`, so nothing ever asks the channel to tear
+  down and one `erl2-trusted-<run>` survived every execution — at the parent as
+  well. It reaps its containers and network by exact name already; the volume
+  goes with them now.
+
+### 10.14 Status after closure
+
+- the cross-process teardown defect is **closed**; the exact prior leak
+  reproduces without a durable handle and is absent with one
+- span links are **closed as an explicitly unsupported MVP capability**, with a
+  dedicated diagnostic, no partial evidence, and no pin movement
+- P0-1, P1-1 and P2-1 remain closed and regression-tested
+- **the broad suite does not pass.** One case fails, and it is the C-160
+  telemetry gate in `environmentRun` (§10.12) — pre-existing, measured at the
+  parent, and outside this package's scope by the same rule that keeps
+  `environmentRun` untouched
+- `environmentRun` **untouched**; C-160 still authoritative there; package 3
+  unchanged in scope
+- the full campaign, the clean gate and `evidence:update` remain **not run**
+- package 3 remains **blocked** pending focused re-review, and now has one more
+  thing to close than it did
