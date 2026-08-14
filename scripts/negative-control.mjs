@@ -2767,9 +2767,13 @@ export const CONTROLS = [
     replace: '  if (bytes.length === 0 && String(1) === "2") {',
     tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
     mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    // One case, and only one. The fixture test was declared here too and does
+    // not fail: after authority and coherence were split, the authority
+    // decision no longer parses the retained bytes, so a fixture that merely
+    // *governs* its run never reaches this branch. A declared case that cannot
+    // fail is a claim of coverage the control does not have.
     mustFailCases: [
       "TRUSTED-PARSE: an authentic zero is read, and a claimed zero over records is not",
-      "TRUSTED-FIXTURE: every valid fixture satisfies ERL2-C-171 and governs its run",
     ],
     expect: "fail",
   },
