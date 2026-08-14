@@ -160,7 +160,17 @@ export const CONTRACTS: readonly ContractDescriptor[] = [
   // observation gets its own identity rather than a field on any frozen
   // capture schema because it post-dates the realized cutoff: it is a
   // statement about receipt during the run, never about the evidence window.
+  // ADR-ERL2-038 R8: ERL2-C-160 stays registered and parseable so historical
+  // evidence keeps verifying under its original scope. It is **not** authoritative
+  // for a new telemetry claim; ERL2-C-171 is. The identity is not repointed,
+  // because a frozen bundle that declared C-160 coverage would otherwise start
+  // reading as a claim about a channel that did not exist when it was written.
   d("ERL2-C-160", "AttributableTelemetryObservationV1", "environment", "attributable-telemetry-observation/v1"),
+  // ADR-ERL2-038 §3 and R8: additive, and a new identity rather than a version
+  // bump on ERL2-C-160 for the same reason ERL2-C-159 was — the two must be
+  // representable at once, one historical and one authoritative, and a single
+  // identity spanning both is exactly the dual authority R8 exists to prevent.
+  d("ERL2-C-171", "AttributableTelemetryObservationV2", "environment", "attributable-telemetry-observation/v2"),
   // ADR-ERL2-031: additive, and the reason it is a new identity rather than two
   // fields on `ObservationBundleV2` is ordering, not migration cost. The bundle is
   // frozen *after* capture, so durations carried there would be a post-hoc

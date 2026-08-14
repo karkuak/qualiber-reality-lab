@@ -1175,6 +1175,50 @@ export type AttributableTelemetryObservationV1 = {
   readonly core_hash: Hash;
 };
 
+export type AttributableTelemetryObservationV2 = {
+  readonly schema_version: "attributable-telemetry-observation/v2";
+  readonly run_id: RunId;
+  readonly marker: string;
+  readonly evidence: "observed" | "absent";
+  readonly observed_at: Instant;
+  readonly channel?: {
+    readonly kind: "collector-file-otlp-json";
+    readonly record_format: "otlp-json-ndjson";
+    readonly encoding: "utf-8";
+    readonly rotation: "forbidden";
+    readonly segment_count: number;
+    readonly exporter_id: string;
+  };
+  readonly binding?: {
+    readonly environment_archetype_hash: Hash;
+    readonly substrate_lock_core_hash: Hash;
+    readonly collector_image_digest: string;
+    readonly collector_config_digest: Hash;
+  };
+  readonly collector?: {
+    readonly service_id: Id;
+    readonly container_name: string;
+    readonly ownership_verified: true;
+    readonly image_id: string;
+    readonly observed_image_repo_digests: readonly string[];
+    readonly image_matches_locked_digest: true;
+  };
+  readonly artifact?: {
+    readonly byte_length: number;
+    readonly content_digest: Hash;
+    readonly record_count: number;
+    readonly finalization: "frozen";
+    readonly final_record_terminated: boolean;
+  };
+  readonly trace_batches?: number;
+  readonly spans?: number;
+  readonly service_names?: readonly string[];
+  readonly run_attributed_records?: number;
+  readonly trusted_records?: string;
+  readonly reason_code?: string;
+  readonly core_hash: Hash;
+};
+
 // ---- erl2:evaluation : ERL2 data-only evaluation pack, metric definition and metric result contracts ----
 
 export type MetricThresholdClass = "measurement" | "information" | "ordinary_gate" | "hard_safety";

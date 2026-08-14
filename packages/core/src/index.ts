@@ -159,6 +159,27 @@ export {
   type TelemetryWindowDecision,
 } from "./environment/telemetryObservation.js";
 export {
+  TRUSTED_TELEMETRY_MAX_BYTES,
+  TRUSTED_TELEMETRY_MAX_RECORDS,
+  TRUSTED_TELEMETRY_MAX_FIELD_CHARS,
+  TRUSTED_RESOURCE_KEYS,
+  TRUSTED_SPAN_KEYS,
+  TRUSTED_TELEMETRY_REASONS,
+  parseTrustedTelemetryRecords,
+  utf8ByteLength,
+  type TrustedTelemetryCounts,
+  type TrustedTelemetryParse,
+} from "./environment/trustedTelemetry.js";
+export {
+  TRUSTED_TELEMETRY_AUTHORITY_VERSION,
+  HISTORICAL_TELEMETRY_VERSION,
+  TELEMETRY_AUTHORITY_REASONS,
+  decideTrustedTelemetryAuthority,
+  trustedTelemetryCoherenceRefusal,
+  readHistoricalTelemetryObservation,
+  type TrustedTelemetryAuthority,
+} from "./environment/telemetryAuthority.js";
+export {
   assertSubstrateBinding,
   buildSubstrateBinding,
   reservationNamespaceHash,

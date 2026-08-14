@@ -29,10 +29,19 @@ import {
   CODES,
   Erl2Error,
   type AttributableTelemetryObservationV1,
+  type AttributableTelemetryObservationV2,
   type Instant,
   type LabLifecycleEventV1,
 } from "@erl2/contracts";
 import { ArtifactStore, coreHash, hashBytes } from "@erl2/integrity";
+import {
+  observedV2,
+  trustedRecord,
+  trustedRecords,
+  validMultiRecord,
+  validPositive,
+  validZero,
+} from "../support/trustedTelemetryFixtures.js";
 import {
   attributableTelemetryDeclared,
   attributableTelemetryGatePassed,
@@ -556,9 +565,14 @@ test("ATTR-TELEM: another run's observation, a foreign marker, or a second obser
     attributableTelemetryGatePassed({ declared: true, runId: RUN_ID, observations: [good, good] }),
     false,
   );
+  // ADR-ERL2-038 R8: and so does the *good* one. A v1 record derives its counts
+  // from a stream a subject can reproduce byte for byte, so its coherence buys
+  // nothing — the version question is answered before the content question, and
+  // answering it the other way round is what let a forged count verify clean.
   assert.equal(
     attributableTelemetryGatePassed({ declared: true, runId: RUN_ID, observations: [good] }),
-    true,
+    false,
+    "a coherent v1 record is still not authoritative for a new claim",
   );
 });
 
@@ -583,6 +597,12 @@ interface SyntheticOptions {
   readonly sourceKind?: string;
   readonly exerciseStatus?: string;
   readonly observation?: AttributableTelemetryObservationV1 | "none";
+  /**
+   * A retained observation of any version, built from the tree's own archetype
+   * hash. ERL2-C-171 binds to the environment it was produced against, so a v2
+   * fixture cannot be written without knowing which archetype this tree wrote.
+   */
+  readonly observationFor?: (archetypeHash: string) => Record<string, unknown>;
   /** A second observation produced under the same role, to test cardinality. */
   readonly secondObservation?: AttributableTelemetryObservationV1;
   readonly producedBy?: string;
@@ -627,7 +647,12 @@ function syntheticTree(options: SyntheticOptions = {}): SyntheticTree {
   const outcome = { ...outcomeBase, core_hash: coreHash(outcomeBase) };
   write("step-outcome-exercise.json", outcome);
 
-  const observation = options.observation === "none" ? undefined : options.observation ?? observedRecord();
+  const observation =
+    options.observationFor !== undefined
+      ? (options.observationFor(archetype.core_hash) as unknown as AttributableTelemetryObservationV1)
+      : options.observation === "none"
+        ? undefined
+        : options.observation ?? observedRecord();
   if (observation !== undefined) write("attributable-telemetry-observation.json", observation);
   if (options.secondObservation !== undefined) {
     write("attributable-telemetry-observation-2.json", options.secondObservation);
@@ -680,7 +705,7 @@ function syntheticTree(options: SyntheticOptions = {}): SyntheticTree {
             {
               artifact_role: "attributable-telemetry-observation",
               artifact_core_hash: observation.core_hash,
-              artifact_schema_version: "attributable-telemetry-observation/v1",
+              artifact_schema_version: observation.schema_version,
             },
             ...(options.secondObservation === undefined
               ? []
@@ -707,10 +732,18 @@ function refusalCode(fn: () => unknown): string | undefined {
   }
 }
 
-test("ATTR-TELEM-VERIFY: a consistent declared observation derives observed and attributed", () => {
+test("ATTR-TELEM-VERIFY: even a consistent v1 observation cannot authorize a declared run", () => {
+  // This test previously asserted the opposite, and the change is the point of
+  // ADR-ERL2-038 R8. The record below is internally consistent in every way the
+  // v1 verifier ever checked; it is refused because the *channel* it came from
+  // has no non-forgeable framing, which no amount of internal consistency can
+  // supply. The positive case now lives on ERL2-C-171 bytes, in
+  // `trustedTelemetryAuthority.test.ts`.
   const tree = syntheticTree();
-  const report = deriveAttributableTelemetry({ ...tree, runId: RUN_ID });
-  assert.deepEqual(report, { declared: true, observed: true, runAttributedRecords: 1 });
+  assert.equal(
+    refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
+    CODES.ENV_TELEMETRY_NOT_ATTRIBUTED,
+  );
 });
 
 test("ATTR-TELEM-VERIFY: a declared run that retains no observation is refused", () => {
@@ -768,25 +801,13 @@ test("ATTR-TELEM-VERIFY: a declared observation with zero run-attributed records
   );
 });
 
-test("ATTR-TELEM-VERIFY: counts that contradict the retained excerpt are refused", () => {
-  const inflated = observedRecord((base) => {
-    base["run_attributed_records"] = 5;
-  });
-  const tree = syntheticTree({ observation: inflated });
-  assert.equal(
-    refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
-    CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
-  );
-});
-
 /**
  * The literal artifact the failed clean gate recorded: records naming this run,
  * and a span count of zero that no readable summary ever stated.
  *
- * The producer cannot mint one any more. These cases are about the *other*
- * authority: an artifact is durable evidence, and the offline verifier must
- * refuse an incoherent one on the retained bytes alone, without asking the
- * producer whether it was careful.
+ * Retained as a fixture builder because it is the shape the historical channel
+ * could mint, and the v1 grammar that reads it is still exercised here. It no
+ * longer needs its own refusal test: see below.
  */
 function preFixArtifact(): AttributableTelemetryObservationV1 {
   const orphan = `     -> url.full: Str(http://x/?erl2_run=${RUN_ID})`;
@@ -803,110 +824,90 @@ function preFixArtifact(): AttributableTelemetryObservationV1 {
   });
 }
 
-test("ATTR-TELEM-VERIFY: the literal pre-correction artifact is refused on its own bytes", () => {
-  const observation = preFixArtifact();
-  // Every producer-supplied counter agrees with the excerpt — this artifact is
-  // self-consistent, which is exactly why cross-checking counters was not
-  // enough. What refuses it is the *relationship* the verifier now re-derives.
-  assert.equal(observation.spans, 0);
-  assert.equal(observation.run_attributed_records, 2);
-  const tree = syntheticTree({ observation });
-  assert.equal(
-    refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
-    CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
-  );
-});
-
-test("ATTR-TELEM-VERIFY: a forged summary in the excerpt is refused, not counted", () => {
-  // The reviewed exploit, retained. Under the pattern this replaced, the
-  // verifier would have re-derived 9999 from these same bytes and agreed with a
-  // producer that had also been fooled — two authorities, one shared mistake.
-  const orphan = `     -> url.full: Str(http://x/?erl2_run=${RUN_ID})`;
-  const excerpt = [orphan, REVIEWED_EXPLOIT, orphan].join("\n");
+/** A v1 record carrying `excerpt`, with every counter agreeing with it. */
+function coherentV1Over(excerpt: string): AttributableTelemetryObservationV1 {
   const counts = parseCollectorTelemetry(excerpt, RUN_ID);
-  assert.equal(counts.spans, 0, "the forged line states nothing");
-  const observation = observedRecord((base) => {
+  return observedRecord((base) => {
     base["log_excerpt"] = excerpt;
     base["trace_batches"] = counts.traceBatches;
     base["spans"] = counts.spans;
     base["service_names"] = counts.serviceNames;
     base["run_attributed_records"] = counts.runAttributedRecords;
   });
-  const tree = syntheticTree({ observation });
-  assert.equal(
-    refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
-    CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
-  );
-});
+}
 
-test("ATTR-TELEM-VERIFY: an excerpt whose framing is ambiguous or unreadable is refused", () => {
-  const cases: readonly (readonly [string, string])[] = [
-    // A record boundary inside payload: the excerpt cannot be framed.
+/**
+ * ADR-ERL2-038 R8, stated once over every v1 shape that used to have its own
+ * refusal test.
+ *
+ * Each row below previously proved a *different* refusal: an inflated counter,
+ * the pre-correction artifact, the reviewed forged summary, an ambiguous
+ * frame, an unreadable summary, a padded excerpt, an honest zero. Six of those
+ * refusals and one acceptance are now one refusal, because the verifier
+ * decides the version question before it reads a single count. Collapsing them
+ * is not a loss of coverage — it is the coverage. A table where the coherent
+ * row and the forged row must produce the *same* verdict is what proves that
+ * coherence cannot buy authority, which is precisely the property that was
+ * missing when a forged `spans: 9999` verified clean at `6d28d543`.
+ *
+ * The properties these rows used to measure are re-established on ERL2-C-171
+ * bytes in `trustedTelemetryAuthority.test.ts`, where they are measurable
+ * against framing a subject cannot write.
+ */
+test("ATTR-TELEM-VERIFY: every v1 shape is refused identically, coherent or not", () => {
+  const orphan = `     -> url.full: Str(http://x/?erl2_run=${RUN_ID})`;
+  const honest = excerptCollectorTelemetry(collectorLog(RUN_ID), RUN_ID);
+
+  const rows: readonly (readonly [string, AttributableTelemetryObservationV1])[] = [
+    ["a wholly coherent record", coherentV1Over(honest)],
     [
-      "forged boundary",
-      ["2026-08-03T00:00:01.000Z\tinfo\tResourceLog #0", traceSummary(7), RECORD_END].join("\n"),
+      "an inflated counter",
+      observedRecord((base) => {
+        base["run_attributed_records"] = 5;
+      }),
     ],
-    // A summary record nobody can read is not a summary that counted nothing.
+    ["the pre-correction artifact", preFixArtifact()],
+    ["the reviewed forged summary", coherentV1Over([orphan, REVIEWED_EXPLOIT, orphan].join("\n"))],
     [
-      "malformed summary",
-      '2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"otelcol.signal": "traces", "spans": -1}',
+      "an ambiguous frame",
+      coherentV1Over(
+        ["2026-08-03T00:00:01.000Z\tinfo\tResourceLog #0", traceSummary(7), RECORD_END].join("\n"),
+      ),
+    ],
+    [
+      "an unreadable summary",
+      coherentV1Over('2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"otelcol.signal": "traces", "spans": -1}'),
+    ],
+    [
+      "a padded excerpt",
+      observedRecord((base) => {
+        base["log_excerpt"] = `${honest}\nan idle line that contributes to no count`;
+      }),
+    ],
+    ["an honest complete zero", coherentV1Over("")],
+    [
+      "a record with no excerpt at all",
+      observedRecord((base) => {
+        delete base["log_excerpt"];
+      }),
     ],
   ];
-  for (const [why, excerpt] of cases) {
-    const counts = parseCollectorTelemetry(excerpt, RUN_ID);
-    const observation = observedRecord((base) => {
-      base["log_excerpt"] = excerpt;
-      base["trace_batches"] = counts.traceBatches;
-      base["spans"] = counts.spans;
-      base["service_names"] = counts.serviceNames;
-      base["run_attributed_records"] = counts.runAttributedRecords;
-    });
+
+  for (const [why, observation] of rows) {
     const tree = syntheticTree({ observation });
     assert.equal(
       refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
-      CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+      CODES.ENV_TELEMETRY_NOT_ATTRIBUTED,
       why,
     );
   }
 });
 
-test("ATTR-TELEM-VERIFY: an honest complete zero still verifies, because zero is not incoherence", () => {
-  // A whole window that genuinely received nothing states zero with no
-  // attribution at all. The coherence floor is about *attribution* without a
-  // counting batch, so it must leave this untouched.
-  const excerpt = "";
-  const counts = parseCollectorTelemetry(excerpt, RUN_ID);
-  assert.equal(counts.runAttributedRecords, 0);
-  const observation = observedRecord((base) => {
-    base["log_excerpt"] = excerpt;
-    base["trace_batches"] = counts.traceBatches;
-    base["spans"] = counts.spans;
-    base["service_names"] = counts.serviceNames;
-    base["run_attributed_records"] = counts.runAttributedRecords;
-  });
-  // Undeclared, because a *declared* run with no attribution is refused by the
-  // floor that already existed. What is under test here is that the new
-  // coherence refusal does not fire on an honest zero.
-  const tree = syntheticTree({ observation, exerciseStatus: "failed" });
-  const report = deriveAttributableTelemetry({ ...tree, runId: RUN_ID });
-  assert.equal(report.declared, false);
-  assert.equal(report.observed, true);
-  assert.equal(report.runAttributedRecords, 0);
-});
-
-test("ATTR-TELEM-VERIFY: an excerpt padded with non-contributing lines is refused", () => {
-  const excerpt = excerptCollectorTelemetry(collectorLog(RUN_ID), RUN_ID);
-  const observation = observedRecord((base) => {
-    base["log_excerpt"] = `${excerpt}\nan idle line that contributes to no count`;
-  });
-  const tree = syntheticTree({ observation });
-  assert.equal(
-    refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
-    CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
-  );
-});
-
 test("ATTR-TELEM-VERIFY: another run's observation, a foreign marker, or a wrong producing event is refused", () => {
+  // Another run's record and a foreign marker refuse for the same reason every
+  // other v1 record does, and one step earlier than they used to: the version
+  // question is answered before the identity question. The identity refusals
+  // themselves are re-measured on v2 in `trustedTelemetryAuthority.test.ts`.
   const foreignRun = observedRecord((base) => {
     base["run_id"] = OTHER_RUN_ID;
   });
@@ -914,7 +915,7 @@ test("ATTR-TELEM-VERIFY: another run's observation, a foreign marker, or a wrong
     refusalCode(() =>
       deriveAttributableTelemetry({ ...syntheticTree({ observation: foreignRun }), runId: RUN_ID }),
     ),
-    CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+    CODES.ENV_TELEMETRY_NOT_ATTRIBUTED,
   );
 
   const foreignMarker = observedRecord((base) => {
@@ -927,7 +928,7 @@ test("ATTR-TELEM-VERIFY: another run's observation, a foreign marker, or a wrong
         runId: RUN_ID,
       }),
     ),
-    CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+    CODES.ENV_TELEMETRY_NOT_ATTRIBUTED,
   );
 
   assert.equal(
@@ -964,19 +965,112 @@ test("ATTR-TELEM-VERIFY: an ambiguous driver manifest or archetype is refused be
   }
 });
 
-test("ATTR-TELEM-VERIFY: an observed record whose excerpt the index never validated is still refused", () => {
-  // ArtifactIndex.typed checks the schema_version string and the recomputed
-  // core hash and nothing else, so a record the contract would refuse still
-  // reaches the derivation. The defensive branch is not dead code.
-  const noExcerpt = observedRecord((base) => {
-    delete base["log_excerpt"];
+/**
+ * The offline verifier over ERL2-C-171 bytes.
+ *
+ * These are the positive and negative cases the v1 block above lost when the
+ * version question moved in front of the content question. They belong here
+ * rather than in `trustedTelemetryAuthority.test.ts` because they need a
+ * retained tree — the point of several of them is that the verifier checks the
+ * artifact against *the run's own* archetype, which only a tree can supply.
+ */
+test("TRUSTED-VERIFY: a coherent v2 observation derives observed and attributed", () => {
+  const tree = syntheticTree({
+    observationFor: (archetypeHash) =>
+      validPositive(archetypeHash) as unknown as Record<string, unknown>,
   });
-  const tree = syntheticTree({ observation: noExcerpt });
+  const report = deriveAttributableTelemetry({ ...tree, runId: RUN_ID });
+  assert.deepEqual(report, { declared: true, observed: true, runAttributedRecords: 1 });
+});
+
+test("TRUSTED-VERIFY: a multi-record v2 observation recomputes every count from its bytes", () => {
+  const tree = syntheticTree({
+    observationFor: (archetypeHash) =>
+      validMultiRecord(archetypeHash) as unknown as Record<string, unknown>,
+  });
+  const report = deriveAttributableTelemetry({ ...tree, runId: RUN_ID });
+  assert.deepEqual(report, { declared: true, observed: true, runAttributedRecords: 2 });
+});
+
+test("TRUSTED-VERIFY: an authentic zero verifies where undeclared and is refused where declared", () => {
+  const undeclared = syntheticTree({
+    exerciseStatus: "failed",
+    observationFor: (archetypeHash) => validZero(archetypeHash) as unknown as Record<string, unknown>,
+  });
+  const report = deriveAttributableTelemetry({ ...undeclared, runId: RUN_ID });
+  assert.deepEqual(report, { declared: false, observed: true, runAttributedRecords: 0 });
+
+  const declared = syntheticTree({
+    observationFor: (archetypeHash) => validZero(archetypeHash) as unknown as Record<string, unknown>,
+  });
   assert.equal(
-    refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID })),
-    CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+    refusalCode(() => deriveAttributableTelemetry({ ...declared, runId: RUN_ID })),
+    CODES.ENV_TELEMETRY_NOT_ATTRIBUTED,
   );
 });
+
+test("TRUSTED-VERIFY: the verifier reads the bytes rather than the claim", () => {
+  // Every row is a v2 record whose declarations disagree with its own retained
+  // bytes in exactly one way. None of them can be produced by mutating a real
+  // bundle — the hash layer refuses first — which is why they are built here.
+  const rows: readonly (readonly [string, (hash: string) => Record<string, unknown>])[] = [
+    [
+      "an inflated span count",
+      (hash) => reseal(validPositive(hash), (d) => {
+        d["spans"] = 9999;
+      }),
+    ],
+    [
+      "a digest that is not the bytes'",
+      (hash) => reseal(validPositive(hash), (d) => {
+        (d["artifact"] as Record<string, unknown>)["content_digest"] = hashBytes(
+          Buffer.from("something else", "utf8"),
+        );
+      }),
+    ],
+    [
+      "a byte length that is not the bytes'",
+      (hash) => reseal(validPositive(hash), (d) => {
+        (d["artifact"] as Record<string, unknown>)["byte_length"] = 3;
+      }),
+    ],
+    [
+      "another run's records under this run's envelope",
+      (hash) =>
+        observedV2({
+          bytes: trustedRecords([trustedRecord({ markers: [OTHER_RUN_ID] })]),
+          archetypeHash: hash,
+          spans: 1,
+          serviceNames: ["quote"],
+          runAttributedRecords: 0,
+        }) as unknown as Record<string, unknown>,
+    ],
+    [
+      "an artifact bound to an environment this run did not use",
+      () => validPositive() as unknown as Record<string, unknown>,
+    ],
+  ];
+  for (const [why, build] of rows) {
+    const tree = syntheticTree({ observationFor: build });
+    const code = refusalCode(() => deriveAttributableTelemetry({ ...tree, runId: RUN_ID }));
+    assert.ok(
+      code === CODES.ENV_TELEMETRY_NOT_ATTRIBUTED ||
+        code === CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+      `${why}: expected a refusal, got ${String(code)}`,
+    );
+  }
+});
+
+/** A v2 record edited and re-sealed, so a stale core hash is not the finding. */
+function reseal(
+  base: AttributableTelemetryObservationV2,
+  edit: (draft: Record<string, unknown>) => void,
+): Record<string, unknown> {
+  const draft = JSON.parse(JSON.stringify(base)) as Record<string, unknown>;
+  edit(draft);
+  delete draft["core_hash"];
+  return { ...draft, core_hash: coreHash(draft) };
+}
 
 // -- 4b. the retention path: what freezes, and what is demoted instead -------
 
@@ -1066,14 +1160,21 @@ function assertDemoted(current: AttributableTelemetryMaterial, reasonCode: strin
   );
 }
 
-test("ATTR-TELEM-RETAIN: ordinary collector material freezes as observed and passes the gate", () => {
+test("ATTR-TELEM-RETAIN: ordinary collector material still freezes as observed, and still cannot authorize", () => {
+  // The retention path is unchanged by ADR-ERL2-038 R8 and deliberately so: the
+  // Lab keeps recording what the current channel observed, honestly labelled
+  // v1, because a run that stopped writing down what it saw would be a worse
+  // record, not a safer one. What changed is downstream — the gate no longer
+  // accepts it. Retention and authority are different questions, and this is
+  // the test that keeps them different.
   const observation = retain(material());
   assert.equal(observation.evidence, "observed");
   assert.equal(observation.log_excerpt, excerptCollectorTelemetry(collectorLog(RUN_ID), RUN_ID));
   assert.equal(observation.run_attributed_records, 1);
   assert.equal(
     attributableTelemetryGatePassed({ declared: true, runId: RUN_ID, observations: [observation] }),
-    true,
+    false,
+    "a v1 record is retained and read, and authorizes nothing",
   );
 });
 

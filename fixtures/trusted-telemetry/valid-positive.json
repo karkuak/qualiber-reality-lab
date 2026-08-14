@@ -1,0 +1,46 @@
+{
+  "schema_version": "attributable-telemetry-observation/v2",
+  "run_id": "00000000-0000-7000-8000-000000000111",
+  "marker": "00000000-0000-7000-8000-000000000111",
+  "evidence": "observed",
+  "observed_at": "2026-08-13T00:00:05Z",
+  "channel": {
+    "kind": "collector-file-otlp-json",
+    "record_format": "otlp-json-ndjson",
+    "encoding": "utf-8",
+    "rotation": "forbidden",
+    "segment_count": 1,
+    "exporter_id": "file/trusted"
+  },
+  "binding": {
+    "environment_archetype_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "substrate_lock_core_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "collector_image_digest": "sha256:1fef9f07f04eb6775b4076ea4f817d6b7b9050e23e52941f0756ba08df798ea6",
+    "collector_config_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+  },
+  "collector": {
+    "service_id": "otel-collector",
+    "container_name": "erl2-00000000-0000-7000-8000-000000000111-otel-collector",
+    "ownership_verified": true,
+    "image_id": "sha256:cafebabe",
+    "observed_image_repo_digests": [
+      "sha256:1fef9f07f04eb6775b4076ea4f817d6b7b9050e23e52941f0756ba08df798ea6"
+    ],
+    "image_matches_locked_digest": true
+  },
+  "artifact": {
+    "byte_length": 267,
+    "content_digest": "sha256:605fef04f374748a311ca6e89058c39640c5e4a3dce93e75bfa853a59119b69f",
+    "record_count": 1,
+    "finalization": "frozen",
+    "final_record_terminated": true
+  },
+  "trace_batches": 1,
+  "spans": 1,
+  "service_names": [
+    "quote"
+  ],
+  "run_attributed_records": 1,
+  "trusted_records": "{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"quote\"}}]},\"scopeSpans\":[{\"spans\":[{\"attributes\":[{\"key\":\"url.full\",\"value\":{\"stringValue\":\"http://quote:8090/getquote?erl2_run=00000000-0000-7000-8000-000000000111\"}}]}]}]}]}\n",
+  "core_hash": "sha256:e17cd00a4e63bc6600f6679844d7357b6aa56321fd82f128f598b68a380f584e"
+}

@@ -1347,6 +1347,321 @@
           }
         }
       ]
+    },
+    "AttributableTelemetryObservationV2": {
+      "$comment": "ADR-ERL2-038 \u00a73 and corrections R2\u2013R8: the trusted-telemetry artifact, and the ONLY format authoritative for a new telemetry claim. Where v1 derived counts from a mixed console stream whose framing a subject could reproduce byte for byte, v2 derives them structurally from newline-delimited OTLP JSON written by the collector's own file exporter, where a record boundary is not expressible in subject bytes. v1 (ERL2-C-160) stays registered and parseable so historical evidence keeps verifying under its original scope, and is refused for every new claim \u2014 absence or invalidity of v2 is a refusal, never a downgrade (R8). The trusted channel itself does not exist yet: this contract is package 1, the collector and volume are package 2, and the driver and live freeze are package 3, so no artifact of this shape has been produced by a collector.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "marker",
+        "evidence",
+        "observed_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "attributable-telemetry-observation/v2"
+        },
+        "run_id": {
+          "$ref": "erl2:common#/$defs/RunId"
+        },
+        "marker": {
+          "$comment": "The run-attribution token, required to equal `run_id` by both the producer gate and the offline verifier, exactly as in v1: a marker a reader cannot re-derive attributes nothing.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "evidence": {
+          "$comment": "Only `observed` can carry counts, bytes or identities (ADR-ERL2-016 decision 2). An `observed` record whose `record_count` is zero is an authentic observed zero \u2014 the channel was provisioned, finalized and empty \u2014 and is a different fact from `absent`, which says the channel produced nothing readable and must say why.",
+          "enum": [
+            "observed",
+            "absent"
+          ]
+        },
+        "observed_at": {
+          "$ref": "erl2:common#/$defs/Instant"
+        },
+        "channel": {
+          "$comment": "Trusted-channel identity (R3). Every field is a schema constant except the exporter id, so a record whose bytes came from the mixed debug stream, from a rotated file, or from any format other than newline-delimited OTLP JSON is unrepresentable rather than merely refused.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "record_format",
+            "encoding",
+            "rotation",
+            "segment_count",
+            "exporter_id"
+          ],
+          "properties": {
+            "kind": {
+              "const": "collector-file-otlp-json"
+            },
+            "record_format": {
+              "const": "otlp-json-ndjson"
+            },
+            "encoding": {
+              "const": "utf-8"
+            },
+            "rotation": {
+              "$comment": "R6: forbidden for the bounded MVP. One run-scoped artifact, one segment. A segmented design would need an ordered integrity-bound manifest and its own amendment.",
+              "const": "forbidden"
+            },
+            "segment_count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1
+            },
+            "exporter_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        },
+        "binding": {
+          "$comment": "R4: the identities that make another run's artifact unusable here. Recomputed by the verifier against the run's own retained archetype, substrate lock and collector identity, so an artifact lifted from a different run, a different substrate or a different collector configuration cannot satisfy this one.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "environment_archetype_hash",
+            "substrate_lock_core_hash",
+            "collector_image_digest",
+            "collector_config_digest"
+          ],
+          "properties": {
+            "environment_archetype_hash": {
+              "$ref": "erl2:common#/$defs/Hash"
+            },
+            "substrate_lock_core_hash": {
+              "$ref": "erl2:common#/$defs/Hash"
+            },
+            "collector_image_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "collector_config_digest": {
+              "$ref": "erl2:common#/$defs/Hash"
+            }
+          }
+        },
+        "collector": {
+          "$comment": "Carried forward from v1 unchanged: the exact container the bytes were read from, as Docker proved it. Both proof booleans stay schema constants, so an unverified observation is unrepresentable as `observed`.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "service_id",
+            "container_name",
+            "ownership_verified",
+            "image_id",
+            "observed_image_repo_digests",
+            "image_matches_locked_digest"
+          ],
+          "properties": {
+            "service_id": {
+              "$ref": "erl2:common#/$defs/Id"
+            },
+            "container_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "ownership_verified": {
+              "const": true
+            },
+            "image_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "observed_image_repo_digests": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "image_matches_locked_digest": {
+              "const": true
+            }
+          }
+        },
+        "artifact": {
+          "$comment": "R5: the finalization proof, carried in the record rather than asserted by the producer. `byte_length` and `content_digest` are recomputed by the verifier over `trusted_records` itself, so the bytes the counts derive from are the bytes whose digest is retained; `record_count` is recomputed by parsing them. `final_record_terminated` states whether the byte sequence ends on a record boundary, and must be false exactly when the artifact is empty \u2014 a non-empty artifact that does not terminate is a partial write and fails closed.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "byte_length",
+            "content_digest",
+            "record_count",
+            "finalization",
+            "final_record_terminated"
+          ],
+          "properties": {
+            "byte_length": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 262144
+            },
+            "content_digest": {
+              "$ref": "erl2:common#/$defs/Hash"
+            },
+            "record_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4096
+            },
+            "finalization": {
+              "$comment": "A writing, crashed or unfinalized channel yields an `absent` record with a reason code. `frozen` is the only state an authoritative artifact may be in, so the alternatives are unrepresentable here rather than merely refused downstream.",
+              "const": "frozen"
+            },
+            "final_record_terminated": {
+              "type": "boolean"
+            }
+          }
+        },
+        "trace_batches": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "spans": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000
+        },
+        "service_names": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "run_attributed_records": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000
+        },
+        "trusted_records": {
+          "$comment": "The exact newline-delimited OTLP-JSON bytes every count above derives from, retained inline and hash-covered for the same reason v1's excerpt was: the observation freezes before the lifecycle event that anchors it, and two files cannot be frozen atomically. Bounded at the same 262144 ceiling, and made achievable at that ceiling by R2 \u2014 the trusted pipeline minimizes fields before export, so a record carries a bounded allowlist rather than whatever a subject attached. Subject-derived values are not absent from these bytes: they may appear inside the allowlisted marker-bearing field, JSON-escaped and length-bounded, and nowhere else.",
+          "type": "string",
+          "maxLength": 262144
+        },
+        "reason_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "core_hash": {
+          "$ref": "erl2:common#/$defs/Hash"
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "The v1 discrimination, extended to the new identity and integrity blocks: only an observation may carry a channel, a binding, a collector, an artifact, counts or bytes, and anything that is not an observation must say why. `log_excerpt` is absent from `properties` and `additionalProperties` is false, so a record mixing v1 and v2 fields fails the schema itself rather than a downstream check.",
+          "if": {
+            "type": "object",
+            "properties": {
+              "evidence": {
+                "const": "observed"
+              }
+            },
+            "required": [
+              "evidence"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "channel",
+              "binding",
+              "collector",
+              "artifact",
+              "trace_batches",
+              "spans",
+              "service_names",
+              "run_attributed_records",
+              "trusted_records"
+            ],
+            "not": {
+              "required": [
+                "reason_code"
+              ]
+            }
+          },
+          "else": {
+            "type": "object",
+            "required": [
+              "reason_code"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "channel"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "binding"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "collector"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "artifact"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "trace_batches"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "spans"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "service_names"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "run_attributed_records"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "trusted_records"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   }
 }

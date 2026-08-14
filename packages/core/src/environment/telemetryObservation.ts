@@ -12,6 +12,7 @@
 
 import { assertContract, CODES, Erl2Error, type Classification } from "@erl2/contracts";
 import { coreHash, isCanonicalizableString } from "@erl2/integrity";
+import { decideTrustedTelemetryAuthority } from "./telemetryAuthority.js";
 import type {
   AttributableTelemetryObservationV1,
   EnvironmentArchetypeV1,
@@ -913,17 +914,36 @@ function retainObservation(input: {
 /**
  * The producer's `attributable-telemetry-retained` gate arithmetic: passing
  * means *not declared, or declared and satisfied by exactly one observed,
- * run-attributed observation of this run*. The gate never reads a verdict —
- * the contract stores none.
+ * run-attributed **v2** observation of this run*. The gate never reads a
+ * verdict — the contract stores none.
+ *
+ * ## What changed at ADR-ERL2-038 R8, and why the gate now usually refuses
+ *
+ * The version question is not asked here. It is asked once, in
+ * `decideTrustedTelemetryAuthority`, which the offline verifier also calls, so
+ * the two authorities cannot disagree about which format governs and no
+ * package ordering opens a window where the forgeable v1 channel still
+ * authorizes evidence.
+ *
+ * Nothing in this repository produces a v2 record yet — the collector exporter
+ * and volume are package 2, the driver and live freeze package 3 — so at this
+ * commit a run that declares attributable telemetry obtainable **fails this
+ * gate**, with `telemetry_authority_v1_not_authoritative`. That is deliberate.
+ * The `6d28d543` defect is open; a v1 record states a span count derived from a
+ * stream a subject can forge byte for byte, and a Lab that kept passing the
+ * gate on it would be certifying the thing ADR-ERL2-038 §8 says it cannot.
+ * Runs that never declare the observation obtainable are untouched: the gate
+ * is vacuous for them, exactly as before.
  */
 export function attributableTelemetryGatePassed(input: {
   readonly declared: boolean;
   readonly runId: string;
-  readonly observations: readonly AttributableTelemetryObservationV1[];
+  readonly observations: readonly unknown[];
 }): boolean {
   if (!input.declared) return true;
-  if (input.observations.length !== 1) return false;
-  const observation = input.observations[0] as AttributableTelemetryObservationV1;
+  const authority = decideTrustedTelemetryAuthority(input.observations);
+  if (!authority.authoritative) return false;
+  const observation = authority.observation;
   return (
     observation.evidence === "observed" &&
     observation.run_id === input.runId &&

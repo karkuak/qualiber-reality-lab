@@ -523,7 +523,16 @@ export const CONTROLS = [
     id: "telemetry-verifier-excerpt-fixed-point",
     what: "a telemetry excerpt padded with lines that contribute to no count is refused (ADR-ERL2-033)",
     file: "packages/public-verifier/src/library/telemetryDerivation.ts",
-    find: "  if (excerptCollectorTelemetry(excerpt, observation.marker) !== excerpt) {",
+    // ADR-ERL2-038 R7/R8 migration. The property is unchanged — *the retained
+    // bytes are exactly the bytes the counts derive from* — but its enforcement
+    // point moved with the channel. Under v1 it was the excerpt fixed point: an
+    // excerpt carrying a line that contributed to no count was refused. Under
+    // ERL2-C-171 the retained bytes are whole records, so the fixed point is
+    // the digest: the verifier hashes the bytes it just parsed and refuses a
+    // record whose declared digest is not that hash. The id is kept so the
+    // ledger can show one property moving rather than one disappearing and an
+    // unrelated one appearing.
+    find: "  if (artifact.content_digest !== recomputedDigest) {",
     replace: '  if (excerptCollectorTelemetry(excerpt, observation.marker) !== excerpt && String(1) === "2") {',
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
@@ -2530,12 +2539,217 @@ export const CONTROLS = [
     //
     // A retained artifact is durable evidence with two authorities. The
     // mutation removes the second one.
-    find: "  if (derived.runAttributedRecords >= 1 && derived.runAttributedBatches < 1) {",
+    // ADR-ERL2-038 R7 migration. Under v1 the incoherent shape was attribution
+    // with no batch that counted it, because a batch's summary and its marked
+    // records could land in different windows. Under ERL2-C-171 both come out
+    // of one parsed document and cannot separate, so the incoherent shape is
+    // attribution that exceeds the spans it was drawn from. Same property —
+    // *the verifier re-derives the relationship between two counts instead of
+    // trusting the producer that wrote them* — at the boundary that now exists.
+    find: "  if (derived.runAttributedRecords > derived.spans) {",
     replace: "  if (false) {",
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFailCases: [
-      "ATTR-TELEM-VERIFY: the literal pre-correction artifact is refused on its own bytes",
+      "TRUSTED-VERIFY: the verifier reads the bytes rather than the claim",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-v1-cannot-authorize",
+    what: "a historical v1 record, an unknown version and an invalid v2 are all refused authority for a new claim rather than accepted because nothing better exists (ADR-ERL2-038 R8)",
+    file: "packages/core/src/environment/telemetryObservation.ts",
+    // The whole migration in one line. Mutating it restores exactly the
+    // dual authority R8 exists to prevent: any retained record, of any
+    // version and any validity, becomes good enough.
+    find: "  if (!authority.authoritative) return false;",
+    replace: "  if (!authority.authoritative) return input.observations.length > 0;",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-AUTHORITY: the migration truth table, observed at the gate",
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+      "TRUSTED-HISTORY: v1 stays readable, and reading is not authorizing",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-invalid-v2-does-not-downgrade",
+    what: "an invalid v2 record refuses outright instead of falling through to a v1 that would have passed (ADR-ERL2-038 R8)",
+    file: "packages/core/src/environment/telemetryAuthority.ts",
+    find: "  if (!validateContract(\"AttributableTelemetryObservationV2\", candidate).valid) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-unknown-version-fails-closed",
+    what: "a retained record whose schema version the Lab does not know fails closed rather than being ignored (ADR-ERL2-038 R8)",
+    file: "packages/core/src/environment/telemetryAuthority.ts",
+    find: "    return refuse(TELEMETRY_AUTHORITY_REASONS.unknownVersion);",
+    replace: "    continue;",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-AUTHORITY: the migration truth table, observed at the gate",
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-freeze-integrity-verified",
+    what: "a record edited after it was frozen is refused, because its own core hash is no longer the hash of its own fields (ADR-ERL2-038 R5)",
+    file: "packages/core/src/environment/telemetryAuthority.ts",
+    find: "  if (coreHash(coreOf(observation)) !== observation.core_hash) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-artifact-digest-verified",
+    what: "the declared content digest is recomputed over the retained bytes, so a record hashed over one buffer and retained over another is refused (ADR-ERL2-038 R5)",
+    file: "packages/core/src/environment/telemetryAuthority.ts",
+    find: "  if (artifact.content_digest !== hashBytes(Buffer.from(bytes, \"utf8\"))) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-untrusted-payload-cannot-create-a-record",
+    what: "a physical line that is not exactly one OTLP-JSON trace document states no count, which is where the retired region-open property now lives (ADR-ERL2-038 R7)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    // The mapped successor of telemetry-record-payload-is-not-summary-text.
+    // That control mutates the mixed parser's region-open decision, whose
+    // enforcement point survives until package 3 retires the parser, so it
+    // is still discovered and still killing. This is the same security
+    // property — subject payload cannot become a record — measured at the
+    // boundary that will outlive it.
+    find: "    if (keys.length !== 1 || keys[0] !== \"resourceSpans\") {",
+    replace: "    if (false) {",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-PARSE: the grammar refuses every shape a minimized channel cannot produce",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-cross-run-record-refused",
+    what: "an artifact carrying another run's marker is refused rather than counted in part (ADR-ERL2-038 R4)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "              if (found !== marker) return refuse(TRUSTED_TELEMETRY_REASONS.foreignRun);",
+    replace: "              if (false) return refuse(TRUSTED_TELEMETRY_REASONS.foreignRun);",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-PARSE: the grammar refuses every shape a minimized channel cannot produce",
+      "TRUSTED-PARSE: mixed run markers are refused rather than partially counted",
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-partial-record-refused",
+    what: "bytes that do not end on a record boundary are a partial write and state no count (ADR-ERL2-038 R5)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "  if (!bytes.endsWith(\"\\n\")) return refuse(TRUSTED_TELEMETRY_REASONS.incomplete);",
+    replace: "  if (false) return refuse(TRUSTED_TELEMETRY_REASONS.incomplete);",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-PARSE: the grammar refuses every shape a minimized channel cannot produce",
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-size-bound-enforced",
+    what: "an artifact past the retention bound is refused rather than truncated into counts that are not the run's (ADR-ERL2-038 R6)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "    return refuse(TRUSTED_TELEMETRY_REASONS.overSizeBound);",
+    replace: "    return { ok: true, counts: { traceBatches: 0, spans: 0, serviceNames: [], runAttributedRecords: 0, byteLength, recordCount: 0, finalRecordTerminated: false } };",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-FIXTURE: the size-boundary fixture is bounded, and one byte more is not",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-minimization-enforced",
+    what: "a record carrying an attribute outside the pre-export allowlist is refused, so the verifier does not assume the minimizing processor ran (ADR-ERL2-038 R2)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "    if (!allowed.includes(key)) return TRUSTED_TELEMETRY_REASONS.unexpectedField;",
+    replace: "    if (false) return TRUSTED_TELEMETRY_REASONS.unexpectedField;",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-PARSE: the grammar refuses every shape a minimized channel cannot produce",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-sensitive-field-refused",
+    what: "a retained record carrying a credential-shaped attribute is refused with its own reason rather than the generic one (ADR-ERL2-038 R2)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "      return TRUSTED_TELEMETRY_REASONS.forbiddenField;",
+    replace: "      return TRUSTED_TELEMETRY_REASONS.unexpectedField;",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-PARSE: the grammar refuses every shape a minimized channel cannot produce",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-field-bound-enforced",
+    what: "an attribute value longer than the pre-export truncation bound is refused, so the privacy bound is measured rather than assumed (ADR-ERL2-038 R2)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "      return TRUSTED_TELEMETRY_REASONS.fieldOverBound;",
+    replace: "      return undefined;",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-PARSE: the grammar refuses every shape a minimized channel cannot produce",
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-run-binding-verified",
+    what: "the offline verifier refuses an artifact bound to an environment archetype this run did not use (ADR-ERL2-038 R4)",
+    file: "packages/public-verifier/src/library/telemetryDerivation.ts",
+    find: "  if (observation.binding?.environment_archetype_hash !== archetypeHashes[0]) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "TRUSTED-VERIFY: the verifier reads the bytes rather than the claim",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-genuine-zero-not-inferred",
+    what: "an artifact carrying no records and a non-zero span count is refused, so a zero is read rather than asserted (ADR-ERL2-038 R5)",
+    file: "packages/public-verifier/src/library/telemetryDerivation.ts",
+    find: "  if (derived.recordCount === 0 && derived.spans !== 0) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "TRUSTED-VERIFY: an authentic zero verifies where undeclared and is refused where declared",
     ],
     expect: "fail",
   },
