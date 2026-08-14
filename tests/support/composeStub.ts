@@ -24,6 +24,8 @@
  * pass when no daemon is present.
  */
 
+import { mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import type { DockerCli, DockerInvocation, DockerResult } from "@erl2/core";
 
 export interface StubContainer {
@@ -55,6 +57,8 @@ export function loopbackBinding(hostPort: number): StubContainer["ports"] {
 
 export interface StubObject {
   labels: Record<string, string>;
+  /** The `o=` driver option string, for volumes the driver created with one. */
+  mountOptions?: string;
 }
 
 export interface StubWorld {
@@ -63,6 +67,8 @@ export interface StubWorld {
   containers: Map<string, StubContainer>;
   networks: Map<string, StubObject>;
   volumes: Map<string, StubObject>;
+  /** What the collector's trusted directory holds, by file name. `undefined` means the directory is absent. */
+  trustedFiles?: Record<string, string>;
   /** Images present locally, by `repo@sha256:...`, to the platform they carry. */
   localImages: Map<string, string>;
   /** What the registry says a digest-pinned manifest describes. */
@@ -229,6 +235,45 @@ export class StubDockerCli implements DockerCli {
     }
     if (head === "volume" && second === "rm") {
       this.world.volumes.delete(args[2] as string);
+      return this.ok();
+    }
+    // The trusted telemetry channel's volume verbs (ADR-ERL2-038, package 2).
+    //
+    // `inspect` answers only for a volume that exists, because the channel's
+    // refusal to adopt a pre-existing name is expressed as "inspect succeeded",
+    // and a stub that answered unconditionally would make that refusal fire on
+    // every run. `create` records the driver's own `--opt` strings so the
+    // read-back check has something real to disagree with.
+    if (head === "volume" && second === "inspect") {
+      const volume = this.world.volumes.get(args[2] as string);
+      if (volume === undefined) return this.no();
+      const format = args.includes("--format") ? (args[args.indexOf("--format") + 1] as string) : "";
+      return this.ok(`${format.includes("Options") ? (volume.mountOptions ?? "") : (args[2] as string)}\n`);
+    }
+    if (head === "volume" && second === "create") {
+      const name = args.at(-1) as string;
+      if (this.world.volumes.has(name)) return this.no(`volume ${name} already exists`);
+      const optionIndex = args.findIndex((arg) => arg.startsWith("o="));
+      this.world.volumes.set(name, {
+        labels: labelsFrom(args),
+        ...(optionIndex === -1 ? {} : { mountOptions: (args[optionIndex] as string).slice("o=".length) }),
+      });
+      return this.ok();
+    }
+    // `docker cp` out of the collector. The stub world holds the trusted bytes
+    // the collector "wrote", so a test can drive a freeze — including the shapes
+    // a live substrate cannot be asked for on demand, like a second output file.
+    if (head === "cp") {
+      const source = args[1] as string;
+      const destination = args[2] as string;
+      const container = source.slice(0, source.indexOf(":"));
+      if (!this.world.containers.has(container)) return this.no();
+      const trusted = this.world.trustedFiles;
+      if (trusted === undefined) return this.no(`no such file in ${container}`);
+      mkdirSync(destination, { recursive: true, mode: 0o700 });
+      for (const [name, bytes] of Object.entries(trusted)) {
+        writeFileSync(path.join(destination, name), bytes);
+      }
       return this.ok();
     }
     if (head === "compose") return this.compose(args, env);

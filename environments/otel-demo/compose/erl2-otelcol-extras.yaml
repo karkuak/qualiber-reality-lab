@@ -17,9 +17,146 @@
 # proven by the collector's own stdout rather than by a backend that would have
 # to be trusted separately. `verbosity: detailed` is what makes a span's
 # attributes visible, so telemetry can be attributed to the run that caused it.
+#
+# ## The trusted channel (ADR-ERL2-038 §3, corrections R2/R3/R6) — package 2
+#
+# `debug` is **no longer a source of truth**, and this file is where that stops
+# being a sentence and starts being a topology. The measurement behind it: the
+# debug exporter is line-oriented and does not escape, so a subject's span
+# attribute reaches stdout at column zero with its newlines intact, and an
+# independent review forged a complete `Traces … "spans": 9999` record out of a
+# subject log body on a stream that also carried genuine structural framing.
+# No grammar over those bytes can separate collector framing from subject
+# payload, because at the byte level there is no distinction to find.
+#
+# So the trusted record is written somewhere a subject's bytes cannot reach:
+#
+#   traces/trusted:  otlp → memory_limiter → transform/trusted → file/trusted
+#
+# Three properties, each load-bearing and each measured against this exact
+# pinned image (`otelcol-contrib` v0.157.0) rather than assumed:
+#
+#   1. **Physical separation (R3).** `file/trusted` writes to a file on a
+#      collector-only volume. `debug` writes to stdout. They are two byte
+#      streams with two writers, so the forgery above cannot reach the trusted
+#      one: it is not a matter of parsing more carefully, it is that the
+#      subject's bytes are never on that channel. The two pipelines are declared
+#      separately — `traces` keeps `debug` and `traces/trusted` keeps the file —
+#      so neither exporter can acquire the other's channel by an edit to one
+#      pipeline's exporter list.
+#
+#   2. **Structural framing.** The `file` exporter writes one OTLP-JSON document
+#      per physical line and JSON-escapes every string value. Measured with a
+#      hostile span attribute carrying six raw newlines, a `\t{…}` region
+#      closer, a forged `Traces … "spans": 9999` summary line and a complete
+#      forged OTLP-JSON document declaring 50 spans: **0 extra physical lines,
+#      0 raw TAB bytes, structural span count 1**. A subject cannot write a
+#      record boundary, so the count is the length of a structure rather than a
+#      numeral a reader has to believe.
+#
+#   3. **Minimization before export (R2).** One realistic unminimized record
+#      measured 1 000 590 bytes against ERL2-C-171's 262 144 retention ceiling —
+#      the channel is unusable without this. `transform/trusted` applies a
+#      strict allowlist and a length bound *before* the exporter sees the span,
+#      so the artifact carries a bounded, named field set rather than whatever a
+#      subject attached. Measured on the same payload: **1 000 590 → 430 bytes**,
+#      and on a 40-span realistic-shaped 914 346-byte batch, **914 346 → 30 079
+#      bytes**, with the structural span count and 40/40 marker attribution
+#      preserved and a session token and `host.name` removed.
+#
+# ## The allowlist, stated exactly
+#
+#   resource attributes: `service.name`     — identifies the emitting service
+#   span attributes:     `url.full`         — carries this run's marker
+#   every retained value: truncated to 512 characters
+#
+# Nothing else survives. Attributes are retained because the allowlist names
+# them, never because they are available. This does **not** claim subject bytes
+# are absent from the artifact: `url.full` is a subject-reachable value, and it
+# remains — JSON-escaped and bounded — because run attribution is derived from
+# it. Saying where subject bytes may remain is the honest bound; saying they are
+# gone would be false. `ERL2-C-171`'s parser re-checks this allowlist over the
+# retained bytes rather than trusting that this file was configured correctly,
+# so a record carrying a key nobody allowed is refused rather than read.
+#
+# ## Why `logs` and `metrics` stay out of the trusted pipeline
+#
+# Nothing ERL2-C-171 derives comes from a log or a metric, and a signal the
+# contract does not read is a signal whose bytes would be retained for no
+# reader. The trusted pipeline is traces-only on purpose, and a subject log body
+# — the exact vector that forged the mixed stream — therefore has no path into
+# the trusted file at all.
+#
+# ## Why the OTTL paths are context-prefixed
+#
+# `resource.attributes` rather than `attributes`. The unprefixed form still
+# parses at v0.157.0, and the collector rewrites it and logs
+# "one or more paths were modified to include their context prefix". Writing the
+# prefix means the configuration says what it does, and it keeps a future
+# collector version's removal of the implicit form from silently changing which
+# attributes are kept.
 exporters:
   debug:
     verbosity: detailed
+
+  # The trusted channel. `path` is the collector-only tmpfs-backed volume the
+  # driver provisions for this run; nothing else in the topology mounts it.
+  # `format: json` is what makes each physical line one OTLP-JSON document.
+  #
+  # No rotation (R6). The exporter is configured with no `rotation` block, so it
+  # writes exactly one file: rotation reintroduces the window-completeness
+  # ambiguity that produced the defect this channel replaces, and minimization
+  # removes the size pressure that would have motivated it. ERL2-C-171 records
+  # `rotation: "forbidden"` and `segment_count: 1`, and the driver refuses a
+  # trusted directory holding more than the one expected file.
+  #
+  # `flush_interval` is what makes the freeze cutoff a bounded wait rather than a
+  # guess: after the run's telemetry is quiesced, one flush interval plus a
+  # margin is the window after which two consecutive reads agree.
+  file/trusted:
+    path: /trusted/traces.jsonl
+    format: json
+    flush_interval: 1s
+
+processors:
+  # R2. `keep_keys` first, then `truncate_all` over what survived — the order
+  # matters only for cost, not for the result, but bounding a value the
+  # allowlist already dropped would be work with no reader.
+  transform/trusted:
+    # `ignore`: a statement that cannot apply to one span must not discard the
+    # batch. The parser is the enforcement point, not this processor — a record
+    # that reaches the artifact unminimized is refused there, so an error mode
+    # that silently kept more would be caught rather than trusted.
+    error_mode: ignore
+    trace_statements:
+      - context: resource
+        statements:
+          - keep_keys(resource.attributes, ["service.name"])
+          - truncate_all(resource.attributes, 512)
+      - context: span
+        statements:
+          - keep_keys(span.attributes, ["url.full"])
+          - truncate_all(span.attributes, 512)
+      # Span *events* are a second attribute map, and `keep_keys` on
+      # `span.attributes` does not touch them. Measured on a live run before
+      # this statement existed: the quote service's PHP instrumentation attached
+      # an `exception` event carrying `exception.message` and a full
+      # `exception.stacktrace` with host file paths, and every byte of it
+      # survived minimization into the retained artifact. Unbounded, unallowlisted
+      # and subject-influenced — exactly what R2 exists to prevent, hiding in the
+      # one field the allowlist did not name.
+      #
+      # An empty allowlist is the whole rule: no event attribute is needed by any
+      # count ERL2-C-171 derives, so none is kept. The event's name and timestamp
+      # remain, which is structure rather than payload, and the parser bounds the
+      # name rather than trusting that.
+      #
+      # `set(span.events, [])` was tried first and is silently a no-op here —
+      # `error_mode: ignore` swallows it — so the statement that looks like it
+      # removes the most is the one that removes nothing. Measured, not assumed.
+      - context: spanevent
+        statements:
+          - keep_keys(spanevent.attributes, [])
 
 service:
   pipelines:
@@ -27,6 +164,15 @@ service:
       receivers: [otlp]
       processors: [memory_limiter]
       exporters: [debug]
+    # The trusted pipeline. Same receiver, its own processor chain, its own
+    # exporter, its own physical output channel. `debug` is deliberately absent:
+    # an exporter that renders subject bytes unescaped must not share a byte
+    # stream with the trusted record, and the simplest way to guarantee that is
+    # for it not to be on this pipeline at all.
+    traces/trusted:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/trusted]
+      exporters: [file/trusted]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter]

@@ -41,9 +41,50 @@
 # The rendered result is asserted by `tests/adversarial/composeSubstrate.test.ts`
 # against `docker compose config`, so a future edit that reintroduces a
 # publication fails a test rather than passing review.
+#
+# ## The trusted telemetry volume (ADR-ERL2-038 R1/R3) — package 2
+#
+# Sixth thing this file changes: one named volume, mounted into `otel-collector`
+# and into nothing else. It is where the collector's `file/trusted` exporter
+# writes the structurally framed OTLP-JSON the ERL2-C-171 artifact is frozen
+# from, and its whole job is to be a channel the subject cannot reach.
+#
+# `external: true` is the load-bearing word. Compose *adopts* a volume it
+# declares and finds already present, which would let a run inherit another
+# run's bytes; declaring it external moves creation to the driver, which creates
+# it with `docker volume create` and **refuses** rather than reuses when the
+# name is already taken. It also means `compose down --volumes` does not remove
+# it, so removal is a named, owned act with its own reported outcome rather than
+# a side effect of teardown.
+#
+# The volume is created with the `local` driver's tmpfs backing and explicit
+# ownership — `type=tmpfs`, `o=uid=10001,gid=10001,mode=0700,size=…`. Measured
+# against the pinned collector: a fresh named volume *without* those options
+# fails closed and loudly at start-up (`open /trusted/traces.jsonl: permission
+# denied`, exit 1), because the image is entirely root-owned, has no shell and
+# runs as uid 10001. Docker reports the prepared volume as `"Type": "volume"`,
+# which is why `docker cp` reads it where it cannot read a `--tmpfs` mount — and
+# why no ownership-preparation helper image is needed on the critical path.
+#
+# Two consequences worth stating rather than discovering. Being memory-backed,
+# the bytes never touch the host filesystem, which is a privacy improvement over
+# a persistent volume. And the tmpfs is unmounted when the container stops, so
+# the trusted bytes **do not survive `docker stop`** — measured directly. The
+# freeze therefore copies from the *running* collector after the observation
+# cutoff, and the container is stopped afterwards; a lifecycle that stopped
+# first and copied second would destroy the evidence it was trying to preserve.
+#
+# `${ERL2_TRUSTED_VOLUME_NAME}` embeds the run's UUID, exactly as the network and
+# both container names do, so two runs never collide and no name is guessable.
 networks:
   default:
     name: ${ERL2_NETWORK_NAME}
+
+volumes:
+  erl2-trusted-telemetry:
+    name: ${ERL2_TRUSTED_VOLUME_NAME}
+    # Created by the driver, never by Compose. See above.
+    external: true
 
 services:
   otel-collector:
@@ -51,6 +92,14 @@ services:
     container_name: ${ERL2_CONTAINER_OTEL_COLLECTOR}
     # No host publication at all. Reachable only on the Compose network.
     ports: !reset []
+    # The one mount of the trusted volume in the entire topology. `quote` — the
+    # container the subject reaches — declares no `volumes` key here and gets
+    # none, and the rendered configuration is asserted to prove it rather than
+    # this comment.
+    volumes:
+      - type: volume
+        source: erl2-trusted-telemetry
+        target: /trusted
     labels:
       com.erl2.run_id: ${ERL2_RUN_ID}
       com.erl2.driver_id: compose-driver
