@@ -247,17 +247,60 @@ leak worth hiding.
 
 ## 7. Controls
 
-Discovery **169 → 180**. Eleven added, none removed, renamed or reordered.
+Discovery **169 → 184**. Fifteen added, none removed, renamed or reordered.
 
-`trusted-channel-` · `stale-volume-refused` · `mount-ownership-verified` ·
-`volume-run-scoped` · `single-file-enforced` · `artifact-stability-required` ·
+Eleven against the lifecycle and the grammar: `trusted-channel-` ·
+`stale-volume-refused` · `mount-ownership-verified` · `volume-run-scoped` ·
+`single-file-enforced` · `artifact-stability-required` ·
 `settle-requires-attribution` · `oversize-refused` · `encoding-verified` ·
 `cleanup-scoped-to-created` · `cleanup-failure-reported`, plus
 `trusted-telemetry-event-attributes-refused`.
 
+Four against the **applied collector configuration**, which nothing mutated
+before: `trusted-channel-` · `minimization-configured` ·
+`event-attributes-stripped` · `debug-off-the-trusted-pipeline` ·
+`logs-excluded-from-trusted-export`. The parser stays the authoritative
+enforcement point, but "the parser refuses an unminimized record" and "the
+pipeline still minimizes" are different claims and only the first had a control.
+
+One existing control needed its anchor widened rather than its meaning changed:
+`trusted-telemetry-field-bound-enforced` matched a single line that Package 2's
+second `fieldOverBound` return — for a span event's name, at a deeper
+indentation — contains as a substring. The harness reported
+`ambiguous_patch_target` instead of patching whichever it found first, which is
+the behaviour to want.
+
 Two of the eleven exist because a live run found the defect first —
 `settle-requires-attribution` and `event-attributes-refused`. Neither was
 predicted by reading.
+
+### Affected-control execution
+
+Selector derived mechanically from the changed paths on both axes:
+mutation-target **30**, designated-suite **20**, **union 31**.
+
+```
+negative controls: 31 of 184
+31 discovered = 31 agreed + 0 disagreed + 0 unmeasured + 0 harness error(s)
+the working tree is byte-identical to how the campaign started
+```
+
+Every one killed on a named case. No wording-only kill, no unexpected skip, no
+harness error, byte-identical restoration. The two skips that appear in three
+rows are the declared `RENDERED_TOPOLOGY_SKIP` pair. The full 184-control
+campaign was **not** run.
+
+### Broad suite
+
+Run once at the final candidate, `TMPDIR=/tmp`, no retries:
+**1 328 tests · 1 328 passed · 0 failed · 0 cancelled · 0 skipped · 917 880 ms**,
+log terminating on `duration_ms`, exit 0.
+
+Zero skips is a property of *this checkout*, not of the commit: the canonical
+tree carries the git-ignored, network-fetched pinned archive under
+`environments/otel-demo/upstream/` that the fixture-dependent tests gate on. A
+fresh clone would skip them and say so. This is the same condition the
+independent Package 1 review recorded as P3-16, restated rather than rediscovered.
 
 `RENDERED_TOPOLOGY_SKIP` gained a second declared case: Package 2's
 trusted-mount assertion reads the same rendered merge as the loopback one and is
