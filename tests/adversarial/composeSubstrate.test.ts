@@ -42,6 +42,8 @@ import {
   retainAttributableTelemetryObservation,
   SteppingClock,
   TELEMETRY_WINDOW_REASONS,
+  TRUSTED_CHANNEL_MOUNT_PATH,
+  trustedVolumeName,
   uuidV7From,
   type DockerCli,
   type DockerInvocation,
@@ -811,7 +813,18 @@ const UPSTREAM_COMPOSE_FILE = path.join(UPSTREAM_ROOT, "compose.yaml");
  * render as two publications, one of them on every interface. Every run-varying
  * value is supplied exactly as the driver supplies it.
  */
-function renderedComposeConfig(): Record<string, { ports?: readonly Record<string, unknown>[] }> {
+interface RenderedService {
+  ports?: readonly Record<string, unknown>[];
+  volumes?: readonly Record<string, unknown>[];
+}
+
+/** The services of the rendered merge. */
+function renderedComposeConfig(): Record<string, RenderedService> {
+  return (JSON.parse(renderedComposeDocument()) as { services: Record<string, RenderedService> }).services;
+}
+
+/** The whole rendered merge, for the assertions that are about top-level blocks. */
+function renderedComposeDocument(): string {
   const overlay = path.join(repoRoot, "environments", "otel-demo", "compose", "erl2-overlay.yaml");
   const extras = path.join(repoRoot, "environments", "otel-demo", "compose", "erl2-otelcol-extras.yaml");
   const result = spawnSync(
@@ -839,14 +852,17 @@ function renderedComposeConfig(): Record<string, { ports?: readonly Record<strin
         DOCKER_SOCK: "/dev/null",
         HOST_FILESYSTEM: "/dev/null",
         OTEL_COLLECTOR_CONFIG_EXTRAS: extras,
+        ERL2_TRUSTED_VOLUME_NAME: TRUSTED_VOLUME,
       },
       maxBuffer: 64 * 1024 * 1024,
     },
   );
   if (result.status !== 0) throw new Error(`docker compose config failed: ${result.stderr ?? ""}`);
-  return (JSON.parse(result.stdout) as { services: Record<string, { ports?: readonly Record<string, unknown>[] }> })
-    .services;
+  return result.stdout;
 }
+
+/** The run-scoped trusted volume name the driver would supply for `RUN_ID`. */
+const TRUSTED_VOLUME = trustedVolumeName(RUN_ID);
 
 /**
  * Why the rendered topology cannot be observed here, or `undefined` when it can.
@@ -934,6 +950,48 @@ test("COMPOSE-ADV: the RENDERED configuration publishes one loopback port and no
       );
     }
   }
+});
+
+test("COMPOSE-ADV: the RENDERED configuration mounts the trusted volume into the collector alone", RENDER_SKIP, () => {
+  if (RENDER_REASON !== undefined) {
+    assert.fail(`ERL2_REQUIRE_LIVE_DOCKER=1 was set but ${RENDER_REASON}`);
+  }
+  const services = renderedComposeConfig();
+
+  // The whole trust argument rests on this: the collector writes the trusted
+  // record and nobody else can reach it. Asserted against the *merge* rather
+  // than the overlay's source text, because `volumes` merges across files
+  // exactly as `ports` does — an entry that looks collector-only in one file can
+  // render onto a second service.
+  const mountsOfService = (serviceId: string): readonly Record<string, unknown>[] =>
+    (services[serviceId]?.volumes ?? []).filter(
+      (mount) => mount["source"] === "erl2-trusted-telemetry" || mount["target"] === TRUSTED_CHANNEL_MOUNT_PATH,
+    );
+
+  const collector = mountsOfService("otel-collector");
+  assert.equal(collector.length, 1, `the collector renders ${collector.length} trusted mounts: ${JSON.stringify(collector)}`);
+  assert.equal(collector[0]?.["type"], "volume", "the trusted channel must be a named volume, never a host bind");
+  assert.equal(collector[0]?.["target"], TRUSTED_CHANNEL_MOUNT_PATH);
+
+  // And nowhere else in the rendered graph — including `quote`, the one
+  // container the subject's traffic reaches. A subject that can write the file
+  // the counts are read from is the whole defect this channel replaces.
+  for (const serviceId of Object.keys(services)) {
+    if (serviceId === "otel-collector") continue;
+    assert.deepEqual(
+      mountsOfService(serviceId),
+      [],
+      `${serviceId} renders a trusted-channel mount: ${JSON.stringify(mountsOfService(serviceId))}`,
+    );
+  }
+
+  // Declared `external`, so Compose creates nothing and adopts nothing. Creation
+  // — and the refusal of a name that is already taken — belongs to the driver.
+  const volumes = (JSON.parse(renderedComposeDocument()) as {
+    volumes?: Record<string, Record<string, unknown>>;
+  }).volumes ?? {};
+  assert.equal(volumes["erl2-trusted-telemetry"]?.["external"], true);
+  assert.equal(volumes["erl2-trusted-telemetry"]?.["name"], TRUSTED_VOLUME);
 });
 
 test("COMPOSE-ADV: the substrate identity changes when the daemon does", () => {
