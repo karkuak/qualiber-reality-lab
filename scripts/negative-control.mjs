@@ -2725,6 +2725,52 @@ export const CONTROLS = [
     expect: "fail",
   },
   {
+    // P0-1, collector side. The scope context is the one the first candidate
+    // never named, and a live review payload retained a session token in it.
+    id: "trusted-channel-scope-minimized",
+    what: "the trusted pipeline strips the instrumentation scope's attributes, name and version before export, so the third attribute map cannot carry subject bytes into the artifact (Package 2 remediation P0-1)",
+    file: "environments/otel-demo/compose/erl2-otelcol-extras.yaml",
+    find: "          - keep_keys(scope.attributes, [])",
+    replace: "          - set(scope.version, \"\")",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CONFIG: the trusted pipeline minimizes before it exports, and the allowlist is the parser's",
+    ],
+    expect: "fail",
+  },
+  {
+    // P0-1, collector side. Span name, status message and trace state were all
+    // measured surviving verbatim into a verified artifact.
+    id: "trusted-channel-span-fields-minimized",
+    what: "the trusted pipeline removes the span's name, status message and trace state before export, closing the three subject-controlled string fields the allowlist never named (Package 2 remediation P0-1)",
+    file: "environments/otel-demo/compose/erl2-otelcol-extras.yaml",
+    find: "          - set(span.status.message, \"\")",
+    replace: "          - set(span.kind, span.kind)",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CONFIG: the trusted pipeline minimizes before it exports, and the allowlist is the parser's",
+    ],
+    expect: "fail",
+  },
+  {
+    // `error_mode: ignore` is how `set(span.events, [])` became a silent no-op.
+    // Every statement here is load-bearing for a privacy bound, so a statement
+    // that cannot be applied must stop the batch rather than export more.
+    id: "trusted-channel-minimization-fails-closed",
+    what: "an inapplicable minimization statement fails the trusted pipeline closed rather than being swallowed, so a statement that parses but does not mutate cannot silently retain more than the allowlist says (Package 2 remediation P0-1)",
+    file: "environments/otel-demo/compose/erl2-otelcol-extras.yaml",
+    find: "    error_mode: propagate",
+    replace: "    error_mode: ignore",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CONFIG: the trusted pipeline minimizes before it exports, and the allowlist is the parser's",
+    ],
+    expect: "fail",
+  },
+  {
     id: "trusted-channel-event-attributes-stripped",
     what: "span event attributes are stripped before export; without it an exception stack trace reaches the retained artifact, which a live run demonstrated (ADR-ERL2-038 R2)",
     file: "environments/otel-demo/compose/erl2-otelcol-extras.yaml",
@@ -2907,14 +2953,91 @@ export const CONTROLS = [
   },
   {
     id: "trusted-telemetry-event-attributes-refused",
-    what: "a span event's attributes are refused, closing the minimization hole a live run exposed when an exception stack trace survived into the retained artifact (ADR-ERL2-038 R2)",
+    what: "a span event's attributes and name are refused, closing the minimization hole a live run exposed when an exception stack trace survived into the retained artifact (ADR-ERL2-038 R2)",
     file: "packages/core/src/environment/trustedTelemetry.ts",
-    find: "          const eventRefusal = childAttributeRefusal(span[\"events\"], \"name\");",
+    find: "          const eventRefusal = childRefusal(span[\"events\"], SHAPE.event);",
     replace: "          const eventRefusal = undefined;",
     tests: ["tests/dist/adversarial/trustedChannel.test.js"],
     mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
     mustFailCases: [
-      "TRUSTED-CHANNEL: a span event's attributes are refused, and its name is bounded",
+      "TRUSTED-CHANNEL: a span event's attributes and name are both refused",
+    ],
+    expect: "fail",
+  },
+  {
+    // P0-1. The generic unknown-key refusal is the whole recursion: the first
+    // Package 2 grammar checked four attribute maps and ignored every other key
+    // at every level, so six subject-controlled surfaces reached the artifact
+    // and verified clean. Tolerating an unknown key is exactly how that happens.
+    id: "trusted-telemetry-unknown-key-refused",
+    what: "an unknown key at any nesting level is refused rather than ignored, so a surface nobody described cannot ride into the retained artifact (Package 2 remediation P0-1)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "    return TRUSTED_TELEMETRY_REASONS.unexpectedField;\n  }\n  return undefined;\n}",
+    replace: "    continue;\n  }\n  return undefined;\n}",
+    tests: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFailCases: [
+      "TRUSTED-REMEDIATION: every subject-controlled surface is refused, at every nesting level",
+    ],
+    expect: "fail",
+  },
+  {
+    // P0-1. The other half: a key the pipeline strips arriving with content.
+    // Treating it as empty is how a scope attribute carrying a session token
+    // becomes an accepted artifact.
+    id: "trusted-telemetry-unminimized-field-refused",
+    what: "a field the trusted pipeline removes is refused when it arrives carrying content, so a configuration regression is caught rather than exported (Package 2 remediation P0-1)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "      if (isEmpty(value[key])) continue;\n      return removedReason;",
+    replace: "      if (isEmpty(value[key])) continue;\n      continue;",
+    tests: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFailCases: [
+      "TRUSTED-REMEDIATION: every subject-controlled surface is refused, at every nesting level",
+    ],
+    expect: "fail",
+  },
+  {
+    // P1-1. The reproduced defect: budget exhaustion reaching the `observed`
+    // constructor. Restoring that one call is exactly the false authentic zero.
+    id: "trusted-channel-settle-timeout-is-not-a-zero",
+    what: "settle-budget exhaustion produces an absence with a cause, never an authoritative observed zero, so delayed telemetry cannot be frozen as a positive claim that the collector received nothing (Package 2 remediation P1-1)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    return {\n      evidence: \"absent\",\n      marker,\n      reasonCode:\n        counts.recordCount === 0\n          ? TRUSTED_CHANNEL_REASONS.expectedTelemetryMissing\n          : TRUSTED_CHANNEL_REASONS.settleTimeout,\n    };",
+    replace: "    return observedMaterial(collector, binding, marker, freeze, counts);",
+    tests: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFailCases: [
+      "TRUSTED-REMEDIATION: telemetry arriving after the settle budget is never an observed zero",
+    ],
+    expect: "fail",
+  },
+  {
+    // P1-1, the other direction: a zero that nobody declared eligible.
+    id: "trusted-channel-zero-requires-declared-eligibility",
+    what: "an observed zero is produced only for a run declared zero-eligible before observation, so an empty file is never read as proof the collector received nothing (Package 2 remediation P1-1)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (zeroEligibility.kind === \"zero-eligible\") {",
+    replace: "    if (true) {",
+    tests: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFailCases: [
+      "TRUSTED-REMEDIATION: a zero is authoritative only when the run was declared eligible for one",
+    ],
+    expect: "fail",
+  },
+  {
+    // P2-1. The planted symlink. Dropping the type check restores the copy
+    // primitive that read the host's /etc/passwd.
+    id: "trusted-channel-source-entry-must-be-regular",
+    what: "the trusted source entry is proved a regular file from the archive's own header before any byte is used, so a planted symlink cannot be dereferenced into the artifact (Package 2 remediation P2-1)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (entry === undefined || entry.type !== \"regular-file\" || entry.bytes === undefined) {",
+    replace: "    if (entry === undefined || entry.bytes === undefined) {",
+    tests: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFailCases: [
+      "TRUSTED-REMEDIATION: a non-regular source entry is refused before anything dereferences it",
     ],
     expect: "fail",
   },
