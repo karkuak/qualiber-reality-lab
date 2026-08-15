@@ -351,6 +351,43 @@ export interface TrustedChannelCleanup {
   readonly detail?: string;
 }
 
+/**
+ * The seam package 3 consumes, and the whole of it (ADR-ERL2-038 §3).
+ *
+ * Deliberately two methods and no more. Everything the trusted channel knows how
+ * to do — minting the volume, proving ownership across processes, copying the
+ * bytes, parsing them, sealing the ERL2-C-171 record, removing the resource —
+ * happens behind these, so `environmentRun` never learns a Docker label, a
+ * volume name, a capability or a record grammar. A run asks for an observation
+ * and asks how cleanup went; it does not ask what a trusted volume is.
+ *
+ * Structural rather than nominal, and not part of `EnvironmentDriver`, for the
+ * reason `AttributableTelemetryObserver` is not either: a driver that cannot
+ * produce trusted telemetry does not implement it, and the run produces no
+ * artifact for it rather than producing an empty one.
+ */
+export interface TrustedTelemetryProducer {
+  /** Freezes this run's trusted artifact and seals it as an ERL2-C-171 record. */
+  freezeTrustedTelemetryObservation(marker: string): AttributableTelemetryObservationV2;
+  /**
+   * How the trusted volume's removal went.
+   *
+   * Reported, never consulted by a verdict. A clean cleanup does not make an
+   * artifact valid and a valid artifact does not make a cleanup clean.
+   */
+  trustedChannelCleanup(): TrustedChannelCleanup;
+}
+
+/** Structural capability guard; a driver without the trusted channel honestly fails it. */
+export function supportsTrustedTelemetry(driver: unknown): driver is TrustedTelemetryProducer {
+  return (
+    typeof driver === "object" &&
+    driver !== null &&
+    typeof (driver as TrustedTelemetryProducer).freezeTrustedTelemetryObservation === "function" &&
+    typeof (driver as TrustedTelemetryProducer).trustedChannelCleanup === "function"
+  );
+}
+
 /** The material a C-171 record is built from — observed, or absent with a reason. */
 export type TrustedTelemetryMaterial =
   | {

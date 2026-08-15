@@ -22,6 +22,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -436,11 +437,18 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
   }
 
   // The attributable-telemetry observation is *retained*, not merely observed
-  // live (ADR-ERL2-033): frozen before teardown began, marked with this run's
-  // id, and carrying the exact log lines its counts derive from. The counts
-  // are re-derived here from the retained excerpt with the test's own
-  // arithmetic, independently of the driver's.
+  // live, and since package 3 it is an **ERL2-C-171** record: bytes the
+  // collector's own file exporter wrote to a volume nothing else could reach,
+  // frozen before teardown began and marked with this run's id.
+  //
+  // This assertion block used to read `log_excerpt` — the collector's debug
+  // console stream, which the Lab's own overlay also renders subject logs into,
+  // and which a subject could therefore write a forged `"spans": 9999` into.
+  // There is no excerpt now. The counts are re-derived here from the retained
+  // trusted bytes with the test's own arithmetic, independently of the driver's,
+  // exactly as before — but over a structure a subject cannot author.
   const observation = retained<{
+    schema_version: string;
     evidence: string;
     run_id: string;
     marker: string;
@@ -449,11 +457,31 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
     trace_batches: number;
     service_names: string[];
     collector: { service_id: string; container_name: string; ownership_verified: boolean };
-    log_excerpt: string;
+    channel: { kind: string; record_format: string; rotation: string; segment_count: number };
+    binding: { environment_archetype_hash: string; substrate_lock_core_hash: string };
+    artifact: {
+      byte_length: number;
+      content_digest: string;
+      record_count: number;
+      finalization: string;
+      final_record_terminated: boolean;
+    };
+    trusted_records: string;
+    log_excerpt?: string;
   }>(run, "environment", "attributable-telemetry-observation.json");
-  assert.equal(observation.evidence, "observed", "the collector observation was not made");
+  assert.equal(
+    observation.schema_version,
+    "attributable-telemetry-observation/v2",
+    "a current run must retain ERL2-C-171; ERL2-C-160 authorizes nothing",
+  );
+  assert.equal(observation.evidence, "observed", "the trusted observation was not made");
   assert.equal(observation.run_id, run.runId);
   assert.equal(observation.marker, run.runId, "the marker must be the run id itself");
+  assert.equal(
+    observation.log_excerpt,
+    undefined,
+    "a trusted record must carry no debug excerpt; the forgeable stream is not evidence",
+  );
   assert.ok(
     observation.run_attributed_records > 0,
     "the retained observation carries no record naming this run's marker",
@@ -462,22 +490,86 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
   assert.equal(observation.collector.service_id, "otel-collector");
   assert.equal(observation.collector.ownership_verified, true);
   assert.ok(observation.collector.container_name.includes("otel-collector"));
-  const excerptText = observation.log_excerpt;
+
+  // The channel is the one ERL2-C-171 pins: one segment, no rotation.
+  assert.equal(observation.channel.record_format, "otlp-json-ndjson");
+  assert.equal(observation.channel.rotation, "forbidden");
+  assert.equal(observation.channel.segment_count, 1);
+
+  // R4: the artifact is bound to *this* run's environment, and the binding is
+  // compared against this run's own retained substrate binding rather than
+  // against anything the artifact says about itself.
   assert.equal(
-    excerptText.split(`erl2_run=${run.runId}`).length - 1 > 0,
-    true,
-    "the retained excerpt does not carry the run marker",
+    observation.binding.substrate_lock_core_hash,
+    binding.substrate_lock_hash,
+    "the trusted artifact binds a substrate lock this run did not use",
+  );
+
+  // R5: the bytes the counts derive from are the bytes whose digest is retained.
+  const trustedBytes = observation.trusted_records;
+  assert.equal(observation.artifact.finalization, "frozen");
+  assert.equal(observation.artifact.final_record_terminated, true);
+  assert.equal(
+    observation.artifact.content_digest,
+    `sha256:${createHash("sha256").update(Buffer.from(trustedBytes, "utf8")).digest("hex")}`,
+    "the declared content digest is not the digest of the retained bytes",
   );
   assert.equal(
-    excerptText.split(run.runId).length - 1,
+    observation.artifact.byte_length,
+    Buffer.byteLength(trustedBytes, "utf8"),
+    "the declared byte length is not the length of the retained bytes",
+  );
+
+  // The counts, re-derived from the retained NDJSON with the test's own
+  // arithmetic: one physical line per collector export, and one span per entry
+  // of every scope's `spans` array.
+  const lines = trustedBytes.split("\n").filter((line) => line.length > 0);
+  assert.equal(
+    observation.artifact.record_count,
+    lines.length,
+    "the declared record count is not the number of retained records",
+  );
+  assert.equal(observation.trace_batches, lines.length);
+  let derivedSpans = 0;
+  let derivedAttributed = 0;
+  for (const line of lines) {
+    const document = JSON.parse(line) as {
+      resourceSpans?: { scopeSpans?: { spans?: unknown[] }[] }[];
+    };
+    for (const resourceSpan of document.resourceSpans ?? []) {
+      for (const scopeSpan of resourceSpan.scopeSpans ?? []) {
+        for (const span of scopeSpan.spans ?? []) {
+          derivedSpans += 1;
+          if (JSON.stringify(span).includes(run.runId)) derivedAttributed += 1;
+        }
+      }
+    }
+  }
+  assert.equal(
+    observation.spans,
+    derivedSpans,
+    "the declared span count must be the length of the structure the collector wrote",
+  );
+  assert.equal(
     observation.run_attributed_records,
-    "the declared run-attributed count must equal the count re-derived from the retained excerpt",
+    derivedAttributed,
+    "the declared run-attributed count must equal the count re-derived from the retained bytes",
   );
-  const excerptSpans = [...excerptText.matchAll(/\bTraces\b.*"spans":\s*(\d+)/g)].reduce(
-    (total, match) => total + Number(match[1]),
-    0,
+
+  // The telemetry gate is composed on this run — it declared the observation
+  // obtainable — and it passes through valid C-171 evidence.
+  const validity = retained<{
+    gate_results: { gate_id: string; passed: boolean }[];
+  }>(run, "validity-result.json");
+  const telemetryGate = validity.gate_results.find(
+    (gate) => gate.gate_id === "attributable-telemetry-retained",
   );
-  assert.equal(excerptSpans, observation.spans, "the declared span count must be derivable from the excerpt");
+  assert.ok(telemetryGate, "a declaring run must evaluate the attributable-telemetry gate");
+  assert.equal(
+    telemetryGate?.passed,
+    true,
+    "the telemetry gate did not pass through the trusted channel",
+  );
 
   // Offline verification, in a fresh process, as an external reader.
   const verified = verifyBundle(run.runRoot, {

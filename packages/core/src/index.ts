@@ -169,6 +169,7 @@ export {
   EXPECTS_TELEMETRY,
   buildTrustedTelemetryObservation,
   observeTrustedTelemetry,
+  supportsTrustedTelemetry,
   trustedFreezeRoot,
   trustedVolumeMountOptions,
   trustedVolumeName,
@@ -193,6 +194,7 @@ export {
   type TrustedChannelSettleCause,
   type TrustedChannelZeroEligibility,
   type TrustedTelemetryMaterial,
+  type TrustedTelemetryProducer,
   type VerifiedTrustedCollector,
 } from "./environment/trustedChannel.js";
 export {
@@ -724,6 +726,7 @@ export {
   LAB_VALIDITY_GATES,
   PRE_ENVIRONMENT_GATE_IDS,
   assertAdapterCertificationApplicability,
+  assertAttributableTelemetryApplicability,
   requiredGateIds,
   assertGatesAreLabOwned,
   assertRequiredGatesPresent,

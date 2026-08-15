@@ -1374,15 +1374,24 @@ test("ATTR-TELEM-E2E: a fake-driver run declares nothing, retains nothing, and s
   const run = selectedRun();
   assert.equal(drive(run), "generic_finalized");
 
-  // No observation was produced, and the validity gate is present and passing.
+  // No observation was produced, and — since package 3 — no gate either.
+  //
+  // This assertion used to require the gate present and `passed: true`. That
+  // convention is what package 3 retires: a fake-driver run could never have
+  // produced trusted telemetry, so a passing gate on it is a boolean answering a
+  // question about applicability, and a reader cannot tell it from a run whose
+  // ERL2-C-171 artifact was actually verified. The honest shape is the one
+  // `adapter-certified` already uses for a fake-port run: the gate is absent.
   const validity = JSON.parse(
     readFileSync(path.join(run.runRoot, "retained", "validity-result.json"), "utf8"),
   ) as {
     readonly gate_results: readonly { readonly gate_id: string; readonly passed: boolean }[];
   };
-  const gate = validity.gate_results.find((g) => g.gate_id === "attributable-telemetry-retained");
-  assert.ok(gate, "the attributable-telemetry-retained gate is evaluated on every environment terminal");
-  assert.equal(gate?.passed, true);
+  assert.equal(
+    validity.gate_results.some((g) => g.gate_id === "attributable-telemetry-retained"),
+    false,
+    "a run that never declared telemetry obtainable must omit the gate, not pass it vacuously",
+  );
   assert.equal(
     existsSync(
       path.join(run.runRoot, "retained", "environment", "attributable-telemetry-observation.json"),

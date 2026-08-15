@@ -128,6 +128,11 @@ function environment(
       subjectExecutionMode: mode,
       ...(mode === "external_adapter" ? { adapterCertificationReceiptHash: CURRENT_RECEIPT } : {}),
       terminalStage: "exercise",
+      // This suite measures the *adapter* applicability dimension, so telemetry
+      // stays applicable throughout and the gate `gatesFor` emits is the one
+      // `assertAttributableTelemetryApplicability` then requires. The telemetry
+      // dimension has its own suite.
+      attributableTelemetryApplicable: true,
       genericRunPolicyHash: POLICY,
       gates: gatesFor(ENVIRONMENT_GATE_IDS, mode, adapterCertified),
       environmentRestorationHash: RESTORATION,

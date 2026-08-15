@@ -44,9 +44,10 @@ export const LAB_VALIDITY_GATES = {
   evidence_completeness: [
     "evidence-cutoff-realized",
     "evidence-sources-accounted",
-    // ADR-ERL2-033: passes wherever the attributable-telemetry observation was
-    // never declared obtainable; refuses where it was declared and is missing,
-    // not observed, not this run's, or unattributed.
+    // ADR-ERL2-038 R8, package 3: evaluated wherever the run declared the
+    // observation obtainable, and **omitted** where it did not. It refuses where
+    // it was declared and the retained ERL2-C-171 record is missing, historical,
+    // absent, not this run's, or unattributed.
     "attributable-telemetry-retained",
   ],
   adapter_compliance: ["adapter-certified", "adapter-authority-respected"],
@@ -90,9 +91,9 @@ export const ENVIRONMENT_GATE_IDS: readonly string[] = [
   ...LAB_VALIDITY_GATES.selection_integrity,
   ...LAB_VALIDITY_GATES.environment_control,
   "evidence-cutoff-realized",
-  // ADR-ERL2-033: evaluated on every environment terminal; vacuous where the
-  // observation was never declared obtainable, so fake-driver runs are
-  // untouched and the gate is still measured rather than skipped.
+  // ADR-ERL2-038 R8, package 3: required of a run that declared the observation
+  // obtainable, and omitted from the required set of one that did not — see
+  // `requiredGateIds` and `assertAttributableTelemetryApplicability`.
   "attributable-telemetry-retained",
   "restoration-verified",
   "teardown-verified",
@@ -124,10 +125,28 @@ export interface GateResult {
  */
 export function requiredGateIds(
   base: readonly string[],
-  options: { readonly externalAdapter: boolean },
+  options: {
+    readonly externalAdapter: boolean;
+    /**
+     * Whether this run declared an attributable-telemetry observation
+     * obtainable (ADR-ERL2-038 R8, package 3).
+     *
+     * Defaults to applicable, which is the safe direction: a caller that forgets
+     * to answer gets a *stricter* required set, not a looser one. Only an
+     * explicit `false` drops the gate, and
+     * `assertAttributableTelemetryApplicability` then refuses the gate being
+     * present at all — so "not applicable" cannot decay into "optional".
+     */
+    readonly attributableTelemetryApplicable?: boolean;
+  },
 ): readonly string[] {
-  if (options.externalAdapter) return base;
-  return base.filter((id) => id !== "adapter-certified");
+  const withoutCertification = options.externalAdapter
+    ? base
+    : base.filter((id) => id !== "adapter-certified");
+  if (options.attributableTelemetryApplicable === false) {
+    return withoutCertification.filter((id) => id !== "attributable-telemetry-retained");
+  }
+  return withoutCertification;
 }
 
 /**
@@ -182,6 +201,63 @@ export function assertAdapterCertificationApplicability(
       "the adapter-certified gate does not cite the current certification receipt this run was " +
         "authorized on; a manifest hash, or the manifest's bootstrap/prior receipt, is not " +
         "certification evidence",
+      { owner: "lab" },
+    );
+  }
+}
+
+/**
+ * The applicability rule for `attributable-telemetry-retained`, enforced rather
+ * than assumed (ADR-ERL2-038 R8, package 3).
+ *
+ * Until package 3 this gate was evaluated on every environment terminal and
+ * *passed vacuously* wherever the observation was never declared obtainable. A
+ * fake-driver run therefore published `attributable-telemetry-retained:
+ * passed: true` — a boolean answering a question about applicability, which is
+ * the same false-attestation shape `assertAdapterCertificationApplicability`
+ * already rejects one gate over. A reader cannot tell "this run's trusted
+ * telemetry was verified" from "this run could never have had any", and only
+ * one of those is a statement about evidence.
+ *
+ * So the gate is now *omitted* where telemetry is inapplicable, and this makes
+ * the omission safe by refusing the two ways it could rot:
+ *
+ *   - for an **applicable** run, the gate being absent or appearing more than
+ *     once — otherwise a producer could drop the gate to avoid failing it,
+ *     which is precisely the failure mode `assertRequiredGatesPresent` exists
+ *     for and which the applicability filter would otherwise punch a hole in;
+ *   - for an **inapplicable** run, the gate being present at all — so the old
+ *     `passed: true` convention cannot creep back through a producer that keeps
+ *     emitting it.
+ *
+ * Applicability is *not* a function of the observation's outcome. It is the
+ * declaration predicate of ADR-ERL2-033 — a compose driver, an archetype
+ * declaring a metric evidence source, and a succeeded exercising step — every
+ * conjunct of which the offline verifier recomputes from retained bytes in
+ * `deriveAttributableTelemetry`. A run cannot become inapplicable by failing to
+ * observe, because nothing the channel reports is an input here.
+ */
+export function assertAttributableTelemetryApplicability(
+  gates: readonly GateResult[],
+  options: { readonly applicable: boolean },
+): void {
+  const found = gates.filter((g) => g.gate_id === "attributable-telemetry-retained");
+  if (!options.applicable) {
+    if (found.length > 0) {
+      throw new Erl2Error(
+        CODES.EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED,
+        "a run that never declared an attributable-telemetry observation obtainable must omit " +
+          "attributable-telemetry-retained; the observation is not applicable, and a boolean cannot say so",
+        { owner: "lab" },
+      );
+    }
+    return;
+  }
+  if (found.length !== 1) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_MISSING_ROLE,
+      `a run declaring an obtainable attributable-telemetry observation must evaluate exactly one ` +
+        `attributable-telemetry-retained gate; found ${String(found.length)}`,
       { owner: "lab" },
     );
   }
@@ -297,6 +373,14 @@ export interface EnvironmentValidityInput {
   /** The current receipt an external run was authorized on, if it has one. */
   readonly adapterCertificationReceiptHash?: Hash;
   readonly terminalStage: EnvironmentJourneyIntent;
+  /**
+   * Whether this run declared an attributable-telemetry observation obtainable.
+   *
+   * Required rather than optional: the whole point of omitting the gate is that
+   * a reader can tell "not applicable" from "passed", and a defaulted flag
+   * would let a producer reach the lenient answer by silence.
+   */
+  readonly attributableTelemetryApplicable: boolean;
   readonly genericRunPolicyHash: Hash;
   readonly gates: readonly GateResult[];
   readonly environmentRestorationHash: Hash;
@@ -313,8 +397,12 @@ export function buildEnvironmentValidity(
     input.gates,
     requiredGateIds(ENVIRONMENT_GATE_IDS, {
       externalAdapter: input.subjectExecutionMode === "external_adapter",
+      attributableTelemetryApplicable: input.attributableTelemetryApplicable,
     }),
   );
+  assertAttributableTelemetryApplicability(input.gates, {
+    applicable: input.attributableTelemetryApplicable,
+  });
   assertAdapterCertificationApplicability(input.gates, {
     subjectExecutionMode: input.subjectExecutionMode,
     ...(input.adapterCertificationReceiptHash === undefined
