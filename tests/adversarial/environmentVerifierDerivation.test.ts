@@ -43,6 +43,7 @@ import type {
   EnvironmentRestorationVerificationV1,
   EnvironmentValidityResultV1,
   InvalidLabRunRecordV1,
+  JourneyStepOutcomeV1,
   LabLifecycleEventV1,
   TeardownVerificationV1,
 } from "@erl2/contracts";
@@ -57,6 +58,37 @@ function finalizedRun(): EnvironmentRun {
 
 function retained<T>(run: EnvironmentRun, relative: string): T {
   return JSON.parse(readFileSync(path.join(run.runRoot, "retained", relative), "utf8")) as T;
+}
+
+/**
+ * The ADR-ERL2-039 inputs `deriveValidityOutcome` recomputes the exercise
+ * obligation from, resolved the way the production caller resolves them.
+ *
+ * Derived from the run rather than stated, so these cases keep measuring the
+ * rule they were written for instead of a convenient constant: a fake-driver run
+ * exercises successfully and retains no telemetry observation, and if that ever
+ * stops being true these tests should notice.
+ */
+function exerciseContext(run: EnvironmentRun): {
+  readonly outcomes: readonly JourneyStepOutcomeV1[];
+  readonly telemetryObservationRetained: boolean;
+} {
+  const index = ArtifactIndex.scan(run.runRoot);
+  const roles = new Map<string, string[]>();
+  for (const event of lifecycle(run)) {
+    for (const produced of event.produced) {
+      const existing = roles.get(produced.artifact_role) ?? [];
+      existing.push(produced.artifact_core_hash);
+      roles.set(produced.artifact_role, existing);
+    }
+  }
+  return {
+    outcomes: (roles.get("journey-step-outcome") ?? []).map(
+      (hash) => index.get(hash as never).value as JourneyStepOutcomeV1,
+    ),
+    telemetryObservationRetained:
+      (roles.get("attributable-telemetry-observation") ?? []).length > 0,
+  };
 }
 
 function lifecycle(run: EnvironmentRun): readonly LabLifecycleEventV1[] {
@@ -95,14 +127,14 @@ test("VERIFIER-DERIVE: a validity result that claims `valid` over a failed gate 
   const run = finalizedRun();
   const index = ArtifactIndex.scan(run.runRoot);
   const validity = retained<EnvironmentValidityResultV1>(run, "validity-result.json");
-  assert.equal(refusalCode(() => deriveValidityOutcome({ index, validity, requireValid: true })), undefined);
+  assert.equal(refusalCode(() => deriveValidityOutcome({ index, validity, requireValid: true, ...exerciseContext(run) })), undefined);
 
   const mutated = {
     ...validity,
     gate_results: validity.gate_results.map((gate, i) => (i === 0 ? { ...gate, passed: false } : gate)),
   } as EnvironmentValidityResultV1;
   assert.equal(
-    refusalCode(() => deriveValidityOutcome({ index, validity: mutated, requireValid: true })),
+    refusalCode(() => deriveValidityOutcome({ index, validity: mutated, requireValid: true, ...exerciseContext(run) })),
     "EVALUATOR_VALIDITY_GATE_FAILED",
   );
 });
@@ -124,7 +156,7 @@ test("VERIFIER-DERIVE: a status that disagrees with its own gates is refused, on
   );
   const understated = { ...validity, status: "invalid" as const } as EnvironmentValidityResultV1;
   assert.equal(
-    refusalCode(() => deriveValidityOutcome({ index, validity: understated, requireValid: false })),
+    refusalCode(() => deriveValidityOutcome({ index, validity: understated, requireValid: false, ...exerciseContext(run) })),
     "EVALUATOR_VALIDITY_GATE_FAILED",
   );
 });
@@ -142,8 +174,86 @@ test("VERIFIER-DERIVE: a failed gate with no invalidity finding naming it is ref
     invalidity_finding_hashes: [],
   } as EnvironmentValidityResultV1;
   assert.equal(
-    refusalCode(() => deriveValidityOutcome({ index, validity: mutated, requireValid: false })),
+    refusalCode(() => deriveValidityOutcome({ index, validity: mutated, requireValid: false, ...exerciseContext(run) })),
     "EVALUATOR_VALIDITY_GATE_FAILED",
+  );
+});
+
+test("VERIFIER-DERIVE: the exercise obligation is recomputed, not read from the producer", () => {
+  // ADR-ERL2-039, verifier half. Each mutation is applied to the object the
+  // derivation reads, and each is a *serialized shape a producer could emit* —
+  // the false-valid terminal was exactly such a shape, and the verifier accepted
+  // it because it had no independent opinion about the exercising step.
+  const run = finalizedRun();
+  const index = ArtifactIndex.scan(run.runRoot);
+  const validity = retained<EnvironmentValidityResultV1>(run, "validity-result.json");
+  const context = exerciseContext(run);
+  const EXERCISE_GATE = "subject-exercise-succeeded";
+
+  assert.ok(
+    context.outcomes.some((o) => o.intent === "exercise" && o.status === "succeeded"),
+    "this fixture run exercises successfully; the mutations below are what make it lie",
+  );
+  assert.equal(refusalCode(() => deriveValidityOutcome({ index, validity, requireValid: true, ...context })), undefined);
+
+  // 1. the gate dropped entirely — the omission the review found, serialized.
+  const dropped = {
+    ...validity,
+    gate_results: validity.gate_results.filter((g) => g.gate_id !== EXERCISE_GATE),
+  } as EnvironmentValidityResultV1;
+  assert.equal(
+    refusalCode(() => deriveValidityOutcome({ index, validity: dropped, requireValid: true, ...context })),
+    "GRAPH_CLOSURE_MISSING_ROLE",
+    "a run that exercised may not publish a validity result with no exercise gate",
+  );
+
+  // 2. the gate published over outcomes that never exercised.
+  assert.equal(
+    refusalCode(() =>
+      deriveValidityOutcome({
+        index,
+        validity,
+        requireValid: true,
+        outcomes: context.outcomes.filter((o) => o.intent !== "exercise"),
+        telemetryObservationRetained: context.telemetryObservationRetained,
+      }),
+    ),
+    "EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED",
+    "a run with no exercising outcome may not publish the gate",
+  );
+
+  // 3. the gate reporting a pass the retained outcomes contradict: a producer
+  //    claiming success over an exercise that came back `failed`.
+  assert.equal(
+    refusalCode(() =>
+      deriveValidityOutcome({
+        index,
+        validity,
+        requireValid: true,
+        outcomes: context.outcomes.map((o) =>
+          o.intent === "exercise" ? ({ ...o, status: "failed" } as JourneyStepOutcomeV1) : o,
+        ),
+        telemetryObservationRetained: context.telemetryObservationRetained,
+      }),
+    ),
+    "EVALUATOR_VALIDITY_GATE_FAILED",
+    "the verifier must derive the exercise verdict from the outcomes, not read the gate",
+  );
+
+  // 4. a retained telemetry observation with no gate over it — the retained-but-
+  //    ungated shape, which is what one predicate now makes unrepresentable.
+  assert.equal(
+    refusalCode(() =>
+      deriveValidityOutcome({
+        index,
+        validity,
+        requireValid: true,
+        outcomes: context.outcomes,
+        telemetryObservationRetained: true,
+      }),
+    ),
+    "EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED",
+    "a retained ERL2-C-171 record no gate evaluates must be refused offline",
   );
 });
 
@@ -154,7 +264,7 @@ test("VERIFIER-DERIVE: a valid result citing invalidity findings is refused", ()
   const someHash = validity.environment_restoration_hash;
   const mutated = { ...validity, invalidity_finding_hashes: [someHash] } as EnvironmentValidityResultV1;
   assert.equal(
-    refusalCode(() => deriveValidityOutcome({ index, validity: mutated, requireValid: true })),
+    refusalCode(() => deriveValidityOutcome({ index, validity: mutated, requireValid: true, ...exerciseContext(run) })),
     "EVALUATOR_VALIDITY_GATE_FAILED",
   );
 });

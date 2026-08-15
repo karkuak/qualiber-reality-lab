@@ -92,6 +92,15 @@ function build(applicable: boolean, gates: readonly Gate[], failing = false): ()
       subjectExecutionMode: "development_fake_port",
       terminalStage: "exercise",
       attributableTelemetryApplicable: applicable,
+      // ADR-ERL2-039. This suite measures the *telemetry* applicability
+      // dimension, so the exercising step succeeds throughout: that is the only
+      // shape in which telemetry may be applicable at all, and
+      // `assertTelemetryExerciseCoherence` refuses any other. Where telemetry is
+      // inapplicable nothing is retained, which is the agreement the coherence
+      // refusal exists to enforce. The exercise dimension has its own suite.
+      exerciseApplicable: true,
+      exerciseSucceeded: true,
+      telemetryObservationRetained: applicable,
       genericRunPolicyHash: POLICY,
       gates,
       environmentRestorationHash: RESTORATION,
