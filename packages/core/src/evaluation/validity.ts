@@ -184,17 +184,19 @@ export function requiredGateIds(
     readonly exerciseApplicable?: boolean;
   },
 ): readonly string[] {
-  const withoutCertification = options.externalAdapter
+  // Sequential narrowings rather than nested ternaries, and deliberately so:
+  // each `if` is a separate negative control's anchor, and a control whose
+  // preimage dissolves into an expression stops applying without saying so.
+  let required = options.externalAdapter
     ? base
     : base.filter((id) => id !== "adapter-certified");
-  const withoutTelemetry =
-    options.attributableTelemetryApplicable === false
-      ? withoutCertification.filter((id) => id !== "attributable-telemetry-retained")
-      : withoutCertification;
-  if (options.exerciseApplicable === false) {
-    return withoutTelemetry.filter((id) => id !== "subject-exercise-succeeded");
+  if (options.attributableTelemetryApplicable === false) {
+    required = required.filter((id) => id !== "attributable-telemetry-retained");
   }
-  return withoutTelemetry;
+  if (options.exerciseApplicable === false) {
+    required = required.filter((id) => id !== "subject-exercise-succeeded");
+  }
+  return required;
 }
 
 /**

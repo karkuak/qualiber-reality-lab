@@ -584,9 +584,89 @@ export const CONTROLS = [
     file: "packages/core/src/run/environmentRun.ts",
     find: "              gate_id: \"attributable-telemetry-retained\",\n              passed:\n                attributableTelemetryGatePassed({",
     replace: "              gate_id: \"attributable-telemetry-retained\",\n              passed:\n                String(1) === String(1) ||\n                attributableTelemetryGatePassed({",
-    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    tests: [
+      "tests/dist/adversarial/attributableTelemetry.test.js",
+      "tests/dist/e2e/environmentExerciseTelemetryTerminal.test.js",
+    ],
+    mustFail: ["tests/dist/e2e/environmentExerciseTelemetryTerminal.test.js"],
+    mustFailCases: [
+      "ENV-TELEM-TERMINAL: a telemetry-applicable run whose channel produced nothing reaches an INVALID terminal",
+    ],
+    expect: "fail",
+    // **Measured, and no longer a declared no-kill (ADR-ERL2-039).**
+    //
+    // This control was `expect: "pass"` from the day it was written, on the
+    // reasoning that driving the gate's false branch needed a live Compose
+    // substrate the ordinary suite must never require. The independent Package 3
+    // review measured the cost of that reasoning: hard-coding the single wire
+    // that decides whether a real run's telemetry is believed broke no test in
+    // the repository.
+    //
+    // The premise was wrong rather than the reasoning. What the false branch
+    // needs is a driver that *declares* a compose kind and implements the
+    // package 2 seam — not a daemon. `environmentExerciseTelemetryTerminal`
+    // supplies one and drives the whole terminal, so the mutation now turns four
+    // assertions over at once: the gate passes, the terminal is valid, no
+    // invalidity finding is frozen, and the run enters the generic evaluation
+    // index it should have been refused.
+    //
+    // Measured before this declaration changed, against the mutation verbatim:
+    // 1 pass / 1 fail, failing on `Missing expected exception: an invalid run
+    // must be refused entry to the generic evaluation index`. The positive case
+    // still passes under the mutant, so the kill is the property and not
+    // collateral breakage.
+  },
+  {
+    id: "exercise-outcome-failure-invalidates",
+    what: "a required exercise that did not succeed fails its own Lab gate, so the run reaches an invalid terminal instead of a valid one with no telemetry obligation (ADR-ERL2-039)",
+    file: "packages/core/src/journey/exerciseOutcome.ts",
+    // The enforcement point, and the reason it is anchored on the *primitive*
+    // rather than on the gate composition: this one definition is what the gate,
+    // the required-gate set, `attributableTelemetryDeclared` and the retention
+    // guard all read. Widening it to accept any status is exactly the defect the
+    // review found — a run whose exercise failed answering as though it had
+    // succeeded — and it type-checks.
+    find: '    (outcome) => outcome.intent === EXERCISE_INTENT && outcome.status === "succeeded",',
+    replace: "    (outcome) => outcome.intent === EXERCISE_INTENT,",
+    tests: ["tests/dist/adversarial/environmentExerciseOutcome.test.js"],
+    mustFail: ["tests/dist/adversarial/environmentExerciseOutcome.test.js"],
+    mustFailCases: [
+      "ENV-EXERCISE: an unsuccessful required exercise reaches an INVALID terminal",
+      "ENV-EXERCISE: telemetry applicability contains exercise success, from one definition",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "exercise-outcome-applicability-is-not-the-verdict",
+    what: "the exercise gate is composed from whether the run exercised, never from how the exercise went, so an unsuccessful exercise cannot be relabelled `not applicable` (ADR-ERL2-039)",
+    file: "packages/core/src/journey/exerciseOutcome.ts",
+    // The rot the ADR names explicitly. Narrowing applicability to *succeeded*
+    // exercises would let a failing run omit the gate rather than fail it, which
+    // is the false-valid terminal restated one level up.
+    find: "  return outcomes.some((outcome) => outcome.intent === EXERCISE_INTENT);",
+    replace:
+      '  return outcomes.some(\n    (outcome) => outcome.intent === EXERCISE_INTENT && outcome.status === "succeeded",\n  );',
+    tests: ["tests/dist/adversarial/environmentExerciseOutcome.test.js"],
+    mustFail: ["tests/dist/adversarial/environmentExerciseOutcome.test.js"],
+    mustFailCases: [
+      "ENV-EXERCISE: an unsuccessful required exercise reaches an INVALID terminal",
+      "ENV-EXERCISE: applicability reads whether an exercise happened, never how it went",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-retention-follows-one-applicability-answer",
+    what: "the run retains an ERL2-C-171 observation only where the telemetry gate will evaluate it, so retention and applicability cannot disagree (ADR-ERL2-039)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // The second half of the review's finding: retention guarded on two
+    // conjuncts while the gate used three, so a run whose exercise did not
+    // succeed froze a record no gate read. Removing the conjunct restores
+    // exactly that, and `assertTelemetryExerciseCoherence` is what refuses it.
+    find: "    if (!exerciseSucceeded(this.ws.derivedStepOutcomes())) return [];",
+    replace: "    if (!exerciseSucceeded(this.ws.derivedStepOutcomes()) && String(1) === \"2\") return [];",
+    tests: ["tests/dist/adversarial/environmentExerciseOutcome.test.js"],
     expect: "pass",
-    note: "Re-anchored by package 3: the gate composition moved inside the applicability spread, so the old two-line anchor no longer exists. The property and the disposition are unchanged, and the disposition is still UNMEASURED, deliberately. The gate's arithmetic is killed by telemetry-gate-satisfaction and its inputs are unit-tested, but no test in the ordinary suite drives a run in which this wiring evaluates false: that needs a live Compose substrate whose collector receives nothing, which the ordinary suite must never require a daemon to reach. Hard-coding the gate true therefore still kills nothing here. What package 3 did add is coverage of the surrounding boundary — telemetry-gate-composed-only-where-applicable measures that the gate is composed from the run's own predicate, and the live matrix drives the false case against a real substrate — so the unmeasured surface is narrower than it was, and the ledger says exactly that rather than implying coverage this control does not provide.",
+    note: "Declared unmeasured, and stated rather than implied. The mutant is a real defect — a run whose exercise did not succeed would freeze an ERL2-C-171 record again — but reaching it needs a run that both declares a compose driver and fails its exercising step, and on the shipped fixture journey a failed exercise is refused earlier still: `revealJudgeExpectations` opens the expectation of every non-succeeded step and refuses any carrying functional truth, which `exercise` does here. The contradiction the mutant creates is refused by `assertTelemetryExerciseCoherence` in the producer and by `deriveValidityOutcome` in the offline verifier, and both refusals ARE measured — by ENV-EXERCISE: a retained observation the gate would not evaluate is refused, and by VERIFIER-DERIVE: the exercise obligation is recomputed, not read from the producer. What is unmeasured is only this call site's own guard, and closing that needs a fixture whose exercise expectation is `journey_only`, which is a fixture change this package deliberately does not make.",
   },
   {
     id: "telemetry-retention-reentry",
@@ -2415,15 +2495,18 @@ export const CONTROLS = [
       "COMPOSE-WINDOW: the failed-gate signature cannot be retained as a definitive zero",
       "COMPOSE-WINDOW: another run's summary does not supply a count for this run's records",
     ],
-    // The same pre-declared skip the suite's three other controls carry: the
-    // extracted upstream configuration is git-ignored, so a fresh clone does
-    // not have it and that one case declines rather than pretending.
-    expectedSkips: [
-      {
-        case: "COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else",
-        reason: "RENDERED TOPOLOGY UNPROVEN",
-      },
-    ],
+    // The shared declaration the suite's three other controls carry, and this
+    // one now carries too. It used to be a hand-written copy naming only the
+    // *first* rendered-topology case; package 2 added a second assertion over
+    // the same merge and updated `RENDERED_TOPOLOGY_SKIP`, and this copy was not
+    // updated with it. The independent Package 3 review ran this control for the
+    // first time since and it harness-errored on the undeclared second skip —
+    // the guard killed correctly, but an undeclared skip is coverage the
+    // campaign cannot account for, so it refused to record an agreement.
+    //
+    // Referencing the constant rather than restating it is the repair: a copy
+    // drifts, a reference cannot.
+    expectedSkips: RENDERED_TOPOLOGY_SKIP,
     expect: "fail",
   },
   {
