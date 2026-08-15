@@ -39,7 +39,7 @@
  */
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import {
   AdmissionRegistry,
@@ -152,6 +152,7 @@ interface Composed {
 function compose(
   cli: CliRun,
   record: (runId: string, archetypeHash: Hash) => AttributableTelemetryObservationV2,
+  stepStatus?: Partial<Record<"exercise", "succeeded" | "failed" | "unsupported">>,
 ): Composed {
   const registry = AdmissionRegistry.open(cli.registry.root);
   const clockSource = new SystemClock();
@@ -160,6 +161,7 @@ function compose(
       cli.registry.adapterManifestHash,
       "SubjectAdapterManifestV1",
     ).operations,
+    ...(stepStatus === undefined ? {} : { stepStatus }),
   });
   const workspace = new RunWorkspace({
     runId: cli.runId,
@@ -398,4 +400,40 @@ test("ENV-TELEM-TERMINAL: a telemetry-applicable run with a valid C-171 passes b
   );
   assert.equal(validity.status, "valid");
   assert.equal(validity.invalidity_finding_hashes.length, 0);
+});
+
+// -- 3. the second guard, and why the failing-exercise terminal is not here ---
+
+test("ENV-TELEM-TERMINAL: a failed exercise carrying functional truth is refused at reveal", () => {
+  // Worth pinning, because it is the reason this suite cannot drive a failing
+  // exercise all the way to a terminal — and because it is an *independent*
+  // guard on the same hole, discovered while building the one above.
+  //
+  // `revealJudgeExpectations` opens the committed expectation of every
+  // non-succeeded step, and refuses any whose `truth_scope` is `functional`. The
+  // fixture commits `exercise` and `diagnose_decide` as functional truth
+  // (design §12/§15: whether a subject installed or connected cleanly is a
+  // journey fact; whether it *worked* is a mechanism one). So on this journey a
+  // failed exercise cannot reveal, cannot evaluate, and never reaches a terminal
+  // at all.
+  //
+  // This does **not** make ADR-ERL2-039 unnecessary, and the distinction matters:
+  // `truth_scope` is a free per-step governor input. Nothing in the contracts or
+  // in `packages/core` binds `exercise` to `functional`; `FUNCTIONAL_TRUTH_INTENTS`
+  // is a constant of this fixture. A governor committing a `journey_only`
+  // exercise expectation would reveal, evaluate and finalize normally — and
+  // before ADR-ERL2-039 would have reached a **valid** terminal with no telemetry
+  // gate. The gate is what closes that; this refusal is what hid it from every
+  // existing test.
+  const cli = selectedRun();
+  const composed = compose(
+    cli,
+    (runId) => absentV2("telemetry_channel_artifact_missing", runId),
+    { exercise: "failed" },
+  );
+  assert.throws(
+    () => driveToTeardown(composed, cli.registry.vaultRoot),
+    (error: { code?: string }) => error.code === "REVEAL_TRUTH_SCOPE_FORBIDDEN",
+    "a failed step whose expectation carries functional truth must not reveal",
+  );
 });
