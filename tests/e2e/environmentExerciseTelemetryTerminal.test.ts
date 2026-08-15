@@ -437,3 +437,58 @@ test("ENV-TELEM-TERMINAL: a failed exercise carrying functional truth is refused
     "a failed step whose expectation carries functional truth must not reveal",
   );
 });
+
+// -- 4. an exercise that never returns an outcome ----------------------------
+
+test("ENV-TELEM-TERMINAL: an exercise that throws freezes no outcome and cannot reach a terminal", () => {
+  // The brief's throws / times out / refused cases collapse into one shape: the
+  // subject port never returns a verdict, so `runJourneyStep` freezes no
+  // outcome. What stops such a run reaching a terminal is not the new gate — it
+  // is `freezeOutput`, which refuses while any committed step is still owed.
+  //
+  // That refusal is also what makes the new gate's applicability rule sound: it
+  // is why "the committed journey required an exercise" and "a retained exercise
+  // outcome exists" are the same statement at a terminal (ADR-ERL2-039 §5). So
+  // this case measures the premise the gate rests on, not just an error path.
+  const cli = selectedRun();
+  const composed = compose(cli, (runId) => absentV2("telemetry_channel_artifact_missing", runId));
+  const { run } = composed;
+  run.provision();
+  run.baseline();
+  run.plan();
+  for (const intent of ["install", "configure", "authenticate", "connect", "discover"] as const) {
+    run.runStep(intent);
+  }
+  run.activate();
+  run.journeyStart();
+  run.observe();
+  run.freezeObservation();
+
+  // The port throws instead of answering. A timeout and a refusal reach the same
+  // place: no `JourneyStepOutcomeV1` is frozen for the exercising step.
+  const port = composed.workspace.subject as { step: unknown };
+  const original = port.step;
+  port.step = (): never => {
+    throw new Error("the subject never answered");
+  };
+  assert.throws(() => run.runStep("exercise"), /the subject never answered/);
+  port.step = original;
+
+  assert.equal(
+    run.nextStep()?.intent,
+    "exercise",
+    "a step that threw is still owed; nothing was frozen for it",
+  );
+  // Two guards stand between here and a terminal, and which one fires depends on
+  // where the throw left the lifecycle — a step that died mid-transition trips
+  // the phase guard first, one that died cleanly trips the outstanding-step
+  // guard. Both are refusals and the case names both rather than pinning
+  // whichever happens to win, because pinning it would make this test a
+  // statement about the fixture's failure timing instead of about the property.
+  assert.throws(
+    () => run.freezeOutput(),
+    (error: { code?: string }) =>
+      error.code === "GRAPH_CLOSURE_MISSING_ROLE" || error.code === "POLICY_CONFLICT",
+    "a run still owing its exercising step may not freeze subject output",
+  );
+});
