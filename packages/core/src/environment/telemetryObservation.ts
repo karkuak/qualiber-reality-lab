@@ -646,7 +646,16 @@ export interface AttributableTelemetryObserver {
   observeAttributableTelemetry(marker: string): AttributableTelemetryMaterial;
 }
 
-/** Structural capability guard; the fake driver honestly fails it. */
+/**
+ * Structural capability guard; the fake driver honestly fails it.
+ *
+ * **Historical since package 3, and no production path calls it.** The run's
+ * guard is `supportsTrustedTelemetry`, and the seam it admits produces
+ * ERL2-C-171. This stays because ERL2-C-160 records exist in retained bundles
+ * that must remain readable — deleting the shape they were produced through
+ * would not make them unreadable, but it would delete the only executable
+ * statement of what they meant.
+ */
 export function supportsAttributableTelemetry(
   driver: unknown,
 ): driver is AttributableTelemetryObserver {
@@ -799,6 +808,15 @@ export interface TelemetryObservationStore {
 
 /**
  * Observes, validates and freezes the retained observation exactly once.
+ *
+ * **Historical since package 3, and no production path calls it.**
+ * `EnvironmentRun.retainAttributableTelemetry` retains what the trusted channel
+ * seals, and what this produces is an ERL2-C-160 record —
+ * `decideTrustedTelemetryAuthority` refuses one for any new claim, so even if a
+ * caller returned, the record could not authorize a gate or survive the offline
+ * verifier. It is left standing rather than deleted because the retention
+ * discipline it encodes is the readable statement of what the v1 records in
+ * existing bundles meant, and because its own controls still measure it.
  *
  * Two properties live here and both are load-bearing.
  *

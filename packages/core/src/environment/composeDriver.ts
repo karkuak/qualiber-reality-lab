@@ -1711,6 +1711,14 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
    * the container's log rotates from the head, and waiting cannot bring an
    * evicted line back, so the settling is what gives the exporter room and the
    * condition is what makes the result honest.
+   *
+   * **Historical since package 3, and no run calls it.** A run's telemetry comes
+   * from `freezeTrustedTelemetryObservation`, over a file only the collector can
+   * write. This reads the debug console stream, which the overlay also renders
+   * subject logs into — the forgeable channel ADR-ERL2-038 §2 closed — so
+   * nothing it returns may influence a gate, a count, an attribution or a claim,
+   * and since package 3 nothing consults it. It remains a driver capability for
+   * operator diagnostics and for the suites that pin what the v1 grammar meant.
    */
   observeAttributableTelemetry(marker: string): AttributableTelemetryMaterial {
     for (let attempt = 1; ; attempt += 1) {
