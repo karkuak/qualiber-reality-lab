@@ -135,6 +135,7 @@ import {
 import {
   supportsTrustedTelemetry,
   type TrustedChannelCleanup,
+  type TrustedTelemetryProducer,
 } from "../environment/trustedChannel.js";
 import { buildEnvironmentRestoration, buildTeardownVerification, type TeardownCheck } from "../cleanup/cleanup.js";
 import {
@@ -2700,7 +2701,8 @@ export class EnvironmentRun {
     readonly artifact_core_hash: Hash;
     readonly artifact_schema_version: string;
   }[] {
-    if (!supportsTrustedTelemetry(this.driver)) return [];
+    const producer = this.trustedProducer();
+    if (producer === undefined) return [];
     if (!this.archetype.evidence_sources.some((source) => source.kind === "metric")) return [];
     const path = `${RETAINED}/attributable-telemetry-observation.json`;
     // Read what you wrote. The freeze precedes the lifecycle event that anchors
@@ -2722,7 +2724,7 @@ export class EnvironmentRun {
     // cleanup, would never run.
     let observation: AttributableTelemetryObservationV2;
     try {
-      observation = existing ?? this.driver.freezeTrustedTelemetryObservation(this.runId);
+      observation = existing ?? producer.freezeTrustedTelemetryObservation(this.runId);
     } catch (cause) {
       if (cause instanceof Erl2Error && cause.code === CODES.TEARDOWN_FAILED) throw cause;
       const code = cause instanceof Erl2Error ? cause.code : "UNCLASSIFIED";
@@ -2743,6 +2745,23 @@ export class EnvironmentRun {
         artifact_schema_version: "attributable-telemetry-observation/v2",
       },
     ];
+  }
+
+  /**
+   * This run's trusted-telemetry producer, or `undefined` if the driver has none.
+   *
+   * A named accessor rather than an inline guard, and deliberately so: a guard
+   * written as `if (!supportsTrustedTelemetry(this.driver)) return [];` is the
+   * *only* thing giving the call below its type, so removing it to measure it
+   * does not produce a wrong program — it produces one that will not compile,
+   * and a build failure is a harness error rather than a kill. Package 2 hit the
+   * same wall on its durable-ownership control and resolved it the same way:
+   * move the anchor to a place where the mutant is a semantic change rather
+   * than a type error. Withholding the capability check from *this* return is
+   * exactly the defect, and it type-checks.
+   */
+  private trustedProducer(): TrustedTelemetryProducer | undefined {
+    return supportsTrustedTelemetry(this.driver) ? this.driver : undefined;
   }
 
   /**

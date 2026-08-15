@@ -3358,9 +3358,14 @@ export const CONTROLS = [
     replace: "  if (options.attributableTelemetryApplicable === true) {",
     tests: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
     mustFail: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    // One declared case, and only one. `silence is the strict answer` was
+    // declared here first and does not fail: inverting the comparison leaves the
+    // *undefined* arm untouched, so a caller that answers nothing still gets the
+    // strict set and that case still passes. A declared case that cannot fail is
+    // a claim of coverage this control does not have — measured, and corrected
+    // rather than left standing.
     mustFailCases: [
       "ENV-TELEM-APPLICABILITY: the gate is required of a declaring run and of no other",
-      "ENV-TELEM-APPLICABILITY: silence is the strict answer, not the lenient one",
     ],
     expect: "fail",
   },
@@ -3368,8 +3373,16 @@ export const CONTROLS = [
     id: "telemetry-producer-retains-the-trusted-record",
     what: "the retained attributable-telemetry observation comes from the package 2 trusted channel, so a driver that cannot produce ERL2-C-171 produces no artifact rather than a debug-derived one (package 3)",
     file: "packages/core/src/run/environmentRun.ts",
-    find: "    if (!supportsTrustedTelemetry(this.driver)) return [];",
-    replace: "    if (false) return [];",
+    // Anchored on the accessor's return, not on the call site's guard. The guard
+    // is what gives `freezeTrustedTelemetryObservation` its type, so removing it
+    // yields a tree that does not build — a harness error, not a kill. Measured
+    // exactly that way first, and re-anchored rather than left as a control that
+    // proves nothing; this is the same correction package 2 made to its
+    // durable-ownership anchor. Withholding the capability check here is the
+    // defect itself, and it type-checks: a fake-driver run then calls a method
+    // its driver does not have.
+    find: "    return supportsTrustedTelemetry(this.driver) ? this.driver : undefined;",
+    replace: "    return this.driver as unknown as TrustedTelemetryProducer;",
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFailCases: [
