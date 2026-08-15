@@ -582,11 +582,11 @@ export const CONTROLS = [
     id: "telemetry-producer-gate-wiring",
     what: "the environment validity gate answers the telemetry question from the run's own evidence, not from a constant",
     file: "packages/core/src/run/environmentRun.ts",
-    find: "        gate_id: \"attributable-telemetry-retained\",\n        passed: attributableTelemetryGatePassed({",
-    replace: "        gate_id: \"attributable-telemetry-retained\",\n        passed: String(1) === String(1) || attributableTelemetryGatePassed({",
+    find: "              gate_id: \"attributable-telemetry-retained\",\n              passed:\n                attributableTelemetryGatePassed({",
+    replace: "              gate_id: \"attributable-telemetry-retained\",\n              passed:\n                String(1) === String(1) ||\n                attributableTelemetryGatePassed({",
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     expect: "pass",
-    note: "Recorded as UNMEASURED, deliberately. The gate's arithmetic is killed by telemetry-gate-satisfaction and its inputs are unit-tested, but no test drives a run in which the wiring evaluates false: that needs a live Compose substrate whose collector receives nothing, which the ordinary suite must never require a daemon to reach. Hard-coding the gate true therefore kills nothing, and the ledger says so rather than implying coverage this control does not provide.",
+    note: "Re-anchored by package 3: the gate composition moved inside the applicability spread, so the old two-line anchor no longer exists. The property and the disposition are unchanged, and the disposition is still UNMEASURED, deliberately. The gate's arithmetic is killed by telemetry-gate-satisfaction and its inputs are unit-tested, but no test in the ordinary suite drives a run in which this wiring evaluates false: that needs a live Compose substrate whose collector receives nothing, which the ordinary suite must never require a daemon to reach. Hard-coding the gate true therefore still kills nothing here. What package 3 did add is coverage of the surrounding boundary — telemetry-gate-composed-only-where-applicable measures that the gate is composed from the run's own predicate, and the live matrix drives the false case against a real substrate — so the unmeasured surface is narrower than it was, and the ledger says exactly that rather than implying coverage this control does not provide.",
   },
   {
     id: "telemetry-retention-reentry",
@@ -3290,6 +3290,90 @@ export const CONTROLS = [
     // fail is a claim of coverage the control does not have.
     mustFailCases: [
       "TRUSTED-PARSE: an authentic zero is read, and a claimed zero over records is not",
+    ],
+    expect: "fail",
+  },
+  // -- package 3: the environment run's ERL2-C-171 integration ---------------
+  {
+    id: "telemetry-gate-composed-only-where-applicable",
+    what: "the environment telemetry gate is composed from this run's own declaration predicate, so a run that could never have had trusted telemetry omits the gate rather than publishing a vacuous pass (ADR-ERL2-038 R8, package 3)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Mutating the *composition* condition alone, not the shared accessor: the
+    // property is that the gate a run publishes and the applicability its
+    // validity result declares are the same answer. Forcing the composition true
+    // makes a fake-driver run emit a gate its own validity input says is not
+    // applicable, and `assertAttributableTelemetryApplicability` refuses it. If
+    // the accessor itself were mutated both sites would move together and agree,
+    // which would measure something weaker.
+    find: "      ...(this.attributableTelemetryApplicable()\n        ? [",
+    replace: '      ...(String(1) === String(1)\n        ? [',
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-TELEM-E2E: a fake-driver run declares nothing, retains nothing, and still verifies offline",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-inapplicable-run-may-not-publish-the-gate",
+    what: "a run that never declared an attributable-telemetry observation obtainable may not publish the gate at all, so the retired vacuous-pass convention cannot creep back through a producer that keeps emitting it (package 3)",
+    file: "packages/core/src/evaluation/validity.ts",
+    find: "    if (found.length > 0) {\n      throw new Erl2Error(\n        CODES.EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED,\n        \"a run that never declared an attributable-telemetry observation obtainable must omit \" +",
+    replace: "    if (String(1) === \"2\") {\n      throw new Erl2Error(\n        CODES.EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED,\n        \"a run that never declared an attributable-telemetry observation obtainable must omit \" +",
+    tests: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    mustFail: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    mustFailCases: [
+      "ENV-TELEM-APPLICABILITY: a non-declaring run that publishes the gate is refused",
+      "ENV-TELEM-APPLICABILITY: the applicability assertion refuses both directions",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-applicable-run-evaluates-exactly-one-gate",
+    what: "a run declaring the observation obtainable must evaluate exactly one telemetry gate, so a second gate cannot disagree with the first (package 3)",
+    file: "packages/core/src/evaluation/validity.ts",
+    // Declared on the *duplicate* case only. Omission is also caught by
+    // `assertRequiredGatesPresent`, so claiming it here would credit this
+    // control for a kill the neighbouring guard already makes — the redundant-
+    // guard trap the package 2 review found twice. The duplicate is the case
+    // only this statement decides.
+    find: "  if (found.length !== 1) {\n    throw new Erl2Error(\n      CODES.GRAPH_CLOSURE_MISSING_ROLE,\n      `a run declaring an obtainable attributable-telemetry observation must evaluate exactly one `",
+    replace: "  if (String(1) === \"2\") {\n    throw new Erl2Error(\n      CODES.GRAPH_CLOSURE_MISSING_ROLE,\n      `a run declaring an obtainable attributable-telemetry observation must evaluate exactly one `",
+    tests: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    mustFail: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    mustFailCases: [
+      "ENV-TELEM-APPLICABILITY: a declaring run that publishes the gate twice is refused",
+      "ENV-TELEM-APPLICABILITY: the applicability assertion refuses both directions",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-required-set-follows-applicability",
+    what: "the telemetry gate leaves the required set only for a run that never declared the observation obtainable, so `not applicable` cannot become `optional` for a run that did (package 3)",
+    file: "packages/core/src/evaluation/validity.ts",
+    // Inverting the test drops the gate from the required set of exactly the
+    // runs that must carry it, and keeps it required of exactly the runs that
+    // must not — both halves of the boundary in one mutation.
+    find: "  if (options.attributableTelemetryApplicable === false) {",
+    replace: "  if (options.attributableTelemetryApplicable === true) {",
+    tests: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    mustFail: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    mustFailCases: [
+      "ENV-TELEM-APPLICABILITY: the gate is required of a declaring run and of no other",
+      "ENV-TELEM-APPLICABILITY: silence is the strict answer, not the lenient one",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-producer-retains-the-trusted-record",
+    what: "the retained attributable-telemetry observation comes from the package 2 trusted channel, so a driver that cannot produce ERL2-C-171 produces no artifact rather than a debug-derived one (package 3)",
+    file: "packages/core/src/run/environmentRun.ts",
+    find: "    if (!supportsTrustedTelemetry(this.driver)) return [];",
+    replace: "    if (false) return [];",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-TELEM-E2E: a fake-driver run declares nothing, retains nothing, and still verifies offline",
     ],
     expect: "fail",
   },
