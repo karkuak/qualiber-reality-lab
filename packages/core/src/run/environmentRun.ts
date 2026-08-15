@@ -137,6 +137,11 @@ import {
   type TrustedChannelCleanup,
   type TrustedTelemetryProducer,
 } from "../environment/trustedChannel.js";
+import {
+  exerciseApplicable,
+  exerciseOutcomeGateVerdict,
+  exerciseSucceeded,
+} from "../journey/exerciseOutcome.js";
 import { buildEnvironmentRestoration, buildTeardownVerification, type TeardownCheck } from "../cleanup/cleanup.js";
 import {
   assertTelemetryOracleClean,
@@ -2704,6 +2709,19 @@ export class EnvironmentRun {
     const producer = this.trustedProducer();
     if (producer === undefined) return [];
     if (!this.archetype.evidence_sources.some((source) => source.kind === "metric")) return [];
+    // ADR-ERL2-039. The conjunct this call used to be missing, and the whole of
+    // the false-valid terminal's second half: without it, a run whose exercising
+    // step did not succeed still provisioned, observed, sealed and froze an
+    // ERL2-C-171 record — while `attributableTelemetryApplicable()` answered
+    // `false` and omitted the gate that would have evaluated it. Retained
+    // evidence that no gate reads is evidence nobody checked, and an offline
+    // reader could not tell it from evidence that passed.
+    //
+    // Read through the same shared primitive the gate and the required-set both
+    // read, so retention and applicability cannot drift apart again; the
+    // coherence refusal in `buildEnvironmentValidity` is the check that says so
+    // out loud.
+    if (!exerciseSucceeded(this.ws.derivedStepOutcomes())) return [];
     const path = `${RETAINED}/attributable-telemetry-observation.json`;
     // Read what you wrote. The freeze precedes the lifecycle event that anchors
     // it, so a crash between the two leaves a retained byte the lifecycle never
@@ -2930,6 +2948,15 @@ export class EnvironmentRun {
       // The same single answer the gate composition used, so the required-gate
       // set and the gate that was actually composed cannot disagree.
       attributableTelemetryApplicable: this.attributableTelemetryApplicable(),
+      // ADR-ERL2-039, read through the same shared primitives the gate above and
+      // `retainAttributableTelemetry` read. `telemetryObservationRetained` is
+      // what closes the loop: it is the producer's own statement of what it
+      // froze, checked against what it declared applicable, so the retained-but-
+      // ungated shape is refused here rather than discovered later by a reader.
+      exerciseApplicable: exerciseApplicable(outcomes),
+      exerciseSucceeded: exerciseSucceeded(outcomes),
+      telemetryObservationRetained:
+        this.ws.hashesForRole("attributable-telemetry-observation").length > 0,
       genericRunPolicyHash: policyHash,
       gates,
       environmentRestorationHash: restorationHash,
@@ -4050,6 +4077,30 @@ export class EnvironmentRun {
           this.ws.hashesForRole("source-snapshot").length === baseline.evidence_source_states.length,
         evidence_refs: [baselineHash],
       },
+      // ADR-ERL2-039. The independent failure the false-valid terminal had
+      // nothing to dominate it with. Composed wherever the committed journey
+      // ordered an exercising step — which, at a terminal, is exactly "an
+      // exercise outcome is retained", because `freezeOutput` refuses while any
+      // committed step is owed — and omitted where it ordered none.
+      //
+      // `passed: false` here is the whole correction: a required exercise that
+      // returned an unsuccessful verdict, or came back `unsupported`, now
+      // freezes a Lab invalidity finding and reaches an **invalid** terminal,
+      // instead of being recorded in a step outcome that no verdict read. The
+      // run is still permitted to finalize and keep its diagnostics; what it may
+      // no longer do is call itself valid.
+      ...((): readonly GateResult[] => {
+        const verdict = exerciseOutcomeGateVerdict(this.ws.derivedStepOutcomes());
+        return verdict === undefined
+          ? []
+          : [
+              {
+                gate_id: "subject-exercise-succeeded",
+                passed: verdict,
+                evidence_refs: [outputHash],
+              },
+            ];
+      })(),
       // ADR-ERL2-038 R8, package 3. Composed only where the run declared the
       // observation obtainable; a run that did not — a fake driver, an archetype
       // with no metric source, a journey that never reached a succeeded

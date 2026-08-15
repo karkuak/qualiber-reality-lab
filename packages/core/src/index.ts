@@ -349,6 +349,12 @@ export {
   type StepStatus,
 } from "./journey/engine.js";
 export {
+  EXERCISE_INTENT,
+  exerciseApplicable,
+  exerciseOutcomeGateVerdict,
+  exerciseSucceeded,
+} from "./journey/exerciseOutcome.js";
+export {
   CRASH_BOUNDARIES,
   NO_CRASH,
   isCrashBoundary,
@@ -727,6 +733,8 @@ export {
   PRE_ENVIRONMENT_GATE_IDS,
   assertAdapterCertificationApplicability,
   assertAttributableTelemetryApplicability,
+  assertExerciseOutcomeApplicability,
+  assertTelemetryExerciseCoherence,
   requiredGateIds,
   assertGatesAreLabOwned,
   assertRequiredGatesPresent,

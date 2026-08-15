@@ -13,6 +13,7 @@
 import { assertContract, CODES, Erl2Error, type Classification } from "@erl2/contracts";
 import { coreHash, isCanonicalizableString } from "@erl2/integrity";
 import { trustedTelemetryClaim } from "./telemetryAuthority.js";
+import { exerciseSucceeded } from "../journey/exerciseOutcome.js";
 import type {
   AttributableTelemetryObservationV1,
   EnvironmentArchetypeV1,
@@ -671,6 +672,13 @@ export function supportsAttributableTelemetry(
  * decision 3). Every conjunct is derivable from retained bytes alone, which is
  * what lets the offline verifier re-derive the same predicate without trusting
  * this one.
+ *
+ * **The third conjunct is imported, not restated** (ADR-ERL2-039). It used to be
+ * written out here as `outcomes.some(o => o.intent === "exercise" && o.status
+ * === "succeeded")`, and `EnvironmentRun.retainAttributableTelemetry` decided
+ * whether to retain anything without that conjunct at all — so the run retained
+ * ERL2-C-171 records that this predicate then declined to gate. One definition,
+ * three readers, and the disagreement stops being expressible.
  */
 export function attributableTelemetryDeclared(input: {
   readonly driverKind: string;
@@ -680,9 +688,7 @@ export function attributableTelemetryDeclared(input: {
   return (
     input.driverKind === "compose" &&
     input.evidenceSources.some((source) => source.kind === "metric") &&
-    input.outcomes.some(
-      (outcome) => outcome.intent === "exercise" && outcome.status === "succeeded",
-    )
+    exerciseSucceeded(input.outcomes)
   );
 }
 
