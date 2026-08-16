@@ -3552,8 +3552,10 @@ export const CONTROLS = [
     id: "trusted-local-refuses-the-certified-arms-plan",
     what: "a plan naming a certification receipt cannot run under an owner declaration",
     file: "packages/core/src/adapter/host.ts",
-    find: "          isCertifiedPlan(plan) ||",
-    replace: "          false ||",
+    // Removing the discrimination has to leave a tree that still builds, so the
+    // mutation asserts the variant rather than deleting the narrowing.
+    find: "  return isCertifiedPlan(plan) ? undefined : plan;",
+    replace: "  return plan as Exclude<LocalObservationPlanV1, LocalObservationCertifiedPlanV1>;",
     tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
     mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
     mustFailCases: [
@@ -3675,8 +3677,10 @@ export const CONTROLS = [
     id: "trusted-local-verifier-recomputes-the-run-identity",
     what: "the record, its result and the plan must name one observation, recomputed rather than compared to itself",
     file: "packages/core/src/observation/trustedLocalVerifier.ts",
-    find: "    record.observation_id !== plan.observation_id ||",
-    replace: "    false ||",
+    // Both clauses are one enforcement point, so both go: leaving the result's
+    // clause behind measures nothing, because a resealed forgery changes both.
+    find: "  if (\n    record.observation_id !== plan.observation_id ||\n    record.result.observation_id !== plan.observation_id\n  ) {",
+    replace: "  if (false) {",
     tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
     mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
     mustFailCases: ["TRUSTED-LOCAL-VERIFY: a changed run id, fully resealed, is refused"],
@@ -3721,8 +3725,8 @@ export const CONTROLS = [
     id: "trusted-local-verifier-closed-record-validation",
     what: "the retained record is contract-validated, so an unknown field at any nesting level is refused rather than ignored",
     file: "packages/core/src/observation/trustedLocalVerifier.ts",
-    find: "    record = assertContract<TrustedLocalObservationRecordV1>(",
-    replace: "    record = parseJson(input.recordBytes, \"retained record\") as TrustedLocalObservationRecordV1;\n    void assertContract<TrustedLocalObservationRecordV1>(",
+    find: "    record = assertContract<TrustedLocalObservationRecordV1>(\n      \"TrustedLocalObservationRecordV1\",\n      parseJson(input.recordBytes, \"retained record\"),\n    );",
+    replace: "    record = parseJson(input.recordBytes, \"retained record\") as TrustedLocalObservationRecordV1;",
     tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
     mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
     mustFailCases: [

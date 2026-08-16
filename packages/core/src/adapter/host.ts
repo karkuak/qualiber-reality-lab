@@ -394,6 +394,13 @@ function isCertifiedPlan(
   return "certification_receipt_hash" in plan;
 }
 
+/** The plan as the trusted-local variant, or `undefined` if it is the other one. */
+function trustedLocalPlanOf(
+  plan: LocalObservationPlanV1,
+): Exclude<LocalObservationPlanV1, LocalObservationCertifiedPlanV1> | undefined {
+  return isCertifiedPlan(plan) ? undefined : plan;
+}
+
 /**
  * The plan may not reach past what the manifest and admitted profile allow.
  *
@@ -641,14 +648,19 @@ export class AdapterHost {
           entryDigest: this.executableDigest,
         });
         this.localScope = admission.profile;
+        // The discrimination is a binding of its own, held in a name rather
+        // than folded into the condition below: a plan naming a certification
+        // receipt is not this arm's document, and the check that says so has to
+        // be separately disable-able or it cannot be separately measured.
+        const ownerPlan = trustedLocalPlanOf(plan);
         if (
-          isCertifiedPlan(plan) ||
-          plan.adapter_id !== admission.adapterId ||
-          plan.adapter_version !== admission.adapterVersion ||
-          plan.adapter_manifest_hash !== admission.manifestHash ||
-          plan.trusted_local_declaration_hash !== admission.declarationHash ||
-          plan.adapter_artifact_hash !== admission.adapterArtifactHash ||
-          plan.trust_mode !== admission.trustMode
+          ownerPlan === undefined ||
+          ownerPlan.adapter_id !== admission.adapterId ||
+          ownerPlan.adapter_version !== admission.adapterVersion ||
+          ownerPlan.adapter_manifest_hash !== admission.manifestHash ||
+          ownerPlan.trusted_local_declaration_hash !== admission.declarationHash ||
+          ownerPlan.adapter_artifact_hash !== admission.adapterArtifactHash ||
+          ownerPlan.trust_mode !== admission.trustMode
         ) {
           throw new Erl2Error(
             CODES.ADAPTER_TRUSTED_LOCAL_BINDING_MISMATCH,
