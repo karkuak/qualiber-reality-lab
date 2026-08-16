@@ -3549,25 +3549,10 @@ export const CONTROLS = [
     expect: "fail",
   },
   {
-    id: "trusted-local-refuses-the-certified-arms-plan",
-    what: "a plan naming a certification receipt cannot run under an owner declaration",
-    file: "packages/core/src/adapter/host.ts",
-    // Removing the discrimination has to leave a tree that still builds, so the
-    // mutation asserts the variant rather than deleting the narrowing.
-    find: "  return isCertifiedPlan(plan) ? undefined : plan;",
-    replace: "  return plan as Exclude<LocalObservationPlanV1, LocalObservationCertifiedPlanV1>;",
-    tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
-    mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
-    mustFailCases: [
-      "TRUSTED-LOCAL-ADMIT: a certified plan cannot run under a trusted-local declaration",
-    ],
-    expect: "fail",
-  },
-  {
     id: "trusted-local-plan-binds-its-declaration",
     what: "the frozen plan must name the exact declaration the run was admitted under",
     file: "packages/core/src/adapter/host.ts",
-    find: "          plan.trusted_local_declaration_hash !== admission.declarationHash ||",
+    find: "          ownerPlan.trusted_local_declaration_hash !== admission.declarationHash ||",
     replace: "          false ||",
     tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
     mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],

@@ -3,7 +3,7 @@
 **Date:** 2026-08-16
 **Companion to:** [ADR-ERL2-042](../adr/ADR-ERL2-042.md)
 **Base:** `4d695bfb3d23e804cf89aafa2aa5033ab31a15e6`, 207 controls
-**Head:** 229 controls — 207 retained unchanged, 22 appended, none removed,
+**Head:** 228 controls — 207 retained unchanged, 21 appended, none removed,
 renamed, reordered or duplicated.
 
 ## 1. Migration from the withdrawn operator candidate
@@ -38,7 +38,7 @@ and 8 are the only removals, and rows 5 and 6 name features that do not exist
 on this branch. Row 8's property is still true and still asserted, just not by a
 control.
 
-## 2. The twenty-two appended controls
+## 2. The twenty-one appended controls
 
 Each mutates exactly one enforcement point, compiles, reaches the intended
 runtime path, and fails a named behavioural case.
@@ -50,7 +50,6 @@ runtime path, and fails a named behavioural case.
 | `trusted-local-artifact-binding` | declaration ↔ manifest artifact digest | artifact digest mismatch refused |
 | `trusted-local-manifest-binding` | declaration ↔ manifest core hash | manifest binding mismatch refused |
 | `trusted-local-pre-host-entry-digest` | entry re-hash before host construction | bytes changed before host construction refused |
-| `trusted-local-refuses-the-certified-arms-plan` | plan-variant discrimination | certified plan under a declaration refused |
 | `trusted-local-plan-binds-its-declaration` | plan ↔ declaration hash | plan bound to another declaration refused |
 | `trusted-local-governed-input-refusal` | named governed/certified flag refusal | governed input refused by name |
 | `trusted-local-result-restates-its-two-absences` | mandatory ceiling in the retained result | eleven-operation plan completes |
@@ -68,11 +67,12 @@ runtime path, and fails a named behavioural case.
 | `trusted-local-certification-claim-is-unrepresentable` | contract constant on `independent_certification` | false certification claim refused |
 | `trusted-local-record-embeds-the-declaration-it-ran-under` | embedded ↔ retained declaration | replaced embedded declaration refused |
 
-## 3. Two enforcement points deliberately without a control
+## 3. Three enforcement points deliberately without a control
 
-Both were **removed from production code** rather than given a control that
-could not kill, which is the same disposition already recorded for the
-receipt-linkage classifier in `admission.ts`.
+The first two were **removed from production code** rather than given a control
+that could not kill, which is the same disposition already recorded for the
+receipt-linkage classifier in `admission.ts`. The third was written as a
+control, measured, disproved by its own campaign, and withdrawn.
 
 **The acknowledgement token re-check.** `acknowledgement_token` is a contract
 constant, so `assertContract` refuses any other value before the runtime
@@ -86,8 +86,20 @@ the bound hashes — and that has a control.
 a governed v2 profile cannot be written down. The reachable refusal is the
 host's, which already has a base control.
 
-Recording these as `expect: "none"` rows would have kept the count monotonic and
-told a reader nothing. Deleting them keeps every remaining check reachable.
+**The plan-variant discrimination in the host.** This one was a control
+(`trusted-local-refuses-the-certified-arms-plan`) until the campaign reported
+`tests_passed_unexpectedly` against it. Disabling the discrimination changes
+nothing observable, because a certification-variant plan has no
+`trusted_local_declaration_hash` and no `trust_mode`, so the bindings below it
+refuse the plan anyway — and a plan carrying both variants' fields satisfies
+neither closed member of the contract's `oneOf` and never reaches the host at
+all. What the expression buys is the narrowing TypeScript needs. The control was
+withdrawn and the code comment that called it "separately measurable" was
+corrected, because the campaign had just demonstrated it is not.
+
+Recording any of these as `expect: "none"` rows would have kept the count
+monotonic and told a reader nothing. Two deletions and one withdrawal keep every
+remaining check reachable.
 
 ## 4. What the appended controls do not cover
 

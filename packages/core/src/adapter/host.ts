@@ -648,10 +648,14 @@ export class AdapterHost {
           entryDigest: this.executableDigest,
         });
         this.localScope = admission.profile;
-        // The discrimination is a binding of its own, held in a name rather
-        // than folded into the condition below: a plan naming a certification
-        // receipt is not this arm's document, and the check that says so has to
-        // be separately disable-able or it cannot be separately measured.
+        // A *typing* discriminator, and only that. It was measured as a
+        // separate enforcement point and is not one: a certification-variant
+        // plan has no `trusted_local_declaration_hash` and no `trust_mode`, so
+        // the comparisons below refuse it anyway, and a plan carrying both
+        // variants' fields satisfies neither closed member of the contract's
+        // `oneOf` and never reaches here. What this expression buys is the
+        // narrowing TypeScript needs; the refusal is the contract's and the
+        // bindings'.
         const ownerPlan = trustedLocalPlanOf(plan);
         if (
           ownerPlan === undefined ||
