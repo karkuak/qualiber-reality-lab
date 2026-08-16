@@ -207,17 +207,15 @@ export function verifyTrustedLocalAdapterDeclaration(
     );
   }
 
-  // 6. The acknowledgement itself: exact token, and bound to the same bytes.
-  //    The schema pins these as constants; they are re-checked here so the
-  //    enforcement lives on the execution path a control can reach.
+  // 6. The acknowledgement is bound to the same bytes the declaration binds.
+  //
+  //    The token itself, and every limitation the operator accepted, are
+  //    `const` in the contract, so `assertContract` above has already refused
+  //    anything else and a runtime re-check here would be a check no test
+  //    could reach — documentation wearing a check's clothes. What the schema
+  //    cannot express is the *relationship* between two fields, which is what
+  //    remains here.
   const acknowledgement = declaration.operator_acknowledgement;
-  if (acknowledgement.acknowledgement_token !== TRUSTED_LOCAL_ACKNOWLEDGEMENT_TOKEN) {
-    throw new Erl2Error(
-      CODES.ADAPTER_TRUSTED_LOCAL_ACKNOWLEDGEMENT_INVALID,
-      "the operator acknowledgement is not the exact trusted-local acknowledgement token",
-      { owner: "lab" },
-    );
-  }
   if (
     acknowledgement.acknowledged_artifact_hash !== declaration.adapter_artifact_hash ||
     acknowledgement.acknowledged_manifest_core_hash !== declaration.adapter_manifest_core_hash
@@ -225,20 +223,6 @@ export function verifyTrustedLocalAdapterDeclaration(
     throw new Erl2Error(
       CODES.ADAPTER_TRUSTED_LOCAL_ACKNOWLEDGEMENT_INVALID,
       "the operator acknowledged different artifact or manifest bytes than the declaration binds",
-      { owner: "lab" },
-    );
-  }
-  if (
-    acknowledgement.adapter_code_is_not_confined !== true ||
-    acknowledgement.adapter_runs_with_operator_user_permissions !== true ||
-    acknowledgement.adapter_is_not_independently_certified !== true ||
-    acknowledgement.results_are_development_only !== true ||
-    acknowledgement.results_are_unscored !== true ||
-    acknowledgement.results_are_unauthenticated !== true
-  ) {
-    throw new Erl2Error(
-      CODES.ADAPTER_TRUSTED_LOCAL_ACKNOWLEDGEMENT_INVALID,
-      "the operator acknowledgement does not accept every stated limitation",
       { owner: "lab" },
     );
   }
@@ -275,13 +259,11 @@ export function verifyTrustedLocalAdapterDeclaration(
       { owner: "adapter" },
     );
   }
-  if (profile.execution_modes.some((mode) => mode !== ADAPTER_LOCAL_EXECUTION_MODE)) {
-    throw new Erl2Error(
-      CODES.ADAPTER_LOCAL_CONTEXT_FORBIDDEN,
-      "a trusted-local declaration never authorizes governed execution",
-      { owner: "lab" },
-    );
-  }
+  // Governed execution is not refused here, because it is unrepresentable: a
+  // `subject-adapter/v2` profile's `execution_modes` is pinned to exactly
+  // `["local_observation"]` by the contract, so a governed V2 profile cannot be
+  // written down. The refusal that *is* reachable lives in the host, which
+  // accepts only explicitly local-observation dispatch.
 
   // 10. The host's actual control states travel with the admission. What the
   //     plan is allowed to do with them is decided where the plan is available

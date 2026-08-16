@@ -3473,6 +3473,308 @@ export const CONTROLS = [
     ],
     expect: "fail",
   },
+  // -- ADR-ERL2-042: owner-operated trusted-local development path -----------
+  //
+  // Each of these disables one enforcement point of the trusted-local path and
+  // names the behavioural case that must notice. Where the contract already
+  // makes something unrepresentable, the control says so and targets the
+  // schema, rather than a runtime re-check the contract has made unreachable.
+  {
+    id: "trusted-local-acknowledgement-must-be-the-exact-sentence",
+    what: "the CLI accepts only the exact acknowledgement sentence, so no short affirmative can stand in for it",
+    file: "packages/cli/src/trustedLocalDeclaration.ts",
+    // Keeps a check, so the branch still compiles and still runs; what it stops
+    // being is a comparison against the contract's sentence. `yes` and `true`
+    // then both satisfy it.
+    find: "  if (supplied !== TRUSTED_LOCAL_ACKNOWLEDGEMENT_TOKEN) {",
+    replace: "  if (supplied.length === 0) {",
+    tests: ["tests/dist/integration/trustedLocalOperator.test.js"],
+    mustFail: ["tests/dist/integration/trustedLocalOperator.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-CLI: a near-miss acknowledgement is refused, and the refusal shows the exact sentence",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-acknowledgement-binds-the-bytes-it-accepted",
+    what: "the acknowledgement must name the same artifact and manifest digests the declaration binds",
+    file: "packages/core/src/adapter/trustedLocal.ts",
+    find: "    acknowledgement.acknowledged_artifact_hash !== declaration.adapter_artifact_hash ||",
+    replace: "    false ||",
+    tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-ADMIT: an acknowledgement of different bytes is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-artifact-binding",
+    what: "the manifest, the declaration and the bytes on disk must have one digest",
+    file: "packages/core/src/adapter/trustedLocal.ts",
+    // Only the declaration's clause is withdrawn; the entry-digest clause stays,
+    // so this measures the declaration binding rather than the file check.
+    find: "    declaration.adapter_artifact_hash !== manifest.adapter_artifact_hash ||",
+    replace: "    false ||",
+    tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-ADMIT: an artifact digest mismatch is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-manifest-binding",
+    what: "the declaration must be bound to the exact manifest it was written for",
+    file: "packages/core/src/adapter/trustedLocal.ts",
+    find: "  if (declaration.adapter_manifest_core_hash !== manifestHash) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-ADMIT: a manifest binding mismatch is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-pre-host-entry-digest",
+    what: "the host re-hashes the entry before it constructs, so bytes swapped after admission are refused before a host exists",
+    file: "packages/core/src/adapter/host.ts",
+    // Anchored inside the trusted-local arm: the same line appears in the
+    // certified arm, and patching that one would measure a different guard.
+    anchor: "        const admission = verifyTrustedLocalAdapterDeclaration({",
+    find: "          entryDigest: this.executableDigest,",
+    replace: "          entryDigest: this.manifest.adapter_artifact_hash,",
+    tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-ADMIT: artifact bytes changed before host construction are refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-refuses-the-certified-arms-plan",
+    what: "a plan naming a certification receipt cannot run under an owner declaration",
+    file: "packages/core/src/adapter/host.ts",
+    find: "          isCertifiedPlan(plan) ||",
+    replace: "          false ||",
+    tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-ADMIT: a certified plan cannot run under a trusted-local declaration",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-plan-binds-its-declaration",
+    what: "the frozen plan must name the exact declaration the run was admitted under",
+    file: "packages/core/src/adapter/host.ts",
+    find: "          plan.trusted_local_declaration_hash !== admission.declarationHash ||",
+    replace: "          false ||",
+    tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-ADMIT: a plan bound to another declaration is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-governed-input-refusal",
+    what: "the run command refuses a governed or certified input by name rather than by unknown-flag accident",
+    file: "packages/cli/src/trustedLocalObservation.ts",
+    find: "    if (argv.includes(`--${forbidden}`)) {",
+    replace: "    if (false) {",
+    tests: ["tests/dist/integration/trustedLocalOperator.test.js"],
+    mustFail: ["tests/dist/integration/trustedLocalOperator.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-CLI: a governed input is refused by name",
+      "TRUSTED-LOCAL-CLI: a certification receipt flag is refused by name",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-result-restates-its-two-absences",
+    what: "a trusted-local result must state that it is neither independently certified nor confined; the ceiling is mandatory in the retained bytes, not optional prose",
+    file: "packages/core/src/observation/localObservation.ts",
+    // The field is a `const true` in the contract, so withholding it makes the
+    // result unrepresentable and the run refuses at `assertContract`. That is
+    // the enforcement: the ceiling cannot be omitted from what is retained.
+    find: "            not_independently_certified: true as const,",
+    replace: "",
+    tests: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFail: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-CHAIN: an eleven-operation neutral plan completes end to end",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-compact-predecessor-construction",
+    what: "ancestry carries the five-field summary the contract defines, not the whole previous operation record",
+    file: "packages/core/src/observation/ancestry.ts",
+    // Reproduces the exact defect the independent review found: passing the
+    // full record makes every second operation refuse with
+    // SCHEMA_VALIDATION_FAILED, so no multi-operation plan can run.
+    find: "  return assertContract<AdapterRequestPredecessorV2>(",
+    replace: "  if (predecessor !== undefined) return previous as unknown as AdapterRequestPredecessorV2;\n  return assertContract<AdapterRequestPredecessorV2>(",
+    tests: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFail: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-CHAIN: an eleven-operation neutral plan completes end to end",
+      "TRUSTED-LOCAL-CHAIN: operation two receives a valid compact predecessor",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-predecessor-chain-verification",
+    what: "the coordinator compares a request's predecessor against one it derives from the operation this run actually finished last",
+    file: "packages/core/src/observation/ancestry.ts",
+    find: "  if (!same) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFail: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-CHAIN: an altered predecessor hash is refused",
+      "TRUSTED-LOCAL-CHAIN: a predecessor from another run is refused",
+      "TRUSTED-LOCAL-CHAIN: a predecessor from another plan is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-registry-retains-exact-bytes",
+    what: "admission retains the operator's exact manifest bytes, because the file digest is half of what a later reader checks",
+    file: "packages/core/src/adapter/trustedLocalRegistry.ts",
+    // Re-serializing produces a document with the same core hash and different
+    // bytes, which is precisely the substitution the file digest exists to catch.
+    find: "    writeFileSync(path.join(staging, TRUSTED_LOCAL_MANIFEST_FILE), input.manifestBytes, {",
+    replace: "    writeFileSync(path.join(staging, TRUSTED_LOCAL_MANIFEST_FILE), JSON.stringify(manifest), {",
+    tests: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFail: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-CHAIN: an eleven-operation neutral plan completes end to end",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-requires-plan-bytes",
+    what: "offline verification has no mode that runs without the plan, because `plan_hash` is otherwise a number nobody can check",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (input.planBytes.byteLength === 0) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-VERIFY: omitted plan bytes are refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-recomputes-the-plan",
+    what: "the record's plan hash is recomputed from the plan bytes rather than read from the record",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (record.plan_hash !== planCoreHash) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-VERIFY: a changed plan hash, fully resealed, is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-recomputes-the-run-identity",
+    what: "the record, its result and the plan must name one observation, recomputed rather than compared to itself",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "    record.observation_id !== plan.observation_id ||",
+    replace: "    false ||",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-VERIFY: a changed run id, fully resealed, is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-operation-completeness",
+    what: "every operation the plan reaches must have exactly one retained outcome",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (outcomes.length !== reachable.length) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-VERIFY: a plan whose operations exceed the retained outcomes is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-recomputes-cleanup",
+    what: "residue comes from the retained final report and nowhere else; there is no branch that derives clean from operations having ended",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (record.cleanup.residue !== residue) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-VERIFY: a false cleanup upgrade is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-recomputes-the-terminal",
+    what: "the terminal status is derived from the retained outcomes rather than believed",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (record.terminal_status !== expectedTerminal) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-VERIFY: a contradictory terminal status is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-closed-record-validation",
+    what: "the retained record is contract-validated, so an unknown field at any nesting level is refused rather than ignored",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "    record = assertContract<TrustedLocalObservationRecordV1>(",
+    replace: "    record = parseJson(input.recordBytes, \"retained record\") as TrustedLocalObservationRecordV1;\n    void assertContract<TrustedLocalObservationRecordV1>(",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-VERIFY: an unknown top-level field is refused",
+      "TRUSTED-LOCAL-VERIFY: an unknown nested field is refused",
+      "TRUSTED-LOCAL-VERIFY: a nested adapter-written verdict is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-oversized-record-bound",
+    what: "an oversized record is refused by its length before anything parses or allocates from it",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (input.recordBytes.byteLength > MAX_TRUSTED_LOCAL_RECORD_BYTES) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-VERIFY: an oversized record is refused before it is parsed",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-certification-claim-is-unrepresentable",
+    what: "a retained trusted-local record cannot say independent certification is present, because the contract pins the field to `absent`",
+    file: "packages/contracts/schemas/observation.schema.json",
+    // Widening the constant is the only way to write the claim down. The
+    // verifier's own ceiling check then catches it — which is the point of
+    // measuring here: the contract is the first line, and the runtime check is
+    // the second rather than the only one.
+    find: "        \"independent_certification\": { \"const\": \"absent\" },",
+    replace: "        \"independent_certification\": { \"enum\": [\"absent\", \"present\"] },",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-VERIFY: a false independent-certification claim is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-record-embeds-the-declaration-it-ran-under",
+    what: "the declaration embedded in a record must be the one the registry retained, so a reader of the record alone sees the terms the run was admitted under",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (coreHash(record.trusted_local_declaration) !== declarationHash) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-VERIFY: an embedded declaration replaced with another is refused",
+    ],
+    expect: "fail",
+  },
 ];
 
 // -- result classification ---------------------------------------------------

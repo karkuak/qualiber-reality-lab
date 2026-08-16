@@ -169,11 +169,11 @@ export function verifyTrustedLocalObservationRecord(
   // The record, its result and the plan must all name one observation. A
   // resealed record that changed its run id has to change the plan too, and
   // the plan hash above is what makes that impossible.
-  if (record.observation_id !== plan.observation_id) {
+  if (
+    record.observation_id !== plan.observation_id ||
+    record.result.observation_id !== plan.observation_id
+  ) {
     refuse("the record's run id is not the run id the plan froze");
-  }
-  if (record.result.observation_id !== plan.observation_id) {
-    refuse("the result's run id is not the run id the plan froze");
   }
 
   // ---- 4. the retained admission ------------------------------------------
