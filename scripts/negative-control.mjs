@@ -3769,7 +3769,7 @@ export const CONTROLS = [
     tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
     mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
     mustFailCases: [
-      "TRUSTED-LOCAL-VERIFY: scored, authenticated and production-ready claims are refused",
+      "TRUSTED-LOCAL-VERIFY: the embedded result's own ceiling cannot be weakened either",
     ],
     expect: "fail",
   },

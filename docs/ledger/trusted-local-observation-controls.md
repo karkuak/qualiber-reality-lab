@@ -64,7 +64,7 @@ runtime path, and fails a named behavioural case.
 | `trusted-local-verifier-recomputes-the-terminal` | terminal derivation | contradictory terminal refused |
 | `trusted-local-verifier-closed-record-validation` | closed-schema record validation | unknown top-level / nested field, nested verdict refused |
 | `trusted-local-verifier-oversized-record-bound` | size bound before parse | oversized record refused |
-| `trusted-local-result-cannot-stop-declaring-itself-unscored` | contract constant on the trusted-local result's `not_scored` | scored / authenticated claims refused |
+| `trusted-local-result-cannot-stop-declaring-itself-unscored` | contract constant on the trusted-local result's `not_scored` | the embedded result's own ceiling cannot be weakened |
 | `trusted-local-certification-claim-is-unrepresentable` | contract constant on `independent_certification` | false certification claim refused |
 | `trusted-local-record-embeds-the-declaration-it-ran-under` | embedded ↔ retained declaration | replaced embedded declaration refused |
 
@@ -86,6 +86,15 @@ Two variants means two constants, so
 `trusted-local-result-cannot-stop-declaring-itself-unscored` was added for the
 one this package introduced. A constant nothing measures is a constant that can
 quietly become a `boolean`.
+
+Its first run reported `tests_passed_unexpectedly`, and the reason was a real
+gap rather than a bad anchor: every forgery case weakened the ceiling on the
+*record*, and none weakened it on the embedded *result*. The record's constant
+was catching all of them, so widening the result's changed nothing observable.
+The missing case was written — the result's four ceiling fields, each weakened
+alone — and the control then killed. The gap is worth recording: a ceiling
+carried in two places needs a forgery against each place, or one of the two
+constants is decoration.
 
 ## 3. Three enforcement points deliberately without a control
 

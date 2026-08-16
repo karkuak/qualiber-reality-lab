@@ -309,6 +309,29 @@ test("TRUSTED-LOCAL-VERIFY: scored, authenticated and production-ready claims ar
   }
 });
 
+test("TRUSTED-LOCAL-VERIFY: the embedded result's own ceiling cannot be weakened either", () => {
+  const b = bed();
+  // The record and its result each carry the ceiling, and each is pinned by its
+  // own contract constant. A forgery that weakens only the inner one has to be
+  // refused by the inner constant, not by the outer one happening to survive.
+  for (const field of [
+    "not_scored",
+    "not_governor_authorized",
+    "not_independently_certified",
+    "not_confined",
+  ]) {
+    const forged = seal({
+      ...b.record,
+      result: seal({ ...(b.record["result"] as Doc), [field]: false }),
+    });
+    assert.match(
+      refusalOf(verify(b, forged)),
+      /closed trusted-local record/,
+      `the result's ${field} must be unrepresentable`,
+    );
+  }
+});
+
 test("TRUSTED-LOCAL-VERIFY: an altered artifact or manifest binding is refused", () => {
   const b = bed();
   assert.match(
