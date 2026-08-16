@@ -1,0 +1,37 @@
+
+> erl2-workspace@0.1.0 negative-control
+> node scripts/negative-control.mjs trusted-local,v2-not-scored-constant
+
+Preparing worktree (detached HEAD ec9ea33)
+negative controls: 23 of 229
+worktree: /var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-DhsClT/tree
+installing dependencies in the worktree (once)…
+  ✔ v2-not-scored-constant: 5 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-acknowledgement-must-be-the-exact-sentence: 10 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-acknowledgement-binds-the-bytes-it-accepted: 16 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-artifact-binding: 16 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-manifest-binding: 16 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-pre-host-entry-digest: 16 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-plan-binds-its-declaration: 16 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-governed-input-refusal: 9 pass / 2 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-result-restates-its-two-absences: 8 pass / 4 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-compact-predecessor-construction: 3 pass / 9 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-predecessor-chain-verification: 9 pass / 3 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-registry-retains-exact-bytes: 7 pass / 5 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-requires-plan-bytes: 20 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-recomputes-the-plan: 20 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-recomputes-the-run-identity: 20 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-operation-completeness: 20 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-recomputes-cleanup: 20 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-recomputes-the-terminal: 20 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-closed-record-validation: 14 pass / 7 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-oversized-record-bound: 20 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-result-cannot-stop-declaring-itself-unscored: 20 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-certification-claim-is-unrepresentable: 20 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-record-embeds-the-declaration-it-ran-under: 20 pass / 1 fail (expected fail, named_tests_failed)
+
+the working tree is byte-identical to how the campaign started
+
+accounting: 23 discovered = 23 agreed + 0 disagreed + 0 unmeasured + 0 harness error(s)
+all 23 measured control(s) matched their recorded expectation
+EXIT=0
