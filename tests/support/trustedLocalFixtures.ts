@@ -86,21 +86,35 @@ export const ALL_OPERATIONS: readonly AdapterOperation[] = [
   "report-residue",
 ];
 
-export function trustedLocalEntry(): string {
-  return path.join(repoRoot, "fixtures", "neutral", "neutral-full-lifecycle-observer.mjs");
+export function trustedLocalEntry(
+  fixture: "full-lifecycle" | "fault" = "full-lifecycle",
+): string {
+  const name =
+    fixture === "fault"
+      ? "neutral-fault-observer.mjs"
+      : "neutral-full-lifecycle-observer.mjs";
+  return path.join(repoRoot, "fixtures", "neutral", name);
 }
+
+/** The fault observer's handlers, in its own negotiation order. */
+export const FAULT_OPERATIONS: readonly AdapterOperation[] = [
+  "acquire",
+  "translate-evidence",
+  "report-residue",
+];
 
 export function trustedLocalManifest(
   operations: readonly AdapterOperation[] = ALL_OPERATIONS,
+  fixture: "full-lifecycle" | "fault" = "full-lifecycle",
 ): SubjectAdapterManifestV2 {
   return assertContract<SubjectAdapterManifestV2>(
     "SubjectAdapterManifestV2",
     sealSigned(
       {
         schema_version: "subject-adapter-manifest/v2" as const,
-        adapter_id: TRUSTED_LOCAL_ADAPTER_ID,
+        adapter_id: fixture === "fault" ? "neutral-fault-observer" : TRUSTED_LOCAL_ADAPTER_ID,
         version: "1.0.0",
-        adapter_artifact_hash: hashBytes(readFileSync(trustedLocalEntry())),
+        adapter_artifact_hash: hashBytes(readFileSync(trustedLocalEntry(fixture))),
         protocol_support: [
           {
             protocol_version: "subject-adapter/v2" as const,
@@ -265,10 +279,11 @@ export function payloadFor(operation: AdapterOperation): Record<string, unknown>
     case "report-residue":
       return { schema_version: "report-residue-payload/v1", checkpoint: "final" };
     case "compensate":
+      // At least one receipt hash: the contract will not describe a
+      // compensation that reverses nothing.
       return {
         schema_version: "compensate-payload/v1",
-        mutation_receipt_hashes: [],
-        target_operation_id: "op-install",
+        mutation_receipt_hashes: [`sha256:${"f".repeat(64)}`],
       };
     default:
       throw new Error(`no neutral payload for ${operation}`);
@@ -393,10 +408,15 @@ export function writeTrustedLocalInputs(
     readonly manifestOperations?: readonly AdapterOperation[];
     readonly declarationOverrides?: Partial<TrustedLocalAdapterDeclarationV1>;
     readonly planOverrides?: Partial<LocalObservationTrustedLocalPlanV1>;
+    readonly fixture?: "full-lifecycle" | "fault";
   } = {},
 ): WrittenTrustedLocalInputs {
   mkdirSync(root, { recursive: true });
-  const manifest = trustedLocalManifest(options.manifestOperations);
+  const fixture = options.fixture ?? "full-lifecycle";
+  const manifest = trustedLocalManifest(
+    options.manifestOperations ?? (fixture === "fault" ? FAULT_OPERATIONS : ALL_OPERATIONS),
+    fixture,
+  );
   const manifestBytes = json(manifest);
   const manifestPath = path.join(root, "adapter-manifest.v2.json");
   writeFileSync(manifestPath, manifestBytes);
@@ -414,7 +434,7 @@ export function writeTrustedLocalInputs(
   writeFileSync(planPath, json(plan));
 
   return {
-    entryPath: trustedLocalEntry(),
+    entryPath: trustedLocalEntry(fixture),
     manifestPath,
     declarationPath,
     planPath,
