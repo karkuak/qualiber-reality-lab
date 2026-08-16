@@ -432,6 +432,14 @@ export {
   type LocalAdapterAdmissionV2,
 } from "./adapter/admission.js";
 export {
+  TRUSTED_LOCAL_ACKNOWLEDGEMENT_TOKEN,
+  assertTrustedLocalClaimCeiling,
+  verifyTrustedLocalAdapterDeclaration,
+  type LocalAdapterAuthorityV2,
+  type TrustedLocalAdmissionV2,
+  type VerifyTrustedLocalAdapterDeclarationInput,
+} from "./adapter/trustedLocal.js";
+export {
   UNPRIVILEGED_CAPABILITIES,
   PRIVILEGED_CAPABILITIES,
   PRIVILEGE_BROKER_STATE,

@@ -2516,6 +2516,138 @@
         "created_at": { "$ref": "erl2:common#/$defs/Instant" },
         "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
       }
+    },
+
+    "TrustedLocalAcknowledgementTokenV1": {
+      "$comment": "The exact sentence an owner must write to accept that these adapter bytes execute with their own user's permissions. It is a contract constant rather than a flag so that no short affirmative (`--yes`, `true`, `1`) can stand in for it, and so the retained record shows precisely what was accepted.",
+      "const": "I ACCEPT THAT THESE EXACT ADAPTER BYTES EXECUTE WITH MY LOCAL USER PERMISSIONS, ARE NOT SANDBOXED AND ARE NOT INDEPENDENTLY CERTIFIED, AND THAT THE RESULTS ARE DEVELOPMENT-ONLY, UNSCORED AND UNAUTHENTICATED"
+    },
+
+    "TrustedLocalAdapterSourceV1": {
+      "$comment": "Exact source coordinate, when the owner supplies one. It is an owner assertion: the Lab binds artifact bytes, never a repository.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_label", "commit", "tree"],
+      "properties": {
+        "repository_label": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "tree": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+      }
+    },
+
+    "TrustedLocalOwnerTestEvidenceV1": {
+      "$comment": "A bounded digest of whatever testing the owner claims to have done. The Lab does not read, execute or believe it; it is retained so a reader can see exactly what was asserted and that nothing verified it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "evidence_digest", "byte_length", "authenticity"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "evidence_digest": { "$ref": "erl2:common#/$defs/Hash" },
+        "byte_length": { "type": "integer", "minimum": 1, "maximum": 1048576 },
+        "authenticity": { "const": "owner_supplied_unauthenticated" }
+      }
+    },
+
+    "TrustedLocalOwnerAcknowledgementV1": {
+      "$comment": "The acknowledgement, bound to the exact bytes it was given for. Every boolean is a `const true`, so a declaration cannot be weakened by flipping one; changing either acknowledged hash breaks the binding checked at admission.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acknowledgement_token",
+        "acknowledged_artifact_hash",
+        "acknowledged_manifest_core_hash",
+        "adapter_code_is_not_confined",
+        "adapter_runs_with_operator_user_permissions",
+        "adapter_is_not_independently_certified",
+        "results_are_development_only",
+        "results_are_unscored",
+        "results_are_unauthenticated",
+        "acknowledged_by",
+        "acknowledged_at"
+      ],
+      "properties": {
+        "acknowledgement_token": { "$ref": "erl2:adapter#/$defs/TrustedLocalAcknowledgementTokenV1" },
+        "acknowledged_artifact_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "acknowledged_manifest_core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_code_is_not_confined": { "const": true },
+        "adapter_runs_with_operator_user_permissions": { "const": true },
+        "adapter_is_not_independently_certified": { "const": true },
+        "results_are_development_only": { "const": true },
+        "results_are_unscored": { "const": true },
+        "results_are_unauthenticated": { "const": true },
+        "acknowledged_by": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "acknowledged_at": { "$ref": "erl2:common#/$defs/Instant" }
+      }
+    },
+
+    "TrustedLocalAdapterDeclarationV1": {
+      "$comment": "An owner's declaration that they trust exact adapter bytes to run with their own permissions. It is NOT a certification receipt and deliberately shares no field with one: there is no certifier identity, no verdict, no signature, no enforced-control claim and no scope the Lab treats as reviewed. `independent_certifier` is `null` and `certifier_is_adapter_owner` is `not_applicable`, because with no certifier the question does not arise. The Lab binds the artifact and manifest bytes named here and enforces the claim ceiling; it asserts nothing about what the code does.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "declaration_id",
+        "adapter_id",
+        "adapter_owner",
+        "protocol_version",
+        "subject_execution_mode",
+        "trust_mode",
+        "tier",
+        "adapter_artifact_hash",
+        "adapter_manifest_file_hash",
+        "adapter_manifest_core_hash",
+        "adapter_source",
+        "operator_acknowledgement",
+        "independent_certifier",
+        "certifier_is_adapter_owner",
+        "owner_test_evidence",
+        "excluded_claims",
+        "not_scored",
+        "not_governor_authorized",
+        "not_independently_certified",
+        "not_confined",
+        "not_production_ready",
+        "evidence_authenticity",
+        "created_at",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "trusted-local-adapter-declaration/v1" },
+        "declaration_id": { "$ref": "erl2:common#/$defs/Id" },
+        "adapter_id": { "$ref": "erl2:common#/$defs/Id" },
+        "adapter_owner": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "protocol_version": { "const": "subject-adapter/v2" },
+        "subject_execution_mode": { "const": "local_observation" },
+        "trust_mode": { "const": "trusted_local_code" },
+        "tier": { "const": "development" },
+        "adapter_artifact_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_manifest_file_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_manifest_core_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_source": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "erl2:adapter#/$defs/TrustedLocalAdapterSourceV1" }
+          ]
+        },
+        "operator_acknowledgement": { "$ref": "erl2:adapter#/$defs/TrustedLocalOwnerAcknowledgementV1" },
+        "independent_certifier": { "type": "null" },
+        "certifier_is_adapter_owner": { "const": "not_applicable" },
+        "owner_test_evidence": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "erl2:adapter#/$defs/TrustedLocalOwnerTestEvidenceV1" }
+          ]
+        },
+        "excluded_claims": { "$ref": "erl2:observation#/$defs/LocalUnsupportedClaimsV1" },
+        "not_scored": { "const": true },
+        "not_governor_authorized": { "const": true },
+        "not_independently_certified": { "const": true },
+        "not_confined": { "const": true },
+        "not_production_ready": { "const": true },
+        "evidence_authenticity": { "const": "owner_asserted_unauthenticated" },
+        "created_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
     }
   }
 }

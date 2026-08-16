@@ -47,6 +47,8 @@ import {
   type AdapterCapabilityGrantV1,
   type AdapterFailureReportV1,
   type AdapterOperation,
+  type AdapterOperationId,
+  type AdapterPackageKind,
   type AdapterProtocolNegotiationV1,
   type AdapterProtocolNegotiationV2,
   type AdapterRequestV2,
@@ -71,8 +73,8 @@ import {
   type SubjectAdapterManifestV1,
   type LocalResidueObservationDraft,
   type SubjectAdapterManifestV2,
-  type SubjectAdapterCertificationReceiptV2,
   type LocalObservationLimitsV1,
+  type LocalObservationCertifiedPlanV1,
   type LocalObservationPlanV1,
   type SubjectDiagnosticsManifestV1,
 } from "@erl2/contracts";
@@ -90,10 +92,11 @@ import {
   privilegedRefusal,
 } from "./capabilities.js";
 import { assertEntryDigestUnchanged } from "./admission.js";
+import { verifyLocalAdapterCertificationV2 } from "./admission.js";
 import {
-  verifyLocalAdapterCertificationV2,
-  type LocalAdapterAdmissionV2,
-} from "./admission.js";
+  verifyTrustedLocalAdapterDeclaration,
+  type LocalAdapterAuthorityV2,
+} from "./trustedLocal.js";
 import { CredentialBroker } from "./credentials.js";
 import { decideEgress, denyByDefaultEgressPolicy } from "./egress.js";
 import { MutationLedger } from "./mutations.js";
@@ -149,8 +152,18 @@ export interface AdapterMount {
 export interface AdapterHostOptions {
   readonly runId: string;
   readonly adapterManifest: SubjectAdapterManifestV1 | SubjectAdapterManifestV2;
-  /** Required only for a V2 local-observation host. */
-  readonly certificationReceiptV2?: SubjectAdapterCertificationReceiptV2;
+  /**
+   * Which authority admitted this adapter. Required for a V2 local-observation
+   * host and meaningless for a governed V1 one.
+   *
+   * A closed union rather than two optional documents: the host must know
+   * *which* kind of authority it is running under — a certified external
+   * review, or the operator's own trusted-local declaration — because the two
+   * support entirely different statements about the run, and a host that
+   * inferred the answer from which field was populated could not retain the
+   * fact honestly (ADR-ERL2-042).
+   */
+  readonly localAuthorityV2?: LocalAdapterAuthorityV2;
   /** Frozen plan whose scope and concrete limits govern every local dispatch. */
   readonly localObservationPlan?: LocalObservationPlanV1;
   /** Absolute path of the adapter's entry module. Its digest is pinned. */
@@ -360,6 +373,51 @@ function treeFingerprint(root: string, scan: { readonly mountId: string } | unde
   return coreHash({ tree: parts });
 }
 
+/**
+ * The operation and package-kind scope a V2 local host may dispatch within.
+ *
+ * Deliberately narrower than either authority document: the host needs exactly
+ * these two lists, and taking only them keeps a certified profile and a
+ * declared manifest profile interchangeable *here* without making them
+ * interchangeable anywhere that matters.
+ */
+interface LocalAdapterScopeV2 {
+  readonly operations: readonly AdapterOperationId[];
+  readonly supported_package_kinds: readonly AdapterPackageKind[];
+}
+
+/** True when a frozen plan is the certification-receipt variant. */
+function isCertifiedPlan(
+  plan: LocalObservationPlanV1,
+): plan is LocalObservationCertifiedPlanV1 {
+  return "certification_receipt_hash" in plan;
+}
+
+/**
+ * The plan may not reach past what the manifest and admitted profile allow.
+ *
+ * Shared by both authority arms because the rule is the same under either one:
+ * an operation the profile does not contain, or a capability the manifest does
+ * not require, is out of scope no matter who admitted the adapter.
+ */
+function assertLocalPlanScope(
+  plan: LocalObservationPlanV1,
+  operations: readonly AdapterOperationId[],
+  manifest: SubjectAdapterManifestV2,
+): void {
+  const permitted = new Set<string>(operations);
+  const manifestCapabilities = new Set<string>(manifest.required_broker_capabilities);
+  if (
+    plan.operations.some((operation) => !permitted.has(operation.operation)) ||
+    plan.allowed_capability_ids.some((capability) => !manifestCapabilities.has(capability))
+  ) {
+    throw new Erl2Error(
+      CODES.ADAPTER_CERTIFICATION_SCOPE_MISMATCH,
+      "local plan operation or capability scope exceeds what the manifest and admitted profile allow",
+    );
+  }
+}
+
 export class AdapterHost {
   readonly runId: string;
   readonly manifest: SubjectAdapterManifestV1 | SubjectAdapterManifestV2;
@@ -384,7 +442,23 @@ export class AdapterHost {
   private readonly evidenceFixtureWallClockMs: number | undefined;
   private readonly certifiedArtifactHash: Hash | undefined;
   private readonly protocolVersion: typeof ADAPTER_PROTOCOL_VERSION | typeof ADAPTER_PROTOCOL_VERSION_V2;
-  private localAdmission: LocalAdapterAdmissionV2 | undefined;
+  /**
+   * Which authority this host is running under, once admission has resolved.
+   *
+   * Retained as a discriminant rather than recomputed, so `run` and the
+   * negotiation check never have to re-derive it, and so a caller reading the
+   * host can be told the truth about what admitted the adapter.
+   */
+  private localAuthorityMode: LocalAdapterAuthorityV2["mode"] | undefined;
+  /**
+   * The operation and package-kind scope admission established.
+   *
+   * Under a certification receipt this is the certified profile — the
+   * intersection a certifier signed off. Under a trusted-local declaration it
+   * is the manifest's own declared profile, because there is no certifier and
+   * pretending there is an approved subset would invent one.
+   */
+  private localScope: LocalAdapterScopeV2 | undefined;
   private readonly localPlan: LocalObservationPlanV1 | undefined;
   private outputFrozen = false;
   private invocationSequence = 0;
@@ -410,7 +484,8 @@ export class AdapterHost {
     this.localPlan = options.localObservationPlan;
     const isV2 = this.manifest.schema_version === "subject-adapter-manifest/v2";
     this.protocolVersion = isV2 ? ADAPTER_PROTOCOL_VERSION_V2 : ADAPTER_PROTOCOL_VERSION;
-    this.localAdmission = undefined;
+    this.localAuthorityMode = undefined;
+    this.localScope = undefined;
     this.certifiedArtifactHash =
       isV2 ? this.manifest.adapter_artifact_hash : options.certifiedArtifactHash;
 
@@ -421,10 +496,10 @@ export class AdapterHost {
         { owner: "adapter" },
       );
     }
-    if (isV2 && (options.certificationReceiptV2 === undefined || this.localPlan === undefined)) {
+    if (isV2 && (options.localAuthorityV2 === undefined || this.localPlan === undefined)) {
       throw new Erl2Error(
         CODES.ADAPTER_CERTIFICATION_RECEIPT_REQUIRED,
-        "a local V2 host requires its exact certification receipt and frozen observation plan",
+        "a local V2 host requires an explicit admission authority and its frozen observation plan",
       );
     }
 
@@ -513,50 +588,90 @@ export class AdapterHost {
           "local plan embeds stale limits or egress-policy identity",
         );
       }
-      const admission = verifyLocalAdapterCertificationV2({
-        manifest: this.manifest,
-        receipt: options.certificationReceiptV2 as SubjectAdapterCertificationReceiptV2,
-        entryDigest: this.executableDigest,
-      });
-      this.localAdmission = admission;
-      if (
-        plan.adapter_id !== admission.adapterId ||
-        plan.adapter_version !== admission.adapterVersion ||
-        plan.adapter_manifest_hash !== admission.manifestHash ||
-        plan.certification_receipt_hash !== admission.receiptHash ||
-        plan.adapter_artifact_hash !== admission.adapterArtifactHash ||
-        plan.certification_authenticity !== admission.authenticity
-      ) {
-        throw new Erl2Error(
-          CODES.ADAPTER_CERTIFICATION_IDENTITY_MISMATCH,
-          "the local plan is not bound to the admitted V2 manifest, receipt and artifact",
-        );
-      }
-      const profileOperations = new Set<string>(admission.profile.operations);
-      const manifestCapabilities = new Set<string>(this.manifest.required_broker_capabilities);
-      if (
-        plan.operations.some((operation) => !profileOperations.has(operation.operation)) ||
-        plan.allowed_capability_ids.some((capability) => !manifestCapabilities.has(capability))
-      ) {
-        throw new Erl2Error(
-          CODES.ADAPTER_CERTIFICATION_SCOPE_MISMATCH,
-          "local plan operation or capability scope exceeds the manifest/receipt intersection",
-        );
-      }
-      const actualControls = sandboxControlReport(this.profile, this.containerActivation);
-      for (const expectation of plan.resource_limits.control_expectations) {
-        const actual = actualControls.find((control) => control.control_id === expectation.control_id);
+      const authority = options.localAuthorityV2 as LocalAdapterAuthorityV2;
+      this.localAuthorityMode = authority.mode;
+      // Each arm resolves the same four facts — identity, artifact digest, the
+      // plan's authority binding, and the operation scope — from a different
+      // authority. The two arms never share a document: a receipt cannot
+      // satisfy the trusted-local arm and a declaration cannot satisfy the
+      // certified one, because each calls a verifier that rejects the other's
+      // `schema_version` outright.
+      if (authority.mode === "certified_external") {
+        const admission = verifyLocalAdapterCertificationV2({
+          manifest: this.manifest,
+          receipt: authority.receipt,
+          entryDigest: this.executableDigest,
+        });
+        this.localScope = admission.profile;
         if (
-          actual === undefined ||
-          (expectation.required_state === "enforced" &&
-            (actual.state !== "enforced" ||
-              !(options.certificationReceiptV2 as SubjectAdapterCertificationReceiptV2)
-                .enforced_controls.includes(expectation.control_id)))
+          !isCertifiedPlan(plan) ||
+          plan.adapter_id !== admission.adapterId ||
+          plan.adapter_version !== admission.adapterVersion ||
+          plan.adapter_manifest_hash !== admission.manifestHash ||
+          plan.certification_receipt_hash !== admission.receiptHash ||
+          plan.adapter_artifact_hash !== admission.adapterArtifactHash ||
+          plan.certification_authenticity !== admission.authenticity
         ) {
           throw new Erl2Error(
-            CODES.ADAPTER_SANDBOX_CONTROL_UNSUPPORTED,
-            `local observation requires unavailable control ${expectation.control_id}`,
+            CODES.ADAPTER_CERTIFICATION_IDENTITY_MISMATCH,
+            "the local plan is not bound to the admitted V2 manifest, receipt and artifact",
           );
+        }
+        assertLocalPlanScope(plan, admission.profile.operations, this.manifest);
+        const actualControls = sandboxControlReport(this.profile, this.containerActivation);
+        for (const expectation of plan.resource_limits.control_expectations) {
+          const actual = actualControls.find((control) => control.control_id === expectation.control_id);
+          if (
+            actual === undefined ||
+            (expectation.required_state === "enforced" &&
+              (actual.state !== "enforced" ||
+                !authority.receipt.enforced_controls.includes(expectation.control_id)))
+          ) {
+            throw new Erl2Error(
+              CODES.ADAPTER_SANDBOX_CONTROL_UNSUPPORTED,
+              `local observation requires unavailable control ${expectation.control_id}`,
+            );
+          }
+        }
+      } else {
+        const admission = verifyTrustedLocalAdapterDeclaration({
+          manifest: this.manifest,
+          declaration: authority.declaration,
+          entryDigest: this.executableDigest,
+        });
+        this.localScope = admission.profile;
+        if (
+          isCertifiedPlan(plan) ||
+          plan.adapter_id !== admission.adapterId ||
+          plan.adapter_version !== admission.adapterVersion ||
+          plan.adapter_manifest_hash !== admission.manifestHash ||
+          plan.trusted_local_declaration_hash !== admission.declarationHash ||
+          plan.adapter_artifact_hash !== admission.adapterArtifactHash ||
+          plan.trust_mode !== admission.trustMode
+        ) {
+          throw new Erl2Error(
+            CODES.ADAPTER_TRUSTED_LOCAL_BINDING_MISMATCH,
+            "the local plan is not bound to the admitted V2 manifest, owner declaration and artifact",
+          );
+        }
+        assertLocalPlanScope(plan, admission.profile.operations, this.manifest);
+        // No certifier claimed anything about controls, so the plan's
+        // expectations are checked against the host's own report and nothing
+        // else. `admission.hostControlReport` already refused any control the
+        // manifest requires that this host does not enforce.
+        for (const expectation of plan.resource_limits.control_expectations) {
+          const actual = admission.hostControlReport.find(
+            (control) => control.control_id === expectation.control_id,
+          );
+          if (
+            actual === undefined ||
+            (expectation.required_state === "enforced" && actual.state !== "enforced")
+          ) {
+            throw new Erl2Error(
+              CODES.ADAPTER_SANDBOX_CONTROL_UNSUPPORTED,
+              `local observation requires unavailable control ${expectation.control_id}`,
+            );
+          }
         }
       }
       if (
@@ -573,6 +688,17 @@ export class AdapterHost {
       this.egressPolicy = options.egressPolicy ?? denyByDefaultEgressPolicy("adapter-default-deny");
     }
     mkdirSync(this.workspaceRoot, { recursive: true, mode: 0o700 });
+  }
+
+  /**
+   * Which authority admitted this host's adapter, or `undefined` for a
+   * governed V1 host that has none.
+   *
+   * Exposed so a caller retaining evidence writes down the authority the host
+   * actually resolved, rather than the one the caller believes it passed in.
+   */
+  get localAuthorityModeV2(): LocalAdapterAuthorityV2["mode"] | undefined {
+    return this.localAuthorityMode;
   }
 
   /** Marks the run's subject output frozen; no further dispatch is possible. */
@@ -632,7 +758,7 @@ export class AdapterHost {
       });
     }
     const declaredOperations = isLocal
-      ? this.localAdmission?.profile.operations ?? []
+      ? this.localScope?.operations ?? []
       : (this.manifest as SubjectAdapterManifestV1).operations;
     if (!declaredOperations.includes(input.operation)) {
       throw new Erl2Error(
@@ -702,7 +828,7 @@ export class AdapterHost {
       const packageKind = localPackageKind(request.operation_payload);
       if (
         packageKind !== undefined &&
-        !this.localAdmission?.profile.supported_package_kinds.includes(packageKind)
+        !this.localScope?.supported_package_kinds.includes(packageKind)
       ) {
         throw new Erl2Error(
           CODES.ADAPTER_PACKAGE_KIND_UNSUPPORTED,
@@ -1842,7 +1968,7 @@ export class AdapterHost {
           { owner: "adapter" },
         );
       }
-      const profile = (this.localAdmission as LocalAdapterAdmissionV2).profile;
+      const profile = this.localScope as LocalAdapterScopeV2;
       assertExactStringSet(raw.supported_operations, profile.operations, "operations");
       assertExactStringSet(
         raw.supported_package_kinds,

@@ -345,6 +345,13 @@
       ]
     },
     "LocalObservationPlanV1": {
+      "$comment": "A frozen local-observation plan, discriminated by which authority admitted the adapter. The certified variant is unchanged and still names a certification receipt. The trusted-local variant names an owner declaration instead and carries no certification field at all, so a plan cannot describe an owner's own assertion using certification vocabulary. Both variants are closed, and no document satisfies both.",
+      "oneOf": [
+        { "$ref": "erl2:observation#/$defs/LocalObservationCertifiedPlanV1" },
+        { "$ref": "erl2:observation#/$defs/LocalObservationTrustedLocalPlanV1" }
+      ]
+    },
+    "LocalObservationCertifiedPlanV1": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -385,6 +392,75 @@
         "certification_authenticity": {
           "enum": ["locally_observed_unauthenticated", "authenticated"]
         },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "$ref": "erl2:observation#/$defs/LocalObservationOperationSpecV1" }
+        },
+        "inputs": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "erl2:observation#/$defs/LocalObservationPlanInputV1" }
+        },
+        "resource_limits": { "$ref": "erl2:observation#/$defs/LocalObservationLimitsV1" },
+        "egress_policy": { "$ref": "erl2:adapter#/$defs/EgressAllowlistPolicyV1" },
+        "allowed_capability_ids": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "erl2:adapter#/$defs/AdapterCapabilityId" }
+        },
+        "allowed_credential_handle_ids": { "$ref": "erl2:common#/$defs/IdArray" },
+        "created_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "expires_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "not_scored": { "const": true },
+        "not_governor_authorized": { "const": true },
+        "unsupported_claims": { "$ref": "erl2:observation#/$defs/LocalUnsupportedClaimsV1" },
+        "evidence_authenticity": { "const": "unauthenticated_local_record" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+    "LocalObservationTrustedLocalPlanV1": {
+      "$comment": "The owner-operated variant. `trusted_local_declaration_hash` is the core hash of a TrustedLocalAdapterDeclarationV1, not a receipt, and `certification_receipt_hash`/`certification_authenticity` are absent rather than filled with a stand-in value.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "observation_id",
+        "mode",
+        "protocol_version",
+        "adapter_id",
+        "adapter_version",
+        "adapter_manifest_hash",
+        "trusted_local_declaration_hash",
+        "trust_mode",
+        "adapter_artifact_hash",
+        "operations",
+        "inputs",
+        "resource_limits",
+        "egress_policy",
+        "allowed_capability_ids",
+        "allowed_credential_handle_ids",
+        "created_at",
+        "expires_at",
+        "not_scored",
+        "not_governor_authorized",
+        "unsupported_claims",
+        "evidence_authenticity",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "local-observation-plan/v1" },
+        "observation_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "mode": { "const": "local_observation" },
+        "protocol_version": { "const": "subject-adapter/v2" },
+        "adapter_id": { "$ref": "erl2:common#/$defs/Id" },
+        "adapter_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "adapter_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "trusted_local_declaration_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "trust_mode": { "const": "trusted_local_code" },
+        "adapter_artifact_hash": { "$ref": "erl2:common#/$defs/Hash" },
         "operations": {
           "type": "array",
           "minItems": 1,
@@ -598,6 +674,13 @@
       }
     },
     "LocalObservationResultV1": {
+      "$comment": "The terminal of one local observation, discriminated by the same authority split as its plan. A result cannot describe a trusted-local run in certification vocabulary, and cannot describe a certified run without naming its receipt.",
+      "oneOf": [
+        { "$ref": "erl2:observation#/$defs/LocalObservationCertifiedResultV1" },
+        { "$ref": "erl2:observation#/$defs/LocalObservationTrustedLocalResultV1" }
+      ]
+    },
+    "LocalObservationCertifiedResultV1": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -649,6 +732,175 @@
         "not_governor_authorized": { "const": true },
         "unsupported_claims": { "$ref": "erl2:observation#/$defs/LocalUnsupportedClaimsV1" },
         "evidence_authenticity": { "const": "unauthenticated_local_record" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+    "LocalObservationTrustedLocalResultV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "observation_id", "plan_hash", "protocol_version", "adapter_id",
+        "adapter_version", "adapter_manifest_hash", "trusted_local_declaration_hash",
+        "trust_mode", "adapter_artifact_hash", "operation_record_hashes",
+        "retained_input_refs", "retained_output_refs", "retained_evidence_refs",
+        "structural_validation", "cleanup", "status", "started_at", "ended_at",
+        "not_scored", "not_governor_authorized", "not_independently_certified",
+        "not_confined", "unsupported_claims", "evidence_authenticity", "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "local-observation-result/v1" },
+        "observation_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "plan_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "protocol_version": { "const": "subject-adapter/v2" },
+        "adapter_id": { "$ref": "erl2:common#/$defs/Id" },
+        "adapter_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "adapter_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "trusted_local_declaration_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "trust_mode": { "const": "trusted_local_code" },
+        "adapter_artifact_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "operation_record_hashes": { "$ref": "erl2:common#/$defs/HashArray" },
+        "retained_input_refs": {
+          "type": "array", "maxItems": 256,
+          "items": { "$ref": "erl2:observation#/$defs/LocalInputArtifactRefV1" }
+        },
+        "retained_output_refs": {
+          "type": "array", "maxItems": 100000,
+          "items": { "$ref": "erl2:common#/$defs/ArtifactRef" }
+        },
+        "retained_evidence_refs": { "$ref": "erl2:common#/$defs/HashArray" },
+        "structural_validation": {
+          "type": "array", "maxItems": 256,
+          "items": { "$ref": "erl2:observation#/$defs/LocalStructuralValidationV1" }
+        },
+        "cleanup": { "$ref": "erl2:observation#/$defs/LocalCleanupResultV1" },
+        "status": {
+          "enum": [
+            "observed_complete", "observed_with_unsupported", "observation_failed",
+            "cleanup_incomplete", "observation_expired", "observation_cancelled"
+          ]
+        },
+        "started_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "ended_at": { "$ref": "erl2:common#/$defs/Instant" },
+        "not_scored": { "const": true },
+        "not_governor_authorized": { "const": true },
+        "not_independently_certified": { "const": true },
+        "not_confined": { "const": true },
+        "unsupported_claims": { "$ref": "erl2:observation#/$defs/LocalUnsupportedClaimsV1" },
+        "evidence_authenticity": { "const": "unauthenticated_local_record" },
+        "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+
+    "TrustedLocalOperationOutcomeV1": {
+      "$comment": "One planned operation as the run observed it. `response_status` is the adapter's own verdict and is present only when an exchange completed; it is never the Lab's judgement of the operation.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "operation_id", "operation", "state", "request_hash", "operation_record_hash"],
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 0, "maximum": 1023 },
+        "operation_id": { "$ref": "erl2:common#/$defs/Id" },
+        "operation": { "$ref": "erl2:adapter#/$defs/AdapterOperationId" },
+        "state": { "enum": ["completed", "failed", "ambiguous_not_replayed"] },
+        "request_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "operation_record_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "response_envelope_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "response_status": { "enum": ["supported", "unsupported", "failed"] },
+        "predecessor_operation_id": { "$ref": "erl2:common#/$defs/Id" },
+        "predecessor_operation_record_hash": { "$ref": "erl2:common#/$defs/Hash" }
+      }
+    },
+
+    "TrustedLocalObservationRecordV1": {
+      "$comment": "The retained story of one owner-operated local observation, closed at every level so an offline reader can recompute it rather than trust it. It contains no verdict field an adapter could write into, and its trust ceiling is restated in its own bytes so the file alone cannot give a stronger impression than the evidence supports.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "observation_id",
+        "subject_execution_mode",
+        "protocol_version",
+        "trust_mode",
+        "tier",
+        "plan_hash",
+        "plan_file_hash",
+        "adapter_id",
+        "adapter_version",
+        "adapter_artifact_hash",
+        "adapter_manifest_hash",
+        "adapter_manifest_file_hash",
+        "trusted_local_declaration",
+        "trusted_local_declaration_hash",
+        "trusted_local_declaration_file_hash",
+        "admission_logical_path",
+        "host_sandbox_profile",
+        "host_control_report",
+        "operation_outcomes",
+        "operation_records",
+        "residue_observations",
+        "result",
+        "cleanup",
+        "terminal_status",
+        "independent_certification",
+        "confinement",
+        "not_scored",
+        "not_governor_authorized",
+        "not_authenticated",
+        "not_production_ready",
+        "evidence_authenticity",
+        "excluded_claims",
+        "core_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": "trusted-local-observation-record/v1" },
+        "observation_id": { "$ref": "erl2:common#/$defs/RunId" },
+        "subject_execution_mode": { "const": "local_observation" },
+        "protocol_version": { "const": "subject-adapter/v2" },
+        "trust_mode": { "const": "trusted_local_code" },
+        "tier": { "const": "development" },
+        "plan_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "plan_file_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_id": { "$ref": "erl2:common#/$defs/Id" },
+        "adapter_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "adapter_artifact_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_manifest_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "adapter_manifest_file_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "trusted_local_declaration": { "$ref": "erl2:adapter#/$defs/TrustedLocalAdapterDeclarationV1" },
+        "trusted_local_declaration_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "trusted_local_declaration_file_hash": { "$ref": "erl2:common#/$defs/Hash" },
+        "admission_logical_path": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "host_sandbox_profile": { "const": "local-process" },
+        "host_control_report": {
+          "type": "array", "maxItems": 64,
+          "items": { "$ref": "erl2:adapter#/$defs/SandboxControlReportV2" }
+        },
+        "operation_outcomes": {
+          "type": "array", "minItems": 1, "maxItems": 64,
+          "items": { "$ref": "erl2:observation#/$defs/TrustedLocalOperationOutcomeV1" }
+        },
+        "operation_records": {
+          "type": "array", "minItems": 1, "maxItems": 256,
+          "items": { "$ref": "erl2:observation#/$defs/LocalObservationOperationRecordV1" }
+        },
+        "residue_observations": {
+          "type": "array", "maxItems": 64,
+          "items": { "$ref": "erl2:observation#/$defs/LocalResidueRecordV1" }
+        },
+        "result": { "$ref": "erl2:observation#/$defs/LocalObservationTrustedLocalResultV1" },
+        "cleanup": { "$ref": "erl2:observation#/$defs/LocalCleanupResultV1" },
+        "terminal_status": {
+          "enum": [
+            "observed_complete", "observed_with_unsupported", "observation_failed",
+            "cleanup_incomplete", "observation_expired", "observation_cancelled"
+          ]
+        },
+        "independent_certification": { "const": "absent" },
+        "confinement": { "const": "absent" },
+        "not_scored": { "const": true },
+        "not_governor_authorized": { "const": true },
+        "not_authenticated": { "const": true },
+        "not_production_ready": { "const": true },
+        "evidence_authenticity": { "const": "unauthenticated_local_record" },
+        "excluded_claims": { "$ref": "erl2:observation#/$defs/LocalUnsupportedClaimsV1" },
         "core_hash": { "$ref": "erl2:common#/$defs/Hash" }
       }
     }

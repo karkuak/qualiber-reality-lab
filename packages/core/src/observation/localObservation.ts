@@ -375,6 +375,22 @@ export class LocalObservationCoordinator {
 
   buildResult(startedAt: Instant, endedAt: Instant): LocalObservationResultV1 {
     const cleanup = this.cleanupResult();
+    // The result carries forward whichever authority the plan was frozen
+    // against, and never translates one into the other. A trusted-local run
+    // has no certification fields to fill in, so it states its trust mode and
+    // its two absences instead of borrowing certification vocabulary.
+    const authority =
+      "certification_receipt_hash" in this.plan
+        ? {
+            certification_receipt_hash: this.plan.certification_receipt_hash,
+            certification_authenticity: this.plan.certification_authenticity,
+          }
+        : {
+            trusted_local_declaration_hash: this.plan.trusted_local_declaration_hash,
+            trust_mode: this.plan.trust_mode,
+            not_independently_certified: true as const,
+            not_confined: true as const,
+          };
     const base = {
       schema_version: "local-observation-result/v1" as const,
       observation_id: this.plan.observation_id,
@@ -383,9 +399,8 @@ export class LocalObservationCoordinator {
       adapter_id: this.plan.adapter_id,
       adapter_version: this.plan.adapter_version,
       adapter_manifest_hash: this.plan.adapter_manifest_hash,
-      certification_receipt_hash: this.plan.certification_receipt_hash,
+      ...authority,
       adapter_artifact_hash: this.plan.adapter_artifact_hash,
-      certification_authenticity: this.plan.certification_authenticity,
       operation_record_hashes: this.records.map((record) => record.core_hash),
       retained_input_refs: [],
       retained_output_refs: [],

@@ -113,7 +113,7 @@ test("LOCAL-V2: a V1 SDK response to the V2-only offer is a downgrade refusal", 
   const host = new AdapterHost({
     runId: LOCAL_RUN_ID,
     adapterManifest: manifest,
-    certificationReceiptV2: receipt,
+    localAuthorityV2: { mode: "certified_external", receipt },
     localObservationPlan: plan,
     adapterEntryPath: entryPath,
     workspaceRoot: mkdtempSync(path.join(tmpdir(), "erl2-v2-downgrade-")),
@@ -209,7 +209,7 @@ test("LOCAL-LIMITS: plan ceilings intersect with host, output, diagnostics and c
       new AdapterHost({
         runId: LOCAL_RUN_ID,
         adapterManifest: fixture.manifest,
-        certificationReceiptV2: fixture.receipt,
+        localAuthorityV2: { mode: "certified_external", receipt: fixture.receipt },
         localObservationPlan: fixture.plan,
         adapterEntryPath: path.join(process.cwd(), "fixtures", "neutral", "local-archive-observer.mjs"),
         workspaceRoot: mkdtempSync(path.join(tmpdir(), "erl2-limit-high-")),
@@ -346,7 +346,7 @@ test("LOCAL-V2: per-dispatch artifact verification is load-bearing", () => {
   const host = new AdapterHost({
     runId: LOCAL_RUN_ID,
     adapterManifest: manifest,
-    certificationReceiptV2: receipt,
+    localAuthorityV2: { mode: "certified_external", receipt },
     localObservationPlan: plan,
     adapterEntryPath: entryPath,
     workspaceRoot: mkdtempSync(path.join(tmpdir(), "erl2-local-tamper-ws-")),
@@ -464,7 +464,7 @@ function hostFor(fixture: ReturnType<typeof localFixtureWithLimits>) {
   return new AdapterHost({
     runId: LOCAL_RUN_ID,
     adapterManifest: fixture.manifest,
-    certificationReceiptV2: fixture.receipt,
+    localAuthorityV2: { mode: "certified_external", receipt: fixture.receipt },
     localObservationPlan: fixture.plan,
     adapterEntryPath: path.join(process.cwd(), "fixtures", "neutral", "local-archive-observer.mjs"),
     workspaceRoot: mkdtempSync(path.join(tmpdir(), "erl2-local-limit-")),
@@ -503,7 +503,7 @@ function fixtureForEntry(
   const host = new AdapterHost({
     runId: LOCAL_RUN_ID,
     adapterManifest: manifest,
-    certificationReceiptV2: receipt,
+    localAuthorityV2: { mode: "certified_external", receipt },
     localObservationPlan: plan,
     adapterEntryPath: entryPath,
     workspaceRoot: mkdtempSync(path.join(tmpdir(), "erl2-local-custom-")),
@@ -558,7 +558,7 @@ function relimit<T extends ReturnType<typeof fixtureForEntry>>(fixture: T, chang
   const host = new AdapterHost({
     runId: LOCAL_RUN_ID,
     adapterManifest: fixture.manifest,
-    certificationReceiptV2: fixture.receipt,
+    localAuthorityV2: { mode: "certified_external", receipt: fixture.receipt },
     localObservationPlan: plan,
     adapterEntryPath: path.join(process.cwd(), "fixtures", "neutral", "local-boundary-observer.mjs"),
     workspaceRoot: mkdtempSync(path.join(tmpdir(), "erl2-local-relimit-")),
@@ -593,7 +593,7 @@ function repolicy<T extends ReturnType<typeof fixtureForEntry>>(fixture: T): T {
   const host = new AdapterHost({
     runId: LOCAL_RUN_ID,
     adapterManifest: fixture.manifest,
-    certificationReceiptV2: fixture.receipt,
+    localAuthorityV2: { mode: "certified_external", receipt: fixture.receipt },
     localObservationPlan: plan,
     adapterEntryPath: path.join(process.cwd(), "fixtures", "neutral", "local-boundary-observer.mjs"),
     workspaceRoot: mkdtempSync(path.join(tmpdir(), "erl2-local-policy-")),

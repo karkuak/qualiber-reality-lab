@@ -414,7 +414,7 @@ export function newLocalLifecycleHost(kind: keyof typeof LIFECYCLE_SHAPES) {
   const host = new AdapterHost({
     runId: LOCAL_RUN_ID,
     adapterManifest: fixture.manifest,
-    certificationReceiptV2: fixture.receipt,
+    localAuthorityV2: { mode: "certified_external", receipt: fixture.receipt },
     localObservationPlan: fixture.plan,
     adapterEntryPath: localEntry(fixture.shape),
     workspaceRoot,
@@ -442,7 +442,7 @@ export function newLocalHost(shape: LocalFixtureShape = ARCHIVE_SHAPE) {
   const host = new AdapterHost({
     runId: LOCAL_RUN_ID,
     adapterManifest: fixture.manifest,
-    certificationReceiptV2: fixture.receipt,
+    localAuthorityV2: { mode: "certified_external", receipt: fixture.receipt },
     localObservationPlan: fixture.plan,
     adapterEntryPath: localEntry(shape),
     workspaceRoot,

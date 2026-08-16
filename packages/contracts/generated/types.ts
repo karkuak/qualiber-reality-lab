@@ -829,6 +829,65 @@ export type SandboxInvocationManifestV2 = {
   readonly core_hash: Hash;
 };
 
+export type TrustedLocalAcknowledgementTokenV1 = "I ACCEPT THAT THESE EXACT ADAPTER BYTES EXECUTE WITH MY LOCAL USER PERMISSIONS, ARE NOT SANDBOXED AND ARE NOT INDEPENDENTLY CERTIFIED, AND THAT THE RESULTS ARE DEVELOPMENT-ONLY, UNSCORED AND UNAUTHENTICATED";
+
+export type TrustedLocalAdapterSourceV1 = {
+  readonly repository_label: string;
+  readonly commit: string;
+  readonly tree: string;
+};
+
+export type TrustedLocalOwnerTestEvidenceV1 = {
+  readonly label: string;
+  readonly evidence_digest: Hash;
+  readonly byte_length: number;
+  readonly authenticity: "owner_supplied_unauthenticated";
+};
+
+export type TrustedLocalOwnerAcknowledgementV1 = {
+  readonly acknowledgement_token: TrustedLocalAcknowledgementTokenV1;
+  readonly acknowledged_artifact_hash: Hash;
+  readonly acknowledged_manifest_core_hash: Hash;
+  readonly adapter_code_is_not_confined: true;
+  readonly adapter_runs_with_operator_user_permissions: true;
+  readonly adapter_is_not_independently_certified: true;
+  readonly results_are_development_only: true;
+  readonly results_are_unscored: true;
+  readonly results_are_unauthenticated: true;
+  readonly acknowledged_by: string;
+  readonly acknowledged_at: Instant;
+};
+
+export type TrustedLocalAdapterDeclarationV1 = {
+  readonly schema_version: "trusted-local-adapter-declaration/v1";
+  readonly declaration_id: Id;
+  readonly adapter_id: Id;
+  readonly adapter_owner: string;
+  readonly protocol_version: "subject-adapter/v2";
+  readonly subject_execution_mode: "local_observation";
+  readonly trust_mode: "trusted_local_code";
+  readonly tier: "development";
+  readonly adapter_artifact_hash: Hash;
+  readonly adapter_manifest_file_hash: Hash;
+  readonly adapter_manifest_core_hash: Hash;
+  readonly adapter_source: null
+    | TrustedLocalAdapterSourceV1;
+  readonly operator_acknowledgement: TrustedLocalOwnerAcknowledgementV1;
+  readonly independent_certifier: null;
+  readonly certifier_is_adapter_owner: "not_applicable";
+  readonly owner_test_evidence: null
+    | TrustedLocalOwnerTestEvidenceV1;
+  readonly excluded_claims: LocalUnsupportedClaimsV1;
+  readonly not_scored: true;
+  readonly not_governor_authorized: true;
+  readonly not_independently_certified: true;
+  readonly not_confined: true;
+  readonly not_production_ready: true;
+  readonly evidence_authenticity: "owner_asserted_unauthenticated";
+  readonly created_at: Instant;
+  readonly core_hash: Hash;
+};
+
 // ---- erl2:common : ERL2 shared scalar and composite definitions ----
 
 export type Hash = `sha256:${string}`;
@@ -2145,7 +2204,10 @@ export type LocalObservationPlanInputV1 = {
   readonly expected_package_kind: AdapterPackageKind;
 };
 
-export type LocalObservationPlanV1 = {
+export type LocalObservationPlanV1 = LocalObservationCertifiedPlanV1
+  | LocalObservationTrustedLocalPlanV1;
+
+export type LocalObservationCertifiedPlanV1 = {
   readonly schema_version: "local-observation-plan/v1";
   readonly observation_id: RunId;
   readonly mode: "local_observation";
@@ -2156,6 +2218,32 @@ export type LocalObservationPlanV1 = {
   readonly certification_receipt_hash: Hash;
   readonly adapter_artifact_hash: Hash;
   readonly certification_authenticity: "locally_observed_unauthenticated" | "authenticated";
+  readonly operations: readonly LocalObservationOperationSpecV1[];
+  readonly inputs: readonly LocalObservationPlanInputV1[];
+  readonly resource_limits: LocalObservationLimitsV1;
+  readonly egress_policy: EgressAllowlistPolicyV1;
+  readonly allowed_capability_ids: readonly AdapterCapabilityId[];
+  readonly allowed_credential_handle_ids: IdArray;
+  readonly created_at: Instant;
+  readonly expires_at: Instant;
+  readonly not_scored: true;
+  readonly not_governor_authorized: true;
+  readonly unsupported_claims: LocalUnsupportedClaimsV1;
+  readonly evidence_authenticity: "unauthenticated_local_record";
+  readonly core_hash: Hash;
+};
+
+export type LocalObservationTrustedLocalPlanV1 = {
+  readonly schema_version: "local-observation-plan/v1";
+  readonly observation_id: RunId;
+  readonly mode: "local_observation";
+  readonly protocol_version: "subject-adapter/v2";
+  readonly adapter_id: Id;
+  readonly adapter_version: string;
+  readonly adapter_manifest_hash: Hash;
+  readonly trusted_local_declaration_hash: Hash;
+  readonly trust_mode: "trusted_local_code";
+  readonly adapter_artifact_hash: Hash;
   readonly operations: readonly LocalObservationOperationSpecV1[];
   readonly inputs: readonly LocalObservationPlanInputV1[];
   readonly resource_limits: LocalObservationLimitsV1;
@@ -2290,7 +2378,10 @@ export type LocalCleanupResultV1 = {
   readonly reason_codes: ShortStringArray;
 };
 
-export type LocalObservationResultV1 = {
+export type LocalObservationResultV1 = LocalObservationCertifiedResultV1
+  | LocalObservationTrustedLocalResultV1;
+
+export type LocalObservationCertifiedResultV1 = {
   readonly schema_version: "local-observation-result/v1";
   readonly observation_id: RunId;
   readonly plan_hash: Hash;
@@ -2314,6 +2405,85 @@ export type LocalObservationResultV1 = {
   readonly not_governor_authorized: true;
   readonly unsupported_claims: LocalUnsupportedClaimsV1;
   readonly evidence_authenticity: "unauthenticated_local_record";
+  readonly core_hash: Hash;
+};
+
+export type LocalObservationTrustedLocalResultV1 = {
+  readonly schema_version: "local-observation-result/v1";
+  readonly observation_id: RunId;
+  readonly plan_hash: Hash;
+  readonly protocol_version: "subject-adapter/v2";
+  readonly adapter_id: Id;
+  readonly adapter_version: string;
+  readonly adapter_manifest_hash: Hash;
+  readonly trusted_local_declaration_hash: Hash;
+  readonly trust_mode: "trusted_local_code";
+  readonly adapter_artifact_hash: Hash;
+  readonly operation_record_hashes: HashArray;
+  readonly retained_input_refs: readonly LocalInputArtifactRefV1[];
+  readonly retained_output_refs: readonly ArtifactRef[];
+  readonly retained_evidence_refs: HashArray;
+  readonly structural_validation: readonly LocalStructuralValidationV1[];
+  readonly cleanup: LocalCleanupResultV1;
+  readonly status: "observed_complete" | "observed_with_unsupported" | "observation_failed" | "cleanup_incomplete" | "observation_expired" | "observation_cancelled";
+  readonly started_at: Instant;
+  readonly ended_at: Instant;
+  readonly not_scored: true;
+  readonly not_governor_authorized: true;
+  readonly not_independently_certified: true;
+  readonly not_confined: true;
+  readonly unsupported_claims: LocalUnsupportedClaimsV1;
+  readonly evidence_authenticity: "unauthenticated_local_record";
+  readonly core_hash: Hash;
+};
+
+export type TrustedLocalOperationOutcomeV1 = {
+  readonly sequence: number;
+  readonly operation_id: Id;
+  readonly operation: AdapterOperationId;
+  readonly state: "completed" | "failed" | "ambiguous_not_replayed";
+  readonly request_hash: Hash;
+  readonly operation_record_hash: Hash;
+  readonly response_envelope_hash?: Hash;
+  readonly response_status?: "supported" | "unsupported" | "failed";
+  readonly predecessor_operation_id?: Id;
+  readonly predecessor_operation_record_hash?: Hash;
+};
+
+export type TrustedLocalObservationRecordV1 = {
+  readonly schema_version: "trusted-local-observation-record/v1";
+  readonly observation_id: RunId;
+  readonly subject_execution_mode: "local_observation";
+  readonly protocol_version: "subject-adapter/v2";
+  readonly trust_mode: "trusted_local_code";
+  readonly tier: "development";
+  readonly plan_hash: Hash;
+  readonly plan_file_hash: Hash;
+  readonly adapter_id: Id;
+  readonly adapter_version: string;
+  readonly adapter_artifact_hash: Hash;
+  readonly adapter_manifest_hash: Hash;
+  readonly adapter_manifest_file_hash: Hash;
+  readonly trusted_local_declaration: TrustedLocalAdapterDeclarationV1;
+  readonly trusted_local_declaration_hash: Hash;
+  readonly trusted_local_declaration_file_hash: Hash;
+  readonly admission_logical_path: string;
+  readonly host_sandbox_profile: "local-process";
+  readonly host_control_report: readonly SandboxControlReportV2[];
+  readonly operation_outcomes: readonly TrustedLocalOperationOutcomeV1[];
+  readonly operation_records: readonly LocalObservationOperationRecordV1[];
+  readonly residue_observations: readonly LocalResidueRecordV1[];
+  readonly result: LocalObservationTrustedLocalResultV1;
+  readonly cleanup: LocalCleanupResultV1;
+  readonly terminal_status: "observed_complete" | "observed_with_unsupported" | "observation_failed" | "cleanup_incomplete" | "observation_expired" | "observation_cancelled";
+  readonly independent_certification: "absent";
+  readonly confinement: "absent";
+  readonly not_scored: true;
+  readonly not_governor_authorized: true;
+  readonly not_authenticated: true;
+  readonly not_production_ready: true;
+  readonly evidence_authenticity: "unauthenticated_local_record";
+  readonly excluded_claims: LocalUnsupportedClaimsV1;
   readonly core_hash: Hash;
 };
 

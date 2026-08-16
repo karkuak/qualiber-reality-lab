@@ -59,7 +59,14 @@ test("LOCAL-FIREWALL: local schemas have no signer role, tier upgrade or governe
   }
   assert.equal("signature" in fixture.plan, false);
   assert.equal("signature" in result, false);
-  assert.equal(result.certification_authenticity, "locally_observed_unauthenticated");
+  assert.ok(
+    "certification_authenticity" in result,
+    "this fixture is the certification-receipt variant and must stay it",
+  );
+  assert.equal(
+    (result as { readonly certification_authenticity: string }).certification_authenticity,
+    "locally_observed_unauthenticated",
+  );
   assert.equal(result.evidence_authenticity, "unauthenticated_local_record");
 });
 

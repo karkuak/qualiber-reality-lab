@@ -253,9 +253,25 @@ export const CONTRACTS: readonly ContractDescriptor[] = [
   d("ERL2-C-165", "AdapterResponseEnvelopeV2", "adapter", "adapter-response-envelope/v2"),
   d("ERL2-C-166", "SandboxInvocationManifestV2", "adapter", "sandbox-invocation-manifest/v2"),
   d("ERL2-C-167", "LocalObservationLimitsV1", "observation", "local-observation-limits/v1"),
-  d("ERL2-C-168", "LocalObservationPlanV1", "observation", "local-observation-plan/v1"),
+  // The plan and result became closed unions when owner-operated trusted-local
+  // execution arrived (ADR-ERL2-042): the certified variants below are the
+  // originals, byte-for-byte, and the trusted-local variants are separate
+  // documents rather than the same document with certification fields reused
+  // for something no certifier ever saw.
+  d("ERL2-C-168", "LocalObservationPlanV1", "observation", undefined, true),
+  d("ERL2-C-168a", "LocalObservationCertifiedPlanV1", "observation", "local-observation-plan/v1"),
+  d("ERL2-C-168b", "LocalObservationTrustedLocalPlanV1", "observation", "local-observation-plan/v1"),
   d("ERL2-C-169", "LocalObservationOperationRecordV1", "observation", undefined, true),
-  d("ERL2-C-170", "LocalObservationResultV1", "observation", "local-observation-result/v1"),
+  d("ERL2-C-170", "LocalObservationResultV1", "observation", undefined, true),
+  d("ERL2-C-170a", "LocalObservationCertifiedResultV1", "observation", "local-observation-result/v1"),
+  d("ERL2-C-170b", "LocalObservationTrustedLocalResultV1", "observation", "local-observation-result/v1"),
+
+  // Owner-operated trusted-local development path (ADR-ERL2-042). None of these
+  // is a certification artefact and none may be named as one.
+  d("ERL2-C-180", "TrustedLocalAdapterDeclarationV1", "adapter", "trusted-local-adapter-declaration/v1"),
+  d("ERL2-C-181", "TrustedLocalOwnerAcknowledgementV1", "adapter", undefined),
+  d("ERL2-C-182", "TrustedLocalObservationRecordV1", "observation", "trusted-local-observation-record/v1"),
+  d("ERL2-C-183", "TrustedLocalOperationOutcomeV1", "observation", undefined),
 
   // Subject-isolation qualification (ERL2-OQ-008, ADR-ERL2-016)
   d("ERL2-C-149", "IsolationSubstrateLockV1", "isolation", "isolation-substrate-lock/v1"),
