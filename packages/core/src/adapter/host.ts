@@ -94,6 +94,7 @@ import {
 import { assertEntryDigestUnchanged } from "./admission.js";
 import { verifyLocalAdapterCertificationV2 } from "./admission.js";
 import {
+  assertTrustedLocalControls,
   verifyTrustedLocalAdapterDeclaration,
   type LocalAdapterAuthorityV2,
 } from "./trustedLocal.js";
@@ -655,24 +656,14 @@ export class AdapterHost {
           );
         }
         assertLocalPlanScope(plan, admission.profile.operations, this.manifest);
-        // No certifier claimed anything about controls, so the plan's
-        // expectations are checked against the host's own report and nothing
-        // else. `admission.hostControlReport` already refused any control the
-        // manifest requires that this host does not enforce.
-        for (const expectation of plan.resource_limits.control_expectations) {
-          const actual = admission.hostControlReport.find(
-            (control) => control.control_id === expectation.control_id,
-          );
-          if (
-            actual === undefined ||
-            (expectation.required_state === "enforced" && actual.state !== "enforced")
-          ) {
-            throw new Erl2Error(
-              CODES.ADAPTER_SANDBOX_CONTROL_UNSUPPORTED,
-              `local observation requires unavailable control ${expectation.control_id}`,
-            );
-          }
-        }
+        // No certifier claimed anything about controls, so both the manifest's
+        // requirements and the plan's expectations are settled against the
+        // host's own report.
+        assertTrustedLocalControls(
+          admission.profile,
+          plan.resource_limits.control_expectations,
+          admission.hostControlReport,
+        );
       }
       if (
         options.egressPolicy !== undefined &&

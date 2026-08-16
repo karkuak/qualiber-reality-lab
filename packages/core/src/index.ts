@@ -458,6 +458,7 @@ export {
 export {
   TRUSTED_LOCAL_ACKNOWLEDGEMENT_TOKEN,
   assertTrustedLocalClaimCeiling,
+  assertTrustedLocalControls,
   verifyTrustedLocalAdapterDeclaration,
   type LocalAdapterAuthorityV2,
   type TrustedLocalAdmissionV2,

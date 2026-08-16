@@ -283,23 +283,10 @@ export function verifyTrustedLocalAdapterDeclaration(
     );
   }
 
-  // 10. Controls the manifest requires must actually be enforced by this host.
-  //     The receipt-based path compared a manifest requirement against a
-  //     certifier's *claim*; with no certifier there is no claim to compare
-  //     against, so the requirement is compared against the host's own report.
-  //     That is strictly the stronger check, and it is the only one available
-  //     that does not involve believing somebody.
+  // 10. The host's actual control states travel with the admission. What the
+  //     plan is allowed to do with them is decided where the plan is available
+  //     — see `assertTrustedLocalControls`.
   const hostControlReport = sandboxControlReport("local-process");
-  for (const control of profile.required_controls) {
-    const actual = hostControlReport.find((candidate) => candidate.control_id === control);
-    if (actual === undefined || actual.state !== "enforced") {
-      throw new Erl2Error(
-        CODES.ADAPTER_SANDBOX_CONTROL_UNSUPPORTED,
-        `the adapter requires control ${control}, which this host reports as ${actual?.state ?? "absent"}`,
-        { owner: "lab" },
-      );
-    }
-  }
 
   return {
     adapterId: manifest.adapter_id,
@@ -316,6 +303,64 @@ export function verifyTrustedLocalAdapterDeclaration(
     confinement: "absent",
     hostControlReport,
   };
+}
+
+/**
+ * Decides which controls a trusted-local run may proceed without.
+ *
+ * The certification path compared a manifest's requirement against a
+ * *certifier's claim* that the control was enforced. There is no certifier
+ * here, so there is no claim — the requirement is compared against the host's
+ * own report instead, which is both the only available check and the stronger
+ * one.
+ *
+ * A control the host cannot enforce does not automatically stop the run,
+ * because the `local-process` profile honestly reports thirteen container-only
+ * controls as unsupported and refusing on all of them would make this path
+ * unreachable rather than safe. It stops the run unless the *plan* named that
+ * control and declared `unsupported_permitted` — the operator deciding, in
+ * frozen bytes, to proceed without it. Silence is a refusal: a control the
+ * manifest requires and the plan never mentions must be enforced.
+ */
+export function assertTrustedLocalControls(
+  profile: SubjectAdapterProtocolProfileV2,
+  planExpectations: readonly {
+    readonly control_id: string;
+    readonly required_state: "enforced" | "unsupported_permitted";
+  }[],
+  hostControlReport: readonly SandboxControlReportV2[],
+): void {
+  const expectationOf = new Map(
+    planExpectations.map((expectation) => [expectation.control_id, expectation.required_state]),
+  );
+  const stateOf = new Map(
+    hostControlReport.map((control) => [control.control_id as string, control.state]),
+  );
+
+  for (const control of profile.required_controls) {
+    const enforced = stateOf.get(control) === "enforced";
+    if (enforced) continue;
+    if (expectationOf.get(control) === "unsupported_permitted") continue;
+    throw new Erl2Error(
+      CODES.ADAPTER_SANDBOX_CONTROL_UNSUPPORTED,
+      `the adapter requires control ${control}, which this host reports as ` +
+        `${stateOf.get(control) ?? "absent"} and the plan does not permit proceeding without`,
+      { owner: "lab" },
+    );
+  }
+
+  // The plan's own expectations, against the same report. A plan may require a
+  // control the manifest did not, and it may not require one this host lacks.
+  for (const expectation of planExpectations) {
+    const state = stateOf.get(expectation.control_id);
+    if (state === undefined || (expectation.required_state === "enforced" && state !== "enforced")) {
+      throw new Erl2Error(
+        CODES.ADAPTER_SANDBOX_CONTROL_UNSUPPORTED,
+        `local observation requires unavailable control ${expectation.control_id}`,
+        { owner: "lab" },
+      );
+    }
+  }
 }
 
 /**
