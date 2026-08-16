@@ -204,10 +204,23 @@ which any of those could be supplied.
 
 ### What is deliberately absent
 
-`ADAPTER-CERT-V2` does not exist on this branch. Neither does the negotiation
-probe that ran adapter code outside `AdapterHost`. Neither is referenced by any
-documentation, and there is no test-only route that could be mistaken for the
-public workflow.
+The **public certification command** does not exist on this branch. Neither does
+the negotiation probe that ran adapter code outside `AdapterHost`. Neither is
+referenced by any documentation, and there is no test-only route that could be
+mistaken for the public workflow. The shipped command list contains
+`declare-trusted-local-adapter` and `run-trusted-local-observation` and no
+`certify-adapter-v2`.
+
+What *does* remain, byte-identical to the base at `4d695bfb` and untouched by
+this package, is the internal `ADAPTER-CERT-V2` scope skeleton in
+`packages/core/src/adapter/certification.ts` and the
+`SubjectAdapterCertificationReceiptV2` contract it produces. Saying
+"`ADAPTER-CERT-V2` does not exist" would be the kind of overstatement this ADR
+exists to remove: the suite identifier, the receipt contract and the certified
+arm of the host's authority union are all still here. They are simply
+unreachable from any public command, and the trusted-local path never calls
+them — `verifyTrustedLocalAdapterDeclaration` rejects a receipt's
+`schema_version` outright rather than sharing a code path with it.
 
 ### Two checks were removed rather than kept
 
