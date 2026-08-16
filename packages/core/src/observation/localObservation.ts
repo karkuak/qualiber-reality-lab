@@ -13,6 +13,7 @@ import {
   assertLocalObservationClaimExclusions,
   assertNoLocalObservationGovernedFields,
   type AdapterOperation,
+  type AdapterRequestPredecessorV2,
   type AdapterRequestV2,
   type Hash,
   type Instant,
@@ -24,6 +25,7 @@ import {
 } from "@erl2/contracts";
 import { coreHash } from "@erl2/integrity";
 import { AdapterHost, type LocalAdapterOperationResult } from "../adapter/host.js";
+import { assertPredecessorMatches, compactPredecessorOf } from "./ancestry.js";
 
 const EFFECTFUL = new Set<AdapterOperation>([
   "acquire",
@@ -47,6 +49,16 @@ export class LocalObservationCoordinator {
   private readonly currentByOperation = new Map<string, LocalObservationOperationRecordV1>();
   private cleanupOnly = false;
   private outputFrozen = false;
+  /**
+   * The last operation that reached a terminal state, which is what the next
+   * request's compact predecessor must describe.
+   *
+   * Tracked rather than searched for, because "the operation before this one"
+   * is a fact about what ran, not about where the plan's cursor sits: after a
+   * failure the frozen cleanup suffix continues from the operation that
+   * actually completed last, not from the plan entry one sequence earlier.
+   */
+  private lastTerminal: TerminalRecord | undefined;
 
   constructor(plan: LocalObservationPlanV1) {
     this.plan = assertContract<LocalObservationPlanV1>("LocalObservationPlanV1", plan);
@@ -60,6 +72,18 @@ export class LocalObservationCoordinator {
 
   get operationRecords(): readonly LocalObservationOperationRecordV1[] {
     return [...this.records];
+  }
+
+  /**
+   * The compact predecessor the next request must carry, or `null` before any
+   * operation has reached a terminal state.
+   *
+   * A caller building requests asks the coordinator for this rather than
+   * assembling it, so there is one derivation of the chain and the runner
+   * cannot invent a link the coordinator would not accept.
+   */
+  nextPredecessor(): AdapterRequestPredecessorV2 | null {
+    return this.lastTerminal === undefined ? null : compactPredecessorOf(this.lastTerminal);
   }
 
   declare(request: AdapterRequestV2, at: Instant): LocalObservationOperationRecordV1 {
@@ -492,6 +516,17 @@ export class LocalObservationCoordinator {
         );
       }
     }
+    // The chain link, last: everything above decides whether this operation may
+    // run at all against the frozen plan, and reports that in plan vocabulary.
+    // This asks the narrower question — whether the request's predecessor is
+    // the operation this run actually finished before it — so a request that is
+    // at the right cursor but carries a predecessor from another run, another
+    // plan, or an edited record is refused here with an ancestry code.
+    assertPredecessorMatches(
+      parsed.ancestry.predecessor,
+      this.nextPredecessor(),
+      parsed.operation_id,
+    );
     return parsed;
   }
 
@@ -510,6 +545,7 @@ export class LocalObservationCoordinator {
     const parsed = assertContract<T>("LocalObservationOperationRecordV1", record);
     this.records.push(parsed);
     this.currentByOperation.set(parsed.operation_id, parsed);
+    if (isTerminal(parsed)) this.lastTerminal = parsed;
     return parsed;
   }
 }

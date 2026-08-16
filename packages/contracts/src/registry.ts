@@ -272,6 +272,9 @@ export const CONTRACTS: readonly ContractDescriptor[] = [
   d("ERL2-C-181", "TrustedLocalOwnerAcknowledgementV1", "adapter", undefined),
   d("ERL2-C-182", "TrustedLocalObservationRecordV1", "observation", "trusted-local-observation-record/v1"),
   d("ERL2-C-183", "TrustedLocalOperationOutcomeV1", "observation", undefined),
+  // Registered so the compact predecessor can be validated on its own, at the
+  // point it is constructed, rather than only as part of an enclosing request.
+  d("ERL2-C-184", "AdapterRequestPredecessorV2", "adapter", undefined, true),
 
   // Subject-isolation qualification (ERL2-OQ-008, ADR-ERL2-016)
   d("ERL2-C-149", "IsolationSubstrateLockV1", "isolation", "isolation-substrate-lock/v1"),

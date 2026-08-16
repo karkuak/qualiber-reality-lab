@@ -432,6 +432,10 @@ export {
   type LocalAdapterAdmissionV2,
 } from "./adapter/admission.js";
 export {
+  assertPredecessorMatches,
+  compactPredecessorOf,
+} from "./observation/ancestry.js";
+export {
   TRUSTED_LOCAL_ACKNOWLEDGEMENT_TOKEN,
   assertTrustedLocalClaimCeiling,
   verifyTrustedLocalAdapterDeclaration,

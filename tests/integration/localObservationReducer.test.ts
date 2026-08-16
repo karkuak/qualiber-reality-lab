@@ -5,6 +5,7 @@ import {
   Erl2Error,
   assertContract,
   type AdapterOperation,
+  type AdapterRequestPredecessorV2,
   type AdapterRequestV2,
   type LocalObservationPlanV1,
 } from "@erl2/contracts";
@@ -100,7 +101,13 @@ test("LOCAL-REDUCER: ambiguous effects are never replayed and force cleanup-only
     refusal(() => coordinator.declare(request(1), LOCAL_NOW)).code,
     CODES.ADAPTER_LOCAL_OPERATION_ORDER_INVALID,
   );
-  assert.equal(coordinator.declare(request(2), LOCAL_NOW).state, "declared");
+  // The residue operation is the frozen cleanup suffix, and its predecessor is
+  // the ambiguous acquire — the operation this run actually finished last, not
+  // the plan entry one sequence earlier.
+  assert.equal(
+    coordinator.declare(request(2, coordinator.nextPredecessor()), LOCAL_NOW).state,
+    "declared",
+  );
   assert.equal(coordinator.cleanupResult().status, "cleanup_incomplete");
 });
 
@@ -175,7 +182,15 @@ function customPlan(
   operations: readonly (readonly [AdapterOperation, boolean])[],
 ): {
   readonly plan: LocalObservationPlanV1;
-  readonly request: (index: number) => AdapterRequestV2;
+  /**
+   * `predecessor` defaults to a placeholder that no run ever produced, which is
+   * what the ancestry check exists to refuse. A test that means to dispatch a
+   * genuinely chained operation passes the coordinator's own `nextPredecessor()`.
+   */
+  readonly request: (
+    index: number,
+    predecessor?: AdapterRequestPredecessorV2 | null,
+  ) => AdapterRequestV2;
 } {
   const fixture = localFixture(ARCHIVE_SHAPE);
   const specs = operations.map(([operation, cleanup], sequence) => ({
@@ -194,26 +209,26 @@ function customPlan(
   });
   return {
     plan,
-    request: (index: number) => {
+    request: (index: number, predecessor?: AdapterRequestPredecessorV2 | null) => {
       const spec = specs[index];
       if (spec === undefined) throw new Error("fixture operation missing");
+      const link = predecessor === undefined
+        ? {
+            operation_id: specs[index - 1]?.operation_id ?? "op-absent",
+            operation_record_hash: H("1"),
+            request_hash: H("2"),
+            outcome: "completed" as const,
+            response_envelope_hash: H("3"),
+          }
+        : predecessor;
       const base = {
         ...fixture.request,
         operation_id: spec.operation_id,
         operation: spec.operation,
         operation_payload: spec.payload,
         ancestry: index === 0
-          ? { sequence: 0, predecessor: null }
-          : {
-              sequence: index,
-              predecessor: {
-                operation_id: specs[index - 1]!.operation_id,
-                operation_record_hash: H("1"),
-                request_hash: H("2"),
-                outcome: "completed" as const,
-                response_envelope_hash: H("3"),
-              },
-            },
+          ? { sequence: 0, predecessor: predecessor ?? null }
+          : { sequence: index, predecessor: link },
         execution_context: {
           ...fixture.request.execution_context,
           observation_plan_hash: plan.core_hash,
