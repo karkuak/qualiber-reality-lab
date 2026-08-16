@@ -37,10 +37,36 @@ test("LOCAL-ARCH: the coordinator delegates execution exclusively to AdapterHost
   }
 });
 
-test("LOCAL-ARCH: Package A added one production observation module and no second engine/store/supervisor", () => {
+test("LOCAL-ARCH: exactly one production module drives the adapter, and no second engine/store/supervisor exists", () => {
+  // The property is that local observation has one execution engine, not that
+  // its directory holds one file. Ancestry derivation and offline verification
+  // are pure readers; pinning the filename list made adding either look like
+  // adding an engine, while a real second engine called `localObservation2.ts`
+  // would have had to be noticed by hand. So the check now asks which modules
+  // actually reach AdapterHost, and requires the rest to hold no process,
+  // store or supervisor authority whatever they are named.
   const observationFiles = files(path.join(repoRoot, "packages", "core", "src", "observation"))
     .filter((file) => file.endsWith(".ts"));
-  assert.deepEqual(observationFiles.map((file) => path.basename(file)), ["localObservation.ts"]);
+  const drivers = observationFiles.filter((file) => {
+    const source = readFileSync(file, "utf8");
+    return /import \{ AdapterHost/.test(source) || source.includes("host.run(");
+  });
+  assert.deepEqual(drivers.map((file) => path.relative(repoRoot, file)), [
+    "packages/core/src/observation/localObservation.ts",
+  ]);
+  for (const file of observationFiles.filter((candidate) => !drivers.includes(candidate))) {
+    const source = readFileSync(file, "utf8");
+    for (const forbidden of [
+      "node:child_process", "spawn(", "spawnSync(", "exec(", "execFile(", "sandboxLauncher",
+      "containerSupervisor", "ArtifactStore", "MutationLedger", "RunWorkspace", "EnvironmentRun",
+    ]) {
+      assert.equal(
+        source.includes(forbidden),
+        false,
+        `${path.relative(repoRoot, file)} directly contains ${forbidden}`,
+      );
+    }
+  }
   const production = [
     ...files(path.join(repoRoot, "packages", "core", "src")),
     ...files(path.join(repoRoot, "packages", "adapter-sdk", "src")),
@@ -54,6 +80,10 @@ test("LOCAL-ARCH: Package A added one production observation module and no secon
 test("LOCAL-ARCH: no product token, converter, local governed role or trusted-status vocabulary entered the implementation", () => {
   const scoped = [
     coordinatorPath,
+    path.join(repoRoot, "packages", "core", "src", "observation", "ancestry.ts"),
+    path.join(repoRoot, "packages", "core", "src", "observation", "trustedLocalVerifier.ts"),
+    path.join(repoRoot, "packages", "core", "src", "adapter", "trustedLocal.ts"),
+    path.join(repoRoot, "packages", "core", "src", "adapter", "trustedLocalRegistry.ts"),
     path.join(repoRoot, "packages", "contracts", "schemas", "observation.schema.json"),
     path.join(repoRoot, "fixtures", "neutral", "local-archive-observer.mjs"),
     path.join(repoRoot, "fixtures", "neutral", "local-bundle-observer.mjs"),

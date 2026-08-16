@@ -436,6 +436,26 @@ export {
   compactPredecessorOf,
 } from "./observation/ancestry.js";
 export {
+  MAX_TRUSTED_LOCAL_PLAN_BYTES,
+  MAX_TRUSTED_LOCAL_RECORD_BYTES,
+  verifyTrustedLocalObservationRecord,
+  type TrustedLocalVerification,
+  type VerifyTrustedLocalRecordInput,
+} from "./observation/trustedLocalVerifier.js";
+export {
+  MAX_TRUSTED_LOCAL_DOCUMENT_BYTES,
+  TRUSTED_LOCAL_ADAPTER_DIR,
+  TRUSTED_LOCAL_DECLARATION_FILE,
+  TRUSTED_LOCAL_MANIFEST_FILE,
+  assertRegularDirectory,
+  assertRegularFile,
+  resolveTrustedLocalAdapterV2,
+  retainTrustedLocalAdapterV2,
+  type ResolvedTrustedLocalAdapter,
+  type RetainTrustedLocalAdapterInput,
+  type RetainedTrustedLocalAdmission,
+} from "./adapter/trustedLocalRegistry.js";
+export {
   TRUSTED_LOCAL_ACKNOWLEDGEMENT_TOKEN,
   assertTrustedLocalClaimCeiling,
   verifyTrustedLocalAdapterDeclaration,
