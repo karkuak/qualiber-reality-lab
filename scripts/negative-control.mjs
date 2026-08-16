@@ -2270,9 +2270,25 @@ export const CONTROLS = [
     id: "v2-not-scored-constant",
     what: "a local observation result cannot stop declaring itself unscored",
     file: "packages/contracts/schemas/observation.schema.json",
-    anchor: '"LocalObservationResultV1": {',
-    find: '"not_scored": { "const": true },',
-    replace: '"not_scored": { "type": "boolean" },',
+    // Re-anchored when the result became a closed union (ADR-ERL2-042). The
+    // enforcement point is unchanged — the certified result's constant — but
+    // `"LocalObservationResultV1": {` is now a two-line `oneOf` wrapper, so the
+    // window below it holds three matching constants instead of one. This is
+    // exactly the silent expiry the campaign's targeting proof exists to catch,
+    // and it caught it.
+    // The preimage reaches two lines further than the mutation, because an
+    // anchor's window runs to the end of the file and three variants now carry
+    // the same constant. Widening what must match is how the target stays
+    // exactly one; only the first line changes.
+    anchor: '"LocalObservationCertifiedResultV1": {',
+    find:
+      '"not_scored": { "const": true },\n' +
+      '        "not_governor_authorized": { "const": true },\n' +
+      '        "unsupported_claims": { "$ref": "erl2:observation#/$defs/LocalUnsupportedClaimsV1" },',
+    replace:
+      '"not_scored": { "type": "boolean" },\n' +
+      '        "not_governor_authorized": { "const": true },\n' +
+      '        "unsupported_claims": { "$ref": "erl2:observation#/$defs/LocalUnsupportedClaimsV1" },',
     tests: ["tests/dist/contract/localObservationContracts.test.js"],
     expect: "fail",
   },
@@ -3731,6 +3747,29 @@ export const CONTROLS = [
     mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
     mustFailCases: [
       "TRUSTED-LOCAL-VERIFY: an oversized record is refused before it is parsed",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-result-cannot-stop-declaring-itself-unscored",
+    what: "the trusted-local result variant carries its own unscored constant, and widening it is the only way to write a scored local result down",
+    file: "packages/contracts/schemas/observation.schema.json",
+    // The sibling of `v2-not-scored-constant`, for the variant this package
+    // added. Two variants means two constants, and a constant nothing measures
+    // is a constant that can quietly become a `boolean`.
+    anchor: '"LocalObservationTrustedLocalResultV1": {',
+    find:
+      '"not_scored": { "const": true },\n' +
+      '        "not_governor_authorized": { "const": true },\n' +
+      '        "not_independently_certified": { "const": true },',
+    replace:
+      '"not_scored": { "type": "boolean" },\n' +
+      '        "not_governor_authorized": { "const": true },\n' +
+      '        "not_independently_certified": { "const": true },',
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-VERIFY: scored, authenticated and production-ready claims are refused",
     ],
     expect: "fail",
   },

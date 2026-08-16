@@ -3,8 +3,8 @@
 **Date:** 2026-08-16
 **Companion to:** [ADR-ERL2-042](../adr/ADR-ERL2-042.md)
 **Base:** `4d695bfb3d23e804cf89aafa2aa5033ab31a15e6`, 207 controls
-**Head:** 228 controls — 207 retained unchanged, 21 appended, none removed,
-renamed, reordered or duplicated.
+**Head:** 229 controls — 206 retained unchanged, 1 re-anchored, 22 appended,
+none removed, renamed, reordered or duplicated.
 
 ## 1. Migration from the withdrawn operator candidate
 
@@ -38,7 +38,7 @@ and 8 are the only removals, and rows 5 and 6 name features that do not exist
 on this branch. Row 8's property is still true and still asserted, just not by a
 control.
 
-## 2. The twenty-one appended controls
+## 2. The twenty-two appended controls
 
 Each mutates exactly one enforcement point, compiles, reaches the intended
 runtime path, and fails a named behavioural case.
@@ -64,8 +64,28 @@ runtime path, and fails a named behavioural case.
 | `trusted-local-verifier-recomputes-the-terminal` | terminal derivation | contradictory terminal refused |
 | `trusted-local-verifier-closed-record-validation` | closed-schema record validation | unknown top-level / nested field, nested verdict refused |
 | `trusted-local-verifier-oversized-record-bound` | size bound before parse | oversized record refused |
+| `trusted-local-result-cannot-stop-declaring-itself-unscored` | contract constant on the trusted-local result's `not_scored` | scored / authenticated claims refused |
 | `trusted-local-certification-claim-is-unrepresentable` | contract constant on `independent_certification` | false certification claim refused |
 | `trusted-local-record-embeds-the-declaration-it-ran-under` | embedded ↔ retained declaration | replaced embedded declaration refused |
+
+## 2a. One base control re-anchored, and one added because of it
+
+`v2-not-scored-constant` anchored on `"LocalObservationResultV1": {` and found
+the first `"not_scored": { "const": true },` after it. Making the result a union
+turned that anchor into a two-line `oneOf` wrapper, so its window held three
+matching constants instead of one and the campaign reported
+`ambiguous_patch_target — found 3`. The broad suite caught it, which is what
+the targeting proof exists for.
+
+It is re-anchored on `"LocalObservationCertifiedResultV1": {`, measuring exactly
+the enforcement point it always measured. Because an anchor's window runs to the
+end of the file and three variants now carry the same constant, the preimage
+reaches two lines further than the mutation; only the first line changes.
+
+Two variants means two constants, so
+`trusted-local-result-cannot-stop-declaring-itself-unscored` was added for the
+one this package introduced. A constant nothing measures is a constant that can
+quietly become a `boolean`.
 
 ## 3. Three enforcement points deliberately without a control
 
