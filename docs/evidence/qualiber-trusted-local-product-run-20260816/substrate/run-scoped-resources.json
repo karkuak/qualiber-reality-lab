@@ -1,0 +1,49 @@
+{
+  "run_id": "01a01180-0e00-716c-a232-303236303831",
+  "project": "erl2-01a01180-0e00-716c-a232-303236303831",
+  "trusted_volume": "erl2-trusted-01a01180-0e00-716c-a232-303236303831",
+  "resources": [
+    {
+      "resource_id": "project-01a01180",
+      "kind": "project",
+      "run_scoped_name": "erl2-01a01180-0e00-716c-a232-303236303831",
+      "identity_hash": "sha256:1b9db2207f80f9018c2ea4506c17cd336006652f4a2d84b051b76e41ae0aee15",
+      "destroyable": true
+    },
+    {
+      "resource_id": "network-01a01180",
+      "kind": "network",
+      "run_scoped_name": "erl2-01a01180-0e00-716c-a232-303236303831-net",
+      "identity_hash": "sha256:5bac7c549b48b3eb342215238618ba07c34e53664db6b3140b517d152c726dee",
+      "destroyable": true
+    },
+    {
+      "resource_id": "container-otel-collector-01a01180",
+      "kind": "container",
+      "run_scoped_name": "erl2-01a01180-0e00-716c-a232-303236303831-otel-collector",
+      "identity_hash": "sha256:76244c289c4ecd4636857a0ae402e3fbf6b59d35bccfdc593821605c2efca9ef",
+      "destroyable": true
+    },
+    {
+      "resource_id": "container-quote-01a01180",
+      "kind": "container",
+      "run_scoped_name": "erl2-01a01180-0e00-716c-a232-303236303831-quote",
+      "identity_hash": "sha256:c1fd2d4952a4ac3b70a2ae4106d53955c7e7ba7fc5c86d9cb3ecdf2b73ed89fa",
+      "destroyable": true
+    },
+    {
+      "resource_id": "trusted-telemetry-01a01180",
+      "kind": "volume",
+      "run_scoped_name": "erl2-trusted-01a01180-0e00-716c-a232-303236303831",
+      "identity_hash": "sha256:53249201405182061f9f7ec581045f390d7444a6e5a98678540791717b3267e2",
+      "destroyable": true
+    },
+    {
+      "resource_id": "port-01a01180",
+      "kind": "port",
+      "run_scoped_name": "erl2-01a01180-0e00-716c-a232-303236303831-quote-port",
+      "identity_hash": "sha256:b8b2ae3ebf8493b4515b78754d82e4fd24006daf33c14171953c28d56f1bf0c6",
+      "destroyable": true
+    }
+  ]
+}

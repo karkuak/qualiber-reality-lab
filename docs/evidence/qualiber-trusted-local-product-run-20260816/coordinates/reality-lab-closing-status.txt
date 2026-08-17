@@ -1,0 +1,14 @@
+ M docs/decisions/trusted-local-observation-operator-surface.md
+ M packages/cli/src/index.ts
+ M packages/cli/src/trustedLocalDeclaration.ts
+ M packages/cli/src/trustedLocalObservation.ts
+ M packages/core/src/index.ts
+ M packages/core/src/observation/trustedLocalVerifier.ts
+ M tests/adversarial/trustedLocalVerifier.test.ts
+ M tests/integration/trustedLocalMultiOperation.test.ts
+ M tests/integration/trustedLocalOperator.test.ts
+ M tests/support/trustedLocalFixtures.ts
+?? fixtures/neutral/neutral-input-reading-observer.mjs
+?? packages/core/src/observation/trustedLocalInputs.ts
+?? packages/core/test/trustedLocalInputHardening.test.ts
+?? tests/integration/trustedLocalInputs.test.ts

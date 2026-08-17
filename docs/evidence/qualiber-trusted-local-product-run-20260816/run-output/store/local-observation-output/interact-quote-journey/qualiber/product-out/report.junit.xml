@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="1" failures="0" skipped="0">
+  <testsuite name="erl2_quote_journey" tests="1" failures="0" skipped="0">
+    <testcase classname="erl2_quote_journey" name="erl2_quote_journey"></testcase>
+  </testsuite>
+</testsuites>

@@ -1,0 +1,6 @@
+repository: qualiber
+path: /Users/karthik/Claude/Projects/Qualiber
+captured_utc: 2026-08-17T02:00:09Z
+branch: codex/erl2-subject-adapter-v2
+head: 6e7f5bbdbb70397922bd8fee923fcc2db321ead9
+committed_tree: 169e0aaaba6c0611cd33f16b3f57ccd3d6d170c6

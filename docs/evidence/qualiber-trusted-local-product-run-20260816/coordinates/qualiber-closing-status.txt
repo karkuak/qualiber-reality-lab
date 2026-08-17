@@ -1,0 +1,44 @@
+ M adapters/erl2-subject/ONBOARDING.md
+ M adapters/erl2-subject/certification/adapter-manifest.v2.json
+ M adapters/erl2-subject/package.json
+ M adapters/erl2-subject/scripts/build-manifest.mjs
+ M adapters/erl2-subject/src/adapter.ts
+ M adapters/erl2-subject/tests/adapter.test.ts
+ M adapters/erl2-subject/tests/v2-boundary.test.ts
+ M adapters/erl2-subject/tsconfig.typecheck.json
+ M docs/process/erl-ev3-study/session-record-EV3-S1.md
+ M docs/process/evaluator-reply-332-DRAFT.md
+?? _to_delete/deck_bundle_2026-08-13.tgz
+?? adapters/erl2-subject/scripts/write-trusted-local-plan-draft.mjs
+?? adapters/erl2-subject/tests/plan-draft-io.test.ts
+?? adapters/erl2-subject/tests/plan-draft.test.ts
+?? docs/process/cr100-unknown-key-diagnostic-triage-prompt.md
+?? docs/process/cr101-severity-override-triage-prompt.md
+?? docs/process/cr103-batched-flips-and-chain-entry-prompt.md
+?? docs/process/cr109-merge-and-mutation-characterisation-prompt.md
+?? docs/process/cr113-356-conflict-resolution-prompt.md
+?? docs/process/cr113-mutation-attestation-honesty-prompt.md
+?? docs/process/cr95-redrop-packed-cli-prompt.md
+?? docs/process/cr99-contract-health-surfacing-prompt.md
+?? docs/process/cut-340-playwright-export-prompt.md
+?? docs/process/cut-b-unknown-key-refusal-prompt.md
+?? docs/process/cut-c-declared-vs-applied-prompt.md
+?? docs/process/cut-d-severity-documented-prompt.md
+?? docs/process/cut-e-contract-mode-honoured-prompt.md
+?? docs/process/cut-f-info-clean-honesty-prompt.md
+?? docs/process/cut-g-explain-message-and-help-prompt.md
+?? docs/process/cutb-merge-and-redrop-prompt.md
+?? docs/process/erl-ev3-study/observer-support-session-prompt.md
+?? docs/process/erl-ev3-study/pre-session-waiver-DRAFT.md
+?? docs/process/erl-ev3-study/recruitment-send-kit.md
+?? docs/process/ev3-packet-repair-prompt.md
+?? docs/process/family-bd-filing-records-prompt.md
+?? docs/process/merge-323-325-and-branch-sweep-prompt.md
+?? docs/process/merge-331-334-335-336-slot-order-prompt.md
+?? docs/process/pending-dispositions-2026-08-07.md
+?? docs/process/publication-disclosure-boundary-analysis-prompt.md
+?? docs/process/qa-release-cockpit-prompt.md
+?? docs/process/r5-batched-closeout-prompt.md
+?? docs/process/review-2026-08-13-code-p2-prompt.md
+?? docs/process/tpm-session-handoff-2026-08-08.md
+?? docs/process/tpm-session-handoff.md

@@ -1,0 +1,14 @@
+independent residue scan (plain docker / lsof / ps, not the driver)
+run_id: 01a01180-0e00-716c-a232-303236303831
+project: erl2-01a01180-0e00-716c-a232-303236303831
+scanned_utc: 2026-08-17T01:59:47Z
+
+containers_by_run_label: (none)
+containers_by_name_substring: (none)
+networks_by_name_substring: (none)
+volumes_by_name_substring: (none)
+listener_on_published_port_58113: (none - port free)
+child_processes_by_run_id: (none)
+adapter_or_harness_processes: (none)
+
+RESIDUE_VERDICT: CLEAN

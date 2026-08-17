@@ -1,0 +1,28 @@
+{
+  "daemon_platform": "linux/arm64",
+  "images": {
+    "quote": {
+      "platform": "linux/arm64",
+      "locked_digest": "sha256:370d920d330a145a5e6769eab82dd256a11c8186c78d7afd7927119f402d2438",
+      "reference": "ghcr.io/open-telemetry/demo@sha256:370d920d330a145a5e6769eab82dd256a11c8186c78d7afd7927119f402d2438",
+      "locked_image_id": "sha256:370d920d330a145a5e6769eab82dd256a11c8186c78d7afd7927119f402d2438",
+      "container_image_id": "sha256:370d920d330a145a5e6769eab82dd256a11c8186c78d7afd7927119f402d2438",
+      "repo_digests": [
+        "ghcr.io/open-telemetry/demo@sha256:370d920d330a145a5e6769eab82dd256a11c8186c78d7afd7927119f402d2438"
+      ],
+      "running_bytes_match_lock": true
+    },
+    "otel-collector": {
+      "platform": "linux/arm64",
+      "locked_digest": "sha256:1fef9f07f04eb6775b4076ea4f817d6b7b9050e23e52941f0756ba08df798ea6",
+      "reference": "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib@sha256:1fef9f07f04eb6775b4076ea4f817d6b7b9050e23e52941f0756ba08df798ea6",
+      "locked_image_id": "sha256:1fef9f07f04eb6775b4076ea4f817d6b7b9050e23e52941f0756ba08df798ea6",
+      "container_image_id": "sha256:1fef9f07f04eb6775b4076ea4f817d6b7b9050e23e52941f0756ba08df798ea6",
+      "repo_digests": [
+        "otel/opentelemetry-collector-contrib@sha256:1fef9f07f04eb6775b4076ea4f817d6b7b9050e23e52941f0756ba08df798ea6",
+        "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib@sha256:1fef9f07f04eb6775b4076ea4f817d6b7b9050e23e52941f0756ba08df798ea6"
+      ],
+      "running_bytes_match_lock": true
+    }
+  }
+}

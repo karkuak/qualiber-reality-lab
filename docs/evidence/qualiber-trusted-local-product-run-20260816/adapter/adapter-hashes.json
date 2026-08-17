@@ -1,0 +1,23 @@
+{
+  "note": "every value below is recomputed here from the bytes retained in this bundle",
+  "artifact": {
+    "path": "adapter/qualiber-erl2-subject.mjs",
+    "byte_length": 42782,
+    "sha256": "sha256:3af5a4f0bee08d65f7730d8b5825dd4637141a5bc00f3b4c48711bb17e5a4548",
+    "expected": "sha256:3af5a4f0bee08d65f7730d8b5825dd4637141a5bc00f3b4c48711bb17e5a4548",
+    "matches_expected": true
+  },
+  "manifest_file": {
+    "path": "adapter/adapter-manifest.v2.json",
+    "byte_length": 1878,
+    "sha256": "sha256:984dfcbdc84f496aad6ac78fcc0b79faf9d534d8a669313d7cc680af2a2ef38a",
+    "expected": "sha256:984dfcbdc84f496aad6ac78fcc0b79faf9d534d8a669313d7cc680af2a2ef38a",
+    "matches_expected": true
+  },
+  "manifest_core": {
+    "recomputed": "sha256:dc062eeacf498030b5a0b85608b40ebd95a2b82781abc75bbfb8771720df9a47",
+    "declared_in_manifest": "sha256:dc062eeacf498030b5a0b85608b40ebd95a2b82781abc75bbfb8771720df9a47",
+    "expected": "sha256:dc062eeacf498030b5a0b85608b40ebd95a2b82781abc75bbfb8771720df9a47",
+    "matches_expected": true
+  }
+}

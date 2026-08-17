@@ -1,0 +1,59 @@
+{
+  "schema_version": "subject-adapter-manifest/v2",
+  "adapter_id": "qualiber-erl2-subject",
+  "version": "0.2.0",
+  "adapter_artifact_hash": "sha256:3af5a4f0bee08d65f7730d8b5825dd4637141a5bc00f3b4c48711bb17e5a4548",
+  "protocol_support": [
+    {
+      "protocol_version": "subject-adapter/v2",
+      "execution_modes": [
+        "local_observation"
+      ],
+      "operations": [
+        "acquire",
+        "validate-package",
+        "install",
+        "configure",
+        "interact",
+        "uninstall",
+        "translate-evidence",
+        "project",
+        "report-residue",
+        "compensate"
+      ],
+      "supported_package_kinds": [
+        "archive"
+      ],
+      "required_controls": [
+        "separate-process",
+        "process-tree-termination",
+        "wall-clock-deadline",
+        "bounded-request-bytes",
+        "bounded-response-bytes",
+        "writable-output-only",
+        "environment-variable-allowlist",
+        "bounded-diagnostics",
+        "input-mount-tamper-detection",
+        "egress-policy-adjudication",
+        "docker-socket-capability-denied",
+        "privileged-capability-denied"
+      ]
+    }
+  ],
+  "required_broker_capabilities": [
+    "network-egress",
+    "write-run-output",
+    "write-adapter-workspace",
+    "read-subject-visible-input"
+  ],
+  "network_allowlist_ids": [],
+  "certification_receipt_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "owner": "qualiber",
+  "core_hash": "sha256:dc062eeacf498030b5a0b85608b40ebd95a2b82781abc75bbfb8771720df9a47",
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "erl2-dev-qualiber-erl2-subject-owner-ed25519-1",
+    "signed_hash": "sha256:dc062eeacf498030b5a0b85608b40ebd95a2b82781abc75bbfb8771720df9a47",
+    "signature_base64": "aJb5D6XrGP05VTxhenjsCdmCXXUJppOYTKO08VNlfCBmV3FWRd+U1IdxBrSRMnrAM6XNBH4rkACHAG6mbnYIAA=="
+  }
+}

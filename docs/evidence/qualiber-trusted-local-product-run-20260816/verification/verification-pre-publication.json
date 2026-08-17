@@ -1,0 +1,46 @@
+{
+  "verifier": "@erl2/core verifyTrustedLocalObservationRecord (unmodified Lab code)",
+  "inputs": {
+    "recordPath": "/private/tmp/claude-502/-Users-karthik-Developer-qualiber-reality-lab/b52e0cbd-e48e-4d4b-aec2-31999b3f5916/scratchpad/tlrun-20260816/run-output/trusted-local-observation-record.json",
+    "planPath": "/private/tmp/claude-502/-Users-karthik-Developer-qualiber-reality-lab/b52e0cbd-e48e-4d4b-aec2-31999b3f5916/scratchpad/tlrun-20260816/run-output/observation-plan.json",
+    "registryRoot": "/private/tmp/claude-502/-Users-karthik-Developer-qualiber-reality-lab/b52e0cbd-e48e-4d4b-aec2-31999b3f5916/scratchpad/tlrun-20260816/run-output/registry",
+    "adapterEntryPath": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/dist/qualiber-erl2-subject.mjs",
+    "retainedInputRoot": "/private/tmp/claude-502/-Users-karthik-Developer-qualiber-reality-lab/b52e0cbd-e48e-4d4b-aec2-31999b3f5916/scratchpad/tlrun-20260816/run-output/inputs"
+  },
+  "verification": {
+    "ok": true,
+    "refusals": [],
+    "verified": {
+      "observationId": "01a00d6f-4c3c-7b54-9f66-e0adb70adf6b",
+      "planHash": "sha256:7ac4b9b654c8d3bc6f9fd3ce25eb09d3cebd44d595c5545889fb3db37d0fdbba",
+      "adapterArtifactHash": "sha256:3af5a4f0bee08d65f7730d8b5825dd4637141a5bc00f3b4c48711bb17e5a4548",
+      "declarationHash": "sha256:535592877c8e17a675a6dd8cf9701c4b83fd6837279459271336aef126d8d1cf",
+      "trustMode": "trusted_local_code",
+      "terminalStatus": "observed_complete",
+      "independentCertification": "absent",
+      "confinement": "absent"
+    }
+  },
+  "independent_recomputation": {
+    "record_file_sha256": "sha256:8a57bc16ac38ffbe0cbbe9529c072896d15d991d0bdadbe43941aea260e1677b",
+    "record_byte_length": 27553,
+    "record_core_hash_declared": "sha256:825e02e1fde5ed719f3e84b3676e392255ee85bca9d91fc510f44c21c3f4b8a7",
+    "record_core_hash_recomputed": "sha256:825e02e1fde5ed719f3e84b3676e392255ee85bca9d91fc510f44c21c3f4b8a7",
+    "record_core_hash_agrees": true,
+    "plan_file_sha256": "sha256:2e2227fa281274c8736431a54e68f85bcc1aecc3b7e2656c526653fbadcfde66",
+    "plan_byte_length": 5402,
+    "plan_file_hash_in_record": "sha256:2e2227fa281274c8736431a54e68f85bcc1aecc3b7e2656c526653fbadcfde66",
+    "plan_file_hash_agrees": true,
+    "adapter_artifact_sha256": "sha256:3af5a4f0bee08d65f7730d8b5825dd4637141a5bc00f3b4c48711bb17e5a4548",
+    "adapter_artifact_hash_in_record": "sha256:3af5a4f0bee08d65f7730d8b5825dd4637141a5bc00f3b4c48711bb17e5a4548",
+    "adapter_artifact_agrees": true
+  },
+  "terminal_checks": {
+    "ok": true,
+    "zero_refusals": true,
+    "terminal_status_observed_complete": true,
+    "independent_certification_absent": true,
+    "confinement_absent": true
+  },
+  "overall_pass": true
+}
