@@ -27,6 +27,58 @@ export const TRUSTED_LOCAL_ADAPTER_ID = "neutral-full-lifecycle-observer";
 export const TRUSTED_LOCAL_OWNER = "neutral fixture owner";
 
 /**
+ * The one host-provisioned input every default fixture plan declares.
+ *
+ * Real bytes with a real digest, not a placeholder. The plan's ArtifactRef is
+ * derived from these constants rather than typed, so the fixture cannot drift
+ * into declaring a digest nothing on disk has — which is precisely the state
+ * the materializer exists to refuse, and a fixture that could reach it would
+ * be testing the refusal rather than the path.
+ */
+export const TRUSTED_LOCAL_INPUT_ID = "package-input";
+export const TRUSTED_LOCAL_INPUT_MOUNT = "package-mount";
+export const TRUSTED_LOCAL_INPUT_RELATIVE = "package.bin";
+export const TRUSTED_LOCAL_INPUT_BYTES = Buffer.from(
+  "neutral trusted-local bound input\n",
+  "utf8",
+);
+
+/** `<input_root>/<mount_id>/<relative-file-path>`, the only convention the runner reads. */
+export function trustedLocalInputLogicalPath(
+  mountId: string = TRUSTED_LOCAL_INPUT_MOUNT,
+  relativePath: string = TRUSTED_LOCAL_INPUT_RELATIVE,
+): string {
+  return `${trustedLocalLimits().input_root}/${mountId}/${relativePath}`;
+}
+
+/** A host-provisioned plan input over exact bytes the caller also writes to disk. */
+export function trustedLocalPlanInput(options: {
+  readonly inputId?: string;
+  readonly mountId?: string;
+  readonly relativePath?: string;
+  readonly bytes?: Buffer;
+  readonly logicalPath?: string;
+  readonly byteLength?: number;
+  readonly fileSha256?: string;
+}): LocalObservationTrustedLocalPlanV1["inputs"][number] {
+  const bytes = options.bytes ?? TRUSTED_LOCAL_INPUT_BYTES;
+  return {
+    input_id: options.inputId ?? TRUSTED_LOCAL_INPUT_ID,
+    role: "package-input",
+    provenance_mode: "host_provisioned" as const,
+    artifact: {
+      path:
+        options.logicalPath ??
+        trustedLocalInputLogicalPath(options.mountId, options.relativePath),
+      media_type: "application/octet-stream",
+      byte_length: options.byteLength ?? bytes.byteLength,
+      file_sha256: (options.fileSha256 ?? hashBytes(bytes)) as `sha256:${string}`,
+      classification: "INTERNAL" as const,
+    },
+  };
+}
+
+/**
  * Controls this fixture's manifest requires.
  *
  * Only controls the `local-process` profile genuinely enforces, so the fixture
@@ -86,14 +138,31 @@ export const ALL_OPERATIONS: readonly AdapterOperation[] = [
   "report-residue",
 ];
 
+/**
+ * Which neutral observer a fixture set is built around.
+ *
+ * `input-reader` is the one that proves the mount: it reads its bound inputs
+ * back through the SDK and reports the digests it observed, so a case can
+ * assert on what the adapter saw rather than on what the host says it wrote.
+ */
+export type TrustedLocalFixtureName = "full-lifecycle" | "fault" | "input-reader";
+
+const FIXTURE_ENTRY: Readonly<Record<TrustedLocalFixtureName, string>> = {
+  "full-lifecycle": "neutral-full-lifecycle-observer.mjs",
+  fault: "neutral-fault-observer.mjs",
+  "input-reader": "neutral-input-reading-observer.mjs",
+};
+
+const FIXTURE_ADAPTER_ID: Readonly<Record<TrustedLocalFixtureName, string>> = {
+  "full-lifecycle": TRUSTED_LOCAL_ADAPTER_ID,
+  fault: "neutral-fault-observer",
+  "input-reader": "neutral-input-reading-observer",
+};
+
 export function trustedLocalEntry(
-  fixture: "full-lifecycle" | "fault" = "full-lifecycle",
+  fixture: TrustedLocalFixtureName = "full-lifecycle",
 ): string {
-  const name =
-    fixture === "fault"
-      ? "neutral-fault-observer.mjs"
-      : "neutral-full-lifecycle-observer.mjs";
-  return path.join(repoRoot, "fixtures", "neutral", name);
+  return path.join(repoRoot, "fixtures", "neutral", FIXTURE_ENTRY[fixture]);
 }
 
 /** The fault observer's handlers, in its own negotiation order. */
@@ -103,16 +172,36 @@ export const FAULT_OPERATIONS: readonly AdapterOperation[] = [
   "report-residue",
 ];
 
+/** The input-reading observer's handlers, in its own negotiation order. */
+export const INPUT_READER_OPERATIONS: readonly AdapterOperation[] = [
+  "acquire",
+  "translate-evidence",
+  "report-residue",
+];
+
+/**
+ * Three operations that reach a clean terminal without an obligation.
+ *
+ * No `start` and no `install`, so nothing has to be discharged, and a final
+ * `report-residue` answering `clean` is the whole cleanup story. That keeps
+ * every input case about the inputs.
+ */
+export const INPUT_READER_PLAN: readonly PlanOperationSpec[] = [
+  { operation: "acquire", cleanup: false },
+  { operation: "translate-evidence", cleanup: false },
+  { operation: "report-residue", cleanup: true },
+];
+
 export function trustedLocalManifest(
   operations: readonly AdapterOperation[] = ALL_OPERATIONS,
-  fixture: "full-lifecycle" | "fault" = "full-lifecycle",
+  fixture: TrustedLocalFixtureName = "full-lifecycle",
 ): SubjectAdapterManifestV2 {
   return assertContract<SubjectAdapterManifestV2>(
     "SubjectAdapterManifestV2",
     sealSigned(
       {
         schema_version: "subject-adapter-manifest/v2" as const,
-        adapter_id: fixture === "fault" ? "neutral-fault-observer" : TRUSTED_LOCAL_ADAPTER_ID,
+        adapter_id: FIXTURE_ADAPTER_ID[fixture],
         version: "1.0.0",
         adapter_artifact_hash: hashBytes(readFileSync(trustedLocalEntry(fixture))),
         protocol_support: [
@@ -295,6 +384,15 @@ export interface PlanOperationSpec {
   readonly cleanup: boolean;
 }
 
+/** Each observer's own negotiation order, which its manifest must match positionally. */
+const DEFAULT_FIXTURE_OPERATIONS: Readonly<
+  Record<TrustedLocalFixtureName, readonly AdapterOperation[]>
+> = {
+  "full-lifecycle": ALL_OPERATIONS,
+  fault: FAULT_OPERATIONS,
+  "input-reader": INPUT_READER_OPERATIONS,
+};
+
 export function trustedLocalPlan(
   manifest: SubjectAdapterManifestV2,
   declaration: TrustedLocalAdapterDeclarationV1,
@@ -320,20 +418,7 @@ export function trustedLocalPlan(
       timeout_ms: 15_000,
       cleanup: spec.cleanup,
     })),
-    inputs: [
-      {
-        input_id: "package-input",
-        role: "package-input",
-        provenance_mode: "host_provisioned" as const,
-        artifact: {
-          path: "observation-inputs/package.bin",
-          media_type: "application/octet-stream",
-          byte_length: 8,
-          file_sha256: `sha256:${"a".repeat(64)}`,
-          classification: "INTERNAL" as const,
-        },
-      },
-    ],
+    inputs: [trustedLocalPlanInput({})],
     resource_limits: trustedLocalLimits(),
     egress_policy: trustedLocalEgressPolicy(),
     allowed_capability_ids: [],
@@ -398,6 +483,16 @@ export interface WrittenTrustedLocalInputs {
   readonly manifest: SubjectAdapterManifestV2;
   readonly declaration: TrustedLocalAdapterDeclarationV1;
   readonly plan: LocalObservationTrustedLocalPlanV1;
+  /**
+   * `--bind-input` pairs for exactly the plan's host-provisioned inputs.
+   *
+   * Spread into the argv rather than assembled at each call site, so a case
+   * that is about something else cannot quietly stop binding an input and pass
+   * for the wrong reason.
+   */
+  readonly bindArgs: readonly string[];
+  /** Absolute source paths, by input id, for cases that want to tamper with one. */
+  readonly boundSources: ReadonlyMap<string, string>;
 }
 
 /** Serializes a complete input set into a caller-owned temporary directory. */
@@ -408,13 +503,21 @@ export function writeTrustedLocalInputs(
     readonly manifestOperations?: readonly AdapterOperation[];
     readonly declarationOverrides?: Partial<TrustedLocalAdapterDeclarationV1>;
     readonly planOverrides?: Partial<LocalObservationTrustedLocalPlanV1>;
-    readonly fixture?: "full-lifecycle" | "fault";
+    readonly fixture?: TrustedLocalFixtureName;
+    /**
+     * Bytes to write for each host-provisioned input, by input id.
+     *
+     * Defaults to the exact bytes the plan's ArtifactRef was derived from. A
+     * case that wants a digest or length mismatch supplies different bytes
+     * here and leaves the plan alone.
+     */
+    readonly sourceBytes?: ReadonlyMap<string, Buffer>;
   } = {},
 ): WrittenTrustedLocalInputs {
   mkdirSync(root, { recursive: true });
   const fixture = options.fixture ?? "full-lifecycle";
   const manifest = trustedLocalManifest(
-    options.manifestOperations ?? (fixture === "fault" ? FAULT_OPERATIONS : ALL_OPERATIONS),
+    options.manifestOperations ?? DEFAULT_FIXTURE_OPERATIONS[fixture],
     fixture,
   );
   const manifestBytes = json(manifest);
@@ -433,6 +536,21 @@ export function writeTrustedLocalInputs(
   const planPath = path.join(root, "observation-plan.json");
   writeFileSync(planPath, json(plan));
 
+  // The sources live beside the plan and outside the run's output root, which
+  // is where an operator's own fixtures would be and where the runner insists
+  // they are.
+  const sourceRoot = path.join(root, "bound-sources");
+  mkdirSync(sourceRoot, { recursive: true });
+  const bindArgs: string[] = [];
+  const boundSources = new Map<string, string>();
+  for (const input of plan.inputs) {
+    if (input.provenance_mode !== "host_provisioned") continue;
+    const source = path.join(sourceRoot, `${input.input_id}.bin`);
+    writeFileSync(source, options.sourceBytes?.get(input.input_id) ?? TRUSTED_LOCAL_INPUT_BYTES);
+    boundSources.set(input.input_id, source);
+    bindArgs.push("--bind-input", `${input.input_id}=${source}`);
+  }
+
   return {
     entryPath: trustedLocalEntry(fixture),
     manifestPath,
@@ -442,6 +560,8 @@ export function writeTrustedLocalInputs(
     manifest,
     declaration,
     plan,
+    bindArgs,
+    boundSources,
   };
 }
 

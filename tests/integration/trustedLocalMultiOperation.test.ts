@@ -57,6 +57,7 @@ function run(inputs: WrittenTrustedLocalInputs): ReturnType<typeof runCommand> {
     "--plan", inputs.planPath,
     "--owner-declaration", inputs.declarationPath,
     "--output-root", inputs.outputRoot,
+    ...inputs.bindArgs,
   ]);
 }
 

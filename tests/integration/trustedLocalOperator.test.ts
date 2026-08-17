@@ -100,9 +100,14 @@ test("TRUSTED-LOCAL-CLI: the worked neutral example executes end to end in a fre
   // Step one: write the declaration. The plan draft is sealed in the same
   // step, because a plan whose authority binding an operator typed by hand is
   // a binding nobody verified.
+  // The draft an operator actually writes: no declaration binding, no plan
+  // hash, and neither nested hash. All four are the command's arithmetic now.
   const draft = JSON.parse(readFileSync(inputs.planPath, "utf8")) as Record<string, unknown>;
   delete draft["trusted_local_declaration_hash"];
   delete draft["core_hash"];
+  for (const nested of ["resource_limits", "egress_policy"]) {
+    delete (draft[nested] as Record<string, unknown>)["core_hash"];
+  }
   const draftPath = path.join(root, "plan-draft.json");
   writeFileSync(draftPath, `${JSON.stringify(draft, null, 2)}\n`);
 
@@ -137,6 +142,7 @@ test("TRUSTED-LOCAL-CLI: the worked neutral example executes end to end in a fre
     "--plan", String(declaredData["sealed_plan_path"]),
     "--owner-declaration", String(declaredData["declaration_path"]),
     "--output-root", path.join(root, "worked-output"),
+    ...inputs.bindArgs,
   ]);
   assert.equal(ran.status, 0, ran.stdout.slice(0, 2000));
   const data = ran.json["data"] as Record<string, unknown>;
@@ -161,6 +167,7 @@ test("TRUSTED-LOCAL-CLI: the machine-readable summary is the whole story", () =>
     "--plan", inputs.planPath,
     "--owner-declaration", inputs.declarationPath,
     "--output-root", inputs.outputRoot,
+    ...inputs.bindArgs,
   ]);
   assert.equal(ran.status, 0, ran.stdout.slice(0, 1200));
   const data = ran.json["data"] as Record<string, unknown>;
@@ -221,6 +228,7 @@ test("TRUSTED-LOCAL-CLI: a governed input is refused by name", () => {
     "--plan", inputs.planPath,
     "--owner-declaration", inputs.declarationPath,
     "--output-root", inputs.outputRoot,
+    ...inputs.bindArgs,
     "--registry-governor", "/somewhere",
   ]);
   assert.equal(refused.ok, false);
@@ -238,6 +246,7 @@ test("TRUSTED-LOCAL-CLI: a certification receipt flag is refused by name", () =>
     "--plan", inputs.planPath,
     "--owner-declaration", inputs.declarationPath,
     "--output-root", inputs.outputRoot,
+    ...inputs.bindArgs,
     "--certification-receipt", "/somewhere",
   ]);
   assert.equal(refused.ok, false);
@@ -274,6 +283,7 @@ test("TRUSTED-LOCAL-CLI: the run creates nothing outside its own output root", (
     "--plan", inputs.planPath,
     "--owner-declaration", inputs.declarationPath,
     "--output-root", inputs.outputRoot,
+    ...inputs.bindArgs,
   ]);
   assert.equal(ran.ok, true, JSON.stringify(ran.errors));
   const after = readdirSync(root).sort();
@@ -299,6 +309,7 @@ test("TRUSTED-LOCAL-CLI: an existing record is never silently overwritten", () =
     "--plan", inputs.planPath,
     "--owner-declaration", inputs.declarationPath,
     "--output-root", inputs.outputRoot,
+    ...inputs.bindArgs,
   ]);
   assert.equal(first.ok, true, JSON.stringify(first.errors));
   const retained = readFileSync(path.join(inputs.outputRoot, "trusted-local-observation-record.json"));
@@ -309,6 +320,7 @@ test("TRUSTED-LOCAL-CLI: an existing record is never silently overwritten", () =
     "--plan", inputs.planPath,
     "--owner-declaration", inputs.declarationPath,
     "--output-root", inputs.outputRoot,
+    ...inputs.bindArgs,
   ]);
   assert.equal(second.ok, false, "a second run into the same root must refuse");
   assert.deepEqual(
@@ -332,6 +344,7 @@ test("TRUSTED-LOCAL-CLI: a symlinked adapter entry is refused rather than follow
     "--plan", inputs.planPath,
     "--owner-declaration", inputs.declarationPath,
     "--output-root", inputs.outputRoot,
+    ...inputs.bindArgs,
   ]);
   assert.equal(refused.ok, false);
   assert.equal(refused.errors?.[0]?.code, CODES.PATH_SYMLINK_REJECTED);

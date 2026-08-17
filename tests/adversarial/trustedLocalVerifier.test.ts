@@ -44,6 +44,7 @@ interface Bed {
   readonly recordPath: string;
   readonly planPath: string;
   readonly registryRoot: string;
+  readonly retainedInputRoot: string;
   readonly record: Doc;
   readonly plan: Doc;
 }
@@ -69,6 +70,7 @@ function bed(observationId?: string): Bed {
     "--plan", inputs.planPath,
     "--owner-declaration", inputs.declarationPath,
     "--output-root", inputs.outputRoot,
+    ...inputs.bindArgs,
   ]);
   assert.equal(result.ok, true, `the genuine run must succeed: ${JSON.stringify(result.errors)}`);
   // The forgery bed is a copy. The genuine evidence is never edited, so a
@@ -83,6 +85,7 @@ function bed(observationId?: string): Bed {
     recordPath,
     planPath,
     registryRoot: path.join(forgeryRoot, "registry"),
+    retainedInputRoot: path.join(forgeryRoot, "inputs"),
     record: JSON.parse(readFileSync(recordPath, "utf8")) as Doc,
     plan: JSON.parse(readFileSync(planPath, "utf8")) as Doc,
   };
@@ -98,6 +101,7 @@ function verify(
     planBytes: planBytes ?? readFileSync(b.planPath),
     registryRoot: b.registryRoot,
     adapterEntryPath: b.entryPath,
+    retainedInputRoot: b.retainedInputRoot,
   });
 }
 
@@ -143,6 +147,7 @@ test("TRUSTED-LOCAL-VERIFY: omitted plan bytes are refused", () => {
     planBytes: Buffer.alloc(0),
     registryRoot: b.registryRoot,
     adapterEntryPath: b.entryPath,
+    retainedInputRoot: b.retainedInputRoot,
   });
   assert.match(refusalOf(result), /plan bytes are required/);
 });
@@ -209,6 +214,7 @@ test("TRUSTED-LOCAL-VERIFY: a cross-run replay is refused", () => {
         planBytes: readFileSync(a.planPath),
         registryRoot: a.registryRoot,
         adapterEntryPath: a.entryPath,
+        retainedInputRoot: a.retainedInputRoot,
       }),
     ),
     /plan/,
@@ -278,6 +284,7 @@ test("TRUSTED-LOCAL-VERIFY: an oversized record is refused before it is parsed",
     planBytes: readFileSync(b.planPath),
     registryRoot: b.registryRoot,
     adapterEntryPath: b.entryPath,
+    retainedInputRoot: b.retainedInputRoot,
   });
   assert.match(refusalOf(result), /above the \d+-byte ceiling/);
 });
@@ -366,6 +373,7 @@ test("TRUSTED-LOCAL-VERIFY: an adapter whose bytes changed after the run is refu
     planBytes: readFileSync(b.planPath),
     registryRoot: b.registryRoot,
     adapterEntryPath: moved,
+    retainedInputRoot: b.retainedInputRoot,
   });
   assert.match(refusalOf(result), /no longer the bytes this observation ran/);
 });

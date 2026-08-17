@@ -14,6 +14,16 @@
  * package, no selected challenge, no governor registry and no certification
  * receipt, and there is no flag through which one could be supplied.
  *
+ * ## What it provisions
+ *
+ * Every input the plan declares `host_provisioned` is bound by the operator
+ * with a repeatable `--bind-input <input_id>=<absolute-source-path>`, copied
+ * beneath the output root, checked against the digest and length the plan
+ * declares, and exposed to the adapter as a read-only mount. The binding set
+ * must be exact: a missing binding, a duplicate, an unknown id or an extra one
+ * is a refusal, because an operator who thinks they supplied a file the run
+ * never used has been told nothing by the run succeeding.
+ *
  * ## What it is not
  *
  * It is not certification, not assurance, not sandboxed execution, not scoring,
@@ -41,11 +51,15 @@ import {
   AdapterHost,
   LocalObservationCoordinator,
   SystemClock,
+  assertBoundSource,
   assertRegularDirectory,
   assertRegularFile,
+  materializeTrustedLocalInputs,
   resolveTrustedLocalAdapterV2,
   retainTrustedLocalAdapterV2,
   verifyTrustedLocalObservationRecord,
+  type AdapterMount,
+  type TrustedLocalInputBinding,
 } from "@erl2/core";
 import { parseFlags, requireString } from "./args.js";
 import {
@@ -104,6 +118,29 @@ export interface RunTrustedLocalObservationOutput {
   readonly record_path: string;
   readonly record_file_hash: string;
   readonly retained_plan_path: string;
+  /**
+   * Where the run copied its host-provisioned inputs.
+   *
+   * In the summary and not in the record: offline verification needs the path
+   * to re-hash the tree, and an operator who did not keep this line can still
+   * derive it — it is `inputs/` beneath the output root they chose. It stays
+   * out of the record's core because an absolute path on one machine is not
+   * portable evidence, and a reader elsewhere could only mistake it for one.
+   */
+  readonly retained_input_root: string;
+  readonly retained_inputs: readonly {
+    readonly input_id: string;
+    readonly mount_id: string;
+    readonly relative_path: string;
+    readonly byte_length: number;
+    readonly file_sha256: string;
+  }[];
+  readonly input_mounts: readonly {
+    readonly mount_id: string;
+    readonly logical_path: string;
+    readonly mode: "read_only";
+    readonly purpose: "subject-visible-input";
+  }[];
   readonly offline_verification: { readonly ok: boolean; readonly refusals: readonly string[] };
   readonly independent_certification: "absent";
   readonly confinement: "absent";
@@ -127,6 +164,10 @@ export function runTrustedLocalObservation(
     { name: "plan", kind: "string", required: true },
     { name: "owner-declaration", kind: "string", required: true },
     { name: "output-root", kind: "string", required: true },
+    // Repeatable: one per host-provisioned plan input, and the set must be
+    // exact. The parser already accumulates a string list, so repetition is
+    // the flag's own semantics rather than something this command re-invents.
+    { name: "bind-input", kind: "string-list" },
   ]);
 
   const entryPath = assertRegularFile(requireString(flags, "adapter-entry"), "adapter entry");
@@ -149,7 +190,21 @@ export function runTrustedLocalObservation(
   );
 
   const outputRoot = assertRegularDirectory(requireString(flags, "output-root"), "output root");
+
+  // Every binding is split, made absolute and proved to be a regular
+  // non-symlink file outside the output tree *before* the output root is
+  // created, so a malformed or unreachable binding leaves nothing behind.
+  const bindings = parseBindings(flags["bind-input"], outputRoot);
+
   mkdirSync(outputRoot, { recursive: true, mode: 0o700 });
+
+  // ---- the bound bytes, before admission and before any host --------------
+  // A digest or length mismatch has to refuse here: after this point the
+  // admission bytes are durable and a run record becomes possible, and a run
+  // that retained evidence of an input it then rejected would be evidence of
+  // something that never happened.
+  const materialized = materializeTrustedLocalInputs({ plan, bindings, outputRoot });
+
   const registryRoot = path.join(outputRoot, "registry");
 
   // ---- durable admission, before any host exists --------------------------
@@ -170,7 +225,7 @@ export function runTrustedLocalObservation(
   });
 
   const clock = new SystemClock();
-  const host = buildHost(plan, resolved, entryPath, outputRoot, clock);
+  const host = buildHost(plan, resolved, entryPath, outputRoot, clock, materialized.mounts);
   const coordinator = new LocalObservationCoordinator(plan);
   if (host.localAuthorityModeV2 !== "trusted_local_code") {
     throw new Erl2Error(
@@ -256,6 +311,7 @@ export function runTrustedLocalObservation(
     planBytes: readFileSync(retainedPlanPath),
     registryRoot,
     adapterEntryPath: entryPath,
+    retainedInputRoot: materialized.retainedInputRoot,
   });
 
   const output: RunTrustedLocalObservationOutput = {
@@ -279,6 +335,20 @@ export function runTrustedLocalObservation(
     record_path: recordPath,
     record_file_hash: hashBytes(recordBytes),
     retained_plan_path: retainedPlanPath,
+    retained_input_root: materialized.retainedInputRoot,
+    retained_inputs: materialized.files.map((file) => ({
+      input_id: file.inputId,
+      mount_id: file.mountId,
+      relative_path: file.relativePath,
+      byte_length: file.byteLength,
+      file_sha256: file.fileSha256,
+    })),
+    input_mounts: materialized.mounts.map((mount) => ({
+      mount_id: mount.mountId,
+      logical_path: mount.logicalPath,
+      mode: "read_only" as const,
+      purpose: mount.purpose,
+    })),
     offline_verification: { ok: verification.ok, refusals: verification.refusals },
     independent_certification: "absent",
     confinement: "absent",
@@ -311,6 +381,41 @@ export function runTrustedLocalObservation(
   return output;
 }
 
+/**
+ * Splits every `--bind-input <input_id>=<absolute-source-path>` value.
+ *
+ * Only the *shape* is decided here — that there is one `=`, that both halves
+ * are non-empty, that the path is absolute, and that it names a regular
+ * non-symlink file outside the output tree. Whether the set of bindings matches
+ * the plan is not this function's question: that comparison belongs with the
+ * plan and lives in the materializer, so one implementation answers it for the
+ * CLI and for anything else that ever calls in.
+ */
+function parseBindings(
+  raw: string | boolean | readonly string[] | undefined,
+  outputRoot: string,
+): readonly TrustedLocalInputBinding[] {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw)) {
+    throw new Erl2Error(
+      CODES.CFG_MISSING_REQUIRED,
+      "--bind-input takes <input_id>=<absolute-source-path>",
+    );
+  }
+  return (raw as readonly string[]).map((value) => {
+    const separator = value.indexOf("=");
+    const inputId = separator < 0 ? "" : value.slice(0, separator);
+    const source = separator < 0 ? "" : value.slice(separator + 1);
+    if (separator < 0 || inputId === "" || source === "") {
+      throw new Erl2Error(
+        CODES.CFG_MISSING_REQUIRED,
+        `--bind-input ${value} is malformed; the value is <input_id>=<absolute-source-path>`,
+      );
+    }
+    return { inputId, sourcePath: assertBoundSource(source, inputId, outputRoot) };
+  });
+}
+
 /** Refuses a governed input by name, before any flag is parsed. */
 function assertNoGovernedFlags(argv: readonly string[]): void {
   for (const forbidden of FORBIDDEN_FLAGS) {
@@ -329,6 +434,7 @@ function buildHost(
   entryPath: string,
   outputRoot: string,
   clock: SystemClock,
+  mounts: readonly AdapterMount[],
 ): AdapterHost {
   const workspaceRoot = path.join(outputRoot, "workspace");
   const storeRoot = path.join(outputRoot, "store");
@@ -342,6 +448,10 @@ function buildHost(
     adapterEntryPath: entryPath,
     workspaceRoot,
     store: new ArtifactStore(storeRoot),
+    // Read-only by construction: the host fingerprints every mount before the
+    // adapter sees it and refuses the run if the tree changed, and the retained
+    // files are mode 0400 beneath owner-only directories.
+    mounts,
     clock,
     wallClockMs: plan.resource_limits.wall_clock_ms,
     maxRequestBytes: plan.resource_limits.max_request_bytes,

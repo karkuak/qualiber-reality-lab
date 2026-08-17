@@ -443,6 +443,22 @@ export {
   type VerifyTrustedLocalRecordInput,
 } from "./observation/trustedLocalVerifier.js";
 export {
+  TRUSTED_LOCAL_INPUTS_DIR,
+  TRUSTED_LOCAL_INPUT_CEILINGS,
+  assertBoundSource,
+  materializeTrustedLocalInputs,
+  retainedInputRootOf,
+  trustedLocalInputMappings,
+  verifyRetainedTrustedLocalInputs,
+  type MaterializeTrustedLocalInputsInput,
+  type MaterializedTrustedLocalInput,
+  type MaterializedTrustedLocalInputs,
+  type TrustedLocalInputBinding,
+  type TrustedLocalInputCeilings,
+  type TrustedLocalInputMapping,
+  type TrustedLocalInputMount,
+} from "./observation/trustedLocalInputs.js";
+export {
   MAX_TRUSTED_LOCAL_DOCUMENT_BYTES,
   TRUSTED_LOCAL_ADAPTER_DIR,
   TRUSTED_LOCAL_DECLARATION_FILE,

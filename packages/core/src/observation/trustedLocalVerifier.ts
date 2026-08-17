@@ -33,6 +33,16 @@
  * Without them the record's `plan_hash` is a number nobody can check, and the
  * previous verifier accepted a cross-plan replay for exactly that reason. There
  * is no mode of this function that runs without the plan.
+ *
+ * ## Why the retained inputs are re-hashed
+ *
+ * The plan declares a digest and a length for every host-provisioned input, so
+ * the plan is the expected-input ledger and the bytes on disk are the claim
+ * being checked. Rehashing them here closes the gap between "the run said it
+ * copied these bytes" and "these are the bytes an adapter could read now": a
+ * retained input edited after the run, deleted, replaced with a symlink, or
+ * joined by a file nobody planned is refused. The retained input root is an
+ * explicit argument for the same reason the plan bytes are.
  */
 
 import { readFileSync } from "node:fs";
@@ -62,6 +72,7 @@ import {
   assertRegularFile,
 } from "../adapter/trustedLocalRegistry.js";
 import { compactPredecessorOf } from "./ancestry.js";
+import { verifyRetainedTrustedLocalInputs } from "./trustedLocalInputs.js";
 
 /**
  * Ceiling for a retained record, checked before it is parsed.
@@ -98,6 +109,21 @@ export interface VerifyTrustedLocalRecordInput {
   readonly planBytes: Buffer;
   readonly registryRoot: string;
   readonly adapterEntryPath: string;
+  /**
+   * Where the run materialized its host-provisioned inputs.
+   *
+   * Mandatory and explicit, for the same reason `planBytes` is: an argument a
+   * caller may omit is an argument most callers will omit, and a verification
+   * that silently skipped the input tree would report `ok` for a run whose
+   * adapter read bytes nobody checked. A plan with no host-provisioned inputs
+   * expects nothing here and passes with the directory absent — which is the
+   * zero-input case, not a way to opt out.
+   *
+   * A physical path, so it is supplied by the caller rather than read from the
+   * record: an absolute location on one machine is not portable evidence and
+   * does not belong in the record's core.
+   */
+  readonly retainedInputRoot: string;
 }
 
 export function verifyTrustedLocalObservationRecord(
@@ -180,6 +206,19 @@ export function verifyTrustedLocalObservationRecord(
   const admission = readRetainedAdmission(input.registryRoot, record, refuse);
   if (admission !== undefined) {
     verifyAdmissionBinding(record, plan, admission, input.adapterEntryPath, refuse);
+  }
+
+  // ---- 4b. the retained inputs, re-hashed from the bytes on disk ----------
+  // Derived from the retained plan's own host-provisioned ArtifactRefs. The
+  // plan is bound to the record by `plan_hash` and `plan_file_hash` above, so
+  // it is already the authoritative ledger of what should be there; a second
+  // copy of the same claims inside the record would add a way for two lists to
+  // disagree and no way to check either.
+  for (const refusal of verifyRetainedTrustedLocalInputs({
+    plan,
+    retainedInputRoot: input.retainedInputRoot,
+  })) {
+    refuse(refusal);
   }
 
   // ---- 5. the operation chain, rebuilt from the plan ----------------------

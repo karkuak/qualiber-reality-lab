@@ -267,11 +267,28 @@ function readOwnerEvidence(
 }
 
 /**
- * Stamps a plan draft with the declaration it runs under and its own hash.
+ * The nested hashes an operator would otherwise compute by hand, in the order
+ * the outer hash depends on them.
  *
- * The draft carries everything a plan needs except the two fields only this
- * command can compute. A plan whose authority binding an operator typed by
- * hand would be a plan whose binding nobody verified.
+ * `resource_limits` and `egress_policy` are sealed documents in their own
+ * right, and the plan's `core_hash` covers them *including* their own
+ * `core_hash` fields. So there is a strict order — limits, then egress, then
+ * the plan — and getting it wrong produces a plan that validates and hashes to
+ * a number nothing else agrees with. That is exactly the arithmetic a person
+ * should not be doing with a calculator and a JSON canonicalizer, which is why
+ * the draft omits all three and this command computes all three.
+ */
+const NESTED_PLAN_HASH_FIELDS = ["resource_limits", "egress_policy"] as const;
+
+/**
+ * Stamps a plan draft with the declaration it runs under and every hash it
+ * needs.
+ *
+ * The draft carries everything a plan needs except the fields only this command
+ * can compute. A plan whose authority binding an operator typed by hand would
+ * be a plan whose binding nobody verified — and the same argument applies to a
+ * nested hash, which nobody would notice was wrong until a run refused with a
+ * message about a stale limits document.
  */
 function sealPlanDraft(
   flags: ReturnType<typeof parseFlags>,
@@ -300,8 +317,32 @@ function sealPlanDraft(
       );
     }
   }
+
+  // A pre-carried nested hash is refused rather than overwritten. Silently
+  // replacing one would mean an operator who computed it wrong — or who copied
+  // it from a different plan — gets a valid plan back and never learns that the
+  // number they supplied was ignored.
+  const sealed: Record<string, unknown> = { ...draft };
+  for (const field of NESTED_PLAN_HASH_FIELDS) {
+    const nested = draft[field];
+    if (nested === undefined) continue;
+    if (nested === null || typeof nested !== "object" || Array.isArray(nested)) {
+      throw new Erl2Error(
+        CODES.SCHEMA_VALIDATION_FAILED,
+        `the plan draft's ${field} must be a JSON object`,
+      );
+    }
+    if (Object.hasOwn(nested, "core_hash")) {
+      throw new Erl2Error(
+        CODES.SCHEMA_VALIDATION_FAILED,
+        `the plan draft must not carry ${field}.core_hash; this command computes it`,
+      );
+    }
+    sealed[field] = { ...(nested as Record<string, unknown>), core_hash: coreHash(nested) };
+  }
+
   const planBase = {
-    ...draft,
+    ...sealed,
     trust_mode: "trusted_local_code" as const,
     adapter_id: manifest.adapter_id,
     adapter_version: manifest.version,
@@ -309,6 +350,9 @@ function sealPlanDraft(
     adapter_artifact_hash: declaration.adapter_artifact_hash,
     trusted_local_declaration_hash: declaration.core_hash,
   };
+  // Closed-schema validation last, over the completed plan: a draft that is
+  // missing a field or carries an unknown one is refused here, and nothing
+  // partially sealed reaches disk.
   const plan = assertContract<LocalObservationTrustedLocalPlanV1>(
     "LocalObservationTrustedLocalPlanV1",
     { ...planBase, core_hash: coreHash(planBase) },
