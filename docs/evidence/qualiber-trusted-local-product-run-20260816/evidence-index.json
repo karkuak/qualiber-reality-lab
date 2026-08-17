@@ -1,0 +1,593 @@
+{
+  "schema": "qualiber-reality-lab/task-local-evidence-index/v1",
+  "bundle": "qualiber-trusted-local-product-run-20260816",
+  "note": "every retained regular file except this index and its digest sidecar; paths are relative POSIX and sorted bytewise",
+  "file_count": 117,
+  "files": [
+    {
+      "path": "README.md",
+      "byte_length": 14667,
+      "sha256": "sha256:3c7f4c222a80d1c5623c88bc06c1e70833dcebb5fc189a55eac3688424c4fd0f"
+    },
+    {
+      "path": "adapter/adapter-hashes.json",
+      "byte_length": 1047,
+      "sha256": "sha256:bae5cea1303df81ba779059f9d284d135afb0960ae3cb566cdb93c39b4aafc4b"
+    },
+    {
+      "path": "adapter/adapter-manifest.v2.json",
+      "byte_length": 1878,
+      "sha256": "sha256:984dfcbdc84f496aad6ac78fcc0b79faf9d534d8a669313d7cc680af2a2ef38a"
+    },
+    {
+      "path": "adapter/qualiber-erl2-subject.mjs",
+      "byte_length": 42782,
+      "sha256": "sha256:3af5a4f0bee08d65f7730d8b5825dd4637141a5bc00f3b4c48711bb17e5a4548"
+    },
+    {
+      "path": "adapter/runtime-dependency-provenance.json",
+      "byte_length": 3006,
+      "sha256": "sha256:a2433a78aeaf4a3359431cfa88f9a7d67da03fd7d9c20e7266f01ce4d94410e7"
+    },
+    {
+      "path": "commands/command-log.tsv",
+      "byte_length": 6064,
+      "sha256": "sha256:bf5c80029b5104118e5d9f0c344d27e1352b0041a6fed5a8561a42fdd4314df1"
+    },
+    {
+      "path": "coordinates/qualiber-closing-status.txt",
+      "byte_length": 2321,
+      "sha256": "sha256:5f786c9c4a241ca9f3bb45d292d1342e2fa06d06f82952f0a692049294e442a8"
+    },
+    {
+      "path": "coordinates/qualiber-closing.txt",
+      "byte_length": 244,
+      "sha256": "sha256:a70e15e70a18e0e0746e12587b86d74f01a20486821312fae0b58b223a3968be"
+    },
+    {
+      "path": "coordinates/qualiber-opening-status.txt",
+      "byte_length": 2321,
+      "sha256": "sha256:5f786c9c4a241ca9f3bb45d292d1342e2fa06d06f82952f0a692049294e442a8"
+    },
+    {
+      "path": "coordinates/qualiber-opening.txt",
+      "byte_length": 244,
+      "sha256": "sha256:e958316a8c22f0f31cf61b44c3ed5f8029613f0a7038dbe19e4c4e8d3f8573c5"
+    },
+    {
+      "path": "coordinates/reality-lab-closing-status.txt",
+      "byte_length": 686,
+      "sha256": "sha256:5301e21a72eec062644e076405b9a5ae24af04d1e43c7023eca3629e2c8b7ae9"
+    },
+    {
+      "path": "coordinates/reality-lab-closing.txt",
+      "byte_length": 757,
+      "sha256": "sha256:e2fee40fc5ebc6f1beaec8181d9580a0677749d8c35c18e45e1d78703f14ece5"
+    },
+    {
+      "path": "coordinates/reality-lab-opening-status.txt",
+      "byte_length": 686,
+      "sha256": "sha256:5301e21a72eec062644e076405b9a5ae24af04d1e43c7023eca3629e2c8b7ae9"
+    },
+    {
+      "path": "coordinates/reality-lab-opening.txt",
+      "byte_length": 262,
+      "sha256": "sha256:4020ff06553def6129f77e16dc99e55f0427d4bac3d4ba390adce91959011467"
+    },
+    {
+      "path": "declaration/trusted-local-declaration.json",
+      "byte_length": 2388,
+      "sha256": "sha256:39847e1b3fd0a82e46b2384339425268159eaa6c4b494039560a5dbfaf4f0b47"
+    },
+    {
+      "path": "input/endpoint.materialized.json",
+      "byte_length": 95,
+      "sha256": "sha256:9c6283e9587620a042b8e1f7662f3dfd4db9c4e58b6a21ef35e3e3ff04a7b34d"
+    },
+    {
+      "path": "input/endpoint.supplied.json",
+      "byte_length": 95,
+      "sha256": "sha256:9c6283e9587620a042b8e1f7662f3dfd4db9c4e58b6a21ef35e3e3ff04a7b34d"
+    },
+    {
+      "path": "plan/plan-draft.generated.json",
+      "byte_length": 4704,
+      "sha256": "sha256:2a64ec5516f83f15335290903688517b181836508678d31f2a92cacf61589f4d"
+    },
+    {
+      "path": "plan/plan-sealed.json",
+      "byte_length": 5402,
+      "sha256": "sha256:2e2227fa281274c8736431a54e68f85bcc1aecc3b7e2656c526653fbadcfde66"
+    },
+    {
+      "path": "run-output/inputs/environment-endpoint/endpoint.json",
+      "byte_length": 95,
+      "sha256": "sha256:9c6283e9587620a042b8e1f7662f3dfd4db9c4e58b6a21ef35e3e3ff04a7b34d"
+    },
+    {
+      "path": "run-output/observation-plan.json",
+      "byte_length": 5402,
+      "sha256": "sha256:2e2227fa281274c8736431a54e68f85bcc1aecc3b7e2656c526653fbadcfde66"
+    },
+    {
+      "path": "run-output/registry/trusted-local-adapters/dc062eeacf498030b5a0b85608b40ebd95a2b82781abc75bbfb8771720df9a47/adapter-manifest.v2.json",
+      "byte_length": 1878,
+      "sha256": "sha256:984dfcbdc84f496aad6ac78fcc0b79faf9d534d8a669313d7cc680af2a2ef38a"
+    },
+    {
+      "path": "run-output/registry/trusted-local-adapters/dc062eeacf498030b5a0b85608b40ebd95a2b82781abc75bbfb8771720df9a47/trusted-local-declaration.v1.json",
+      "byte_length": 2388,
+      "sha256": "sha256:39847e1b3fd0a82e46b2384339425268159eaa6c4b494039560a5dbfaf4f0b47"
+    },
+    {
+      "path": "run-output/store/local-observation-output/configure-environment-endpoint/configure/endpoint.txt",
+      "byte_length": 16,
+      "sha256": "sha256:fe3748b77f21a3cec5ae93968217999b2ffc03f4642b12b8e1b9eee0c7c0cca4"
+    },
+    {
+      "path": "run-output/store/local-observation-output/configure-environment-endpoint/configure/endpoint.txt.frozen",
+      "byte_length": 257,
+      "sha256": "sha256:573ef6b465dd6ca2977ba2eb800617dce7b95c5eba9c08e1dcc7ce777c3591b3"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/capture.json",
+      "byte_length": 6729,
+      "sha256": "sha256:6e3ef7bfc9b00ea5959a727770a2293957310caf60a7a74c87b72a18aa96a68b"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/capture.json.frozen",
+      "byte_length": 256,
+      "sha256": "sha256:0b44ef30416266ab6d649d859158fbbd6d85578a6b15be2060e60dc595013dc9"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/evidence-pack.json",
+      "byte_length": 1408,
+      "sha256": "sha256:a49864776cc3f9f60243f3ff9e9f69983d8674be32951e93d5dfb61040f206dc"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 274,
+      "sha256": "sha256:84c568366f4f15f88b618ce553df3f7f9983e7732ba694b9bde9381c44e91eb3"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/report.json",
+      "byte_length": 4750,
+      "sha256": "sha256:eb0aef35d3db42d0373c8393b82ef302a021e8978b53d306e1f6af3679f33422"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/report.json.frozen",
+      "byte_length": 267,
+      "sha256": "sha256:8bd9a6398411083657f4ff1f4dbad47baaddc26132a434c313f05353465182ff"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/report.junit.xml",
+      "byte_length": 274,
+      "sha256": "sha256:661db4b56c69199b19086c20142bfc6b17d9ad3fa086c0e8eb2505215e6a3e10"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 265,
+      "sha256": "sha256:163be0b28d8238c4a7443555bf6271ec2bc3acdafbe29b2104cb3e379c3c878e"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/report.md",
+      "byte_length": 348,
+      "sha256": "sha256:72bd2ab9fc06600376d39b510b619ff80887e9b244b79a82eb467a847f66b271"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/report.md.frozen",
+      "byte_length": 258,
+      "sha256": "sha256:3fedad3298e06715553b309d8bc9bd739bd884202f5abae1e42d8a4623c244f8"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/run-result.json",
+      "byte_length": 286,
+      "sha256": "sha256:43b4b2cb26cfa5c51b1c738439b407e2a784872b7f5315c78b92da726cde6f4c"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 270,
+      "sha256": "sha256:9db8636b5e5a11f9b78921433c93d1c45ce72522306b1b281616a1e7697d9725"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/telemetrytest.decision.local-1.0-mswl2h2w-ece6637d.15b34699887c.snap.json",
+      "byte_length": 1672,
+      "sha256": "sha256:f03a059be30e4675edabe1052c3ffa0f279bf56924168efba81c6cbea91986af"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/telemetrytest.decision.local-1.0-mswl2h2w-ece6637d.15b34699887c.snap.json.frozen",
+      "byte_length": 329,
+      "sha256": "sha256:907d4a8a04f412abf886110028f1a846dcc2ec5a01486b3684eb29441cc4484d"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/telemetrytest.eligibility.json",
+      "byte_length": 826,
+      "sha256": "sha256:e669f01651d6208263316f99e0ff8bdff6b215da82a116a48011135bc9e3d57a"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/telemetrytest.eligibility.json.frozen",
+      "byte_length": 285,
+      "sha256": "sha256:e20852e97894d2c538716bd605cb672b82096d27ee7e237acf0b14016950b25c"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 2370,
+      "sha256": "sha256:3e89c29f328d201fa7ffc98495cb8ee4476eedbcab1b0413fb2bc4e6df5d08c5"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 285,
+      "sha256": "sha256:b9a462813d380b9e99eb1681e0205a74f5abb5a7c86bd79a80b83850590ebd62"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/run-summary.json",
+      "byte_length": 2646,
+      "sha256": "sha256:406a57abfff23fdadc496a275c26c55826f7e3b44f50df244c5a4032d94c11fb"
+    },
+    {
+      "path": "run-output/store/local-observation-output/interact-quote-journey/qualiber/run-summary.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:32a7733e051e5805bdb7d6d15059b4d7cf37703231d9f2809d5d12d218228a23"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/configure-environment-endpoint/capability-grant.json",
+      "byte_length": 709,
+      "sha256": "sha256:32261ae9ba62101058d61e0b157399b7a38501c00626b4271cf5b63b06f70caa"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/configure-environment-endpoint/capability-grant.json.frozen",
+      "byte_length": 273,
+      "sha256": "sha256:ae40c62f50ecebd3fe46f579c83f1a10dc5a7dc59a0af91fdc922766d677aab9"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/configure-environment-endpoint/diagnostics-manifest.json",
+      "byte_length": 564,
+      "sha256": "sha256:90501af1c530edd6458a43cfee245a16df01499020315b2aeee726a156ef008b"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/configure-environment-endpoint/diagnostics-manifest.json.frozen",
+      "byte_length": 277,
+      "sha256": "sha256:2f8f205684de41edffabdf47edef26fa3adab6ea8bf2c25014189c7eaa76a1ec"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/configure-environment-endpoint/response-envelope.json",
+      "byte_length": 894,
+      "sha256": "sha256:0a22742b32adb1ed524a21eba9e1360fac5e6f420420ccffd0aac77b2fafaea5"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/configure-environment-endpoint/response-envelope.json.frozen",
+      "byte_length": 274,
+      "sha256": "sha256:a14d96bf17b7e0e2cea09b6bcb5cf9633545cab2eb2119c626de51890e711e4c"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/configure-environment-endpoint/sandbox-invocation-manifest.json",
+      "byte_length": 5228,
+      "sha256": "sha256:5c65c369ebad36f87c157fa5132d1fbfef266db916b1cecfb1dc77a5b5191212"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/configure-environment-endpoint/sandbox-invocation-manifest.json.frozen",
+      "byte_length": 285,
+      "sha256": "sha256:d2f5832e371da2e8db5c960b2645d5674762753e018d4550658768e47cdcf39e"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/configure-environment-endpoint/sandbox-invocation-result.json",
+      "byte_length": 578,
+      "sha256": "sha256:f8ddb23c350fb4af02d6bcf328e85ad914cde8403200496c87e69efcb985cf9f"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/configure-environment-endpoint/sandbox-invocation-result.json.frozen",
+      "byte_length": 282,
+      "sha256": "sha256:2e5e5c73f50b6336b5415bc827f60d088adbbbbb1a209b5c7677948aa6eee767"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/capability-grant.json",
+      "byte_length": 701,
+      "sha256": "sha256:4c2c337795931fedbf33c8706057cc2a98e51cf48dc869c864c624597dea01e7"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/capability-grant.json.frozen",
+      "byte_length": 265,
+      "sha256": "sha256:4e5fefe312ad5d1e311cc1884ca5c937de7785b4e87691dbe7ea2ec0aac3fae6"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/diagnostics-manifest.json",
+      "byte_length": 803,
+      "sha256": "sha256:d9ca75bd39064cbbb01bd88d5425074e4ae7c0f08fdea00edc9446a6ece15040"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/diagnostics-manifest.json.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:6c77e5c124b0b0786a4e1b4d2f05efc6157c4e3d1e9b1938db41b25721f9e4d0"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/egress-decision-receipt-0001.json",
+      "byte_length": 694,
+      "sha256": "sha256:052a5341b1163b8b3afcbd29a5559a139542bbf77a18c03cc05671ad1c197598"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/egress-decision-receipt-0001.json.frozen",
+      "byte_length": 277,
+      "sha256": "sha256:a80cad0c2852ebeb664425b38af19d4100910ecddb64005d12a593565822baf0"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/egress-decision-receipt-0002.json",
+      "byte_length": 694,
+      "sha256": "sha256:a8ca544a13c73bb98a81533579e6b9033834715575fe5716bf4d437570519ad4"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/egress-decision-receipt-0002.json.frozen",
+      "byte_length": 277,
+      "sha256": "sha256:20c9d7ea46f9185a4b55009d13228e2e8a671a429eae2a7e3bceb7ac9f0e4f04"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/egress-decision-receipt-0003.json",
+      "byte_length": 694,
+      "sha256": "sha256:a9005797c8dadf139c1849f99f94161f0c56698d37c34bef86ffbba4d86514ba"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/egress-decision-receipt-0003.json.frozen",
+      "byte_length": 277,
+      "sha256": "sha256:10fd3b9808fed6d6b098d6d5963354e26898943839b9f80f9865fd55a89fafaa"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/response-envelope.json",
+      "byte_length": 887,
+      "sha256": "sha256:0a24af24439a0a5cdc9d7d6a38a06bed2128c481a94abc770f5a5ece230c661e"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/response-envelope.json.frozen",
+      "byte_length": 266,
+      "sha256": "sha256:77155d378d3b5082bf4734c0ef376ca57cca23e43459cbdda110b6aaa84eb0f2"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/sandbox-invocation-manifest.json",
+      "byte_length": 5204,
+      "sha256": "sha256:9c25a7f6f30194d1fab6f061c33f3d5f1a9fa329cf4bd14267755321419d9db7"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/sandbox-invocation-manifest.json.frozen",
+      "byte_length": 277,
+      "sha256": "sha256:82df3980965cdeb92a6c402bf0efc34f7a1cd5827f55723661c46400c42eeae1"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/sandbox-invocation-result.json",
+      "byte_length": 580,
+      "sha256": "sha256:516bb41f8302200224a3f7fa4ee384530b9e238c15f9f8f65b4ee33ea70dd8e3"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/interact-quote-journey/sandbox-invocation-result.json.frozen",
+      "byte_length": 274,
+      "sha256": "sha256:248d4eedf700a56f1181b0f82a70a947ecd16cd6bf1f8d298676de5bf85fc891"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/report-residue-final/capability-grant.json",
+      "byte_length": 699,
+      "sha256": "sha256:272a5dd11feeac13cb866633191fc1647732e48ceef63a7814da6c70ef83e573"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/report-residue-final/capability-grant.json.frozen",
+      "byte_length": 263,
+      "sha256": "sha256:deb3f282cdeac4b394d2ed0231d52e924a7ff63bc33a11ff5437fc1d0428e43d"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/report-residue-final/diagnostics-manifest.json",
+      "byte_length": 797,
+      "sha256": "sha256:d04ce81c02d5be9526ef7e508de635b479af59369b8098cb9df799020864d5c6"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/report-residue-final/diagnostics-manifest.json.frozen",
+      "byte_length": 267,
+      "sha256": "sha256:2dc34da43eb9945cb6418e5ee6015f5f42303984db0de880082be29b187b0464"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/report-residue-final/response-envelope.json",
+      "byte_length": 883,
+      "sha256": "sha256:faeac49ded9268304f5cf597cbb300dfeb9a768c7c4258800577a3b2e1a53eba"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/report-residue-final/response-envelope.json.frozen",
+      "byte_length": 264,
+      "sha256": "sha256:a1ea51c4872139291ba5435d0029d64668640daaf9a855e8bc81d0e995ffc603"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-manifest.json",
+      "byte_length": 5198,
+      "sha256": "sha256:d3b8a942e49cce883403d51ff86e13ed706e6bb6ba605576dc36c11e2010fb7f"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-manifest.json.frozen",
+      "byte_length": 275,
+      "sha256": "sha256:a0e966f3521e79062f21b5aaa40c4f2f7098a9baa6d92abce4ac8ddb5bbd3aeb"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-result.json",
+      "byte_length": 580,
+      "sha256": "sha256:42a6b81eecb4d8fcc011d38168d9917ac7a6100e6e6adeadc897b087865a70de"
+    },
+    {
+      "path": "run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-result.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:8c45304940bf0cd2f5b28b8b80e5612f141aeb8c1487de6754a442eae844c6ae"
+    },
+    {
+      "path": "run-output/store/subject-output/diagnostics/interact-quote-journey/interact-quote-journey.log",
+      "byte_length": 97,
+      "sha256": "sha256:8097f54a9ac82d21eddcb13c1cd3e1cb70ed89eca68e21fd0f56d077fe05fe25"
+    },
+    {
+      "path": "run-output/store/subject-output/diagnostics/interact-quote-journey/interact-quote-journey.log.frozen",
+      "byte_length": 255,
+      "sha256": "sha256:37cef6fff3ff68051550a2d28924a12aa04647f2fc456935a8d3aadee7a5d8ef"
+    },
+    {
+      "path": "run-output/store/subject-output/diagnostics/report-residue-final/report-residue-final.log",
+      "byte_length": 46,
+      "sha256": "sha256:e6b7f1e842fe1406a2208b00ba8554fc09b08a9a96bb2d0c887f457b5f39002d"
+    },
+    {
+      "path": "run-output/store/subject-output/diagnostics/report-residue-final/report-residue-final.log.frozen",
+      "byte_length": 251,
+      "sha256": "sha256:23185065c825d909947f02c80a7848282a68a8bf28ae472e18e2ececb5a2e796"
+    },
+    {
+      "path": "run-output/trusted-local-observation-record.json",
+      "byte_length": 27553,
+      "sha256": "sha256:8a57bc16ac38ffbe0cbbe9529c072896d15d991d0bdadbe43941aea260e1677b"
+    },
+    {
+      "path": "run-output/workspace/configure-environment-endpoint/output/configure/endpoint.txt",
+      "byte_length": 16,
+      "sha256": "sha256:fe3748b77f21a3cec5ae93968217999b2ffc03f4642b12b8e1b9eee0c7c0cca4"
+    },
+    {
+      "path": "run-output/workspace/configure-environment-endpoint/request.frames",
+      "byte_length": 5028,
+      "sha256": "sha256:a3d5e28eae6530a91d35510f1c7fb95170105cb5308eae2dbc58699c58ccbd82"
+    },
+    {
+      "path": "run-output/workspace/interact-quote-journey/diagnostics/interact-quote-journey.log",
+      "byte_length": 97,
+      "sha256": "sha256:8097f54a9ac82d21eddcb13c1cd3e1cb70ed89eca68e21fd0f56d077fe05fe25"
+    },
+    {
+      "path": "run-output/workspace/interact-quote-journey/output/qualiber/capture.json",
+      "byte_length": 6729,
+      "sha256": "sha256:6e3ef7bfc9b00ea5959a727770a2293957310caf60a7a74c87b72a18aa96a68b"
+    },
+    {
+      "path": "run-output/workspace/interact-quote-journey/output/qualiber/product-out/evidence-pack.json",
+      "byte_length": 1408,
+      "sha256": "sha256:a49864776cc3f9f60243f3ff9e9f69983d8674be32951e93d5dfb61040f206dc"
+    },
+    {
+      "path": "run-output/workspace/interact-quote-journey/output/qualiber/product-out/report.json",
+      "byte_length": 4750,
+      "sha256": "sha256:eb0aef35d3db42d0373c8393b82ef302a021e8978b53d306e1f6af3679f33422"
+    },
+    {
+      "path": "run-output/workspace/interact-quote-journey/output/qualiber/product-out/report.junit.xml",
+      "byte_length": 274,
+      "sha256": "sha256:661db4b56c69199b19086c20142bfc6b17d9ad3fa086c0e8eb2505215e6a3e10"
+    },
+    {
+      "path": "run-output/workspace/interact-quote-journey/output/qualiber/product-out/report.md",
+      "byte_length": 348,
+      "sha256": "sha256:72bd2ab9fc06600376d39b510b619ff80887e9b244b79a82eb467a847f66b271"
+    },
+    {
+      "path": "run-output/workspace/interact-quote-journey/output/qualiber/product-out/run-result.json",
+      "byte_length": 286,
+      "sha256": "sha256:43b4b2cb26cfa5c51b1c738439b407e2a784872b7f5315c78b92da726cde6f4c"
+    },
+    {
+      "path": "run-output/workspace/interact-quote-journey/output/qualiber/product-out/telemetrytest.decision.local-1.0-mswl2h2w-ece6637d.15b34699887c.snap.json",
+      "byte_length": 1672,
+      "sha256": "sha256:f03a059be30e4675edabe1052c3ffa0f279bf56924168efba81c6cbea91986af"
+    },
+    {
+      "path": "run-output/workspace/interact-quote-journey/output/qualiber/product-out/telemetrytest.eligibility.json",
+      "byte_length": 826,
+      "sha256": "sha256:e669f01651d6208263316f99e0ff8bdff6b215da82a116a48011135bc9e3d57a"
+    },
+    {
+      "path": "run-output/workspace/interact-quote-journey/output/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 2370,
+      "sha256": "sha256:3e89c29f328d201fa7ffc98495cb8ee4476eedbcab1b0413fb2bc4e6df5d08c5"
+    },
+    {
+      "path": "run-output/workspace/interact-quote-journey/output/qualiber/run-summary.json",
+      "byte_length": 2646,
+      "sha256": "sha256:406a57abfff23fdadc496a275c26c55826f7e3b44f50df244c5a4032d94c11fb"
+    },
+    {
+      "path": "run-output/workspace/interact-quote-journey/request.frames",
+      "byte_length": 5344,
+      "sha256": "sha256:087c1ad47a6c38889471dbd84d104115cf75ea6b47aa91c9734a73d8cd971c28"
+    },
+    {
+      "path": "run-output/workspace/report-residue-final/diagnostics/report-residue-final.log",
+      "byte_length": 46,
+      "sha256": "sha256:e6b7f1e842fe1406a2208b00ba8554fc09b08a9a96bb2d0c887f457b5f39002d"
+    },
+    {
+      "path": "run-output/workspace/report-residue-final/request.frames",
+      "byte_length": 5312,
+      "sha256": "sha256:1a0ff889cdac8385ac12798f7201414e3806acff1c7259263c29f5639f7158d0"
+    },
+    {
+      "path": "substrate/destroy-result.json",
+      "byte_length": 910,
+      "sha256": "sha256:4c27eb2fb9886b8bb65e5958e65a33eb35566e985b67bbd9d0515bcca9b8b351"
+    },
+    {
+      "path": "substrate/independent-residue-scan.txt",
+      "byte_length": 485,
+      "sha256": "sha256:b94b74926031a035a7630587d0aab71c296a3a018fe85adfec06f236d86bfe43"
+    },
+    {
+      "path": "substrate/post-destroy-inventory.json",
+      "byte_length": 472,
+      "sha256": "sha256:e0d0f51fd181b0019424b918e031293b1bd606b4581bf7e5dec1545ddbe630db"
+    },
+    {
+      "path": "substrate/pre-destroy-state.txt",
+      "byte_length": 672,
+      "sha256": "sha256:2b3b16d8ef60d70f0e244a6303e5dd3f629d1a855d6f19233229b3bc980c02e4"
+    },
+    {
+      "path": "substrate/provision-request.json",
+      "byte_length": 919,
+      "sha256": "sha256:16c45dfca31c3851f91ccf6311d603fe99d4300ede9718ae78b831ef91044ea8"
+    },
+    {
+      "path": "substrate/provision-result.json",
+      "byte_length": 3327,
+      "sha256": "sha256:428567bc31fee6c88be4dfe8c1ee66d1e7a762fa2793be80c18b6704b716c407"
+    },
+    {
+      "path": "substrate/published-endpoint.json",
+      "byte_length": 109,
+      "sha256": "sha256:3e1b1075619a1e7b5341f2869a4de12fa9ded4b29998c3395b39eed03d83d74d"
+    },
+    {
+      "path": "substrate/quote-container-identity.json",
+      "byte_length": 1835,
+      "sha256": "sha256:2d20a60876f5edb3f13e6bfbc9e1868f5b4e761b04d122fb3268221deedfe2c2"
+    },
+    {
+      "path": "substrate/resolved-image-digests.json",
+      "byte_length": 1626,
+      "sha256": "sha256:f6377aaffbbe95d3481d72327910ed12dd250eb688ef5e9112a726298cf01514"
+    },
+    {
+      "path": "substrate/run-scoped-resources.json",
+      "byte_length": 1921,
+      "sha256": "sha256:7c56c315f3f50edec2685efb769e70dc34f2b00ff90023a019007f78c0be5bcb"
+    },
+    {
+      "path": "substrate/substrate-instance.json",
+      "byte_length": 125,
+      "sha256": "sha256:4e091d5dcca35be57a30c4155a8bff9cf236a6154c45fe9e68a1cab6f1ed1131"
+    },
+    {
+      "path": "substrate/substrate-lock.json",
+      "byte_length": 3050,
+      "sha256": "sha256:3862a924ffa6960056c1c6772e7f9b13441966b68bfd66c9f98c1bfbf6398082"
+    },
+    {
+      "path": "substrate/task-local-substrate.mjs",
+      "byte_length": 7133,
+      "sha256": "sha256:4ae5e3d481417e5eec657de833ef7169b037ab5c0ce1d592f0bc43f835a19789"
+    },
+    {
+      "path": "verification/task-local-verify.mjs",
+      "byte_length": 3551,
+      "sha256": "sha256:baf54c145fa3d08195d78eca8bbb84724b24da371787399e6ec7b9b11880d792"
+    },
+    {
+      "path": "verification/verification-pre-publication.json",
+      "byte_length": 2748,
+      "sha256": "sha256:446174e1945e10bae614eb5a968e7f1d5143a56b924a35545f7cc42212df94a4"
+    }
+  ]
+}

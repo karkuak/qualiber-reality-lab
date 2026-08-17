@@ -1,0 +1,29 @@
+{
+  "name": "erl2-01a01180-0e00-716c-a232-303236303831-quote",
+  "id": "34f2aae23fecd47d035630f82bb6014b17f72c47fa97ea360855a742814065ec",
+  "image": "sha256:370d920d330a145a5e6769eab82dd256a11c8186c78d7afd7927119f402d2438",
+  "state": "running",
+  "labels": {
+    "com.docker.compose.config-hash": "a43d14c17abd5f065ef4e9c7357711339dc63cdec4b505c9b898abdc470cfeda",
+    "com.docker.compose.container-number": "1",
+    "com.docker.compose.depends_on": "otel-collector:service_started:false",
+    "com.docker.compose.image": "sha256:370d920d330a145a5e6769eab82dd256a11c8186c78d7afd7927119f402d2438",
+    "com.docker.compose.oneoff": "False",
+    "com.docker.compose.project": "erl2-01a01180-0e00-716c-a232-303236303831",
+    "com.docker.compose.project.config_files": "/private/tmp/claude-502/-Users-karthik-Developer-qualiber-reality-lab/b52e0cbd-e48e-4d4b-aec2-31999b3f5916/scratchpad/tlrun-20260816/substrate-root/upstream-1bf3ef8fbaffc049/compose.yaml,/Users/karthik/Developer/qualiber-reality-lab-tlo/environments/otel-demo/compose/erl2-overlay.yaml",
+    "com.docker.compose.project.environment_file": "/private/tmp/claude-502/-Users-karthik-Developer-qualiber-reality-lab/b52e0cbd-e48e-4d4b-aec2-31999b3f5916/scratchpad/tlrun-20260816/substrate-root/upstream-1bf3ef8fbaffc049/.env",
+    "com.docker.compose.project.working_dir": "/private/tmp/claude-502/-Users-karthik-Developer-qualiber-reality-lab/b52e0cbd-e48e-4d4b-aec2-31999b3f5916/scratchpad/tlrun-20260816/substrate-root/upstream-1bf3ef8fbaffc049",
+    "com.docker.compose.service": "quote",
+    "com.docker.compose.version": "5.1.4",
+    "com.erl2.driver_id": "compose-driver",
+    "com.erl2.run_id": "01a01180-0e00-716c-a232-303236303831"
+  },
+  "network_ports": {
+    "8090/tcp": [
+      {
+        "HostIp": "127.0.0.1",
+        "HostPort": "58113"
+      }
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+repository: reality-lab
+path: /Users/karthik/Developer/qualiber-reality-lab-tlo
+captured_utc: 2026-08-17T01:54:02Z
+branch: codex/v2-trusted-local-observation
+head: 561d782a92543b95246cce6405cf1cea258edd63
+committed_tree: 5871e2d834f7c61ea221c5b750916765203b9fd3

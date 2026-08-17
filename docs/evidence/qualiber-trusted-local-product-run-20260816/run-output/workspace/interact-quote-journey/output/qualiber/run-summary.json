@@ -1,0 +1,50 @@
+{
+  "schema_version": "qualiber-erl2-subject-run-summary/v2",
+  "run_id": "01a00d6f-4c3c-7b54-9f66-e0adb70adf6b",
+  "journey_id": "erl2_quote_journey",
+  "http_observations": [
+    {
+      "step": 1,
+      "event": "quote_requested_one",
+      "url_path_and_query": "/getquote?erl2_run=01a00d6f-4c3c-7b54-9f66-e0adb70adf6b&erl2_step=1",
+      "http_status": 200,
+      "response_value": 8.99,
+      "elapsed_ms": 51
+    },
+    {
+      "step": 2,
+      "event": "quote_requested_three",
+      "url_path_and_query": "/getquote?erl2_run=01a00d6f-4c3c-7b54-9f66-e0adb70adf6b&erl2_step=2",
+      "http_status": 200,
+      "response_value": 26.97,
+      "elapsed_ms": 5
+    },
+    {
+      "step": 3,
+      "event": "quote_requested_zero",
+      "url_path_and_query": "/getquote?erl2_run=01a00d6f-4c3c-7b54-9f66-e0adb70adf6b&erl2_step=3",
+      "http_status": 200,
+      "response_value": 0,
+      "elapsed_ms": 3
+    }
+  ],
+  "product_cli": {
+    "command": "telemetrytest validate --contract <committed contract> --capture <this run's capture> --out <run-scoped dir>",
+    "exit_code": 0,
+    "run_status": "clean",
+    "completed": true
+  },
+  "subject_role": "This subject reports what the product emitted and asserts nothing about whether that constitutes a pass. The product's own artifacts are under product-out/.",
+  "artifact_hashes": {
+    "qualiber/capture.json": "sha256:6e3ef7bfc9b00ea5959a727770a2293957310caf60a7a74c87b72a18aa96a68b",
+    "qualiber/product-out/evidence-pack.json": "sha256:a49864776cc3f9f60243f3ff9e9f69983d8674be32951e93d5dfb61040f206dc",
+    "qualiber/product-out/report.json": "sha256:eb0aef35d3db42d0373c8393b82ef302a021e8978b53d306e1f6af3679f33422",
+    "qualiber/product-out/report.junit.xml": "sha256:661db4b56c69199b19086c20142bfc6b17d9ad3fa086c0e8eb2505215e6a3e10",
+    "qualiber/product-out/report.md": "sha256:72bd2ab9fc06600376d39b510b619ff80887e9b244b79a82eb467a847f66b271",
+    "qualiber/product-out/run-result.json": "sha256:43b4b2cb26cfa5c51b1c738439b407e2a784872b7f5315c78b92da726cde6f4c",
+    "qualiber/product-out/telemetrytest.decision.local-1.0-mswl2h2w-ece6637d.15b34699887c.snap.json": "sha256:f03a059be30e4675edabe1052c3ffa0f279bf56924168efba81c6cbea91986af",
+    "qualiber/product-out/telemetrytest.eligibility.json": "sha256:e669f01651d6208263316f99e0ff8bdff6b215da82a116a48011135bc9e3d57a",
+    "qualiber/product-out/validation-evidence-pack.json": "sha256:3e89c29f328d201fa7ffc98495cb8ee4476eedbcab1b0413fb2bc4e6df5d08c5"
+  },
+  "telemetry_source": "Qualiber consumed the analytics JSON of the three requests this subject issued. It did not consume OTLP, and it did not read the collector."
+}

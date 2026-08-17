@@ -1,0 +1,70 @@
+{
+  "schema_version": "substrate-lock/v1",
+  "lock_id": "otel-demo-minimal-subset",
+  "substrate_id": "opentelemetry-demo",
+  "qualification_status": "qualified",
+  "source_archive": {
+    "release_tag": "3.0.0",
+    "source_commit": "1755859a9de82c2e5e225be68abc401a5ebf2b4f",
+    "archive_sha256": "sha256:1bf3ef8fbaffc049919b497a9174637dbee74ec1797ce5ff85d3d12dc86c051c"
+  },
+  "images": [
+    {
+      "service_id": "otel-collector",
+      "platform": "linux/amd64",
+      "digest": "sha256:4eb842091c796156d4d3c994eb22ba793590f5723719dbf6b8436cb4dfc17f48"
+    },
+    {
+      "service_id": "otel-collector",
+      "platform": "linux/arm64",
+      "digest": "sha256:1fef9f07f04eb6775b4076ea4f817d6b7b9050e23e52941f0756ba08df798ea6"
+    },
+    {
+      "service_id": "quote",
+      "platform": "linux/amd64",
+      "digest": "sha256:87201885ff95bd4524fffe31b84cef90dabda0707a7f57d356a4932a461fd153"
+    },
+    {
+      "service_id": "quote",
+      "platform": "linux/arm64",
+      "digest": "sha256:370d920d330a145a5e6769eab82dd256a11c8186c78d7afd7927119f402d2438"
+    }
+  ],
+  "sbom": {
+    "path": "environments/otel-demo/qualification/sbom.json",
+    "media_type": "application/json",
+    "byte_length": 1812,
+    "file_sha256": "sha256:17f79bd9788d614cfc5dcd1f243076b2acce1fd8aeec2dc42be6d5b6d4bc0d61",
+    "classification": "PUBLIC"
+  },
+  "provenance": {
+    "producer": "erl2 scripts/qualify-otel-demo.mjs (docker scout, docker buildx imagetools)",
+    "producer_version": "0.1.0",
+    "source_uri": "https://codeload.github.com/open-telemetry/opentelemetry-demo/tar.gz/refs/tags/3.0.0",
+    "source_commit": "1755859a9de82c2e5e225be68abc401a5ebf2b4f",
+    "transformations": [
+      "fetch release archive over TLS and record its SHA-256",
+      "read the source commit from the archive pax global header",
+      "resolve linux/amd64 and linux/arm64 manifest digests from the release-pinned tags",
+      "hash the five applied configuration files",
+      "generate SPDX SBOMs with docker scout",
+      "record build attestation presence with docker buildx imagetools",
+      "sign with the repository development environment governor (NOT an independent authority)"
+    ]
+  },
+  "config_hashes": [
+    "sha256:a23520301cd8dc6b4af4315628ca19b694ebdac0ca0dc1d29a4ad43d205bbc84",
+    "sha256:517055b93534de0b38e6d4e9a0fff8cfaa3145083d8089e1bb503beedd2d3c99",
+    "sha256:6eddab9bd51a2aaea0b98af04c4233a18a9795cf4314ee32a3def9344f3611ff",
+    "sha256:5bf984b2a506b96869f1e61f485c210cda5bc681ed42719c1df8c17513da273c",
+    "sha256:0468ab32f54ddbf366bca0537dedba6cc410244e6912292d29acf81a7a50f8c2"
+  ],
+  "recorded_at": "2026-08-14T19:02:00Z",
+  "core_hash": "sha256:a815e35f79528a394b69362f4975ff5d807176c2e9bca55a8c582994c7152ea2",
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "erl2-dev-challenge-governor-ed25519-1",
+    "signed_hash": "sha256:a815e35f79528a394b69362f4975ff5d807176c2e9bca55a8c582994c7152ea2",
+    "signature_base64": "rp1EfhlKYXXGwBGB9MxJGRYAoVbVeIOC600bh2uUHxhcLj/ZyjETObW1QpZoEMPpTP5KSkX5mR0dIjNhh9xuDg=="
+  }
+}

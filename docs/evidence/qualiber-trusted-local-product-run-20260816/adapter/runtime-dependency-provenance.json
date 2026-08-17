@@ -1,0 +1,51 @@
+{
+  "resolved_from_adapter_entry": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/dist/qualiber-erl2-subject.mjs",
+  "note": "physical paths are realpath-resolved; symlink targets recorded where the lookup path was a link",
+  "packages": {
+    "@erl2/adapter-sdk": {
+      "declared_version": "0.1.0",
+      "lookup_path": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/node_modules/@erl2/adapter-sdk",
+      "lookup_path_is_symlink": false,
+      "symlink_target": null,
+      "package_root_physical_path": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/node_modules/@erl2/adapter-sdk",
+      "resolved_entry_physical_path": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/node_modules/@erl2/adapter-sdk/dist/src/index.js",
+      "resolved_entry_error": null
+    },
+    "@erl2/contracts": {
+      "declared_version": "0.1.0",
+      "lookup_path": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/node_modules/@erl2/contracts",
+      "lookup_path_is_symlink": false,
+      "symlink_target": null,
+      "package_root_physical_path": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/node_modules/@erl2/contracts",
+      "resolved_entry_physical_path": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/node_modules/@erl2/contracts/dist/src/index.js",
+      "resolved_entry_error": null
+    },
+    "@erl2/integrity": {
+      "declared_version": "0.1.0",
+      "lookup_path": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/node_modules/@erl2/integrity",
+      "lookup_path_is_symlink": false,
+      "symlink_target": null,
+      "package_root_physical_path": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/node_modules/@erl2/integrity",
+      "resolved_entry_physical_path": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/node_modules/@erl2/integrity/dist/src/index.js",
+      "resolved_entry_error": null
+    },
+    "@qualgraph/collector": {
+      "declared_version": "0.1.0",
+      "lookup_path": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/node_modules/@qualgraph/collector",
+      "lookup_path_is_symlink": false,
+      "symlink_target": null,
+      "package_root_physical_path": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/node_modules/@qualgraph/collector",
+      "resolved_entry_physical_path": "/Users/karthik/Claude/Projects/Qualiber/adapters/erl2-subject/node_modules/@qualgraph/collector/dist/collector/index.js",
+      "resolved_entry_error": null
+    },
+    "ajv": {
+      "declared_version": "8.20.0",
+      "lookup_path": "/Users/karthik/Claude/Projects/Qualiber/node_modules/ajv",
+      "lookup_path_is_symlink": false,
+      "symlink_target": null,
+      "package_root_physical_path": "/Users/karthik/Claude/Projects/Qualiber/node_modules/ajv",
+      "resolved_entry_physical_path": "/Users/karthik/Claude/Projects/Qualiber/node_modules/ajv/dist/ajv.js",
+      "resolved_entry_error": null
+    }
+  }
+}

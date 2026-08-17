@@ -1,0 +1,212 @@
+{
+  "schemaVersion": "test_run_capture_v0.1",
+  "testRunId": "01a00d6f-4c3c-7b54-9f66-e0adb70adf6b",
+  "testId": "adapters/erl2-subject::erl2_quote_journey",
+  "journeyId": "erl2_quote_journey",
+  "ciRunId": "01a00d6f-4c3c-7b54-9f66-e0adb70adf6b",
+  "events": [
+    {
+      "schemaVersion": "canonical_telemetry_event_v0.1",
+      "eventId": "d59eb8d6-5b06-4196-8279-8605f46b29bb",
+      "collectorSeq": 0,
+      "sourceEventName": "quote_requested_one",
+      "canonicalEventName": "quote_requested_one",
+      "source": "erl2_subject_collector_0.1",
+      "ciRunId": "01a00d6f-4c3c-7b54-9f66-e0adb70adf6b",
+      "timestamp": "2026-08-17T01:57:00.369Z",
+      "relTs": 0,
+      "environment": "ci",
+      "platform": "web",
+      "properties": {
+        "numberOfItems": 1
+      },
+      "context": {
+        "browser": "chromium",
+        "collectorVersion": "erl2_subject_collector_0.1"
+      },
+      "associationConfidence": "high",
+      "associationScore": 1,
+      "associationReasons": [
+        "test_id matched",
+        "browser context matched",
+        "within test window",
+        "worker index matched"
+      ],
+      "associationSignals": {
+        "injected_test_id": true,
+        "browser_context": true,
+        "within_window": true,
+        "worker_index": true,
+        "within_grace_window": false,
+        "page_session": false
+      },
+      "associationBlockingEligible": true,
+      "primary": "validation_eligible",
+      "flags": [
+        "associated"
+      ],
+      "eventClass": "associated",
+      "lineage": {
+        "collectorVersion": "erl2_subject_collector_0.1",
+        "rawPayloadHash": "9d9511d993b77d54c1777c4629fd502dd08de192a3e33f9f4bde21d020b353c1",
+        "sourceEndpoint": "http://127.0.0.1:58113/getquote?erl2_run=01a00d6f-4c3c-7b54-9f66-e0adb70adf6b&erl2_step=1",
+        "captureTs": 1786931820369,
+        "normalizationTs": 1786931820430,
+        "browserContextId": "erl2-run-01a00d6f-4c3c-7b54-9f66-e0adb70adf6b"
+      },
+      "journeyId": "erl2_quote_journey",
+      "testId": "adapters/erl2-subject::erl2_quote_journey",
+      "networkRequestId": "0"
+    },
+    {
+      "schemaVersion": "canonical_telemetry_event_v0.1",
+      "eventId": "a342df98-3f19-4d08-961d-faa0d760ec51",
+      "collectorSeq": 1,
+      "sourceEventName": "quote_requested_three",
+      "canonicalEventName": "quote_requested_three",
+      "source": "erl2_subject_collector_0.1",
+      "ciRunId": "01a00d6f-4c3c-7b54-9f66-e0adb70adf6b",
+      "timestamp": "2026-08-17T01:57:00.421Z",
+      "relTs": 52,
+      "environment": "ci",
+      "platform": "web",
+      "properties": {
+        "numberOfItems": 3
+      },
+      "context": {
+        "browser": "chromium",
+        "collectorVersion": "erl2_subject_collector_0.1"
+      },
+      "associationConfidence": "high",
+      "associationScore": 1,
+      "associationReasons": [
+        "test_id matched",
+        "browser context matched",
+        "within test window",
+        "worker index matched"
+      ],
+      "associationSignals": {
+        "injected_test_id": true,
+        "browser_context": true,
+        "within_window": true,
+        "worker_index": true,
+        "within_grace_window": false,
+        "page_session": false
+      },
+      "associationBlockingEligible": true,
+      "primary": "validation_eligible",
+      "flags": [
+        "associated"
+      ],
+      "eventClass": "associated",
+      "lineage": {
+        "collectorVersion": "erl2_subject_collector_0.1",
+        "rawPayloadHash": "420cd308d05a08677703f87da0a04b359824050e93a05a07d3a3980e99a77b02",
+        "sourceEndpoint": "http://127.0.0.1:58113/getquote?erl2_run=01a00d6f-4c3c-7b54-9f66-e0adb70adf6b&erl2_step=2",
+        "captureTs": 1786931820421,
+        "normalizationTs": 1786931820430,
+        "browserContextId": "erl2-run-01a00d6f-4c3c-7b54-9f66-e0adb70adf6b"
+      },
+      "journeyId": "erl2_quote_journey",
+      "testId": "adapters/erl2-subject::erl2_quote_journey",
+      "networkRequestId": "1"
+    },
+    {
+      "schemaVersion": "canonical_telemetry_event_v0.1",
+      "eventId": "3bf89b8b-3427-4f63-aeaa-5cae4a6a049a",
+      "collectorSeq": 2,
+      "sourceEventName": "quote_requested_zero",
+      "canonicalEventName": "quote_requested_zero",
+      "source": "erl2_subject_collector_0.1",
+      "ciRunId": "01a00d6f-4c3c-7b54-9f66-e0adb70adf6b",
+      "timestamp": "2026-08-17T01:57:00.426Z",
+      "relTs": 57,
+      "environment": "ci",
+      "platform": "web",
+      "properties": {
+        "numberOfItems": 0
+      },
+      "context": {
+        "browser": "chromium",
+        "collectorVersion": "erl2_subject_collector_0.1"
+      },
+      "associationConfidence": "high",
+      "associationScore": 1,
+      "associationReasons": [
+        "test_id matched",
+        "browser context matched",
+        "within test window",
+        "worker index matched"
+      ],
+      "associationSignals": {
+        "injected_test_id": true,
+        "browser_context": true,
+        "within_window": true,
+        "worker_index": true,
+        "within_grace_window": false,
+        "page_session": false
+      },
+      "associationBlockingEligible": true,
+      "primary": "validation_eligible",
+      "flags": [
+        "associated"
+      ],
+      "eventClass": "associated",
+      "lineage": {
+        "collectorVersion": "erl2_subject_collector_0.1",
+        "rawPayloadHash": "7cd8099b54bf628eda0a5db0ced336583ebc1dbaa5d00903b2411d5024ceee93",
+        "sourceEndpoint": "http://127.0.0.1:58113/getquote?erl2_run=01a00d6f-4c3c-7b54-9f66-e0adb70adf6b&erl2_step=3",
+        "captureTs": 1786931820426,
+        "normalizationTs": 1786931820430,
+        "browserContextId": "erl2-run-01a00d6f-4c3c-7b54-9f66-e0adb70adf6b"
+      },
+      "journeyId": "erl2_quote_journey",
+      "testId": "adapters/erl2-subject::erl2_quote_journey",
+      "networkRequestId": "2"
+    }
+  ],
+  "markers": [
+    {
+      "kind": "start",
+      "ts": 1786931820369,
+      "relTs": 0
+    },
+    {
+      "kind": "step",
+      "stepId": "step-1",
+      "ts": 1786931820369,
+      "relTs": 0
+    },
+    {
+      "kind": "step",
+      "stepId": "step-2",
+      "ts": 1786931820421,
+      "relTs": 52
+    },
+    {
+      "kind": "step",
+      "stepId": "step-3",
+      "ts": 1786931820426,
+      "relTs": 57
+    },
+    {
+      "kind": "end",
+      "ts": 1786931820430,
+      "relTs": 61
+    }
+  ],
+  "summary": {
+    "schemaVersion": "collector_run_summary_v0.1",
+    "health": "healthy",
+    "eventsCaptured": 3,
+    "eventsValidationEligible": 3,
+    "eventsBackground": 0,
+    "eventsLate": 0,
+    "eventsOrphaned": 0,
+    "eventsUnknown": 0,
+    "interceptionErrors": 0,
+    "unsupportedBodyTypesObserved": [],
+    "captureStarted": true,
+    "captureEndedCleanly": true
+  }
+}

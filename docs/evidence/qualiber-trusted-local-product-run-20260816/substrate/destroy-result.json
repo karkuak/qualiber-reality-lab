@@ -1,0 +1,18 @@
+{
+  "receipt": {
+    "schema_version": "environment-operation-receipt/v1",
+    "run_id": "01a01180-0e00-716c-a232-303236303831",
+    "operation": "destroy",
+    "operation_id": "op-destroy",
+    "idempotency_key": "127a5056398571fb85deb092986b6f5dab65dba32bdaca458770634949992fb0",
+    "driver_manifest_hash": "sha256:862d26f57eee6998e124d2bf90f4a77316a6ab913ea19b001c20e95cc5feb517",
+    "target_identity_hash": "sha256:fb252e05a3dc0a020e220f0aba40d4456fac1ab4e0e497a6def928c7527a478b",
+    "before_state_hash": "sha256:fa318c6a56b71dff5615e346b8346f2f0b70c81ec64d16faa9b611ccd36e78c7",
+    "after_state_hash": "sha256:0a09829870039fb378c58c5131be5a398ca1453e986e9ea8deb057b89550bfb3",
+    "status": "succeeded",
+    "started_at": "2026-08-16T00:00:00Z",
+    "ended_at": "2026-08-16T00:00:01Z",
+    "core_hash": "sha256:a64f032854d43c6f2019328cb56090ece13152dedda0e2fee0bcdc806d6edfcb"
+  },
+  "residue": []
+}

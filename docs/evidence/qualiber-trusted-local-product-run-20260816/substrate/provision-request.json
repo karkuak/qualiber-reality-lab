@@ -1,0 +1,12 @@
+{
+  "runId": "01a01180-0e00-716c-a232-303236303831",
+  "archetypeHash": "sha256:e6e68796846006c08aaa7d83bb1b65abb04600ccc410eb81a6e4b59480e62f8c",
+  "disorderSeedCommitment": "sha256:8fe057003bd486b67aa1b4d4139222ccafbf56d37d997793ce10f4b3073e7ebb",
+  "operationId": "op-provision",
+  "note": "the exact ProvisionRequest handed to the unmodified ComposeEnvironmentDriver",
+  "project": "erl2-01a01180-0e00-716c-a232-303236303831",
+  "substrate_lock_file": "/Users/karthik/Developer/qualiber-reality-lab-tlo/environments/otel-demo/substrate-lock.json",
+  "overlay": "/Users/karthik/Developer/qualiber-reality-lab-tlo/environments/otel-demo/compose/erl2-overlay.yaml",
+  "extras": "/Users/karthik/Developer/qualiber-reality-lab-tlo/environments/otel-demo/compose/erl2-otelcol-extras.yaml",
+  "archive": "/Users/karthik/Developer/qualiber-reality-lab-tlo/environments/otel-demo/upstream/opentelemetry-demo-3.0.0.tar.gz"
+}

@@ -1,0 +1,13 @@
+run_id: 01a01180-0e00-716c-a232-303236303831
+project: erl2-01a01180-0e00-716c-a232-303236303831
+captured_utc: 2026-08-17T01:59:28Z
+--- containers (label com.erl2.run_id=01a01180-0e00-716c-a232-303236303831) ---
+erl2-01a01180-0e00-716c-a232-303236303831-quote	running	370d920d330a
+erl2-01a01180-0e00-716c-a232-303236303831-otel-collector	running	1fef9f07f04e
+--- networks ---
+erl2-01a01180-0e00-716c-a232-303236303831-net
+--- volumes ---
+erl2-trusted-01a01180-0e00-716c-a232-303236303831
+--- port 58113 ---
+COMMAND    PID    USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+com.docke 5610 karthik  170u  IPv4 0x1a4e8546bce75c68      0t0  TCP 127.0.0.1:58113 (LISTEN)
