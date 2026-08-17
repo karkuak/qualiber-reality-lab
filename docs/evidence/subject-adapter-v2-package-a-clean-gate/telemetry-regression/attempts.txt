@@ -1,0 +1,49 @@
+=== normal-condition attempts (fresh clone at b22e9fb, sequential, unique run each) ===
+--- attempt 1 ---
+attempt: 1
+head: b22e9fb4cb24b030ecaf84fa5d721ed0bf649d6a
+tree: b3df8f28d319343e85ac3aff9e0a6fbe3ca71f22
+command: node --test --test-reporter=spec --test-name-pattern=reaches an offline-valid terminal tests/dist/e2e/composeEnvironmentRun.test.js
+started_at: 2026-08-12T20:09:36Z
+ended_at: 2026-08-12T20:10:22Z
+duration_ms: 45511
+exit_status: 0
+signal: none
+✔ COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compose substrate (45152.989209ms)
+erl2_objects_after=0
+--- attempt 2 ---
+attempt: 2
+head: b22e9fb4cb24b030ecaf84fa5d721ed0bf649d6a
+tree: b3df8f28d319343e85ac3aff9e0a6fbe3ca71f22
+command: node --test --test-reporter=spec --test-name-pattern=reaches an offline-valid terminal tests/dist/e2e/composeEnvironmentRun.test.js
+started_at: 2026-08-12T20:10:25Z
+ended_at: 2026-08-12T20:11:09Z
+duration_ms: 44032
+exit_status: 0
+signal: none
+✔ COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compose substrate (43692.569917ms)
+erl2_objects_after=0
+--- attempt 3 ---
+attempt: 3
+head: b22e9fb4cb24b030ecaf84fa5d721ed0bf649d6a
+tree: b3df8f28d319343e85ac3aff9e0a6fbe3ca71f22
+command: node --test --test-reporter=spec --test-name-pattern=reaches an offline-valid terminal tests/dist/e2e/composeEnvironmentRun.test.js
+started_at: 2026-08-12T20:11:12Z
+ended_at: 2026-08-12T20:11:56Z
+duration_ms: 43822
+exit_status: 0
+signal: none
+✔ COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compose substrate (43513.082792ms)
+erl2_objects_after=0
+
+=== loaded-condition attempt ===
+attempt: LOADED
+head: b22e9fb4cb24b030ecaf84fa5d721ed0bf649d6a
+tree: b3df8f28d319343e85ac3aff9e0a6fbe3ca71f22
+command: node --test --test-reporter=spec --test-name-pattern=reaches an offline-valid terminal tests/dist/e2e/composeEnvironmentRun.test.js
+started_at: 2026-08-12T20:12:36Z
+ended_at: 2026-08-12T20:14:08Z
+duration_ms: 91392
+exit_status: 0
+signal: none
+✔ COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compose substrate (90858.3625ms)

@@ -1,0 +1,20 @@
+=== ROTATION-INDEPENDENCE PROOF (loaded regression) ===
+The rotating `docker container logs` view captured during the loaded run:
+  bytes: 1599272
+  lines: 50972
+  console 'Traces' summary lines surviving : 0
+  JSON-form '"spans": N' surviving        : 0
+  container StartedAt                      : 2026-08-12T20:12:52.052031006Z
+  earliest surviving console line          : 2026-08-12T20:13:40.766Z
+  => the front of the log was evicted, exactly as in the diagnosed failure
+
+The REPLACED assertion applied to that same view:
+  legacy regex matches: 0  legacy spanSum: 0
+  => the old observation would have reported ZERO and failed here
+
+The corrected assertion, same run:
+✔ COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compose substrate (90858.3625ms)
+duration_ms: 91392
+exit_status: 0
+signal: none
+  => durable stream capture retained what container-log rotation destroyed

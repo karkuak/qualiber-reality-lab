@@ -1,0 +1,39 @@
+✖ GOVERNED-PORT: a v2 local-observation host cannot enter the governed SubjectPort (55.135084ms)
+✔ HOST-MODE-BINDING: the layer beneath the port refuses governed dispatch on its own (2.142166ms)
+✖ GOVERNED-PORT: the refusal is deterministic across repeated attempts (1.243541ms)
+✔ GOVERNED-PORT: the sentinel is real — a genuine local dispatch moves it (273.721542ms)
+✔ GOVERNED-PORT: the local host still dispatches normally on its own path (247.192666ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 3
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 725.34625
+
+✖ failing tests:
+
+test at tests/dist/integration/governedPortRefusal.test.js:72:1
+✖ GOVERNED-PORT: a v2 local-observation host cannot enter the governed SubjectPort (55.135084ms)
+  Error: expected a typed refusal
+      at refusalOf (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/governedPortRefusal.test.js:58:11)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/governedPortRefusal.test.js:79:19)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+
+test at tests/dist/integration/governedPortRefusal.test.js:102:1
+✖ GOVERNED-PORT: the refusal is deterministic across repeated attempts (1.243541ms)
+  Error: expected a typed refusal
+      at refusalOf (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/governedPortRefusal.test.js:58:11)
+      at file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/governedPortRefusal.test.js:104:39
+      at Array.map (<anonymous>)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/governedPortRefusal.test.js:104:29)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)

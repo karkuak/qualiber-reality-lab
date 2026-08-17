@@ -41,6 +41,7 @@ import {
   type EnvironmentValidityResultV1,
   type Hash,
   type InvalidLabRunRecordV1,
+  type JourneyStepOutcomeV1,
   type LabLifecycleEventV1,
   type RestorationProbeV1,
   type SubstrateBindingV1,
@@ -50,6 +51,12 @@ import {
   assertFrontierActionsDerivable,
   deriveResidueProbeOutcome,
   deriveRestorationProbeOutcome,
+  // ADR-ERL2-039. Pure applicability primitives, shared with the producer on the
+  // same terms `decideTrustedTelemetryAuthority` already is: their inputs are
+  // retained step outcomes the Lab wrote, not bytes a subject controls. Every
+  // *verdict* below is still recomputed here.
+  exerciseApplicable,
+  exerciseSucceeded,
   gateForInvalidFailurePhase,
   isEnvironmentFailurePhase,
   restorationProbePassed,
@@ -1009,6 +1016,12 @@ export function assertJourneyOrderingFromLifecycle(
 
 // -- 5. Lab validity ---------------------------------------------------------
 
+/** The two fields this module reads off a retained gate row. */
+interface GateLike {
+  readonly gate_id: string;
+  readonly passed: boolean;
+}
+
 /**
  * Re-derives the validity verdict from the gates the producer recorded, and
  * cross-checks the invalidity findings against the gates that failed.
@@ -1030,8 +1043,77 @@ export function deriveValidityOutcome(options: {
   readonly index: ArtifactIndex;
   readonly validity: EnvironmentValidityResultV1;
   readonly requireValid: boolean;
+  /**
+   * This run's retained step outcomes, and whether it retained an
+   * attributable-telemetry observation (ADR-ERL2-039).
+   *
+   * Supplied rather than resolved here because the caller already holds the
+   * lifecycle's role map; what this function does with them is its own, and it
+   * reads no producer verdict to do it.
+   */
+  readonly outcomes: readonly JourneyStepOutcomeV1[];
+  readonly telemetryObservationRetained: boolean;
 }): { readonly status: "valid" | "invalid"; readonly failedGateIds: readonly string[] } {
   const { validity } = options;
+
+  // -- ADR-ERL2-039: the exercise obligation, recomputed --------------------
+  //
+  // Independently, from the retained step outcomes, and *before* the gate
+  // arithmetic below — because the failure this catches is a gate set that is
+  // internally self-consistent and still describes a run that may not be valid.
+  // The producer's own answer is not read; these are the same pure primitives
+  // the producer uses, applied to bytes the verifier holds.
+  const applicable = exerciseApplicable(options.outcomes);
+  const succeeded = exerciseSucceeded(options.outcomes);
+  const exerciseGates = validity.gate_results.filter(
+    (g) => g.gate_id === "subject-exercise-succeeded",
+  );
+
+  if (applicable && exerciseGates.length !== 1) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_MISSING_ROLE,
+      `this run retains an exercising step outcome and its validity result evaluates ` +
+        `${String(exerciseGates.length)} subject-exercise-succeeded gates; exactly one must be present`,
+    );
+  }
+  if (!applicable && exerciseGates.length > 0) {
+    throw new Erl2Error(
+      CODES.EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED,
+      "this run retains no exercising step outcome and its validity result publishes a " +
+        "subject-exercise-succeeded gate; a boolean cannot answer a question about applicability",
+    );
+  }
+  // The false-valid terminal itself: the producer may not report the gate as
+  // passing over outcomes that say otherwise.
+  if (applicable && (exerciseGates[0] as GateLike | undefined)?.passed !== succeeded) {
+    throw new Erl2Error(
+      CODES.EVALUATOR_VALIDITY_GATE_FAILED,
+      `the retained validity result reports subject-exercise-succeeded as ` +
+        `${String((exerciseGates[0] as GateLike | undefined)?.passed)} while this run's retained ` +
+        `exercising step outcome derives ${String(succeeded)}`,
+    );
+  }
+
+  // Telemetry applicability contains exercise success, so the retained gate set
+  // and the retained observation must agree with the outcomes about all three.
+  const telemetryGates = validity.gate_results.filter(
+    (g) => g.gate_id === "attributable-telemetry-retained",
+  );
+  if (telemetryGates.length > 0 && !succeeded) {
+    throw new Erl2Error(
+      CODES.EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED,
+      "this run evaluates an attributable-telemetry gate while its exercising step did not " +
+        "succeed; telemetry applicability requires a succeeded exercise",
+    );
+  }
+  if (options.telemetryObservationRetained && telemetryGates.length === 0) {
+    throw new Erl2Error(
+      CODES.EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED,
+      "this run retains an attributable-telemetry observation and evaluates no gate over it; " +
+        "a retained record no gate reads is evidence nobody checked",
+    );
+  }
+
   const failed = validity.gate_results.filter((g) => !g.passed).map((g) => g.gate_id);
   const derived = failed.length === 0 ? "valid" : "invalid";
 
@@ -1188,6 +1270,14 @@ export function deriveEnvironmentSemantics(options: {
       "environment-validity-result/v1",
     ),
     requireValid: true,
+    // ADR-ERL2-039. Resolved from the lifecycle's own role map, so the exercise
+    // obligation is recomputed from retained bytes rather than read off the
+    // producer's verdict.
+    outcomes: (roles.get("journey-step-outcome") ?? [])
+      .map((hash) => options.index.typed<JourneyStepOutcomeV1>(hash, "journey-step-outcome/v1"))
+      .filter((outcome) => outcome.run_id === options.runId),
+    telemetryObservationRetained:
+      (roles.get("attributable-telemetry-observation") ?? []).length > 0,
   });
 
   const restorationHash = single(roles, "environment-restoration");

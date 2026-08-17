@@ -118,6 +118,15 @@ const RENDERED_TOPOLOGY_SKIP = Object.freeze([
     case: "COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else",
     reason: "RENDERED TOPOLOGY UNPROVEN",
   }),
+  // Package 2 added a second assertion over the same rendered merge — that the
+  // trusted telemetry volume is mounted into the collector and into nothing
+  // else — so it is unobservable under exactly the same missing fixture, for
+  // exactly the same controls, and is declared here for exactly the same
+  // reason. An undeclared skip in a campaign row reads as coverage.
+  Object.freeze({
+    case: "COMPOSE-ADV: the RENDERED configuration mounts the trusted volume into the collector alone",
+    reason: "RENDERED TOPOLOGY UNPROVEN",
+  }),
 ]);
 
 export const CONTROLS = [
@@ -447,12 +456,18 @@ export const CONTROLS = [
       "  );",
     ].join("\n"),
     replace: ["  void observation;", "  return String(1) === String(1);"].join("\n"),
-    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
-    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    // ADR-ERL2-038 R8 moved the suite, not the property. The arithmetic is
+    // unchanged and still decides whether a declared run is satisfied; what
+    // changed is that only an ERL2-C-171 record now reaches it, so the cases
+    // that exercise it live with the v2 fixtures. Its v1 cases were not
+    // dropped — they still run, and they still fail the gate, one step earlier
+    // and for a stronger reason.
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
     mustFailCases: [
-      "ATTR-TELEM: a declared run with an absent observation fails the gate",
-      "ATTR-TELEM: a declared run with zero run-attributed records fails the gate",
-      "ATTR-TELEM: another run's observation, a foreign marker, or a second observation fails the gate",
+      "TRUSTED-AUTHORITY: an authentic zero governs, and authorizes no positive claim",
+      "TRUSTED-AUTHORITY: an absent v2 governs its own refusal rather than being ignored",
+      "TRUSTED-AUTHORITY: the migration truth table, observed at the gate",
     ],
     expect: "fail",
   },
@@ -490,7 +505,7 @@ export const CONTROLS = [
     replace: '  if (String(1) === "2" && Boolean(namesAgree)) {',
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
-    mustFailCases: ["ATTR-TELEM-VERIFY: counts that contradict the retained excerpt are refused"],
+    mustFailCases: ["TRUSTED-VERIFY: the verifier reads the bytes rather than the claim"],
     expect: "fail",
   },
   {
@@ -502,7 +517,7 @@ export const CONTROLS = [
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFailCases: [
-      "ATTR-TELEM-VERIFY: a declared observation with zero run-attributed records is refused",
+      "TRUSTED-VERIFY: an authentic zero verifies where undeclared and is refused where declared",
     ],
     expect: "fail",
   },
@@ -521,14 +536,23 @@ export const CONTROLS = [
   },
   {
     id: "telemetry-verifier-excerpt-fixed-point",
-    what: "a telemetry excerpt padded with lines that contribute to no count is refused (ADR-ERL2-033)",
+    what: "the offline verifier recomputes the digest of the retained trusted bytes, so the bytes it parses are the bytes the record is hash-bound to (ADR-ERL2-038 R5)",
     file: "packages/public-verifier/src/library/telemetryDerivation.ts",
-    find: "  if (excerptCollectorTelemetry(excerpt, observation.marker) !== excerpt) {",
-    replace: '  if (excerptCollectorTelemetry(excerpt, observation.marker) !== excerpt && String(1) === "2") {',
+    // ADR-ERL2-038 R7/R8 migration. The property is unchanged — *the retained
+    // bytes are exactly the bytes the counts derive from* — but its enforcement
+    // point moved with the channel. Under v1 it was the excerpt fixed point: an
+    // excerpt carrying a line that contributed to no count was refused. Under
+    // ERL2-C-171 the retained bytes are whole records, so the fixed point is
+    // the digest: the verifier hashes the bytes it just parsed and refuses a
+    // record whose declared digest is not that hash. The id is kept so the
+    // ledger can show one property moving rather than one disappearing and an
+    // unrelated one appearing.
+    find: "  if (artifact.content_digest !== recomputedDigest) {",
+    replace: '  if (artifact.content_digest !== recomputedDigest && String(1) === "2") {',
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFailCases: [
-      "ATTR-TELEM-VERIFY: an excerpt padded with non-contributing lines is refused",
+      "TRUSTED-VERIFY: the verifier reads the bytes rather than the claim",
     ],
     expect: "fail",
   },
@@ -558,11 +582,91 @@ export const CONTROLS = [
     id: "telemetry-producer-gate-wiring",
     what: "the environment validity gate answers the telemetry question from the run's own evidence, not from a constant",
     file: "packages/core/src/run/environmentRun.ts",
-    find: "        gate_id: \"attributable-telemetry-retained\",\n        passed: attributableTelemetryGatePassed({",
-    replace: "        gate_id: \"attributable-telemetry-retained\",\n        passed: String(1) === String(1) || attributableTelemetryGatePassed({",
-    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    find: "              gate_id: \"attributable-telemetry-retained\",\n              passed:\n                attributableTelemetryGatePassed({",
+    replace: "              gate_id: \"attributable-telemetry-retained\",\n              passed:\n                String(1) === String(1) ||\n                attributableTelemetryGatePassed({",
+    tests: [
+      "tests/dist/adversarial/attributableTelemetry.test.js",
+      "tests/dist/e2e/environmentExerciseTelemetryTerminal.test.js",
+    ],
+    mustFail: ["tests/dist/e2e/environmentExerciseTelemetryTerminal.test.js"],
+    mustFailCases: [
+      "ENV-TELEM-TERMINAL: a telemetry-applicable run whose channel produced nothing reaches an INVALID terminal",
+    ],
+    expect: "fail",
+    // **Measured, and no longer a declared no-kill (ADR-ERL2-039).**
+    //
+    // This control was `expect: "pass"` from the day it was written, on the
+    // reasoning that driving the gate's false branch needed a live Compose
+    // substrate the ordinary suite must never require. The independent Package 3
+    // review measured the cost of that reasoning: hard-coding the single wire
+    // that decides whether a real run's telemetry is believed broke no test in
+    // the repository.
+    //
+    // The premise was wrong rather than the reasoning. What the false branch
+    // needs is a driver that *declares* a compose kind and implements the
+    // package 2 seam — not a daemon. `environmentExerciseTelemetryTerminal`
+    // supplies one and drives the whole terminal, so the mutation now turns four
+    // assertions over at once: the gate passes, the terminal is valid, no
+    // invalidity finding is frozen, and the run enters the generic evaluation
+    // index it should have been refused.
+    //
+    // Measured before this declaration changed, against the mutation verbatim:
+    // 1 pass / 1 fail, failing on `Missing expected exception: an invalid run
+    // must be refused entry to the generic evaluation index`. The positive case
+    // still passes under the mutant, so the kill is the property and not
+    // collateral breakage.
+  },
+  {
+    id: "exercise-outcome-failure-invalidates",
+    what: "a required exercise that did not succeed fails its own Lab gate, so the run reaches an invalid terminal instead of a valid one with no telemetry obligation (ADR-ERL2-039)",
+    file: "packages/core/src/journey/exerciseOutcome.ts",
+    // The enforcement point, and the reason it is anchored on the *primitive*
+    // rather than on the gate composition: this one definition is what the gate,
+    // the required-gate set, `attributableTelemetryDeclared` and the retention
+    // guard all read. Widening it to accept any status is exactly the defect the
+    // review found — a run whose exercise failed answering as though it had
+    // succeeded — and it type-checks.
+    find: '    (outcome) => outcome.intent === EXERCISE_INTENT && outcome.status === "succeeded",',
+    replace: "    (outcome) => outcome.intent === EXERCISE_INTENT,",
+    tests: ["tests/dist/adversarial/environmentExerciseOutcome.test.js"],
+    mustFail: ["tests/dist/adversarial/environmentExerciseOutcome.test.js"],
+    mustFailCases: [
+      "ENV-EXERCISE: an unsuccessful required exercise reaches an INVALID terminal",
+      "ENV-EXERCISE: telemetry applicability contains exercise success, from one definition",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "exercise-outcome-applicability-is-not-the-verdict",
+    what: "the exercise gate is composed from whether the run exercised, never from how the exercise went, so an unsuccessful exercise cannot be relabelled `not applicable` (ADR-ERL2-039)",
+    file: "packages/core/src/journey/exerciseOutcome.ts",
+    // The rot the ADR names explicitly. Narrowing applicability to *succeeded*
+    // exercises would let a failing run omit the gate rather than fail it, which
+    // is the false-valid terminal restated one level up.
+    find: "  return outcomes.some((outcome) => outcome.intent === EXERCISE_INTENT);",
+    replace:
+      '  return outcomes.some(\n    (outcome) => outcome.intent === EXERCISE_INTENT && outcome.status === "succeeded",\n  );',
+    tests: ["tests/dist/adversarial/environmentExerciseOutcome.test.js"],
+    mustFail: ["tests/dist/adversarial/environmentExerciseOutcome.test.js"],
+    mustFailCases: [
+      "ENV-EXERCISE: an unsuccessful required exercise reaches an INVALID terminal",
+      "ENV-EXERCISE: applicability reads whether an exercise happened, never how it went",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-retention-follows-one-applicability-answer",
+    what: "the run retains an ERL2-C-171 observation only where the telemetry gate will evaluate it, so retention and applicability cannot disagree (ADR-ERL2-039)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // The second half of the review's finding: retention guarded on two
+    // conjuncts while the gate used three, so a run whose exercise did not
+    // succeed froze a record no gate read. Removing the conjunct restores
+    // exactly that, and `assertTelemetryExerciseCoherence` is what refuses it.
+    find: "    if (!exerciseSucceeded(this.ws.derivedStepOutcomes())) return [];",
+    replace: "    if (!exerciseSucceeded(this.ws.derivedStepOutcomes()) && String(1) === \"2\") return [];",
+    tests: ["tests/dist/adversarial/environmentExerciseOutcome.test.js"],
     expect: "pass",
-    note: "Recorded as UNMEASURED, deliberately. The gate's arithmetic is killed by telemetry-gate-satisfaction and its inputs are unit-tested, but no test drives a run in which the wiring evaluates false: that needs a live Compose substrate whose collector receives nothing, which the ordinary suite must never require a daemon to reach. Hard-coding the gate true therefore kills nothing, and the ledger says so rather than implying coverage this control does not provide.",
+    note: "Declared unmeasured, and stated rather than implied. The mutant is a real defect — a run whose exercise did not succeed would freeze an ERL2-C-171 record again — but reaching it needs a run that both declares a compose driver and fails its exercising step, and on the shipped fixture journey a failed exercise is refused earlier still: `revealJudgeExpectations` opens the expectation of every non-succeeded step and refuses any carrying functional truth, which `exercise` does here. The contradiction the mutant creates is refused by `assertTelemetryExerciseCoherence` in the producer and by `deriveValidityOutcome` in the offline verifier, and both refusals ARE measured — by ENV-EXERCISE: a retained observation the gate would not evaluate is refused, and by VERIFIER-DERIVE: the exercise obligation is recomputed, not read from the producer. What is unmeasured is only this call site's own guard, and closing that needs a fixture whose exercise expectation is `journey_only`, which is a fixture change this package deliberately does not make.",
   },
   {
     id: "telemetry-retention-reentry",
@@ -650,10 +754,14 @@ export const CONTROLS = [
     replace: "    if (String(1) === \"2\") {\n      return R.countNotRepresentable;\n    }",
     tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
     mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
-    mustFailCases: [
-      "ATTR-TELEM-RETAIN: a count the canonicalizer cannot represent demotes",
-      "ATTR-TELEM-RETAIN: a count outside the contract's range demotes",
-    ],
+    // This named two cases. The second one — a digit run long enough to reach
+    // `Infinity` — no longer belongs to this guard: the trace-summary parser
+    // refuses an unrepresentable count before it can be summed into a total, so
+    // that case now passes under this mutation and is killed by
+    // `telemetry-malformed-summary-is-not-a-zero` instead. The property did not
+    // move out of the campaign, it moved earlier in the pipeline, and this row
+    // is narrowed rather than left naming a case it cannot kill.
+    mustFailCases: ["ATTR-TELEM-RETAIN: a count outside the contract's range demotes"],
     expect: "fail",
   },
   {
@@ -2110,6 +2218,1591 @@ export const CONTROLS = [
     expect: "fail",
     note: "Needs a container daemon. On a host without one the deadline tests take their announced skip branch, the declared prerequisite is unavailable, and the campaign records `unmeasured_here` — which is neither agreement nor disagreement, and must not be read as a guard that is not load-bearing. The ordinary gate must never require a daemon; this control is where that reading is made explicit.",
   },
+
+  // -- subject-adapter/v2 local observation (ADR-ERL2-037) ------------------
+  //
+  // These twelve ran for a while in `scripts/subject-adapter-v2-negative-controls.mjs`,
+  // a second harness with its own runner, its own patcher and its own report
+  // shape. They killed what they claimed to kill, and `npm run negative-control`
+  // could not see any of them: the campaign counted 129 controls and published
+  // that number as its scope while twelve load-bearing guards sat outside it. A
+  // control the campaign cannot discover is a control the campaign does not have,
+  // so they live here now, under the same discovery, timeout, classification and
+  // durable-record path as every other row. The five after them close the gaps an
+  // independent review found in this package.
+  {
+    id: "v2-local-mode-accepts-v1",
+    what: "local observation may only be dispatched on subject-adapter/v2",
+    file: "packages/core/src/adapter/host.ts",
+    find: "if (isLocal !== (input.executionMode === ADAPTER_LOCAL_EXECUTION_MODE)) {",
+    replace: 'if (String(1) === "2" && isLocal !== (input.executionMode === ADAPTER_LOCAL_EXECUTION_MODE)) {',
+    tests: ["tests/dist/adversarial/localAdapterV2.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-receipt-version-guard",
+    what: "a v1 certification receipt never authorizes a v2 local profile",
+    file: "packages/core/src/adapter/admission.ts",
+    find: 'if (receipt.schema_version !== "subject-adapter-certification-receipt/v2") {',
+    replace: 'if (String(1) === "2") {',
+    tests: ["tests/dist/adversarial/localAdapterV2.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-local-context-closed",
+    what: "the local execution context admits no governed field",
+    file: "packages/contracts/schemas/adapter.schema.json",
+    // The def name is carried in the preimage rather than used as an anchor:
+    // an anchor only opens a window to end-of-file, and `additionalProperties`
+    // occurs seven times below this one.
+    find:
+      '"LocalObservationExecutionContextV2": {\n' +
+      '      "type": "object",\n' +
+      '      "additionalProperties": false,',
+    replace:
+      '"LocalObservationExecutionContextV2": {\n' +
+      '      "type": "object",\n' +
+      '      "additionalProperties": true,',
+    tests: ["tests/dist/contract/localObservationContracts.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-not-scored-constant",
+    what: "a local observation result cannot stop declaring itself unscored",
+    file: "packages/contracts/schemas/observation.schema.json",
+    // Re-anchored when the result became a closed union (ADR-ERL2-042). The
+    // enforcement point is unchanged — the certified result's constant — but
+    // `"LocalObservationResultV1": {` is now a two-line `oneOf` wrapper, so the
+    // window below it holds three matching constants instead of one. This is
+    // exactly the silent expiry the campaign's targeting proof exists to catch,
+    // and it caught it.
+    // The preimage reaches two lines further than the mutation, because an
+    // anchor's window runs to the end of the file and three variants now carry
+    // the same constant. Widening what must match is how the target stays
+    // exactly one; only the first line changes.
+    anchor: '"LocalObservationCertifiedResultV1": {',
+    find:
+      '"not_scored": { "const": true },\n' +
+      '        "not_governor_authorized": { "const": true },\n' +
+      '        "unsupported_claims": { "$ref": "erl2:observation#/$defs/LocalUnsupportedClaimsV1" },',
+    replace:
+      '"not_scored": { "type": "boolean" },\n' +
+      '        "not_governor_authorized": { "const": true },\n' +
+      '        "unsupported_claims": { "$ref": "erl2:observation#/$defs/LocalUnsupportedClaimsV1" },',
+    tests: ["tests/dist/contract/localObservationContracts.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-governed-consumer-firewall",
+    what: "a local observation result cannot satisfy a governed consumer contract",
+    file: "packages/contracts/src/validate.ts",
+    find: "export function validateContract(contractName: string, value: unknown): ValidationResult {",
+    replace:
+      "export function validateContract(contractName: string, value: unknown): ValidationResult {\n" +
+      '  if (contractName === "LabRunRecordV1" && (value as { schema_version?: string })?.schema_version === "local-observation-result/v1") return { valid: true, problems: [] };',
+    tests: ["tests/dist/adversarial/localObservationFirewall.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-receipt-operation-scope",
+    what: "the receipt's certified operations must equal the certified profile's",
+    file: "packages/core/src/adapter/admission.ts",
+    find: '  assertSameSet(receipt.certified_operations, certifiedProfile.operations, "certified operations", manifest.adapter_id);\n',
+    replace: "",
+    tests: ["tests/dist/adversarial/localAdapterV2.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-per-dispatch-digest",
+    what: "the adapter's entry bytes are re-verified on every dispatch",
+    file: "packages/core/src/adapter/host.ts",
+    find:
+      "      assertEntryDigestUnchanged({\n" +
+      "        entryPath: this.entryPath,\n" +
+      "        certifiedArtifactHash: this.certifiedArtifactHash,\n" +
+      "      });",
+    replace: "      void this.certifiedArtifactHash;",
+    tests: ["tests/dist/adversarial/localAdapterV2.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-local-output-bytes",
+    what: "the plan's output-byte ceiling, not the host default, bounds a local run",
+    file: "packages/core/src/adapter/host.ts",
+    find: "maxTotalBytes: limits.max_output_bytes,",
+    replace: "maxTotalBytes: hostBounds.maxTotalBytes,",
+    tests: ["tests/dist/adversarial/localAdapterV2.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-ambiguous-never-replayed",
+    what: "an ambiguous local effect is never replayed to make progress",
+    file: "packages/core/src/observation/localObservation.ts",
+    find:
+      '        if (existing.state === "ambiguous_not_replayed") {\n' +
+      "          throw new Erl2Error(\n" +
+      "            CODES.ADAPTER_LOCAL_AMBIGUOUS_REPLAY_REFUSED,\n" +
+      '            "an ambiguous local effect is never replayed blindly",\n' +
+      "          );\n" +
+      "        }",
+    replace:
+      '        if (existing.state === "ambiguous_not_replayed") {\n' +
+      "          return existing;\n" +
+      "        }",
+    tests: ["tests/dist/integration/localObservationReducer.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-post-freeze-dispatch",
+    what: "no local operation dispatches after the output freeze",
+    file: "packages/core/src/observation/localObservation.ts",
+    find: "if (this.outputFrozen) {",
+    replace: 'if (String(1) === "2" && this.outputFrozen) {',
+    tests: ["tests/dist/integration/localObservationReducer.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-cleanup-requires-evidence",
+    what: "cleanup is complete only when its evidence says so",
+    file: "packages/core/src/observation/localObservation.ts",
+    find: "    const complete =\n",
+    replace: "    const complete =\n      true ||\n",
+    tests: [
+      "tests/dist/integration/localObservationReducer.test.js",
+      "tests/dist/integration/localResidueTruth.test.js",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "v2-coordinator-delegates",
+    what: "the local coordinator holds no subprocess authority of its own",
+    file: "packages/core/src/observation/localObservation.ts",
+    find: 'import { coreHash } from "@erl2/integrity";\n',
+    replace: 'import { coreHash } from "@erl2/integrity";\nimport { spawnSync } from "node:child_process";\n',
+    tests: ["tests/dist/architecture/localObservationBoundary.test.js"],
+    expect: "fail",
+  },
+
+  // -- closures from the Package A independent review ------------------------
+  {
+    id: "v2-residue-requires-report",
+    what: "a clean substrate is read from the adapter's residue report, never inferred from an operation ending",
+    file: "packages/core/src/observation/localObservation.ts",
+    // The exact defect that was found, reintroduced verbatim: cleanliness
+    // derived from a `report-residue` operation having ended, with the report
+    // itself computed and then ignored.
+    //
+    // An earlier version of this control patched only the `finalResidue ===
+    // undefined` arm, and survived — because once the report is read, that arm
+    // is unreachable for an operation that succeeded. A control has to remove
+    // the property, not a line near it.
+    find:
+      '    const residue: LocalCleanupResultV1["residue"] =\n' +
+      "      finalResidue === undefined\n" +
+      '        ? "not_observed"\n' +
+      '        : finalResidue.status === "clean"\n' +
+      '          ? "observed_clean"\n' +
+      '          : finalResidue.status === "residue_detected"\n' +
+      '            ? "residue_detected"\n' +
+      '            : "not_observed";',
+    replace:
+      "    void finalResidue;\n" +
+      '    const residue: LocalCleanupResultV1["residue"] =\n' +
+      '      finalResiduePlanned && succeeded("report-residue") ? "observed_clean" : "not_observed";',
+    tests: ["tests/dist/integration/localResidueTruth.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-residue-report-validated",
+    what: "an unusable or self-contradicting residue report is refused at the protocol boundary",
+    file: "packages/core/src/adapter/responseShape.ts",
+    find: '  if (record["status"] === "clean" && named > 0) {',
+    replace: '  if (String(1) === "2" && record["status"] === "clean" && named > 0) {',
+    tests: ["tests/dist/integration/localResidueTruth.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-governed-port-refusal",
+    what: "the governed SubjectPort refuses a v2 local-observation host at construction, before a port exists to dispatch through",
+    file: "packages/core/src/adapter/hostedSubjectPort.ts",
+    // The mutation an independent review ran, which the suite did not notice.
+    //
+    // What it kills is the port's own early refusal, and only that. Enforcement
+    // is layered: with this guard gone the host's execution-mode binding still
+    // refuses every port method, so no adapter dispatch becomes observable and
+    // the suite's sentinel does not move. An earlier note here claimed the
+    // sentinel would move; a second review disproved it by experiment. The
+    // narrower claim is the true one, and `HOST-MODE-BINDING` in the same suite
+    // pins the layer that makes it true.
+    find: '    if (host.manifest.schema_version !== "subject-adapter-manifest/v1") {',
+    replace: '    if (String(1) === "2") {',
+    tests: ["tests/dist/integration/governedPortRefusal.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-telemetry-follower-readiness",
+    what: "a follower that never attached or died mid-look yields TRACE_OBSERVATION_UNAVAILABLE, never TRACE_NOT_EMITTED",
+    file: "tests/support/durableTelemetry.ts",
+    // Pinned at the diagnostic code, not at an explanation string. The cases
+    // this control originally killed all stayed classified
+    // `TRACE_OBSERVATION_UNAVAILABLE` under the mutation — the `unreadable`
+    // fallback caught them — so only their wording changed, which a second
+    // review found and is not a boundary. `a follower that dies after an empty
+    // read` is the fixture where the classification itself flips to
+    // `TRACE_NOT_EMITTED`: the capture is present, readable and honestly empty,
+    // so nothing else in the verdict chain can stand in for readiness.
+    find: "    if (!readiness.usable) {",
+    replace: '    if (String(1) === "2" && !readiness.usable) {',
+    tests: ["tests/dist/integration/durableTelemetryObservation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-telemetry-block-boundary",
+    what: "a trace batch is attributed only by the markers inside its own block",
+    file: "tests/support/durableTelemetry.ts",
+    // Never terminating a block is the direction that leaks one run's spans into
+    // another's total, and is the mutation that previously survived.
+    find: "      if (SIGNAL_SUMMARY_LINE.test(line)) break;",
+    replace: "      if (false) break;",
+    tests: ["tests/dist/integration/durableTelemetryObservation.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "v2-operation-success-requires-adapter-success",
+    what: "an operation counts as successful only when the adapter said it succeeded, never merely because its record completed",
+    file: "packages/core/src/observation/localObservation.ts",
+    // The residue remediation corrected two properties, and only the first got a
+    // control. This is the second: `completed` means the exchange completed and
+    // its evidence froze, and has never meant the adapter succeeded. An
+    // independent review ran exactly this mutation and the entire test tree
+    // stayed green, so the property was outside the campaign's scope.
+    //
+    // The conjunct is removed rather than the branch around it: lifecycle
+    // completion is retained, so the mutation asks precisely "does the adapter's
+    // verdict decide?" and nothing else.
+    find:
+      '          record.state === "completed" &&\n' +
+      '          record.response_status === "supported",',
+    replace: '          record.state === "completed",',
+    tests: ["tests/dist/integration/localOperationSuccess.test.js"],
+    expect: "fail",
+  },
+  {
+    id: "compose-observation-requires-coherent-span-count",
+    what: "a retained telemetry observation states a span count only from a window that carried the counting line and this run's records together",
+    file: "packages/core/src/environment/telemetryObservation.ts",
+    // The defect an independently classified clean-gate failure exposed. The
+    // observer settled on `runAttributedRecords >= 1` and froze the span count
+    // from the same read, but the two survive rotation differently: marked
+    // records live in a batch's detailed dump and the count lives in the summary
+    // line above it, and the collector's `json-file` log evicts from the head. A
+    // run whose spans were emitted, exported and marked could therefore freeze
+    // `evidence: observed, spans: 0` beside `run_attributed_records: 2`.
+    //
+    // The mutation is exactly the pre-correction condition, so a survivor means
+    // the false-zero artifact is retainable again. The named case reads the
+    // *frozen artifact* through the production retention path, not a helper's
+    // return value: the lie was in the retained evidence.
+    find: "  if (input.counts.runAttributedBatches >= 1) return { decision: \"retain\" };",
+    replace: "  if (input.counts.runAttributedRecords >= 1) return { decision: \"retain\" };",
+    tests: ["tests/dist/adversarial/composeSubstrate.test.js"],
+    mustFail: ["tests/dist/adversarial/composeSubstrate.test.js"],
+    mustFailCases: [
+      "COMPOSE-WINDOW: the failed-gate signature cannot be retained as a definitive zero",
+      "COMPOSE-WINDOW: another run's summary does not supply a count for this run's records",
+    ],
+    // The shared declaration the suite's three other controls carry, and this
+    // one now carries too. It used to be a hand-written copy naming only the
+    // *first* rendered-topology case; package 2 added a second assertion over
+    // the same merge and updated `RENDERED_TOPOLOGY_SKIP`, and this copy was not
+    // updated with it. The independent Package 3 review ran this control for the
+    // first time since and it harness-errored on the undeclared second skip —
+    // the guard killed correctly, but an undeclared skip is coverage the
+    // campaign cannot account for, so it refused to record an agreement.
+    //
+    // Referencing the constant rather than restating it is the repair: a copy
+    // drifts, a reference cannot.
+    expectedSkips: RENDERED_TOPOLOGY_SKIP,
+    expect: "fail",
+  },
+  {
+    id: "nc-marker-published-atomically",
+    what: "a marker's final path is never the file being written to, so no reader can observe it at length zero",
+    file: "tests/support/atomicMarker.ts",
+    // The second failure the same gate recorded. `writeFileSync` opens the final
+    // path with O_CREAT|O_TRUNC and *then* writes, so the path exists, empty,
+    // before it carries a byte; an independent probe caught it at size zero in
+    // 300 of 300 attempts. The mutation restores exactly that shape — the bytes
+    // go straight to the final name — and the named case notices structurally,
+    // between staging and committing, rather than by racing anything.
+    find: '  const fd = openSync(temporary, "wx", MARKER_MODE);',
+    replace: '  const fd = openSync(finalPath, "w", MARKER_MODE);',
+    tests: ["tests/dist/integration/atomicMarkerPublication.test.js"],
+    mustFail: ["tests/dist/integration/atomicMarkerPublication.test.js"],
+    mustFailCases: ["MARKER-WRITE: the final path is never the file being written to"],
+    expect: "fail",
+  },
+  {
+    id: "nc-marker-readiness-requires-valid-content",
+    what: "a marker is ready only when its bytes read whole, parse, and name the writer the reader is waiting for — never merely because the path exists",
+    file: "tests/support/atomicMarker.ts",
+    // The reader half of the same defect, and the half that makes the outcome
+    // deterministic rather than merely unlikely: the original loop's readiness
+    // condition was `existsSync`, so it proceeded to `JSON.parse` on a file that
+    // existed and was empty. The mutation makes an existing empty file ready
+    // again, which is that condition exactly.
+    find: '  if (bytes.length === 0) return { ready: false, why: { state: "empty" } };',
+    replace:
+      "  if (bytes.length === 0) {\n" +
+      "    return { ready: true, envelope: { kind: expected.kind, id: expected.id, payload: {} as T } };\n" +
+      "  }",
+    tests: ["tests/dist/integration/atomicMarkerPublication.test.js"],
+    mustFail: ["tests/dist/integration/atomicMarkerPublication.test.js"],
+    mustFailCases: [
+      "MARKER-READ: an empty file is never a marker",
+      "MARKER-READ: the exact failed-gate failure is unreachable through the reader",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-summary-must-be-a-framed-record",
+    what: "a span count is read only from a line the collector framed as a whole console record, never from payload text a subject wrote",
+    file: "packages/core/src/environment/telemetryObservation.ts",
+    // P1 of the independent review. The pattern here was
+    // `/\bTraces\b.*"spans":\s*(\d+)/` — unanchored, matching anywhere on any
+    // line. The Lab's overlay pipes subject logs through the same debug
+    // exporter, and the pinned collector renders a log body at column zero, so
+    // `Body: Str(...Traces ... "spans": 9999)` matched. One of those turned a
+    // correctly refused rotated window into a retained observation stating a
+    // count no collector ever wrote.
+    //
+    // The mutation drops the record-boundary requirement, which is the whole of
+    // the anchoring. The named case is the payload table: the reviewed exploit
+    // must classify as `not_summary`, and without the anchor it does not.
+    find: "  if (!CONSOLE_RECORD_LINE.test(line)) return NOT_SUMMARY;",
+    replace: "  if (false) return NOT_SUMMARY;",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-PARSE: only a whole console record the collector framed states a span count",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-record-payload-is-not-summary-text",
+    what: "text inside a record's payload states nothing, even when it is a byte-exact copy of an authentic summary",
+    file: "packages/core/src/environment/telemetryObservation.ts",
+    // The residual the anchoring alone leaves: a subject's *multi-line* log body
+    // puts its continuation at column zero, so it can carry a whole copied
+    // summary record. Framing is what answers it — a record whose message runs
+    // on opens a payload region, and nothing in that region is read as a
+    // summary. The mutation stops any region from ever opening.
+    find: "    if (CONSOLE_RECORD_LINE.test(line) && !isCompleteRecordLine(line)) open = true;",
+    replace: "    if (false) open = true;",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-PARSE: a payload line shaped like a record boundary makes the window ambiguous",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-ambiguous-window-is-refused",
+    what: "a window carrying a record boundary inside payload is refused, not read as though its framing were known",
+    file: "packages/core/src/environment/telemetryObservation.ts",
+    // Detecting the forged boundary is only half of it: the window must then be
+    // refused. Without this guard the scan falls through and states whatever
+    // its lines happen to total, which is the shape of the original defect.
+    find: "  if (input.counts.forgedBoundaries > 0) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-PARSE: a payload line shaped like a record boundary makes the window ambiguous",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-malformed-summary-is-not-a-zero",
+    what: "a summary record whose count cannot be read refuses the window instead of totalling to zero",
+    file: "packages/core/src/environment/telemetryObservation.ts",
+    // The count used to be a digit run handed to `Number.parseInt`, so a long
+    // enough one reached `Infinity`. The parser refuses it now — but a refused
+    // summary that merely went uncounted would leave the window stating a zero
+    // it never observed, which is the exact conflation this module exists to
+    // prevent.
+    find: "  if (input.counts.malformedSummaries > 0) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-PARSE: a record shaped like a summary and unreadable as one is malformed, never a zero",
+      "ATTR-TELEM-RETAIN: a digit run too long to represent never becomes a count",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-verifier-recomputes-coherence",
+    what: "the offline verifier re-derives the retained artifact's byte length, record count and termination instead of trusting the producer that declared them (ADR-ERL2-038 R5)",
+    file: "packages/public-verifier/src/library/telemetryDerivation.ts",
+    // P2 of the same review. The producer enforced the coherent-window
+    // invariant and the verifier did not re-derive it, so the literal artifact
+    // the failed clean gate recorded — `spans: 0` beside
+    // `run_attributed_records: 2` — still verified clean: every counter agreed
+    // with the excerpt, and nothing checked the relationship between them.
+    //
+    // A retained artifact is durable evidence with two authorities. The
+    // mutation removes the second one.
+    // ADR-ERL2-038 R7 migration. Under v1 the incoherent shape was attribution
+    // with no batch that counted it, because a batch's summary and its marked
+    // records could land in different windows. Under ERL2-C-171 both come out
+    // of one parsed document and cannot separate, so the incoherent shape is
+    // attribution that exceeds the spans it was drawn from. Same property —
+    // *the verifier re-derives the relationship between two counts instead of
+    // trusting the producer that wrote them* — at the boundary that now exists.
+    find: [
+      "  if (",
+      "    artifact.byte_length !== derived.byteLength ||",
+      "    artifact.record_count !== derived.recordCount ||",
+      "    artifact.final_record_terminated !== derived.finalRecordTerminated",
+      "  ) {",
+    ].join("\n"),
+    replace: '  if (String(1) === "2") {',
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "TRUSTED-VERIFY: the verifier reads the bytes rather than the claim",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-v1-cannot-authorize",
+    what: "a historical v1 record, an unknown version and an invalid v2 are all refused authority for a new claim rather than accepted because nothing better exists (ADR-ERL2-038 R8)",
+    file: "packages/core/src/environment/telemetryObservation.ts",
+    // The whole migration in one line. Mutating it restores exactly the
+    // dual authority R8 exists to prevent: any retained record, of any
+    // version and any validity, becomes good enough.
+    find: "  if (!claim.authoritative) return false;",
+    replace: "  if (!claim.authoritative) return input.observations.length > 0;",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-AUTHORITY: the migration truth table, observed at the gate",
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+      "TRUSTED-HISTORY: v1 stays readable, and reading is not authorizing",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-invalid-v2-does-not-downgrade",
+    what: "an invalid v2 record refuses outright instead of falling through to a v1 that would have passed (ADR-ERL2-038 R8)",
+    file: "packages/core/src/environment/telemetryAuthority.ts",
+    find: "  if (!validateContract(\"AttributableTelemetryObservationV2\", candidate).valid) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-unknown-version-fails-closed",
+    what: "a retained record whose schema version the Lab does not know fails closed rather than being ignored (ADR-ERL2-038 R8)",
+    file: "packages/core/src/environment/telemetryAuthority.ts",
+    find: "    return refuse(TELEMETRY_AUTHORITY_REASONS.unknownVersion);",
+    replace: "    continue;",
+    // Only the inventory distinguishes this. The truth table asks whether the
+    // run is eligible, and an ignored unknown-version record leaves it
+    // ineligible either way — a weaker refusal is still a refusal, so the row
+    // that must move is the one asserting *which* refusal.
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-freeze-integrity-verified",
+    what: "a record edited after it was frozen is refused, because its own core hash is no longer the hash of its own fields (ADR-ERL2-038 R5)",
+    file: "packages/core/src/environment/telemetryAuthority.ts",
+    find: "  if (coreHash(coreOf(observation)) !== observation.core_hash) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-artifact-digest-verified",
+    what: "the declared content digest is recomputed over the retained bytes, so a record hashed over one buffer and retained over another is refused (ADR-ERL2-038 R5)",
+    file: "packages/core/src/environment/telemetryAuthority.ts",
+    find: "  if (artifact.content_digest !== hashBytes(Buffer.from(bytes, \"utf8\"))) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-untrusted-payload-cannot-create-a-record",
+    what: "a physical line that is not exactly one OTLP-JSON trace document states no count, which is where the retired region-open property now lives (ADR-ERL2-038 R7)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    // The mapped successor of telemetry-record-payload-is-not-summary-text.
+    // That control mutates the mixed parser's region-open decision, whose
+    // enforcement point survives until package 3 retires the parser, so it
+    // is still discovered and still killing. This is the same security
+    // property — subject payload cannot become a record — measured at the
+    // boundary that will outlive it.
+    find: "    if (keys.length !== 1 || keys[0] !== \"resourceSpans\") {",
+    replace: "    if (false) {",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-PARSE: the grammar refuses every shape a minimized channel cannot produce",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-cross-run-record-refused",
+    what: "an artifact carrying another run's marker is refused rather than counted in part (ADR-ERL2-038 R4)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "              if (found !== marker) return refuse(TRUSTED_TELEMETRY_REASONS.foreignRun);",
+    replace: "              if (false) return refuse(TRUSTED_TELEMETRY_REASONS.foreignRun);",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-PARSE: the grammar refuses every shape a minimized channel cannot produce",
+      "TRUSTED-PARSE: mixed run markers are refused rather than partially counted",
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-partial-record-refused",
+    what: "bytes that do not end on a record boundary are a partial write and state no count (ADR-ERL2-038 R5)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "  if (!bytes.endsWith(\"\\n\")) return refuse(TRUSTED_TELEMETRY_REASONS.incomplete);",
+    replace: "  if (false) return refuse(TRUSTED_TELEMETRY_REASONS.incomplete);",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-PARSE: the grammar refuses every shape a minimized channel cannot produce",
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-size-bound-enforced",
+    what: "an artifact past the retention bound is refused rather than truncated into counts that are not the run's (ADR-ERL2-038 R6)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "    return refuse(TRUSTED_TELEMETRY_REASONS.overSizeBound);",
+    replace: "    return { ok: true, counts: { traceBatches: 0, spans: 0, serviceNames: [], runAttributedRecords: 0, byteLength, recordCount: 0, finalRecordTerminated: false } };",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-FIXTURE: the size-boundary fixture is bounded, and one byte more is not",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-channel-minimization-configured",
+    what: "the trusted pipeline minimizes before it exports; removing the transform makes the channel retain whatever a subject attached (ADR-ERL2-038 R2)",
+    file: "environments/otel-demo/compose/erl2-otelcol-extras.yaml",
+    find: "      processors: [memory_limiter, transform/trusted]",
+    replace: "      processors: [memory_limiter]",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CONFIG: the trusted pipeline minimizes before it exports, and the allowlist is the parser's",
+    ],
+    expect: "fail",
+  },
+  {
+    // P0-1, collector side. The scope context is the one the first candidate
+    // never named, and a live review payload retained a session token in it.
+    id: "trusted-channel-scope-minimized",
+    what: "the trusted pipeline strips the instrumentation scope's attributes, name and version before export, so the third attribute map cannot carry subject bytes into the artifact (Package 2 remediation P0-1)",
+    file: "environments/otel-demo/compose/erl2-otelcol-extras.yaml",
+    find: "          - keep_keys(scope.attributes, [])",
+    replace: "          - set(scope.version, \"\")",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CONFIG: the trusted pipeline minimizes before it exports, and the allowlist is the parser's",
+    ],
+    expect: "fail",
+  },
+  {
+    // P0-1, collector side. Span name, status message and trace state were all
+    // measured surviving verbatim into a verified artifact.
+    id: "trusted-channel-span-fields-minimized",
+    what: "the trusted pipeline removes the span's name, status message and trace state before export, closing the three subject-controlled string fields the allowlist never named (Package 2 remediation P0-1)",
+    file: "environments/otel-demo/compose/erl2-otelcol-extras.yaml",
+    find: "          - set(span.status.message, \"\")",
+    replace: "          - set(span.kind, span.kind)",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CONFIG: the trusted pipeline minimizes before it exports, and the allowlist is the parser's",
+    ],
+    expect: "fail",
+  },
+  {
+    // `error_mode: ignore` is how `set(span.events, [])` became a silent no-op.
+    // Every statement here is load-bearing for a privacy bound, so a statement
+    // that cannot be applied must stop the batch rather than export more.
+    id: "trusted-channel-minimization-fails-closed",
+    what: "an inapplicable minimization statement fails the trusted pipeline closed rather than being swallowed, so a statement that parses but does not mutate cannot silently retain more than the allowlist says (Package 2 remediation P0-1)",
+    file: "environments/otel-demo/compose/erl2-otelcol-extras.yaml",
+    find: "    error_mode: propagate",
+    replace: "    error_mode: ignore",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CONFIG: the trusted pipeline minimizes before it exports, and the allowlist is the parser's",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-channel-event-attributes-stripped",
+    what: "span event attributes are stripped before export; without it an exception stack trace reaches the retained artifact, which a live run demonstrated (ADR-ERL2-038 R2)",
+    file: "environments/otel-demo/compose/erl2-otelcol-extras.yaml",
+    find: "          - keep_keys(spanevent.attributes, [])",
+    replace: "          - truncate_all(spanevent.attributes, 512)",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CONFIG: the trusted pipeline minimizes before it exports, and the allowlist is the parser's",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-channel-debug-off-the-trusted-pipeline",
+    what: "the debug exporter never shares the trusted pipeline; on a shared stream a subject log body forged a complete trusted record reading 9999 spans (ADR-ERL2-038 R3)",
+    file: "environments/otel-demo/compose/erl2-otelcol-extras.yaml",
+    find: "      exporters: [file/trusted]",
+    replace: "      exporters: [file/trusted, debug]",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CONFIG: the trusted exporter shares its channel with nothing that renders subject bytes",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-channel-logs-excluded-from-trusted-export",
+    what: "no signal but traces reaches the trusted exporter, so a subject log body — the vector the mixed stream was forged through — has no path into the trusted file (ADR-ERL2-038 R3)",
+    file: "environments/otel-demo/compose/erl2-otelcol-extras.yaml",
+    find: [
+      "    logs:",
+      "      receivers: [otlp]",
+      "      processors: [memory_limiter]",
+      "      exporters: [debug]",
+    ].join("\n"),
+    replace: [
+      "    logs:",
+      "      receivers: [otlp]",
+      "      processors: [memory_limiter]",
+      "      exporters: [debug, file/trusted]",
+    ].join("\n"),
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CONFIG: the trusted exporter shares its channel with nothing that renders subject bytes",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-channel-stale-volume-refused",
+    what: "a trusted volume of this run's name that already exists is refused rather than adopted, so a run cannot inherit another run's bytes (ADR-ERL2-038 R5)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (this.volumeExists()) {",
+    replace: "    if (false) {",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CHANNEL: a volume of this run's name that already exists is refused, never adopted",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-channel-mount-ownership-verified",
+    what: "the volume's ownership and size options are read back from the daemon rather than assumed to have been applied (ADR-ERL2-038 R1/R4)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (observed !== trustedVolumeMountOptions()) {",
+    replace: "    if (false) {",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CHANNEL: a daemon that ignored the ownership options is refused, not trusted",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-channel-volume-run-scoped",
+    what: "the trusted volume's name embeds the run id, so ownership is provable from the name and two runs cannot collide (ADR-ERL2-038 R5)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "  return `erl2-trusted-${runId}`;",
+    replace: "  return \"erl2-trusted-shared\";",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CHANNEL: the volume name is run-scoped, so ownership is provable from the name",
+      "TRUSTED-CHANNEL: the volume is created with the collector's ownership and a size bound",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-channel-single-file-enforced",
+    what: "a trusted directory holding more than the one expected artifact is refused, which is what enforces the contract's no-rotation single segment (ADR-ERL2-038 R6)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (fileNames.length !== 1) {",
+    replace: "    if (false) {",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CHANNEL: exactly one file is frozen, and a second is refused rather than ignored",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-channel-artifact-stability-required",
+    what: "an artifact is frozen only after two consecutive copies agree, so a prefix of a file the collector is still appending to is never hashed as the artifact (ADR-ERL2-038 R5)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "        previous.equals(read.bytes) &&",
+    replace: "        true &&",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CHANNEL: bytes that never stop moving are refused, never half-frozen",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-channel-settle-requires-attribution",
+    what: "the freeze waits for this run's telemetry to reach the file rather than for the file to stop moving, so a stable empty file is not frozen as an authentic zero (ADR-ERL2-033)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    return settling.ok && settling.counts.runAttributedRecords >= 1;",
+    replace: "    return true;",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CHANNEL: an empty file that is merely stable is not yet a settled observation",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-channel-oversize-refused",
+    what: "an artifact larger than ERL2-C-171 retains fails closed at the freeze and is never truncated to fit (ADR-ERL2-038 R6)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (byteLength > TRUSTED_TELEMETRY_MAX_BYTES) {",
+    replace: "    if (false) {",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CHANNEL: an artifact over the retention bound fails closed and is never truncated to fit",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-channel-encoding-verified",
+    what: "bytes that do not survive a UTF-8 round trip are refused rather than decoded with replacement characters, so a digest never covers bytes the collector did not write",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (!Buffer.from(text, \"utf8\").equals(bytes)) {",
+    replace: "    if (false) {",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CHANNEL: bytes that are not UTF-8 are refused rather than silently replaced",
+    ],
+    expect: "fail",
+  },
+  {
+    // The anchor moved from `this.created` to the durable handle's run binding,
+    // because the property moved with it. "Only a volume this channel created"
+    // used to mean "only while the creating process is still alive", which is
+    // why every real multi-process teardown left the volume behind. It now means
+    // "only a volume this run holds a durable, run-bound handle for", and this
+    // is the line that makes the handle load-bearing: refuse every handle here
+    // and cleanup is blind again, exactly as it was.
+    //
+    // The mutation withholds the handle from every caller. Two earlier attempts
+    // did not survive contact with the type checker — assigning the read away
+    // narrows the local to `never`, and an always-true early return discards the
+    // narrowing for the lines below it — and the campaign scores a build failure
+    // as a harness error rather than a kill, so a control anchored either way
+    // measures nothing. Returning `undefined` from the accessor is the same
+    // defect and type-checks.
+    id: "trusted-channel-cleanup-scoped-to-created",
+    what: "cleanup acts only on a durable ownership handle bound to this run, so a refused pre-existing volume is never deleted and a volume created in an earlier process is still removable (Package 2 closure)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    return handle;",
+    replace: "    return undefined;",
+    // Scoped to the ownership suite rather than to both, and every case it kills
+    // is declared. This is the most central guard in the module — withhold the
+    // handle and nothing downstream can prove anything — so a broad kill is the
+    // honest result rather than a sign the mutation is too coarse. Declaring the
+    // full list is what keeps it a measurement: an undeclared failure would be
+    // scored as collateral and the control would not be credited at all. The
+    // cross-process suite is left to the controls whose mutations discriminate
+    // within it.
+    tests: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFailCases: [
+      "TRUSTED-OWNERSHIP: a crash after the volume and before confirmation reconciles the exact resource",
+      "TRUSTED-OWNERSHIP: a failed removal keeps the handle and reports the daemon's words",
+      "TRUSTED-OWNERSHIP: a live claim is never overwritten by a second provision",
+      "TRUSTED-OWNERSHIP: a removal that succeeded without a tombstone is recovered honestly",
+      "TRUSTED-OWNERSHIP: a successful removal tombstones the handle",
+      "TRUSTED-OWNERSHIP: a volume with the right labels and the wrong capability survives",
+      "TRUSTED-OWNERSHIP: a volume with the right name and wrong labels survives",
+      "TRUSTED-OWNERSHIP: ownership is read from the handle, never from this object's memory",
+      "TRUSTED-OWNERSHIP: reconciliation refuses a mismatched resource rather than deleting it",
+      "TRUSTED-OWNERSHIP: repeated destroy is idempotent and cannot reach a later resource",
+    ],
+    expect: "fail",
+  },
+  {
+    // The handle is the only thing standing between a second process and a
+    // guessed deletion, so a handle that verifies without being sealed is a
+    // capability anyone with write access to a temporary directory can mint.
+    id: "trusted-channel-ownership-handle-integrity",
+    what: "an ownership handle is accepted only when it hashes to what it claims, so an edited or hand-written handle cannot authorize removing a resource (Package 2 closure)",
+    file: "packages/core/src/environment/trustedOwnership.ts",
+    find: "  return coreHash(core) === claimed;",
+    replace: "  return claimed === claimed;",
+    tests: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFailCases: ["TRUSTED-OWNERSHIP: a tampered handle is not a handle"],
+    expect: "fail",
+  },
+  {
+    // The crash-window ordering. Persisting the intent *after* the resource
+    // exists reopens the one window that cannot be recovered from: a volume
+    // nobody can prove they own.
+    id: "trusted-channel-ownership-intent-precedes-creation",
+    what: "the ownership intent is durable before the volume is created, so a crash between the two leaves a recoverable handle rather than an unattributable resource (Package 2 closure)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    this.ownership.write(intent);",
+    replace: "    void intent;",
+    tests: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFailCases: [
+      "TRUSTED-OWNERSHIP: a crash after the intent and before the volume is recoverable",
+    ],
+    expect: "fail",
+  },
+  {
+    // Label validation, immediately before removal.
+    id: "trusted-channel-ownership-labels-verified",
+    what: "a volume is removed only when its label set is exactly the one this run's handle requires, so a resource carrying this run's name and another run's labels is never deleted (Package 2 closure)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (!labelsMatch(handle.labels, observed)) return false;",
+    replace: "    if (false) return false;",
+    tests: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFailCases: [
+      "TRUSTED-OWNERSHIP: a volume with the right name and wrong labels survives",
+    ],
+    expect: "fail",
+  },
+  {
+    // Capability validation. Separate from the labels because it is a separate
+    // claim: the labels say what the resource is, and this says the remover
+    // holds the value that created it.
+    id: "trusted-channel-ownership-capability-verified",
+    what: "a volume is removed only when its ownership label carries the digest of the capability in this run's handle, so a resource spoofed under a predictable name is never deleted (Package 2 closure)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find:
+      "    if (observed?.[TRUSTED_VOLUME_LABEL_KEYS.ownership] !== trustedCapabilityDigest(handle.capability)) {",
+    replace: "    if (false) {",
+    tests: [
+      "tests/dist/adversarial/trustedOwnership.test.js",
+      "tests/dist/integration/trustedCrossProcess.test.js",
+    ],
+    mustFail: [
+      "tests/dist/adversarial/trustedOwnership.test.js",
+      "tests/dist/integration/trustedCrossProcess.test.js",
+    ],
+    mustFailCases: [
+      "TRUSTED-OWNERSHIP: a volume with the right labels and the wrong capability survives",
+      // The same spoof staged against the real daemon. Both must be declared, or
+      // the harness reads the second failure as collateral and scores the
+      // control `unrelated_tests_failed` — a kill it will not credit.
+      "XPROC: a volume carrying the right name and a foreign capability is not removed",
+    ],
+    expect: "fail",
+  },
+  {
+    // The one place this module removes a resource it did not watch being
+    // created. Widening it is how a recovery path becomes a garbage collector.
+    id: "trusted-channel-ownership-reconciliation-exact",
+    what: "a pending ownership intent reconciles only the exact resource it names and proves, so recovery never removes a volume the intent does not describe (Package 2 closure)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (!this.resourceProvenOwned(intent)) return false;",
+    replace: "    if (false) return false;",
+    tests: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFailCases: [
+      "TRUSTED-OWNERSHIP: reconciliation refuses a mismatched resource rather than deleting it",
+    ],
+    expect: "fail",
+  },
+  {
+    // Without the tombstone a destroyed run keeps a live claim on a name, and a
+    // later resource under that name inherits it.
+    id: "trusted-channel-cleanup-tombstones-ownership",
+    what: "a successful removal retires the ownership handle, so a repeated destroy is idempotent and a live claim can never reach a resource created later under the same name (Package 2 closure)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find:
+      "    this.ownership.write(sealTrustedVolumeOwnership({ ...withoutHash(handle), phase: \"released\" }));\n    return { attempted: true, removed: true, surviving: [] };",
+    replace: "    return { attempted: true, removed: true, surviving: [] };",
+    tests: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedOwnership.test.js"],
+    mustFailCases: [
+      "TRUSTED-OWNERSHIP: a successful removal tombstones the handle",
+      "TRUSTED-OWNERSHIP: repeated destroy is idempotent and cannot reach a later resource",
+    ],
+    expect: "fail",
+  },
+  {
+    // The anchor moved with the code: the post-removal re-check is now one
+    // expression rather than a second `volumeExists` block, and the mutation
+    // says the same thing — treat every removal as having succeeded.
+    id: "trusted-channel-cleanup-failure-reported",
+    what: "a volume that is still present after a failed removal is reported as surviving rather than as removed, so cleanup outcome stays an observation (ADR-ERL2-038)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (removed.status === 0 || !this.volumeExists()) return this.releaseHandle(handle);",
+    replace: "    if (true) return this.releaseHandle(handle);",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CHANNEL: a cleanup that failed says so, and says what survived",
+      "TRUSTED-CHANNEL: cleanup does not confer evidence validity, and validity does not confer cleanup",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-event-attributes-refused",
+    what: "a span event's attributes and name are refused, closing the minimization hole a live run exposed when an exception stack trace survived into the retained artifact (ADR-ERL2-038 R2)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "          const eventRefusal = childRefusal(span[\"events\"], SHAPE.event);",
+    replace: "          const eventRefusal = undefined;",
+    tests: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedChannel.test.js"],
+    mustFailCases: [
+      "TRUSTED-CHANNEL: a span event's attributes and name are both refused",
+    ],
+    expect: "fail",
+  },
+  {
+    // P0-1. The generic unknown-key refusal is the whole recursion: the first
+    // Package 2 grammar checked four attribute maps and ignored every other key
+    // at every level, so six subject-controlled surfaces reached the artifact
+    // and verified clean. Tolerating an unknown key is exactly how that happens.
+    id: "trusted-telemetry-unknown-key-refused",
+    what: "an unknown key at any nesting level is refused rather than ignored, so a surface nobody described cannot ride into the retained artifact (Package 2 remediation P0-1)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "    return TRUSTED_TELEMETRY_REASONS.unexpectedField;\n  }\n  return undefined;\n}",
+    replace: "    continue;\n  }\n  return undefined;\n}",
+    tests: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFailCases: [
+      "TRUSTED-REMEDIATION: every subject-controlled surface is refused, at every nesting level",
+    ],
+    expect: "fail",
+  },
+  {
+    // P0-1. The other half: a key the pipeline strips arriving with content.
+    // Treating it as empty is how a scope attribute carrying a session token
+    // becomes an accepted artifact.
+    id: "trusted-telemetry-unminimized-field-refused",
+    what: "a field the trusted pipeline removes is refused when it arrives carrying content, so a configuration regression is caught rather than exported (Package 2 remediation P0-1)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "      if (isEmpty(value[key])) continue;\n      return removedReason;",
+    replace: "      if (isEmpty(value[key])) continue;\n      continue;",
+    tests: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFailCases: [
+      "TRUSTED-REMEDIATION: every subject-controlled surface is refused, at every nesting level",
+    ],
+    expect: "fail",
+  },
+  {
+    // P1-1. The reproduced defect: budget exhaustion reaching the `observed`
+    // constructor. Restoring that one call is exactly the false authentic zero.
+    id: "trusted-channel-settle-timeout-is-not-a-zero",
+    what: "settle-budget exhaustion produces an absence with a cause, never an authoritative observed zero, so delayed telemetry cannot be frozen as a positive claim that the collector received nothing (Package 2 remediation P1-1)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    return {\n      evidence: \"absent\",\n      marker,\n      reasonCode:\n        counts.recordCount === 0\n          ? TRUSTED_CHANNEL_REASONS.expectedTelemetryMissing\n          : TRUSTED_CHANNEL_REASONS.settleTimeout,\n    };",
+    replace: "    return observedMaterial(collector, binding, marker, freeze, counts);",
+    tests: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFailCases: [
+      "TRUSTED-REMEDIATION: telemetry arriving after the settle budget is never an observed zero",
+    ],
+    expect: "fail",
+  },
+  {
+    // P1-1, the other direction: a zero that nobody declared eligible.
+    id: "trusted-channel-zero-requires-declared-eligibility",
+    what: "an observed zero is produced only for a run declared zero-eligible before observation, so an empty file is never read as proof the collector received nothing (Package 2 remediation P1-1)",
+    file: "packages/core/src/environment/trustedChannel.ts",
+    find: "    if (zeroEligibility.kind === \"zero-eligible\") {",
+    replace: "    if (true) {",
+    tests: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFailCases: [
+      "TRUSTED-REMEDIATION: a zero is authoritative only when the run was declared eligible for one",
+    ],
+    expect: "fail",
+  },
+  {
+    // P2-1. The planted symlink. Dropping the type check restores the copy
+    // primitive that read the host's /etc/passwd.
+    // Anchored on the *classification*, not on the channel's guard.
+    //
+    // The guard in `copyTrustedDirectory` refuses a non-regular entry twice
+    // over — by type, and because the reader attaches no payload to one — so
+    // mutating it alone changes no outcome and the control measured nothing.
+    // Measured: it survived. The load-bearing decision is here, where the
+    // archive's typeflag becomes a classification, and misreading a symlink as
+    // a regular file is exactly the defect P2-1 describes.
+    id: "trusted-channel-source-entry-must-be-regular",
+    what: "the trusted source entry is proved a regular file from the archive's own header before any byte is used, so a planted symlink cannot be dereferenced into the artifact (Package 2 remediation P2-1)",
+    file: "packages/core/src/environment/trustedArchive.ts",
+    find: "  \"2\": \"symlink\",",
+    replace: "  \"2\": \"regular-file\",",
+    tests: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedRemediation.test.js"],
+    mustFailCases: [
+      "TRUSTED-REMEDIATION: a non-regular source entry is refused before anything dereferences it",
+    ],
+    expect: "fail",
+  },
+  {
+    // P2-2, closed as an explicitly unsupported MVP capability. The pinned
+    // collector has no span-link OTTL context, so nothing upstream of this line
+    // can remove link content — which makes this the only enforcement point
+    // there is, and a silent acceptance here retains subject-controlled bytes
+    // the artifact's privacy bound never accounted for.
+    id: "trusted-telemetry-span-links-unsupported",
+    what: "an artifact carrying any nonempty span link is refused whole with its own capability reason, so no linked span contributes evidence at a collector pin that cannot minimize link content (Package 2 closure P2-2)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "  return TRUSTED_TELEMETRY_REASONS.spanLinksUnsupported;",
+    replace: "  return undefined;",
+    tests: ["tests/dist/adversarial/trustedSpanLinks.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedSpanLinks.test.js"],
+    mustFailCases: [
+      "TRUSTED-LINKS: any nonempty link refuses the artifact with the capability reason",
+      "TRUSTED-LINKS: a mixed artifact contributes nothing, not a reduced count",
+      "TRUSTED-LINKS: the sealed record refuses the gate and retains no link bytes",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-minimization-enforced",
+    what: "a record carrying an attribute outside the pre-export allowlist is refused, so the verifier does not assume the minimizing processor ran (ADR-ERL2-038 R2)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "    if (!allowed.includes(key)) return TRUSTED_TELEMETRY_REASONS.unexpectedField;",
+    replace: "    if (false) return TRUSTED_TELEMETRY_REASONS.unexpectedField;",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-PARSE: the grammar refuses every shape a minimized channel cannot produce",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-sensitive-field-refused",
+    what: "a retained record carrying a credential-shaped attribute is refused with its own reason rather than the generic one (ADR-ERL2-038 R2)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    find: "      return TRUSTED_TELEMETRY_REASONS.forbiddenField;",
+    replace: "      return TRUSTED_TELEMETRY_REASONS.unexpectedField;",
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-PARSE: the grammar refuses every shape a minimized channel cannot produce",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-field-bound-enforced",
+    what: "an attribute value longer than the pre-export truncation bound is refused, so the privacy bound is measured rather than assumed (ADR-ERL2-038 R2)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    // Anchored on the comparison rather than on the bare `return`. Package 2
+    // added a second `fieldOverBound` return for a span event's name, at a
+    // deeper indentation — which *contains* the one-line anchor as a substring,
+    // so the patch target stopped being unique and the harness said so instead
+    // of patching the wrong one.
+    find: [
+      "    if (stringValue.length > TRUSTED_TELEMETRY_MAX_FIELD_CHARS) {",
+      "      return TRUSTED_TELEMETRY_REASONS.fieldOverBound;",
+    ].join("\n"),
+    replace: [
+      "    if (false) {",
+      "      return TRUSTED_TELEMETRY_REASONS.fieldOverBound;",
+    ].join("\n"),
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFailCases: [
+      "TRUSTED-PARSE: the grammar refuses every shape a minimized channel cannot produce",
+      "TRUSTED-INVALID: every invalid shape is refused, and none falls back to v1",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-run-binding-verified",
+    what: "the offline verifier refuses an artifact bound to an environment archetype this run did not use (ADR-ERL2-038 R4)",
+    file: "packages/public-verifier/src/library/telemetryDerivation.ts",
+    find: "  if (observation.binding?.environment_archetype_hash !== archetypeHashes[0]) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "TRUSTED-VERIFY: the verifier reads the bytes rather than the claim",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-telemetry-genuine-zero-not-inferred",
+    what: "an empty finalized artifact is positively read as an authentic zero rather than conflated with bytes that could not be read (ADR-ERL2-038 R5)",
+    file: "packages/core/src/environment/trustedTelemetry.ts",
+    // The property is *a zero is read, never inferred*. Mutating the branch
+    // makes an empty artifact fall through to the termination check and refuse,
+    // which turns "the collector received nothing" into "nothing readable
+    // arrived" — the exact conflation ADR-ERL2-033 exists to prevent.
+    find: "  if (bytes.length === 0) {",
+    replace: '  if (bytes.length === 0 && String(1) === "2") {',
+    tests: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedTelemetryAuthority.test.js"],
+    // One case, and only one. The fixture test was declared here too and does
+    // not fail: after authority and coherence were split, the authority
+    // decision no longer parses the retained bytes, so a fixture that merely
+    // *governs* its run never reaches this branch. A declared case that cannot
+    // fail is a claim of coverage the control does not have.
+    mustFailCases: [
+      "TRUSTED-PARSE: an authentic zero is read, and a claimed zero over records is not",
+    ],
+    expect: "fail",
+  },
+  // -- package 3: the environment run's ERL2-C-171 integration ---------------
+  {
+    id: "telemetry-gate-composed-only-where-applicable",
+    what: "the environment telemetry gate is composed from this run's own declaration predicate, so a run that could never have had trusted telemetry omits the gate rather than publishing a vacuous pass (ADR-ERL2-038 R8, package 3)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Mutating the *composition* condition alone, not the shared accessor: the
+    // property is that the gate a run publishes and the applicability its
+    // validity result declares are the same answer. Forcing the composition true
+    // makes a fake-driver run emit a gate its own validity input says is not
+    // applicable, and `assertAttributableTelemetryApplicability` refuses it. If
+    // the accessor itself were mutated both sites would move together and agree,
+    // which would measure something weaker.
+    find: "      ...(this.attributableTelemetryApplicable()\n        ? [",
+    replace: '      ...(String(1) === String(1)\n        ? [',
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-TELEM-E2E: a fake-driver run declares nothing, retains nothing, and still verifies offline",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-inapplicable-run-may-not-publish-the-gate",
+    what: "a run that never declared an attributable-telemetry observation obtainable may not publish the gate at all, so the retired vacuous-pass convention cannot creep back through a producer that keeps emitting it (package 3)",
+    file: "packages/core/src/evaluation/validity.ts",
+    find: "    if (found.length > 0) {\n      throw new Erl2Error(\n        CODES.EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED,\n        \"a run that never declared an attributable-telemetry observation obtainable must omit \" +",
+    replace: "    if (String(1) === \"2\") {\n      throw new Erl2Error(\n        CODES.EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED,\n        \"a run that never declared an attributable-telemetry observation obtainable must omit \" +",
+    tests: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    mustFail: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    mustFailCases: [
+      "ENV-TELEM-APPLICABILITY: a non-declaring run that publishes the gate is refused",
+      "ENV-TELEM-APPLICABILITY: the applicability assertion refuses both directions",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-applicable-run-evaluates-exactly-one-gate",
+    what: "a run declaring the observation obtainable must evaluate exactly one telemetry gate, so a second gate cannot disagree with the first (package 3)",
+    file: "packages/core/src/evaluation/validity.ts",
+    // Declared on the *duplicate* case only. Omission is also caught by
+    // `assertRequiredGatesPresent`, so claiming it here would credit this
+    // control for a kill the neighbouring guard already makes — the redundant-
+    // guard trap the package 2 review found twice. The duplicate is the case
+    // only this statement decides.
+    find: "  if (found.length !== 1) {\n    throw new Erl2Error(\n      CODES.GRAPH_CLOSURE_MISSING_ROLE,\n      `a run declaring an obtainable attributable-telemetry observation must evaluate exactly one `",
+    replace: "  if (String(1) === \"2\") {\n    throw new Erl2Error(\n      CODES.GRAPH_CLOSURE_MISSING_ROLE,\n      `a run declaring an obtainable attributable-telemetry observation must evaluate exactly one `",
+    tests: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    mustFail: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    mustFailCases: [
+      "ENV-TELEM-APPLICABILITY: a declaring run that publishes the gate twice is refused",
+      "ENV-TELEM-APPLICABILITY: the applicability assertion refuses both directions",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-required-set-follows-applicability",
+    what: "the telemetry gate leaves the required set only for a run that never declared the observation obtainable, so `not applicable` cannot become `optional` for a run that did (package 3)",
+    file: "packages/core/src/evaluation/validity.ts",
+    // Inverting the test drops the gate from the required set of exactly the
+    // runs that must carry it, and keeps it required of exactly the runs that
+    // must not — both halves of the boundary in one mutation.
+    find: "  if (options.attributableTelemetryApplicable === false) {",
+    replace: "  if (options.attributableTelemetryApplicable === true) {",
+    tests: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    mustFail: ["tests/dist/adversarial/environmentTelemetryApplicability.test.js"],
+    // One declared case, and only one. `silence is the strict answer` was
+    // declared here first and does not fail: inverting the comparison leaves the
+    // *undefined* arm untouched, so a caller that answers nothing still gets the
+    // strict set and that case still passes. A declared case that cannot fail is
+    // a claim of coverage this control does not have — measured, and corrected
+    // rather than left standing.
+    mustFailCases: [
+      "ENV-TELEM-APPLICABILITY: the gate is required of a declaring run and of no other",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "telemetry-producer-retains-the-trusted-record",
+    what: "the retained attributable-telemetry observation comes from the package 2 trusted channel, so a driver that cannot produce ERL2-C-171 produces no artifact rather than a debug-derived one (package 3)",
+    file: "packages/core/src/run/environmentRun.ts",
+    // Anchored on the accessor's return, not on the call site's guard. The guard
+    // is what gives `freezeTrustedTelemetryObservation` its type, so removing it
+    // yields a tree that does not build — a harness error, not a kill. Measured
+    // exactly that way first, and re-anchored rather than left as a control that
+    // proves nothing; this is the same correction package 2 made to its
+    // durable-ownership anchor. Withholding the capability check here is the
+    // defect itself, and it type-checks: a fake-driver run then calls a method
+    // its driver does not have.
+    find: "    return supportsTrustedTelemetry(this.driver) ? this.driver : undefined;",
+    replace: "    return this.driver as unknown as TrustedTelemetryProducer;",
+    tests: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFail: ["tests/dist/adversarial/attributableTelemetry.test.js"],
+    mustFailCases: [
+      "ATTR-TELEM-E2E: a fake-driver run declares nothing, retains nothing, and still verifies offline",
+    ],
+    expect: "fail",
+  },
+  // -- ADR-ERL2-042: owner-operated trusted-local development path -----------
+  //
+  // Each of these disables one enforcement point of the trusted-local path and
+  // names the behavioural case that must notice. Where the contract already
+  // makes something unrepresentable, the control says so and targets the
+  // schema, rather than a runtime re-check the contract has made unreachable.
+  {
+    id: "trusted-local-acknowledgement-must-be-the-exact-sentence",
+    what: "the CLI accepts only the exact acknowledgement sentence, so no short affirmative can stand in for it",
+    file: "packages/cli/src/trustedLocalDeclaration.ts",
+    // Keeps a check, so the branch still compiles and still runs; what it stops
+    // being is a comparison against the contract's sentence. `yes` and `true`
+    // then both satisfy it.
+    find: "  if (supplied !== TRUSTED_LOCAL_ACKNOWLEDGEMENT_TOKEN) {",
+    replace: "  if (supplied.length === 0) {",
+    tests: ["tests/dist/integration/trustedLocalOperator.test.js"],
+    mustFail: ["tests/dist/integration/trustedLocalOperator.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-CLI: a near-miss acknowledgement is refused, and the refusal shows the exact sentence",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-acknowledgement-binds-the-bytes-it-accepted",
+    what: "the acknowledgement must name the same artifact and manifest digests the declaration binds",
+    file: "packages/core/src/adapter/trustedLocal.ts",
+    find: "    acknowledgement.acknowledged_artifact_hash !== declaration.adapter_artifact_hash ||",
+    replace: "    false ||",
+    tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-ADMIT: an acknowledgement of different bytes is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-artifact-binding",
+    what: "the manifest, the declaration and the bytes on disk must have one digest",
+    file: "packages/core/src/adapter/trustedLocal.ts",
+    // Only the declaration's clause is withdrawn; the entry-digest clause stays,
+    // so this measures the declaration binding rather than the file check.
+    find: "    declaration.adapter_artifact_hash !== manifest.adapter_artifact_hash ||",
+    replace: "    false ||",
+    tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-ADMIT: an artifact digest mismatch is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-manifest-binding",
+    what: "the declaration must be bound to the exact manifest it was written for",
+    file: "packages/core/src/adapter/trustedLocal.ts",
+    find: "  if (declaration.adapter_manifest_core_hash !== manifestHash) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-ADMIT: a manifest binding mismatch is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-pre-host-entry-digest",
+    what: "the host re-hashes the entry before it constructs, so bytes swapped after admission are refused before a host exists",
+    file: "packages/core/src/adapter/host.ts",
+    // Anchored inside the trusted-local arm: the same line appears in the
+    // certified arm, and patching that one would measure a different guard.
+    anchor: "        const admission = verifyTrustedLocalAdapterDeclaration({",
+    find: "          entryDigest: this.executableDigest,",
+    replace: "          entryDigest: this.manifest.adapter_artifact_hash,",
+    tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-ADMIT: artifact bytes changed before host construction are refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-plan-binds-its-declaration",
+    what: "the frozen plan must name the exact declaration the run was admitted under",
+    file: "packages/core/src/adapter/host.ts",
+    find: "          ownerPlan.trusted_local_declaration_hash !== admission.declarationHash ||",
+    replace: "          false ||",
+    tests: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalAdmission.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-ADMIT: a plan bound to another declaration is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-governed-input-refusal",
+    what: "the run command refuses a governed or certified input by name rather than by unknown-flag accident",
+    file: "packages/cli/src/trustedLocalObservation.ts",
+    find: "    if (argv.includes(`--${forbidden}`)) {",
+    replace: "    if (false) {",
+    tests: ["tests/dist/integration/trustedLocalOperator.test.js"],
+    mustFail: ["tests/dist/integration/trustedLocalOperator.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-CLI: a governed input is refused by name",
+      "TRUSTED-LOCAL-CLI: a certification receipt flag is refused by name",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-result-restates-its-two-absences",
+    what: "a trusted-local result must state that it is neither independently certified nor confined; the ceiling is mandatory in the retained bytes, not optional prose",
+    file: "packages/core/src/observation/localObservation.ts",
+    // The field is a `const true` in the contract, so withholding it makes the
+    // result unrepresentable and the run refuses at `assertContract`. That is
+    // the enforcement: the ceiling cannot be omitted from what is retained.
+    find: "            not_independently_certified: true as const,",
+    replace: "",
+    tests: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFail: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-CHAIN: an eleven-operation neutral plan completes end to end",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-compact-predecessor-construction",
+    what: "ancestry carries the five-field summary the contract defines, not the whole previous operation record",
+    file: "packages/core/src/observation/ancestry.ts",
+    // Reproduces the exact defect the independent review found: passing the
+    // full record makes every second operation refuse with
+    // SCHEMA_VALIDATION_FAILED, so no multi-operation plan can run.
+    find: "  return assertContract<AdapterRequestPredecessorV2>(",
+    replace: "  if (predecessor !== undefined) return previous as unknown as AdapterRequestPredecessorV2;\n  return assertContract<AdapterRequestPredecessorV2>(",
+    tests: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFail: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-CHAIN: an eleven-operation neutral plan completes end to end",
+      "TRUSTED-LOCAL-CHAIN: operation two receives a valid compact predecessor",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-predecessor-chain-verification",
+    what: "the coordinator compares a request's predecessor against one it derives from the operation this run actually finished last",
+    file: "packages/core/src/observation/ancestry.ts",
+    find: "  if (!same) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFail: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-CHAIN: an altered predecessor hash is refused",
+      "TRUSTED-LOCAL-CHAIN: a predecessor from another run is refused",
+      "TRUSTED-LOCAL-CHAIN: a predecessor from another plan is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-registry-retains-exact-bytes",
+    what: "admission retains the operator's exact manifest bytes, because the file digest is half of what a later reader checks",
+    file: "packages/core/src/adapter/trustedLocalRegistry.ts",
+    // Re-serializing produces a document with the same core hash and different
+    // bytes, which is precisely the substitution the file digest exists to catch.
+    find: "    writeFileSync(path.join(staging, TRUSTED_LOCAL_MANIFEST_FILE), input.manifestBytes, {",
+    replace: "    writeFileSync(path.join(staging, TRUSTED_LOCAL_MANIFEST_FILE), JSON.stringify(manifest), {",
+    tests: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFail: ["tests/dist/integration/trustedLocalMultiOperation.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-CHAIN: an eleven-operation neutral plan completes end to end",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-requires-plan-bytes",
+    what: "offline verification has no mode that runs without the plan, because `plan_hash` is otherwise a number nobody can check",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (input.planBytes.byteLength === 0) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-VERIFY: omitted plan bytes are refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-recomputes-the-plan",
+    what: "the record's plan hash is recomputed from the plan bytes rather than read from the record",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (record.plan_hash !== planCoreHash) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-VERIFY: a changed plan hash, fully resealed, is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-recomputes-the-run-identity",
+    what: "the record, its result and the plan must name one observation, recomputed rather than compared to itself",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    // Both clauses are one enforcement point, so both go: leaving the result's
+    // clause behind measures nothing, because a resealed forgery changes both.
+    find: "  if (\n    record.observation_id !== plan.observation_id ||\n    record.result.observation_id !== plan.observation_id\n  ) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-VERIFY: a changed run id, fully resealed, is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-operation-completeness",
+    what: "every operation the plan reaches must have exactly one retained outcome",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (outcomes.length !== reachable.length) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-VERIFY: a plan whose operations exceed the retained outcomes is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-recomputes-cleanup",
+    what: "residue comes from the retained final report and nowhere else; there is no branch that derives clean from operations having ended",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (record.cleanup.residue !== residue) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-VERIFY: a false cleanup upgrade is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-recomputes-the-terminal",
+    what: "the terminal status is derived from the retained outcomes rather than believed",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (record.terminal_status !== expectedTerminal) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: ["TRUSTED-LOCAL-VERIFY: a contradictory terminal status is refused"],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-closed-record-validation",
+    what: "the retained record is contract-validated, so an unknown field at any nesting level is refused rather than ignored",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "    record = assertContract<TrustedLocalObservationRecordV1>(\n      \"TrustedLocalObservationRecordV1\",\n      parseJson(input.recordBytes, \"retained record\"),\n    );",
+    replace: "    record = parseJson(input.recordBytes, \"retained record\") as TrustedLocalObservationRecordV1;",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-VERIFY: an unknown top-level field is refused",
+      "TRUSTED-LOCAL-VERIFY: an unknown nested field is refused",
+      "TRUSTED-LOCAL-VERIFY: a nested adapter-written verdict is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-verifier-oversized-record-bound",
+    what: "an oversized record is refused by its length before anything parses or allocates from it",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (input.recordBytes.byteLength > MAX_TRUSTED_LOCAL_RECORD_BYTES) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-VERIFY: an oversized record is refused before it is parsed",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-result-cannot-stop-declaring-itself-unscored",
+    what: "the trusted-local result variant carries its own unscored constant, and widening it is the only way to write a scored local result down",
+    file: "packages/contracts/schemas/observation.schema.json",
+    // The sibling of `v2-not-scored-constant`, for the variant this package
+    // added. Two variants means two constants, and a constant nothing measures
+    // is a constant that can quietly become a `boolean`.
+    anchor: '"LocalObservationTrustedLocalResultV1": {',
+    find:
+      '"not_scored": { "const": true },\n' +
+      '        "not_governor_authorized": { "const": true },\n' +
+      '        "not_independently_certified": { "const": true },',
+    replace:
+      '"not_scored": { "type": "boolean" },\n' +
+      '        "not_governor_authorized": { "const": true },\n' +
+      '        "not_independently_certified": { "const": true },',
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-VERIFY: the embedded result's own ceiling cannot be weakened either",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-certification-claim-is-unrepresentable",
+    what: "a retained trusted-local record cannot say independent certification is present, because the contract pins the field to `absent`",
+    file: "packages/contracts/schemas/observation.schema.json",
+    // Widening the constant is the only way to write the claim down. The
+    // verifier's own ceiling check then catches it — which is the point of
+    // measuring here: the contract is the first line, and the runtime check is
+    // the second rather than the only one.
+    find: "        \"independent_certification\": { \"const\": \"absent\" },",
+    replace: "        \"independent_certification\": { \"enum\": [\"absent\", \"present\"] },",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-VERIFY: a false independent-certification claim is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "trusted-local-record-embeds-the-declaration-it-ran-under",
+    what: "the declaration embedded in a record must be the one the registry retained, so a reader of the record alone sees the terms the run was admitted under",
+    file: "packages/core/src/observation/trustedLocalVerifier.ts",
+    find: "  if (coreHash(record.trusted_local_declaration) !== declarationHash) {",
+    replace: "  if (false) {",
+    tests: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFail: ["tests/dist/adversarial/trustedLocalVerifier.test.js"],
+    mustFailCases: [
+      "TRUSTED-LOCAL-VERIFY: an embedded declaration replaced with another is refused",
+    ],
+    expect: "fail",
+  },
 ];
 
 // -- result classification ---------------------------------------------------
@@ -2967,6 +4660,21 @@ async function main() {
     console.error("negative-control refuses to run: the control table is malformed\n");
     for (const problem of declarationProblems) console.error(`  ${problem}`);
     process.exit(2);
+  }
+
+  // `--list` answers "what would this campaign measure?" without measuring it.
+  //
+  // It exists because scope was silently wrong once: twelve `subject-adapter/v2`
+  // controls lived in a second script with its own runner, and the campaign went
+  // on reporting 129 as its scope while none of the twelve was discoverable here.
+  // Nothing was lying; there was simply no cheap way to ask. This is that way,
+  // and it deliberately mutates nothing, so it does not need a clean tree.
+  if (process.argv.includes("--list")) {
+    console.log(`negative-control discovery: ${String(CONTROLS.length)} control(s)\n`);
+    for (const control of CONTROLS) {
+      console.log(`  ${control.id}\t${control.file}\t${control.what}`);
+    }
+    process.exit(0);
   }
 
   const before = treeDigest(root);

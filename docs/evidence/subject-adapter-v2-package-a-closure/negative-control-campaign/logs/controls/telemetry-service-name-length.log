@@ -1,0 +1,80 @@
+✔ ATTR-TELEM: parsing the excerpt reproduces the counts of the full log (1.168208ms)
+✔ ATTR-TELEM: two markers on one line count as two run-attributed records (0.064416ms)
+✔ ATTR-TELEM: service names are deduplicated and sorted (0.051834ms)
+✔ ATTR-TELEM-CONTRACT: a valid observed record and a valid absent record both validate (4.249667ms)
+✔ ATTR-TELEM-CONTRACT: an absent record cannot carry a count, an excerpt or a collector (0.505916ms)
+✔ ATTR-TELEM-CONTRACT: an observed record without its excerpt, or over an unverified collector, is unrepresentable (0.33325ms)
+✔ ATTR-TELEM: the declaration predicate needs the driver, the source and the exercising step together (0.071625ms)
+✔ ATTR-TELEM: an undeclared run passes the gate with no observation at all (0.057459ms)
+✔ ATTR-TELEM: a declared run with no observation fails the gate (0.053375ms)
+✔ ATTR-TELEM: a declared run with an absent observation fails the gate (0.089791ms)
+✔ ATTR-TELEM: a declared run with zero run-attributed records fails the gate (0.090167ms)
+✔ ATTR-TELEM: another run's observation, a foreign marker, or a second observation fails the gate (0.149875ms)
+✔ ATTR-TELEM: the fake driver does not offer the capability (0.044125ms)
+✔ ATTR-TELEM-VERIFY: a consistent declared observation derives observed and attributed (1.594833ms)
+✔ ATTR-TELEM-VERIFY: a declared run that retains no observation is refused (0.733917ms)
+✔ ATTR-TELEM-VERIFY: an undeclared run with no observation derives nothing and refuses nothing (2.033834ms)
+✔ ATTR-TELEM-VERIFY: an absent observation where declared is refused (0.973458ms)
+✔ ATTR-TELEM-VERIFY: a declared observation with zero run-attributed records is refused (0.841833ms)
+✔ ATTR-TELEM-VERIFY: counts that contradict the retained excerpt are refused (0.831333ms)
+✔ ATTR-TELEM-VERIFY: an excerpt padded with non-contributing lines is refused (1.095791ms)
+✔ ATTR-TELEM-VERIFY: another run's observation, a foreign marker, or a wrong producing event is refused (2.202334ms)
+✔ ATTR-TELEM-VERIFY: a second retained observation is refused rather than silently ignored (0.902166ms)
+✔ ATTR-TELEM-VERIFY: an ambiguous driver manifest or archetype is refused before anything is derived (1.733167ms)
+✔ ATTR-TELEM-VERIFY: an observed record whose excerpt the index never validated is still refused (0.816333ms)
+✔ ATTR-TELEM-RETAIN: ordinary collector material freezes as observed and passes the gate (21.142083ms)
+✔ ATTR-TELEM-RETAIN: a re-entered retention reads what it wrote instead of observing again (15.546667ms)
+✔ ATTR-TELEM-RETAIN: an excerpt past the retention bound demotes rather than truncating (17.635583ms)
+✔ ATTR-TELEM-RETAIN: an excerpt the canonicalizer refuses demotes rather than throwing (12.904792ms)
+✔ ATTR-TELEM-RETAIN: more distinct service names than the contract retains demotes (12.899666ms)
+✖ ATTR-TELEM-RETAIN: a service name past the contract's length bound demotes (0.662583ms)
+✔ ATTR-TELEM-RETAIN: a service name the canonicalizer refuses demotes (26.471084ms)
+✔ ATTR-TELEM-RETAIN: a count the canonicalizer cannot represent demotes (13.72125ms)
+✔ ATTR-TELEM-RETAIN: a count outside the contract's range demotes (15.045042ms)
+✔ ATTR-TELEM-RETAIN: a collector service id the contract refuses demotes (14.285584ms)
+✔ ATTR-TELEM-RETAIN: more observed repo digests than the contract retains demotes (15.811625ms)
+✔ ATTR-TELEM-RETAIN: a collector identity string past its bound demotes (14.932167ms)
+✔ ATTR-TELEM-RETAIN: a collector identity string the canonicalizer refuses demotes (14.982917ms)
+✔ ATTR-TELEM-RETAIN: a driver's own absent material is retained with the driver's reason (15.920792ms)
+✔ ATTR-TELEM-RETAIN: a retention failure nothing anticipated still leaves as a routable teardown failure (1.482208ms)
+✔ ATTR-TELEM-RETAIN: a demoted observation is refused offline, not quietly accepted (17.420625ms)
+✔ ATTR-TELEM-E2E: a fake-driver run declares nothing, retains nothing, and still verifies offline (19785.407375ms)
+ℹ tests 41
+ℹ suites 0
+ℹ pass 40
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 20249.136125
+
+✖ failing tests:
+
+test at tests/dist/adversarial/attributableTelemetry.test.js:539:1
+✖ ATTR-TELEM-RETAIN: a service name past the contract's length bound demotes (0.662583ms)
+  Error [Erl2Error]: the attributable-telemetry observation could not be retained (SCHEMA_VALIDATION_FAILED): AttributableTelemetryObservationV1 failed validation at /service_names/0: must NOT have more than 256 characters
+      at retainAttributableTelemetryObservation (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/packages/core/dist/src/environment/telemetryObservation.js:272:15)
+      at file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/attributableTelemetry.test.js:467:39
+      ... 5 lines matching cause stack trace ...
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18) {
+    code: 'TEARDOWN_FAILED',
+    owner: 'lab',
+    detail: undefined,
+    [cause]: Error [Erl2Error]: AttributableTelemetryObservationV1 failed validation at /service_names/0: must NOT have more than 256 characters
+        at assertContract (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/packages/contracts/dist/src/validate.js:124:15)
+        at retainObservation (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/packages/core/dist/src/environment/telemetryObservation.js:314:25)
+        at retainAttributableTelemetryObservation (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/packages/core/dist/src/environment/telemetryObservation.js:256:16)
+        at file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/attributableTelemetry.test.js:467:39
+        at Array.map (<anonymous>)
+        at retainAll (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/attributableTelemetry.test.js:467:22)
+        at retain (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/attributableTelemetry.test.js:477:12)
+        at assertDemoted (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/attributableTelemetry.test.js:481:25)
+        at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/attributableTelemetry.test.js:540:5)
+        at Test.runInAsyncScope (node:async_hooks:226:14) {
+      code: 'SCHEMA_VALIDATION_FAILED',
+      owner: 'lab',
+      detail: '[{"instancePath":"/service_names/0","keyword":"maxLength","message":"must NOT have more than 256 characters"}]'
+    }
+  }

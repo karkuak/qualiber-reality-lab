@@ -1,0 +1,38 @@
+
+> erl2-workspace@0.1.0 negative-control
+> node scripts/negative-control.mjs trusted-local
+
+Preparing worktree (detached HEAD 0b5469b)
+negative controls: 22 of 229
+worktree: /var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-HcvVnI/tree
+installing dependencies in the worktree (once)…
+  ✔ trusted-local-acknowledgement-must-be-the-exact-sentence: 10 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-acknowledgement-binds-the-bytes-it-accepted: 16 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-artifact-binding: 16 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-manifest-binding: 16 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-pre-host-entry-digest: 16 pass / 1 fail (expected fail, named_tests_failed)
+  ✖ trusted-local-refuses-the-certified-arms-plan: 17 pass / 0 fail (expected fail, tests_passed_unexpectedly)
+  ✖ trusted-local-plan-binds-its-declaration: patch_not_applicable
+  ✔ trusted-local-governed-input-refusal: 9 pass / 2 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-result-restates-its-two-absences: 8 pass / 4 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-compact-predecessor-construction: 3 pass / 9 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-predecessor-chain-verification: 9 pass / 3 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-registry-retains-exact-bytes: 8 pass / 4 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-requires-plan-bytes: 19 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-recomputes-the-plan: 19 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-recomputes-the-run-identity: 19 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-operation-completeness: 19 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-recomputes-cleanup: 19 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-recomputes-the-terminal: 19 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-closed-record-validation: 14 pass / 6 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-verifier-oversized-record-bound: 19 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-certification-claim-is-unrepresentable: 19 pass / 1 fail (expected fail, named_tests_failed)
+  ✔ trusted-local-record-embeds-the-declaration-it-ran-under: 19 pass / 1 fail (expected fail, named_tests_failed)
+
+the working tree is byte-identical to how the campaign started
+
+accounting: 22 discovered = 20 agreed + 1 disagreed + 0 unmeasured + 1 harness error(s)
+
+negative-control FAILED: 2 control(s) disagreed with their recorded expectation, of which 1 measured nothing (a harness error rather than a result)
+  trusted-local-refuses-the-certified-arms-plan: {"id":"trusted-local-refuses-the-certified-arms-plan","what":"a plan naming a certification receipt cannot run under an owner declaration","expected":"fail","result":"tests_passed_unexpectedly","harnessError":false,"replacedCount":1,"offsets":[16025],"pass":17,"fail":0,"agreed":false,"tests":17,"cancelled":0,"skipped":0,"command":"node --test --test-reporter=spec tests/dist/adversarial/trustedLocalAdmission.test.js","exitStatus":0,"exitSignal":null,"buildExitStatus":0,"buildMs":7753,"suiteMs":275,"stageTmpRemoved":true,"outputTruncated":false,"suiteOutputSha256":"sha256:99c65fd25d6ac727d08d7cb9b0fd45f73846f5a766aa95e44d2473ea18a9f9bc","suiteOutputBytes":1611,"suiteOutputTail":"✔ TRUSTED-LOCAL-ADMIT: an explicit owner declaration is admitted, and says what it is not (14.400792ms)\n✔ TRUSTED-LOCAL-ADMIT: a missing acknowledgement is refused (0.649792ms)\n✔ TRUSTED-LOCAL-ADMIT: an altered acknowledgement token is refused (0.534ms)\n✔ TRUSTED-LOCAL-ADMIT: an acknowledgement of different bytes is refused (0.542958ms)\n✔ TRUSTED-LOCAL-ADMIT: an artifact digest mismatch is refused (0.527209ms)\n✔ TRUSTED-LOCAL-ADMIT: a manifest binding mismatch is refused (0.49275ms)\n✔ TRUSTED-LOCAL-ADMIT: manifest file bytes that changed after acceptance are refused (0.4455ms)\n✔ TRUSTED-LOCAL-ADMIT: artifact bytes changed before host construction are refused (30.629208ms)\n✔ TRUSTED-LOCAL-ADMIT: artifact bytes changed between dispatches are refused (2.849875ms)\n✔ TRUSTED-LOCAL-ADMIT: a governed execution mode is refused (0.594667ms)\n✔ TRUSTED-LOCAL-ADMIT: a scored, authenticated or governor-authorized claim is refused (2.5045ms)\n✔ TRUSTED-LOCAL-ADMIT: a weakened claim ceiling is refused (0.40725ms)\n✔ TRUSTED-LOCAL-ADMIT: a V1 manifest cannot fall back into this path (0.309333ms)\n✔ TRUSTED-LOCAL-ADMIT: a certification receipt does not substitute for a declaration (8.93925ms)\n✔ TRUSTED-LOCAL-ADMIT: the host retains which authority admitted the adapter (2.01925ms)\n✔ TRUSTED-LOCAL-ADMIT: a plan bound to another declaration is refused (2.161667ms)\n✔ TRUSTED-LOCAL-ADMIT: a certified plan cannot run under a trusted-local declaration (2.543917ms)\nℹ tests 17\nℹ suites 0\nℹ pass 17\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 229.4125\n","mustFailCases":["TRUSTED-LOCAL-ADMIT: a certified plan cannot run under a trusted-local declaration"]}
+  trusted-local-plan-binds-its-declaration: {"id":"trusted-local-plan-binds-its-declaration","what":"the frozen plan must name the exact declaration the run was admitted under","expected":"fail","result":"patch_not_applicable","harnessError":true,"agreed":false,"detail":{"outcome":"patch_not_applicable","expected":1,"found":0,"preimage":"          plan.trusted_local_declaration_hash !== admission.declarationHash ||"}}

@@ -1,0 +1,49 @@
+✔ WINDOW-SEAL: a well-formed window seals, and carries the exact durations (4.277833ms)
+✔ WINDOW-SEAL: the cutoff is exactly process start plus warmup plus observation (0.406291ms)
+✔ WINDOW-BOUNDS: a zero warmup is legal; a zero observation window is not (0.386125ms)
+✔ WINDOW-BOUNDS: the policy's minimum and maximum are the edges, inclusive (0.961625ms)
+✔ WINDOW-BOUNDS: one unit outside either edge refuses (0.664291ms)
+✔ WINDOW-BOUNDS: a negative duration refuses (0.202375ms)
+✔ WINDOW-BOUNDS: a fractional duration refuses (0.209042ms)
+✖ WINDOW-BOUNDS: a sub-second window refuses, because its instant is not representable (0.837209ms)
+✔ WINDOW-ARITH: exact integer addition refuses to overflow rather than losing precision (0.090292ms)
+✔ WINDOW-CLOCK: a window measured against another clock domain refuses (0.197667ms)
+✔ WINDOW-RUN: a receipt from another run refuses before it is signed (0.198333ms)
+✔ WINDOW-MILESTONE: the observed milestone must land exactly on the committed boundary (0.808834ms)
+✔ WINDOW-MILESTONE: a milestone before the process it attests refuses (0.431083ms)
+✔ WINDOW-MILESTONE: a zero-warmup window puts the milestone at the process start (0.569834ms)
+✔ WINDOW-TZ: the arithmetic is on UTC instants, so offsets and DST are irrelevant (0.310625ms)
+✔ WINDOW-TZ: an unparseable process start refuses rather than yielding NaN arithmetic (0.191042ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 15
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 169.319459
+
+✖ failing tests:
+
+test at tests/dist/integration/evidenceWindowDerivation.test.js:166:1
+✖ WINDOW-BOUNDS: a sub-second window refuses, because its instant is not representable (0.837209ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'SCHEMA_VALIDATION_FAILED'
+  - 'CUTOFF_BOUND_EXCEEDED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/evidenceWindowDerivation.test.js:175:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SCHEMA_VALIDATION_FAILED',
+    expected: 'CUTOFF_BOUND_EXCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

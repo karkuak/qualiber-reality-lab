@@ -1,0 +1,32 @@
+✔ LOCAL-V2: both neutral fixture shapes use the real subprocess protocol path (566.681667ms)
+✔ LOCAL-V2: V1 remains the default and cannot be selected for local mode (4.840166ms)
+✔ LOCAL-V2: a V1 SDK response to the V2-only offer is a downgrade refusal (127.888042ms)
+✔ LOCAL-V2: governed V2 is rejected before executable dispatch (1.980375ms)
+✔ LOCAL-V2: V1 receipts and altered manifest/artifact/profile scope never authorize V2 (1.017708ms)
+✖ LOCAL-LIMITS: plan ceilings intersect with host, output, diagnostics and controls (239.521375ms)
+✔ LOCAL-LIMITS: timeout, response bomb and diagnostic-line bomb reuse existing host enforcement (456.404875ms)
+✔ LOCAL-CONTROLS: egress, redirect, proxy environment and capabilities fail closed (305.947916ms)
+✔ LOCAL-V2: per-dispatch artifact verification is load-bearing (1.512833ms)
+✔ ADAPTER-CERT-V2: the neutral scope skeleton produces deterministic unsigned test receipts (1.161583ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 9
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1859.765041
+
+✖ failing tests:
+
+test at tests/dist/adversarial/localAdapterV2.test.js:144:1
+✖ LOCAL-LIMITS: plan ceilings intersect with host, output, diagnostics and controls (239.521375ms)
+  Error: expected a typed refusal
+      at refusal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/localAdapterV2.test.js:20:11)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/localAdapterV2.test.js:159:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)

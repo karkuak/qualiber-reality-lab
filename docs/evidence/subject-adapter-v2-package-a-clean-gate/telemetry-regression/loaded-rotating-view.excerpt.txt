@@ -1,0 +1,33 @@
+--- first 20 lines of the rotating docker-logs view (front already evicted) ---
+Body: Str(Memory limiter configured)
+Attributes:
+     -> code.file.path: Str(go.opentelemetry.io/collector/internal/memorylimiter@v0.157.0/memorylimiter.go)
+     -> code.line.number: Int(109)
+     -> code.function.name: Str(go.opentelemetry.io/collector/internal/memorylimiter.NewMemoryLimiter)
+     -> limit_mib: Int(320)
+     -> spike_limit_mib: Int(100)
+     -> check_interval: Int(5000000000)
+Trace ID: 
+Span ID: 
+Flags: 0
+ScopeLogs #2
+ScopeLogs SchemaURL: 
+InstrumentationScope go.opentelemetry.io/collector/service 
+InstrumentationScope attributes:
+     -> otelcol.component.id: Str(otlp)
+     -> otelcol.component.kind: Str(receiver)
+LogRecord #0
+ObservedTimestamp: 2026-08-12 20:12:52.791611715 +0000 UTC
+Timestamp: 2026-08-12 20:12:52.791536256 +0000 UTC
+
+--- last 10 lines ---
+Flags: 0
+)
+Trace ID: 
+Span ID: 
+Flags: 0
+)
+Trace ID: 
+Span ID: 
+Flags: 0
+	{"resource": {"service.instance.id": "e534fb5c-eeb0-4bde-8c6e-8cf5e3d23eea", "service.name": "otelcol-contrib", "service.version": "0.157.0"}, "otelcol.component.id": "debug", "otelcol.component.kind": "exporter", "otelcol.signal": "logs"}

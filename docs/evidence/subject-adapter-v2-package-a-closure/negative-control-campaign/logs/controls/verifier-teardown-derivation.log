@@ -1,0 +1,46 @@
+✔ VERIFIER-DERIVE: a real environment bundle verifies, and the derivations are reached (20193.862667ms)
+✔ VERIFIER-DERIVE: a validity result that claims `valid` over a failed gate is refused (15836.392084ms)
+✔ VERIFIER-DERIVE: a status that disagrees with its own gates is refused, on that ground alone (15801.17025ms)
+✔ VERIFIER-DERIVE: a failed gate with no invalidity finding naming it is refused (15762.697125ms)
+✔ VERIFIER-DERIVE: a valid result citing invalidity findings is refused (16067.49525ms)
+✔ VERIFIER-DERIVE: a restoration `passed` that its own evidence contradicts is refused (15900.916125ms)
+✔ VERIFIER-DERIVE: a restoration citing no compensation receipt is refused (16305.977917ms)
+✖ VERIFIER-DERIVE: a teardown `passed` over non-empty residue is refused (16344.641917ms)
+✔ VERIFIER-DERIVE: a teardown whose residue count and list disagree is refused (16737.607667ms)
+✔ VERIFIER-DERIVE: a bundle whose lifecycle names no substrate binding is refused (16277.504125ms)
+✔ VERIFIER-DERIVE: a binding naming another run is refused (16270.597667ms)
+✔ VERIFIER-DERIVE: a cancellation claiming `not_required` over an environment is refused (5500.584333ms)
+✔ VERIFIER-DERIVE: a cancellation closing over a pre-environment cleanup is refused (5493.709167ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 12
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 193254.921375
+
+✖ failing tests:
+
+test at tests/dist/adversarial/environmentVerifierDerivation.test.js:146:1
+✖ VERIFIER-DERIVE: a teardown `passed` over non-empty residue is refused (16344.641917ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'TEARDOWN_FAILED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/environmentVerifierDerivation.test.js:156:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'TEARDOWN_FAILED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

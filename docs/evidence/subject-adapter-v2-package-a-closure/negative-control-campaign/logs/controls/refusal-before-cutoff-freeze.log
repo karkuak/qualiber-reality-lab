@@ -1,0 +1,171 @@
+✖ REFUSAL-ATOMIC: this is P1-10 — journey with a missing comparison policy freezes no cutoff policy (13018.276791ms)
+✖ REFUSAL-ATOMIC: every representative refusal cause leaves the run byte-identical (35288.048625ms)
+✔ REFUSAL-ATOMIC: a refused environment command creates no substrate or reservation directory (3978.120375ms)
+✖ REFUSAL-ATOMIC: nothing is written after the valid terminal, refused or replayed (7876.870458ms)
+✖ PREREQ-CLI: this is P1-9 — a committed post-capture step cannot run before activation (8398.014458ms)
+✖ CANCEL-BRANCH: a live environment never receives a pre-environment cleanup terminal (38134.491208ms)
+✔ CANCEL-BRANCH: the branch is not decided by one file's existence (4034.360125ms)
+✔ CANCEL-BRANCH: an unreadable binding refuses rather than answering pre-environment (3864.304ms)
+✔ CANCEL-BRANCH: a pre-environment run still takes the pre-environment branch (3606.127958ms)
+✖ CANCEL-BRANCH: cancelling a cleanup interrupted mid-flight continues it, not restarts it (8932.967292ms)
+✖ CANCEL-BRANCH: cancelling after emergency cleanup completed returns its terminal (8250.563458ms)
+✔ CANCEL-BRANCH: cancelling a cancelled run returns the same record and writes nothing (5064.025ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 5
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 141189.303084
+
+✖ failing tests:
+
+test at tests/dist/adversarial/lifecycleOrdering.test.js:93:1
+✖ REFUSAL-ATOMIC: this is P1-10 — journey with a missing comparison policy freezes no cutoff policy (13018.276791ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"LAB_UNEXPECTED_FAILURE","message":"unexpected Lab failure while running journey: maximum canonicalization depth exceeded"}]
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/lifecycleOrdering.test.js:109:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/lifecycleOrdering.test.js:111:1
+✖ REFUSAL-ATOMIC: every representative refusal cause leaves the run byte-identical (35288.048625ms)
+  AssertionError [ERR_ASSERTION]: journey: [{"code":"LAB_UNEXPECTED_FAILURE","message":"unexpected Lab failure while running journey: maximum canonicalization depth exceeded"}]
+  
+  2 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/environmentCli.js:109:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/lifecycleOrdering.test.js:130:9)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/lifecycleOrdering.test.js:164:1
+✖ REFUSAL-ATOMIC: nothing is written after the valid terminal, refused or replayed (7876.870458ms)
+  AssertionError [ERR_ASSERTION]: journey: [{"code":"LAB_UNEXPECTED_FAILURE","message":"unexpected Lab failure while running journey: maximum canonicalization depth exceeded"}]
+  
+  2 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/environmentCli.js:109:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/lifecycleOrdering.test.js:166:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/lifecycleOrdering.test.js:184:1
+✖ PREREQ-CLI: this is P1-9 — a committed post-capture step cannot run before activation (8398.014458ms)
+  AssertionError [ERR_ASSERTION]: journey: [{"code":"LAB_UNEXPECTED_FAILURE","message":"unexpected Lab failure while running journey: maximum canonicalization depth exceeded"}]
+  
+  2 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/environmentCli.js:109:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/lifecycleOrdering.test.js:195:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/lifecycleOrdering.test.js:218:1
+✖ CANCEL-BRANCH: a live environment never receives a pre-environment cleanup terminal (38134.491208ms)
+  AssertionError [ERR_ASSERTION]: journey: [{"code":"LAB_UNEXPECTED_FAILURE","message":"unexpected Lab failure while running journey: maximum canonicalization depth exceeded"}]
+  
+  2 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/environmentCli.js:109:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/lifecycleOrdering.test.js:222:9)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/lifecycleOrdering.test.js:269:1
+✖ CANCEL-BRANCH: cancelling a cleanup interrupted mid-flight continues it, not restarts it (8932.967292ms)
+  AssertionError [ERR_ASSERTION]: journey: [{"code":"LAB_UNEXPECTED_FAILURE","message":"unexpected Lab failure while running journey: maximum canonicalization depth exceeded"}]
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/lifecycleOrdering.test.js:274:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/lifecycleOrdering.test.js:302:1
+✖ CANCEL-BRANCH: cancelling after emergency cleanup completed returns its terminal (8250.563458ms)
+  AssertionError [ERR_ASSERTION]: journey: [{"code":"LAB_UNEXPECTED_FAILURE","message":"unexpected Lab failure while running journey: maximum canonicalization depth exceeded"}]
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/lifecycleOrdering.test.js:310:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

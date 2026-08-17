@@ -138,20 +138,104 @@ export {
 export {
   attributableTelemetryDeclared,
   attributableTelemetryGatePassed,
+  collectorWindowComplete,
   contributesToTelemetryCounts,
+  decideTelemetryObservationWindow,
   excerptCollectorTelemetry,
+  parseTraceSummaryRecord,
   MAX_TELEMETRY_EXCERPT_CHARS,
   parseCollectorTelemetry,
   retainAttributableTelemetryObservation,
   supportsAttributableTelemetry,
   TELEMETRY_RETENTION_REASONS,
   telemetryRetentionRefusal,
+  TELEMETRY_WINDOW_REASONS,
   type AttributableTelemetryMaterial,
   type AttributableTelemetryObserver,
   type CollectorTelemetryCounts,
   type ObservedCollectorIdentity,
   type TelemetryObservationStore,
+  type TraceSummaryRecord,
+  type TelemetryWindowDecision,
 } from "./environment/telemetryObservation.js";
+export {
+  readTrustedArchive,
+  unsafeArchiveName,
+  TAR_ENTRY_TYPES,
+  type TrustedArchiveEntry,
+  type TrustedArchiveRead,
+} from "./environment/trustedArchive.js";
+export {
+  EXPECTS_TELEMETRY,
+  buildTrustedTelemetryObservation,
+  observeTrustedTelemetry,
+  supportsTrustedTelemetry,
+  trustedFreezeRoot,
+  trustedVolumeMountOptions,
+  trustedVolumeName,
+  TrustedTelemetryChannel,
+  TRUSTED_CHANNEL_ENCODING,
+  TRUSTED_CHANNEL_EXPORTER_ID,
+  TRUSTED_CHANNEL_FILE_NAME,
+  TRUSTED_CHANNEL_FLUSH_INTERVAL_MS,
+  TRUSTED_CHANNEL_KIND,
+  TRUSTED_CHANNEL_MOUNT_PATH,
+  TRUSTED_CHANNEL_REASONS,
+  TRUSTED_CHANNEL_RECORD_FORMAT,
+  TRUSTED_VOLUME_GID,
+  TRUSTED_VOLUME_MODE,
+  TRUSTED_VOLUME_SIZE,
+  TRUSTED_VOLUME_UID,
+  type TrustedChannelBinding,
+  type TrustedChannelCleanup,
+  type TrustedChannelFreeze,
+  type TrustedChannelOptions,
+  type TrustedChannelProvision,
+  type TrustedChannelSettleCause,
+  type TrustedChannelZeroEligibility,
+  type TrustedTelemetryMaterial,
+  type TrustedTelemetryProducer,
+  type VerifiedTrustedCollector,
+} from "./environment/trustedChannel.js";
+export {
+  fileTrustedOwnershipStore,
+  isTrustedVolumeOwnership,
+  labelsMatch,
+  newTrustedVolumeCapability,
+  sealTrustedVolumeOwnership,
+  trustedCapabilityDigest,
+  trustedVolumeLabels,
+  TRUSTED_CHANNEL_VERSION,
+  TRUSTED_OWNERSHIP_SCHEMA_VERSION,
+  TRUSTED_VOLUME_LABEL_KEYS,
+  TRUSTED_VOLUME_RESOURCE_TYPE,
+  type TrustedOwnershipStore,
+  type TrustedVolumeOwnership,
+  type TrustedVolumeOwnershipPhase,
+} from "./environment/trustedOwnership.js";
+export {
+  TRUSTED_TELEMETRY_MAX_BYTES,
+  TRUSTED_TELEMETRY_MAX_RECORDS,
+  TRUSTED_TELEMETRY_MAX_FIELD_CHARS,
+  TRUSTED_RESOURCE_KEYS,
+  TRUSTED_SPAN_KEYS,
+  TRUSTED_TELEMETRY_REASONS,
+  parseTrustedTelemetryRecords,
+  utf8ByteLength,
+  type TrustedTelemetryCounts,
+  type TrustedTelemetryParse,
+} from "./environment/trustedTelemetry.js";
+export {
+  TRUSTED_TELEMETRY_AUTHORITY_VERSION,
+  HISTORICAL_TELEMETRY_VERSION,
+  TELEMETRY_AUTHORITY_REASONS,
+  decideTrustedTelemetryAuthority,
+  trustedTelemetryCoherenceRefusal,
+  trustedTelemetryClaim,
+  trustedTelemetryClaimRefusal,
+  readHistoricalTelemetryObservation,
+  type TrustedTelemetryAuthority,
+} from "./environment/telemetryAuthority.js";
 export {
   assertSubstrateBinding,
   buildSubstrateBinding,
@@ -196,6 +280,7 @@ export {
   type DockerCli,
   type DockerInvocation,
   type DockerResult,
+  type DockerBinaryResult,
 } from "./environment/dockerCli.js";
 export {
   fileSha256,
@@ -264,6 +349,12 @@ export {
   type StepStatus,
 } from "./journey/engine.js";
 export {
+  EXERCISE_INTENT,
+  exerciseApplicable,
+  exerciseOutcomeGateVerdict,
+  exerciseSucceeded,
+} from "./journey/exerciseOutcome.js";
+export {
   CRASH_BOUNDARIES,
   NO_CRASH,
   isCrashBoundary,
@@ -299,15 +390,24 @@ export {
   type AdapterHostOptions,
   type AdapterMount,
   type AdapterOperationResult,
+  type LocalAdapterOperationResult,
+  type LocalAdapterStepEvidence,
 } from "./adapter/host.js";
+export { LocalObservationCoordinator } from "./observation/localObservation.js";
 export {
   HostedSubjectPort,
   HOSTED_SUBJECT_PORT_ID,
 } from "./adapter/hostedSubjectPort.js";
 export {
   certifyAdapter,
+  certifyAdapterV2Scope,
   type CertifyAdapterOptions,
+  type CertifyAdapterV2ScopeOptions,
 } from "./adapter/certification.js";
+// Exported so the residue draft's refusal contract can be exercised directly.
+// A validator whose every branch is only reachable through a certified
+// subprocess is a validator whose branches are never really tested.
+export { assertLocalResidueObservationDraft } from "./adapter/responseShape.js";
 export {
   BOOTSTRAP_RECEIPT_SENTINEL,
   EXTERNAL_ADAPTER_DIR,
@@ -318,6 +418,7 @@ export {
   deriveCertificationAuthenticity,
   retainAdmittedAdapter,
   verifyAdapterCertification,
+  verifyLocalAdapterCertificationV2,
   verifyReceiptSignature,
   type AdapterAdmission,
   type AdapterCertifiedGate,
@@ -327,7 +428,58 @@ export {
   type ReceiptSignatureVerification,
   type RetainedAdmission,
   type VerifyAdapterCertificationInput,
+  type VerifyLocalAdapterCertificationV2Input,
+  type LocalAdapterAdmissionV2,
 } from "./adapter/admission.js";
+export {
+  assertPredecessorMatches,
+  compactPredecessorOf,
+} from "./observation/ancestry.js";
+export {
+  MAX_TRUSTED_LOCAL_PLAN_BYTES,
+  MAX_TRUSTED_LOCAL_RECORD_BYTES,
+  verifyTrustedLocalObservationRecord,
+  type TrustedLocalVerification,
+  type VerifyTrustedLocalRecordInput,
+} from "./observation/trustedLocalVerifier.js";
+export {
+  TRUSTED_LOCAL_INPUTS_DIR,
+  TRUSTED_LOCAL_INPUT_CEILINGS,
+  assertBoundSource,
+  materializeTrustedLocalInputs,
+  retainedInputRootOf,
+  trustedLocalInputMappings,
+  verifyRetainedTrustedLocalInputs,
+  type MaterializeTrustedLocalInputsInput,
+  type MaterializedTrustedLocalInput,
+  type MaterializedTrustedLocalInputs,
+  type TrustedLocalInputBinding,
+  type TrustedLocalInputCeilings,
+  type TrustedLocalInputMapping,
+  type TrustedLocalInputMount,
+} from "./observation/trustedLocalInputs.js";
+export {
+  MAX_TRUSTED_LOCAL_DOCUMENT_BYTES,
+  TRUSTED_LOCAL_ADAPTER_DIR,
+  TRUSTED_LOCAL_DECLARATION_FILE,
+  TRUSTED_LOCAL_MANIFEST_FILE,
+  assertRegularDirectory,
+  assertRegularFile,
+  resolveTrustedLocalAdapterV2,
+  retainTrustedLocalAdapterV2,
+  type ResolvedTrustedLocalAdapter,
+  type RetainTrustedLocalAdapterInput,
+  type RetainedTrustedLocalAdmission,
+} from "./adapter/trustedLocalRegistry.js";
+export {
+  TRUSTED_LOCAL_ACKNOWLEDGEMENT_TOKEN,
+  assertTrustedLocalClaimCeiling,
+  assertTrustedLocalControls,
+  verifyTrustedLocalAdapterDeclaration,
+  type LocalAdapterAuthorityV2,
+  type TrustedLocalAdmissionV2,
+  type VerifyTrustedLocalAdapterDeclarationInput,
+} from "./adapter/trustedLocal.js";
 export {
   UNPRIVILEGED_CAPABILITIES,
   PRIVILEGED_CAPABILITIES,
@@ -629,6 +781,9 @@ export {
   LAB_VALIDITY_GATES,
   PRE_ENVIRONMENT_GATE_IDS,
   assertAdapterCertificationApplicability,
+  assertAttributableTelemetryApplicability,
+  assertExerciseOutcomeApplicability,
+  assertTelemetryExerciseCoherence,
   requiredGateIds,
   assertGatesAreLabOwned,
   assertRequiredGatesPresent,

@@ -22,6 +22,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,7 +30,14 @@ import { dockerAvailable, OTEL_DEMO_RELEASE_TAG } from "@erl2/core";
 import { erl2, verifyBundle } from "../support/cliRun.js";
 import { referenceAdapterEntry } from "../support/adapterFixtures.js";
 import { buildGovernorRegistry, type GovernorRegistry } from "../support/governorRegistry.js";
-import { ownedRunRoot } from "../support/tempDirs.js";
+import { ownedRunRoot, ownedTempDir } from "../support/tempDirs.js";
+import {
+  awaitDurableTelemetry,
+  explainDurableTelemetry,
+  startCollectorCapture,
+  type CollectorCapture,
+  type DurableTelemetryObservation,
+} from "../support/durableTelemetry.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const ARCHIVE = path.join(
@@ -233,28 +241,20 @@ function retained<T>(run: ComposeRun, ...segments: readonly string[]): T {
 }
 
 /**
- * Telemetry the collector received, read from the run's own exact container.
+ * Telemetry the collector received, read from a durable copy of its output.
  *
- * Polled rather than sampled once: the emitting SDK batches, so "no spans yet" a
- * few hundred milliseconds after a request is a timing fact and not a telemetry
- * fact. Bounded, so a genuine absence still fails.
+ * This used to re-read `docker container logs` after the fact. The pinned
+ * collector rotates its `json-file` log (`max-size=5m`, `max-file=2`) and
+ * exports its own self-telemetry back through the detailed `debug` exporter, so
+ * a loaded run writes past the retention window in seconds: a diagnosed failure
+ * had three HTTP 200 `/getquote` responses, spans emitted, spans received and 63
+ * run-marked records, and still reported "telemetry was not actually emitted"
+ * because the console line carrying the count had already rotated away. The
+ * follower attached at `provision` copies the stream as it is produced, so
+ * rotation inside the container cannot evict what was already observed.
  */
-function telemetry(run: ComposeRun): { readonly spans: number; readonly runAttributed: number } {
-  const collector = `${run.project}-otel-collector`;
-  let spans = 0;
-  let runAttributed = 0;
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const result = spawnSync("docker", ["container", "logs", collector], { encoding: "utf8" });
-    const text = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-    spans = [...text.matchAll(/\tTraces\t.*"spans": (\d+)/g)].reduce(
-      (total, match) => total + Number(match[1]),
-      0,
-    );
-    runAttributed = text.split(`erl2_run=${run.runId}`).length - 1;
-    if (spans > 0 && runAttributed > 0) break;
-    spawnSync(process.execPath, ["-e", "setTimeout(() => undefined, 1000)"]);
-  }
-  return { spans, runAttributed };
+function telemetry(capture: CollectorCapture, run: ComposeRun): DurableTelemetryObservation {
+  return awaitDurableTelemetry({ capture, runId: run.runId });
 }
 
 test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compose substrate", SKIP, () => {
@@ -267,6 +267,10 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
   );
 
   const observed: Record<string, unknown> = {};
+  // Attached the moment the collector exists and detached in `finally`, so the
+  // durable copy spans the whole run and leaves nothing behind either way.
+  let capture: CollectorCapture | undefined;
+  try {
   for (const [name, argv] of composePlan(run)) {
     const result = erl2(argv);
     assert.equal(result.exitCode, 0, `${name}: ${JSON.stringify(result.body.errors)}`);
@@ -280,7 +284,16 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
         "the qualified subset is exactly two containers",
       );
       assert.deepEqual([...live.networks], [`${run.project}-net`]);
-      assert.equal(result.body.data?.["resource_count"], 5);
+      // Six, not five: the project, the network, both containers, the published
+      // port — and, since package 2, the run's trusted telemetry volume, which
+      // the driver owns and therefore inventories and reaps.
+      //
+      // `157cf04` admitted the volume into the live *driver contract* test and
+      // did not reach this one, so this expectation stayed at the pre-package-2
+      // inventory and this suite has been failing here since. Found by running
+      // the broad suite during the package 2 remediation, and reproduced at
+      // `8485b8a` itself to confirm it is not a remediation regression.
+      assert.equal(result.body.data?.["resource_count"], 6);
       // Live execution really was linux/arm64-or-amd64, and the container really
       // is the digest the lock pins for it.
       const platform = docker(["version", "--format", "{{.Server.Os}}/{{.Server.Arch}}"]).stdout.trim();
@@ -289,16 +302,29 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
         `the executed platform ${platform} is not one the lock pins`,
       );
       observed["platform"] = platform;
+      capture = startCollectorCapture({
+        containerName: `${run.project}-otel-collector`,
+        directory: ownedTempDir("erl2-collector-capture-"),
+      });
     }
 
     if (name === "execute-subject:exercise") {
-      const counts = telemetry(run);
-      assert.ok(counts.spans > 0, "the collector received no spans; telemetry was not actually emitted");
-      assert.ok(
-        counts.runAttributed > 0,
-        "no telemetry record carries this run's marker; the spans are not attributable to this run",
+      assert.ok(capture !== undefined, "the collector capture was never attached");
+      const telemetryObservation = telemetry(capture, run);
+      // One assertion, on the first missing transition. The previous pair could
+      // report "telemetry was not actually emitted" for a run whose telemetry was
+      // emitted, received and run-marked — the message named a conclusion the
+      // evidence did not support. `diagnosticCode` names what actually failed.
+      assert.equal(
+        telemetryObservation.diagnosticCode,
+        "CURRENT_RUN_SPANS_OBSERVED",
+        explainDurableTelemetry(telemetryObservation),
       );
-      observed["telemetry"] = counts;
+      assert.ok(
+        telemetryObservation.currentRunSpanCount > 0,
+        explainDurableTelemetry(telemetryObservation),
+      );
+      observed["telemetry"] = telemetryObservation;
     }
 
     if (name === "activate") {
@@ -411,11 +437,18 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
   }
 
   // The attributable-telemetry observation is *retained*, not merely observed
-  // live (ADR-ERL2-033): frozen before teardown began, marked with this run's
-  // id, and carrying the exact log lines its counts derive from. The counts
-  // are re-derived here from the retained excerpt with the test's own
-  // arithmetic, independently of the driver's.
+  // live, and since package 3 it is an **ERL2-C-171** record: bytes the
+  // collector's own file exporter wrote to a volume nothing else could reach,
+  // frozen before teardown began and marked with this run's id.
+  //
+  // This assertion block used to read `log_excerpt` — the collector's debug
+  // console stream, which the Lab's own overlay also renders subject logs into,
+  // and which a subject could therefore write a forged `"spans": 9999` into.
+  // There is no excerpt now. The counts are re-derived here from the retained
+  // trusted bytes with the test's own arithmetic, independently of the driver's,
+  // exactly as before — but over a structure a subject cannot author.
   const observation = retained<{
+    schema_version: string;
     evidence: string;
     run_id: string;
     marker: string;
@@ -424,11 +457,31 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
     trace_batches: number;
     service_names: string[];
     collector: { service_id: string; container_name: string; ownership_verified: boolean };
-    log_excerpt: string;
+    channel: { kind: string; record_format: string; rotation: string; segment_count: number };
+    binding: { environment_archetype_hash: string; substrate_lock_core_hash: string };
+    artifact: {
+      byte_length: number;
+      content_digest: string;
+      record_count: number;
+      finalization: string;
+      final_record_terminated: boolean;
+    };
+    trusted_records: string;
+    log_excerpt?: string;
   }>(run, "environment", "attributable-telemetry-observation.json");
-  assert.equal(observation.evidence, "observed", "the collector observation was not made");
+  assert.equal(
+    observation.schema_version,
+    "attributable-telemetry-observation/v2",
+    "a current run must retain ERL2-C-171; ERL2-C-160 authorizes nothing",
+  );
+  assert.equal(observation.evidence, "observed", "the trusted observation was not made");
   assert.equal(observation.run_id, run.runId);
   assert.equal(observation.marker, run.runId, "the marker must be the run id itself");
+  assert.equal(
+    observation.log_excerpt,
+    undefined,
+    "a trusted record must carry no debug excerpt; the forgeable stream is not evidence",
+  );
   assert.ok(
     observation.run_attributed_records > 0,
     "the retained observation carries no record naming this run's marker",
@@ -437,22 +490,86 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
   assert.equal(observation.collector.service_id, "otel-collector");
   assert.equal(observation.collector.ownership_verified, true);
   assert.ok(observation.collector.container_name.includes("otel-collector"));
-  const excerptText = observation.log_excerpt;
+
+  // The channel is the one ERL2-C-171 pins: one segment, no rotation.
+  assert.equal(observation.channel.record_format, "otlp-json-ndjson");
+  assert.equal(observation.channel.rotation, "forbidden");
+  assert.equal(observation.channel.segment_count, 1);
+
+  // R4: the artifact is bound to *this* run's environment, and the binding is
+  // compared against this run's own retained substrate binding rather than
+  // against anything the artifact says about itself.
   assert.equal(
-    excerptText.split(`erl2_run=${run.runId}`).length - 1 > 0,
-    true,
-    "the retained excerpt does not carry the run marker",
+    observation.binding.substrate_lock_core_hash,
+    binding.substrate_lock_hash,
+    "the trusted artifact binds a substrate lock this run did not use",
+  );
+
+  // R5: the bytes the counts derive from are the bytes whose digest is retained.
+  const trustedBytes = observation.trusted_records;
+  assert.equal(observation.artifact.finalization, "frozen");
+  assert.equal(observation.artifact.final_record_terminated, true);
+  assert.equal(
+    observation.artifact.content_digest,
+    `sha256:${createHash("sha256").update(Buffer.from(trustedBytes, "utf8")).digest("hex")}`,
+    "the declared content digest is not the digest of the retained bytes",
   );
   assert.equal(
-    excerptText.split(run.runId).length - 1,
+    observation.artifact.byte_length,
+    Buffer.byteLength(trustedBytes, "utf8"),
+    "the declared byte length is not the length of the retained bytes",
+  );
+
+  // The counts, re-derived from the retained NDJSON with the test's own
+  // arithmetic: one physical line per collector export, and one span per entry
+  // of every scope's `spans` array.
+  const lines = trustedBytes.split("\n").filter((line) => line.length > 0);
+  assert.equal(
+    observation.artifact.record_count,
+    lines.length,
+    "the declared record count is not the number of retained records",
+  );
+  assert.equal(observation.trace_batches, lines.length);
+  let derivedSpans = 0;
+  let derivedAttributed = 0;
+  for (const line of lines) {
+    const document = JSON.parse(line) as {
+      resourceSpans?: { scopeSpans?: { spans?: unknown[] }[] }[];
+    };
+    for (const resourceSpan of document.resourceSpans ?? []) {
+      for (const scopeSpan of resourceSpan.scopeSpans ?? []) {
+        for (const span of scopeSpan.spans ?? []) {
+          derivedSpans += 1;
+          if (JSON.stringify(span).includes(run.runId)) derivedAttributed += 1;
+        }
+      }
+    }
+  }
+  assert.equal(
+    observation.spans,
+    derivedSpans,
+    "the declared span count must be the length of the structure the collector wrote",
+  );
+  assert.equal(
     observation.run_attributed_records,
-    "the declared run-attributed count must equal the count re-derived from the retained excerpt",
+    derivedAttributed,
+    "the declared run-attributed count must equal the count re-derived from the retained bytes",
   );
-  const excerptSpans = [...excerptText.matchAll(/\bTraces\b.*"spans":\s*(\d+)/g)].reduce(
-    (total, match) => total + Number(match[1]),
-    0,
+
+  // The telemetry gate is composed on this run — it declared the observation
+  // obtainable — and it passes through valid C-171 evidence.
+  const validity = retained<{
+    gate_results: { gate_id: string; passed: boolean }[];
+  }>(run, "validity-result.json");
+  const telemetryGate = validity.gate_results.find(
+    (gate) => gate.gate_id === "attributable-telemetry-retained",
   );
-  assert.equal(excerptSpans, observation.spans, "the declared span count must be derivable from the excerpt");
+  assert.ok(telemetryGate, "a declaring run must evaluate the attributable-telemetry gate");
+  assert.equal(
+    telemetryGate?.passed,
+    true,
+    "the telemetry gate did not pass through the trusted channel",
+  );
 
   // Offline verification, in a fresh process, as an external reader.
   const verified = verifyBundle(run.runRoot, {
@@ -481,6 +598,9 @@ test("COMPOSE-E2E: a run reaches an offline-valid terminal through a real Compos
   // selection, and the ceiling is the weakest applicable component. Asking for
   // more than the evidence supports is reduced, never granted.
   assert.equal(observed["telemetry"] !== undefined, true);
+  } finally {
+    capture?.dispose();
+  }
 });
 
 test("COMPOSE-E2E: a run may not substitute its driver after it has bound one", SKIP, () => {
@@ -500,13 +620,19 @@ test("COMPOSE-E2E: a run may not substitute its driver after it has bound one", 
     assert.equal(resumed.exitCode, 0, JSON.stringify(resumed.body.errors));
   } finally {
     // The environment is real, so this test cleans up after itself by exact name.
+    //
+    // Including the trusted volume, which `provision` creates and which nothing
+    // here ever asks the channel to remove: this case never runs `destroy`, so
+    // the lifecycle that owns the volume never reaches its teardown. That is a
+    // gap in this test rather than in the channel — but it left one
+    // `erl2-trusted-<run>` behind on every execution, and a suite that leaks a
+    // volume cannot be evidence that the lifecycle does not.
     for (const service of ["quote", "otel-collector"]) {
       docker(["container", "rm", "--force", `${run.project}-${service}`]);
     }
     docker(["network", "rm", `${run.project}-net`]);
+    docker(["volume", "rm", "--force", `erl2-trusted-${run.runId}`]);
   }
-  assert.deepEqual(
-    [...projectObjects(run.project).containers, ...projectObjects(run.project).networks],
-    [],
-  );
+  const after = projectObjects(run.project);
+  assert.deepEqual([...after.containers, ...after.networks, ...after.volumes], []);
 });

@@ -1,0 +1,6 @@
+1d1bceb4d0c945ff6c4a9bb356937b61d343fc4f9ad5c0141aba36f24e49e167  docs/evidence/trusted-local-observation-20260816/affected-control-campaign-first-run.txt
+709751a44893ceec5cf9a26172cbc299e6d65a1608878cdd6a00aae307de9c94  docs/evidence/trusted-local-observation-20260816/affected-control-campaign.txt
+e561bf3c58c60bf07b0d2e69b9eb9a9f6541e975311cc8aae511e547ccc78f45  docs/evidence/trusted-local-observation-20260816/broad-suite.log
+40cf4e00043eaf33e42b0d8dd55cac76d708b042969e41e083945cf41b5e20a5  docs/evidence/trusted-local-observation-20260816/campaign-binding.txt
+27b7ddafd7e6b896a5272c3cb7dc1708f53910739b6790b1de7b4d032770960c  docs/evidence/trusted-local-observation-20260816/coordinates.txt
+9f92f0929af37138245add837805a44d21fb9042472bbbea1fd44ead7cf3c02a  docs/evidence/trusted-local-observation-20260816/qualiber-compatibility-probe.json

@@ -35,6 +35,7 @@ import {
   parseProcessIdentity,
 } from "../support/processIdentity.js";
 import type { ProcessIdentity } from "../support/processIdentity.js";
+import { awaitMarker, markerTemporaryResidue } from "../support/atomicMarker.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..", "..");
@@ -43,6 +44,10 @@ const targetModulePath = path.join(scriptsDir, "lib", "controlTarget.mjs");
 const worktreeModulePath = path.join(scriptsDir, "lib", "disposableWorktree.mjs");
 /** The identity helper, reachable from the probe's own process by URL. */
 const identityModulePath = pathToFileURL(path.join(here, "..", "support", "processIdentity.js")).href;
+/** The atomic-marker helper, reachable from a spawned driver by URL. */
+const markerModulePath = pathToFileURL(path.join(here, "..", "support", "atomicMarker.js")).href;
+/** What a signal driver's marker calls itself, so a reader can prove whose it is. */
+const SIGNAL_MARKER_KIND = "erl2-harness-signal-worktree";
 
 interface PatchPlan {
   readonly outcome: string;
@@ -557,22 +562,35 @@ test("NC-RESTORE: a control's patch is restored from the object store, and the r
 async function releasesOnSignal(signal: "SIGINT" | "SIGTERM"): Promise<void> {
   const repo = makeThrowawayRepo();
   const marker = path.join(repo.root, "worktree.json");
+  // The driver names itself, so the reader below is waiting for *this* run's
+  // marker rather than for whatever happens to be at that path.
+  const markerId = `${String(process.pid)}-${signal}`;
   const driver = [
     `import { createDisposableWorktree } from ${JSON.stringify(pathToFileURL(worktreeModulePath).href)};`,
-    "import { writeFileSync } from 'node:fs';",
+    `import { publishMarker } from ${JSON.stringify(markerModulePath)};`,
     "const d = createDisposableWorktree({",
     "  repoRoot: process.env['HARNESS_REPO'],",
     "  prefix: 'erl2-harness-signal-',",
     "});",
     "d.installSignalHandlers(() => {});",
-    "writeFileSync(process.env['HARNESS_MARKER'], JSON.stringify({",
-    "  worktree: d.worktree, worktreeRoot: d.worktreeRoot,",
-    "}));",
+    // Published atomically: `writeFileSync` created the final path and *then*
+    // wrote it, so a reader gated on existence could — and, under load, did —
+    // read it at length zero and fail in `JSON.parse`.
+    "publishMarker(process.env['HARNESS_MARKER'], {",
+    `  kind: ${JSON.stringify(SIGNAL_MARKER_KIND)},`,
+    "  id: process.env['HARNESS_MARKER_ID'],",
+    "  payload: { worktree: d.worktree, worktreeRoot: d.worktreeRoot },",
+    "});",
     "setInterval(() => {}, 1_000);",
   ].join("\n");
 
   const child = spawn(process.execPath, ["--input-type=module", "-e", driver], {
-    env: { ...process.env, HARNESS_REPO: repo.root, HARNESS_MARKER: marker },
+    env: {
+      ...process.env,
+      HARNESS_REPO: repo.root,
+      HARNESS_MARKER: marker,
+      HARNESS_MARKER_ID: markerId,
+    },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stderr = "";
@@ -583,9 +601,22 @@ async function releasesOnSignal(signal: "SIGINT" | "SIGTERM"): Promise<void> {
   try {
     // Generous, because this runs alongside every other suite and `git worktree
     // add` is not fast under that load. Exceeding it is a failure, not a hang.
-    for (let waited = 0; waited < 60_000 && !existsSync(marker); waited += 50) await sleep(50);
-    assert.ok(existsSync(marker), `the driver never created its worktree: ${stderr}`);
-    const created = JSON.parse(readFileSync(marker, "utf8")) as { worktree: string; worktreeRoot: string };
+    //
+    // Readiness is the marker's *content*, not its path: a published file that
+    // does not parse, or that names another driver, is not this driver saying
+    // it is up.
+    let created: { worktree: string; worktreeRoot: string };
+    try {
+      created = (
+        await awaitMarker<{ worktree: string; worktreeRoot: string }>({
+          path: marker,
+          expected: { kind: SIGNAL_MARKER_KIND, id: markerId },
+        })
+      ).payload;
+    } catch (cause) {
+      assert.fail(`the driver never created its worktree: ${(cause as Error).message}: ${stderr}`);
+    }
+    assert.deepEqual(markerTemporaryResidue(marker), [], "the publication left a temporary behind");
     assert.equal(existsSync(created.worktree), true);
 
     const exited = new Promise<void>((resolve) => {

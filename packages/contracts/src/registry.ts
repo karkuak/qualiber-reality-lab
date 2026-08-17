@@ -160,7 +160,17 @@ export const CONTRACTS: readonly ContractDescriptor[] = [
   // observation gets its own identity rather than a field on any frozen
   // capture schema because it post-dates the realized cutoff: it is a
   // statement about receipt during the run, never about the evidence window.
+  // ADR-ERL2-038 R8: ERL2-C-160 stays registered and parseable so historical
+  // evidence keeps verifying under its original scope. It is **not** authoritative
+  // for a new telemetry claim; ERL2-C-171 is. The identity is not repointed,
+  // because a frozen bundle that declared C-160 coverage would otherwise start
+  // reading as a claim about a channel that did not exist when it was written.
   d("ERL2-C-160", "AttributableTelemetryObservationV1", "environment", "attributable-telemetry-observation/v1"),
+  // ADR-ERL2-038 §3 and R8: additive, and a new identity rather than a version
+  // bump on ERL2-C-160 for the same reason ERL2-C-159 was — the two must be
+  // representable at once, one historical and one authoritative, and a single
+  // identity spanning both is exactly the dual authority R8 exists to prevent.
+  d("ERL2-C-171", "AttributableTelemetryObservationV2", "environment", "attributable-telemetry-observation/v2"),
   // ADR-ERL2-031: additive, and the reason it is a new identity rather than two
   // fields on `ObservationBundleV2` is ordering, not migration cost. The bundle is
   // frozen *after* capture, so durations carried there would be a post-hoc
@@ -233,6 +243,38 @@ export const CONTRACTS: readonly ContractDescriptor[] = [
   d("ERL2-C-140", "ResidueReportV1", "adapter", "residue-report/v1"),
   d("ERL2-C-141", "AdapterFailureReportV1", "adapter", "adapter-failure-report/v1"),
   d("ERL2-C-142", "AdapterCertificationFindingV1", "adapter", undefined),
+
+  // subject-adapter/v2 local observation (ADR-ERL2-037). These identities are
+  // additive: the governed V1 contracts above remain byte-for-byte unchanged.
+  d("ERL2-C-161", "SubjectAdapterManifestV2", "acquisition", "subject-adapter-manifest/v2"),
+  d("ERL2-C-162", "SubjectAdapterCertificationReceiptV2", "adapter", "subject-adapter-certification-receipt/v2"),
+  d("ERL2-C-163", "AdapterProtocolNegotiationV2", "adapter", "adapter-protocol-negotiation/v2"),
+  d("ERL2-C-164", "AdapterRequestV2", "adapter", "adapter-request/v2"),
+  d("ERL2-C-165", "AdapterResponseEnvelopeV2", "adapter", "adapter-response-envelope/v2"),
+  d("ERL2-C-166", "SandboxInvocationManifestV2", "adapter", "sandbox-invocation-manifest/v2"),
+  d("ERL2-C-167", "LocalObservationLimitsV1", "observation", "local-observation-limits/v1"),
+  // The plan and result became closed unions when owner-operated trusted-local
+  // execution arrived (ADR-ERL2-042): the certified variants below are the
+  // originals, byte-for-byte, and the trusted-local variants are separate
+  // documents rather than the same document with certification fields reused
+  // for something no certifier ever saw.
+  d("ERL2-C-168", "LocalObservationPlanV1", "observation", undefined, true),
+  d("ERL2-C-168a", "LocalObservationCertifiedPlanV1", "observation", "local-observation-plan/v1"),
+  d("ERL2-C-168b", "LocalObservationTrustedLocalPlanV1", "observation", "local-observation-plan/v1"),
+  d("ERL2-C-169", "LocalObservationOperationRecordV1", "observation", undefined, true),
+  d("ERL2-C-170", "LocalObservationResultV1", "observation", undefined, true),
+  d("ERL2-C-170a", "LocalObservationCertifiedResultV1", "observation", "local-observation-result/v1"),
+  d("ERL2-C-170b", "LocalObservationTrustedLocalResultV1", "observation", "local-observation-result/v1"),
+
+  // Owner-operated trusted-local development path (ADR-ERL2-042). None of these
+  // is a certification artefact and none may be named as one.
+  d("ERL2-C-180", "TrustedLocalAdapterDeclarationV1", "adapter", "trusted-local-adapter-declaration/v1"),
+  d("ERL2-C-181", "TrustedLocalOwnerAcknowledgementV1", "adapter", undefined),
+  d("ERL2-C-182", "TrustedLocalObservationRecordV1", "observation", "trusted-local-observation-record/v1"),
+  d("ERL2-C-183", "TrustedLocalOperationOutcomeV1", "observation", undefined),
+  // Registered so the compact predecessor can be validated on its own, at the
+  // point it is constructed, rather than only as part of an enclosing request.
+  d("ERL2-C-184", "AdapterRequestPredecessorV2", "adapter", undefined, true),
 
   // Subject-isolation qualification (ERL2-OQ-008, ADR-ERL2-016)
   d("ERL2-C-149", "IsolationSubstrateLockV1", "isolation", "isolation-substrate-lock/v1"),

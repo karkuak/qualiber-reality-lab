@@ -21,6 +21,14 @@ export {
   type SubjectAdapterManifestV1,
   type SubstrateLockV1,
   type Tier,
+  // Owner-operated trusted-local development path (ADR-ERL2-042).
+  type AdapterRequestPredecessorV2,
+  type AdapterRequestV2,
+  type LocalObservationTrustedLocalPlanV1,
+  type SubjectAdapterManifestV2,
+  type TrustedLocalAdapterDeclarationV1,
+  type TrustedLocalObservationRecordV1,
+  type TrustedLocalOperationOutcomeV1,
 } from "@erl2/contracts";
 
 import { CONTRACTS } from "@erl2/contracts";

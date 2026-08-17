@@ -1,0 +1,119 @@
+✔ LOCAL-REDUCER: declared, dispatched and completed records are immutable and terminal replay is idempotent (511.023458ms)
+✔ LOCAL-REDUCER: the same operation id with different request bytes conflicts (2.072375ms)
+✖ LOCAL-REDUCER: ambiguous effects are never replayed and force cleanup-only progress (3.937125ms)
+✔ LOCAL-REDUCER: failed operations preserve typed failure and conservative cleanup (1.683333ms)
+✔ LOCAL-REDUCER: output freeze irreversibly refuses subsequent subject operations (1.526375ms)
+✔ LOCAL-REDUCER: every prerequisite edge is refused before dispatch (11.4705ms)
+✔ LOCAL-RESIDUE: an explicitly clean report is the only route to observed_clean (480.687166ms)
+✖ LOCAL-RESIDUE: fifty remaining artifacts reach the reducer as residue_detected (253.316667ms)
+✔ LOCAL-RESIDUE: zero and fifty remaining artifacts are observably different evidence (473.785708ms)
+✖ LOCAL-RESIDUE: an adapter that cannot tell is not rounded to clean (228.891833ms)
+✖ LOCAL-RESIDUE: a self-contradicting report is refused, never believed (166.077125ms)
+✔ LOCAL-RESIDUE: a completed operation that is not a residue report never implies clean (238.876833ms)
+✔ LOCAL-RESIDUE: the host refuses an unusable report at the protocol boundary (0.35375ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 9
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2108.2945
+
+✖ failing tests:
+
+test at tests/dist/integration/localObservationReducer.test.js:49:1
+✖ LOCAL-REDUCER: ambiguous effects are never replayed and force cleanup-only progress (3.937125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'cleanup_complete'
+  - 'cleanup_incomplete'
+             ^
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localObservationReducer.test.js:63:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'cleanup_complete',
+    expected: 'cleanup_incomplete',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/localResidueTruth.test.js:60:1
+✖ LOCAL-RESIDUE: fifty remaining artifacts reach the reducer as residue_detected (253.316667ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'cleanup_complete'
+  - 'cleanup_incomplete'
+             ^
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localResidueTruth.test.js:63:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'cleanup_complete',
+    expected: 'cleanup_incomplete',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/localResidueTruth.test.js:80:1
+✖ LOCAL-RESIDUE: an adapter that cannot tell is not rounded to clean (228.891833ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'cleanup_complete'
+  - 'cleanup_incomplete'
+             ^
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localResidueTruth.test.js:83:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'cleanup_complete',
+    expected: 'cleanup_incomplete',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/localResidueTruth.test.js:88:1
+✖ LOCAL-RESIDUE: a self-contradicting report is refused, never believed (166.077125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'cleanup_complete'
+  - 'cleanup_incomplete'
+             ^
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localResidueTruth.test.js:96:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'cleanup_complete',
+    expected: 'cleanup_incomplete',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

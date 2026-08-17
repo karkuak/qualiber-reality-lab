@@ -1,0 +1,51 @@
+✔ CUTOFF-DERIVE: a well-formed cutoff derives its warmup and observation windows (2.4545ms)
+✔ CUTOFF-DERIVE: a run that realized no cutoff derives none rather than refusing (0.656708ms)
+✔ CUTOFF-MUT: an observation bundle naming a nonexistent runtime milestone is refused (0.895458ms)
+✖ CUTOFF-MUT: a decoy milestone of the right schema does not satisfy the cutoff's named hash (1.317083ms)
+✔ CUTOFF-MUT: a cutoff naming a nonexistent process-start receipt is refused (0.910167ms)
+✔ CUTOFF-MUT: a milestone bound to a different process-start receipt is refused (1.528583ms)
+✔ CUTOFF-MUT: a milestone in a different monotonic clock domain is refused (0.933625ms)
+✔ CUTOFF-MUT: a milestone from another run is refused (0.931334ms)
+✔ CUTOFF-MUT: a milestone retained but never lifecycle-reached is refused (0.859208ms)
+✔ CUTOFF-MUT: an observation window beyond the committed maximum is refused (0.862542ms)
+✔ CUTOFF-MUT: an observation window below the committed minimum is refused (0.831917ms)
+✔ CUTOFF-MUT: a warmup beyond the committed maximum is refused (0.793916ms)
+✔ CUTOFF-MUT: a milestone occurring before the process it attests started is refused (0.812541ms)
+✔ CUTOFF-MUT: wall and monotonic views that diverge beyond the bound are refused (0.79275ms)
+✔ CUTOFF-MUT: a policy whose instant rule this verifier does not implement is refused (0.801834ms)
+✔ CUTOFF-MUT: a cutoff outside the policy's own validity window is refused (0.837833ms)
+✔ CUTOFF-MUT: an observation bundle belonging to another run is refused (1.022459ms)
+✔ CUTOFF-MUT: two retained observation bundles are refused rather than one being picked (0.932375ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 17
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 167.848333
+
+✖ failing tests:
+
+test at tests/dist/integration/cutoffDerivation.test.js:181:1
+✖ CUTOFF-MUT: a decoy milestone of the right schema does not satisfy the cutoff's named hash (1.317083ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'NO_REFUSAL'
+  - 'CUTOFF_MILESTONE_MISMATCH'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/cutoffDerivation.test.js:196:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'NO_REFUSAL',
+    expected: 'CUTOFF_MILESTONE_MISMATCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

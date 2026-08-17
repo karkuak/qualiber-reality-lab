@@ -17,9 +17,231 @@
 # proven by the collector's own stdout rather than by a backend that would have
 # to be trusted separately. `verbosity: detailed` is what makes a span's
 # attributes visible, so telemetry can be attributed to the run that caused it.
+#
+# ## The trusted channel (ADR-ERL2-038 §3, corrections R2/R3/R6) — package 2
+#
+# `debug` is **no longer a source of truth**, and this file is where that stops
+# being a sentence and starts being a topology. The measurement behind it: the
+# debug exporter is line-oriented and does not escape, so a subject's span
+# attribute reaches stdout at column zero with its newlines intact, and an
+# independent review forged a complete `Traces … "spans": 9999` record out of a
+# subject log body on a stream that also carried genuine structural framing.
+# No grammar over those bytes can separate collector framing from subject
+# payload, because at the byte level there is no distinction to find.
+#
+# So the trusted record is written somewhere a subject's bytes cannot reach:
+#
+#   traces/trusted:  otlp → memory_limiter → transform/trusted → file/trusted
+#
+# Three properties, each load-bearing and each measured against this exact
+# pinned image (`otelcol-contrib` v0.157.0) rather than assumed:
+#
+#   1. **Physical separation (R3).** `file/trusted` writes to a file on a
+#      collector-only volume. `debug` writes to stdout. They are two byte
+#      streams with two writers, so the forgery above cannot reach the trusted
+#      one: it is not a matter of parsing more carefully, it is that the
+#      subject's bytes are never on that channel. The two pipelines are declared
+#      separately — `traces` keeps `debug` and `traces/trusted` keeps the file —
+#      so neither exporter can acquire the other's channel by an edit to one
+#      pipeline's exporter list.
+#
+#   2. **Structural framing.** The `file` exporter writes one OTLP-JSON document
+#      per physical line and JSON-escapes every string value. Measured with a
+#      hostile span attribute carrying six raw newlines, a `\t{…}` region
+#      closer, a forged `Traces … "spans": 9999` summary line and a complete
+#      forged OTLP-JSON document declaring 50 spans: **0 extra physical lines,
+#      0 raw TAB bytes, structural span count 1**. A subject cannot write a
+#      record boundary, so the count is the length of a structure rather than a
+#      numeral a reader has to believe.
+#
+#   3. **Minimization before export (R2).** One realistic unminimized record
+#      measured 1 000 590 bytes against ERL2-C-171's 262 144 retention ceiling —
+#      the channel is unusable without this. `transform/trusted` applies a
+#      strict allowlist and a length bound *before* the exporter sees the span,
+#      so the artifact carries a bounded, named field set rather than whatever a
+#      subject attached. Measured on the same payload: **1 000 590 → 430 bytes**,
+#      and on a 40-span realistic-shaped 914 346-byte batch, **914 346 → 30 079
+#      bytes**, with the structural span count and 40/40 marker attribution
+#      preserved and a session token and `host.name` removed.
+#
+# ## The allowlist, stated exactly
+#
+#   resource attributes: `service.name`     — identifies the emitting service
+#   span attributes:     `url.full`         — carries this run's marker
+#   every retained value: truncated to 512 characters
+#
+# Every other subject-controlled field in the record is **removed**, not bounded:
+# scope attributes, scope name and version, span name, span status message, span
+# trace state, span-event names and attributes, and the schema URL at both the
+# resource and the scope level. A bound would keep a privacy-bearing field for a
+# reader that does not exist; removal is the rule wherever no ERL2-C-171 count
+# reads the field.
+#
+# Two honest exceptions, both stated rather than hidden:
+#
+#   1. `url.full` is a subject-reachable value and it remains — JSON-escaped and
+#      bounded to 512 characters — because run attribution is derived from it.
+#      This is the disclosed bounded MVP limit.
+#   2. Span **link** attributes and link trace state are not removed here,
+#      because this pinned collector version has no span-link context. The
+#      parser refuses them rather than retaining them, so no unbounded subject
+#      value survives — but a legitimately linked span is refused rather than
+#      minimized. See the `transform/trusted` block for the measurements.
+#
+# `ERL2-C-171`'s parser re-derives this whole allowlist over the retained bytes
+# rather than trusting that this file was configured correctly, and refuses an
+# unknown key at every nesting level — so a record carrying a key nobody allowed
+# is refused rather than read, and a regression in this file is caught rather
+# than exported.
+#
+# ## Why `logs` and `metrics` stay out of the trusted pipeline
+#
+# Nothing ERL2-C-171 derives comes from a log or a metric, and a signal the
+# contract does not read is a signal whose bytes would be retained for no
+# reader. The trusted pipeline is traces-only on purpose, and a subject log body
+# — the exact vector that forged the mixed stream — therefore has no path into
+# the trusted file at all.
+#
+# ## Why the OTTL paths are context-prefixed
+#
+# `resource.attributes` rather than `attributes`. The unprefixed form still
+# parses at v0.157.0, and the collector rewrites it and logs
+# "one or more paths were modified to include their context prefix". Writing the
+# prefix means the configuration says what it does, and it keeps a future
+# collector version's removal of the implicit form from silently changing which
+# attributes are kept.
 exporters:
   debug:
     verbosity: detailed
+
+  # The trusted channel. `path` is the collector-only tmpfs-backed volume the
+  # driver provisions for this run; nothing else in the topology mounts it.
+  # `format: json` is what makes each physical line one OTLP-JSON document.
+  #
+  # No rotation (R6). The exporter is configured with no `rotation` block, so it
+  # writes exactly one file: rotation reintroduces the window-completeness
+  # ambiguity that produced the defect this channel replaces, and minimization
+  # removes the size pressure that would have motivated it. ERL2-C-171 records
+  # `rotation: "forbidden"` and `segment_count: 1`, and the driver refuses a
+  # trusted directory holding more than the one expected file.
+  #
+  # `flush_interval` is what makes the freeze cutoff a bounded wait rather than a
+  # guess: after the run's telemetry is quiesced, one flush interval plus a
+  # margin is the window after which two consecutive reads agree.
+  file/trusted:
+    path: /trusted/traces.jsonl
+    format: json
+    flush_interval: 1s
+
+processors:
+  # R2, widened to the whole record by the Package 2 remediation.
+  #
+  # ## Why every context is named, not just the two that were
+  #
+  # The first Package 2 candidate minimized `resource.attributes`,
+  # `span.attributes` and `spanevent.attributes` and nothing else. An
+  # independent review submitted one hostile OTLP payload through this exact
+  # pinned collector and measured six further surfaces surviving verbatim into
+  # the retained artifact: instrumentation-scope attributes (carrying a
+  # `session.token`), the span status message (carrying a host file path), the
+  # span name, the span trace state, and the schema URL at both the resource and
+  # the scope level. The subject is the OTLP producer, so every one of those is
+  # subject-controlled — not trusted collector metadata — and each was accepted
+  # by the verifier.
+  #
+  # That is the same defect class as the span-event leak this file already
+  # records: a second attribute map, or a plain string field, that the allowlist
+  # simply did not name. The rule is now the whole record rather than the fields
+  # someone remembered, and the parser re-derives the same allowlist over the
+  # retained bytes (`trustedTelemetry.ts`) so a regression here is refused rather
+  # than trusted.
+  #
+  # ## `propagate`, not `ignore`
+  #
+  # `error_mode: ignore` was how `set(span.events, [])` came to be silently a
+  # no-op: the statement parsed, failed at runtime, and the error was swallowed,
+  # so the statement that looked like it removed the most removed nothing. Every
+  # statement below is load-bearing for a privacy bound, so a statement that
+  # cannot be applied must stop the batch rather than quietly export more than
+  # the allowlist says. `propagate` makes an inapplicable minimization statement
+  # fail the trusted pipeline closed — the artifact is then absent with a reason,
+  # which is a refusal a reader can act on, rather than an artifact carrying
+  # bytes nobody allowed.
+  #
+  # Measured against the pinned image on both a maximal hostile payload and a
+  # minimal sparse span (no status, no events, no links, no scope version): every
+  # statement applies cleanly, and neither payload fails the pipeline.
+  transform/trusted:
+    error_mode: propagate
+    trace_statements:
+      - context: resource
+        statements:
+          - keep_keys(resource.attributes, ["service.name"])
+          - truncate_all(resource.attributes, 512)
+          # Emitted by the instrumentation, unbounded, and read by nothing
+          # ERL2-C-171 derives. `""` is omitted entirely by the proto3 JSON
+          # marshaller, so the key disappears rather than being retained empty.
+          - set(resource.schema_url, "")
+      - context: scope
+        statements:
+          # The scope's own attribute map — a third map, reached by none of the
+          # statements above. The review retained a 1 200-character
+          # `session.token` here, through a forbidden-key check that never saw it.
+          - keep_keys(scope.attributes, [])
+          - set(scope.name, "")
+          - set(scope.version, "")
+          - set(scope.schema_url, "")
+      - context: span
+        statements:
+          - keep_keys(span.attributes, ["url.full"])
+          - truncate_all(span.attributes, 512)
+          # The span name is instrumentation-chosen and routinely carries the
+          # request target — the review put a token in it and it survived whole.
+          # Nothing ERL2-C-171 derives reads it, so it is removed rather than
+          # bounded: a bound would keep a privacy-bearing field for no reader.
+          - set(span.name, "")
+          # Where an instrumentation puts an exception message. The review
+          # retained `/Users/…/quote.php:42` here — the identical payload to the
+          # span-event stack trace, in the field next door.
+          - set(span.status.message, "")
+          # W3C `tracestate` propagates from an inbound request header, so it is
+          # directly settable by whatever reaches the subject.
+          - set(span.trace_state, "")
+      - context: spanevent
+        statements:
+          # Kept from the original fix, which was measured against a live run:
+          # the quote service's PHP instrumentation attached an `exception` event
+          # carrying `exception.message` and a full `exception.stacktrace` with
+          # host file paths, and every byte survived into the artifact.
+          - keep_keys(spanevent.attributes, [])
+          # The event name is subject-influenced too and no count reads it, so it
+          # goes the same way as the span name rather than being bounded.
+          - set(spanevent.name, "")
+      # ## The one surface this pinned collector cannot reach: span links
+      #
+      # A span's `links[]` carry their own attribute map and their own
+      # `traceState`, and both are subject-controlled. They are NOT minimized
+      # here, and that is a measured limitation of the pinned image rather than
+      # an oversight:
+      #
+      #   - `otelcol-contrib` v0.157.0 has no span-link OTTL context. `spanlink`,
+      #     `link`, `links` and `span_link` are all rejected as `unknown context`,
+      #     in both the explicit `context:` form and the inferred flat form.
+      #   - `set(span.links, [])` parses and then fails at runtime with
+      #     `expects ptrace.SpanLinkSlice but got []interface {}` — the same
+      #     silent-no-op class as `set(span.events, [])`, and now loud under
+      #     `propagate`.
+      #   - `keep_keys(span.links[0].attributes, [])` is refused: links do not
+      #     support indexing.
+      #   - the `redaction` processor reaches scope and span-event attributes but
+      #     does not traverse links.
+      #
+      # So the parser refuses a link that carries attributes or a trace state,
+      # with its own reason code, and privacy is preserved. What is NOT closed is
+      # the availability asymmetry: instrumentation that legitimately attaches
+      # link attributes makes the whole artifact refuse. Closing that needs a
+      # collector version with a span-link context, which is an image-pin move
+      # and its own design review. Stated here rather than discovered again.
 
 service:
   pipelines:
@@ -27,6 +249,15 @@ service:
       receivers: [otlp]
       processors: [memory_limiter]
       exporters: [debug]
+    # The trusted pipeline. Same receiver, its own processor chain, its own
+    # exporter, its own physical output channel. `debug` is deliberately absent:
+    # an exporter that renders subject bytes unescaped must not share a byte
+    # stream with the trusted record, and the simplest way to guarantee that is
+    # for it not to be on this pipeline at all.
+    traces/trusted:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/trusted]
+      exporters: [file/trusted]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter]

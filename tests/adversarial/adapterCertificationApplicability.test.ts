@@ -128,6 +128,18 @@ function environment(
       subjectExecutionMode: mode,
       ...(mode === "external_adapter" ? { adapterCertificationReceiptHash: CURRENT_RECEIPT } : {}),
       terminalStage: "exercise",
+      // This suite measures the *adapter* applicability dimension, so telemetry
+      // stays applicable throughout and the gate `gatesFor` emits is the one
+      // `assertAttributableTelemetryApplicability` then requires. The telemetry
+      // dimension has its own suite.
+      attributableTelemetryApplicable: true,
+      // ADR-ERL2-039. A run with applicable telemetry is a run whose exercising
+      // step succeeded — the coherence refusal makes any other combination
+      // unrepresentable — so this suite states the ordinary case and leaves the
+      // exercise dimension to `environmentExerciseOutcome.test.ts`.
+      exerciseApplicable: true,
+      exerciseSucceeded: true,
+      telemetryObservationRetained: true,
       genericRunPolicyHash: POLICY,
       gates: gatesFor(ENVIRONMENT_GATE_IDS, mode, adapterCertified),
       environmentRestorationHash: RESTORATION,

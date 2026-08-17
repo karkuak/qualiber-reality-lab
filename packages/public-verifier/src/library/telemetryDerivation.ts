@@ -7,7 +7,14 @@
  * whether this run declared the observation obtainable, whether exactly one
  * observation was produced where declared, whether it is this run's, and
  * whether every count it declares is the count its own inline log excerpt
- * derives. The parsing arithmetic (`parseCollectorTelemetry`,
+ * derives, and whether those counts are *coherent* — whether the excerpt
+ * actually carries a trace batch that stated a count for records naming this
+ * run. What is **not** independently derivable here is window completeness:
+ * `collectorWindowComplete` reads the raw window, and the excerpt keeps only
+ * counting lines. That is sound rather than a gap, because completeness only
+ * ever chooses between refusal shapes for a window with no attribution at all,
+ * and an observation with no attribution fails the floor below regardless.
+ * The parsing arithmetic (`parseCollectorTelemetry`,
  * `excerptCollectorTelemetry`) is shared with the producer on purpose: it is a
  * *definition*, not a judgement (ADR-ERL2-024 §7.2). Every refusal on this
  * page is verifier-owned and shared with nothing.
@@ -27,11 +34,11 @@ import {
   type JourneyStepOutcomeV1,
   type LabLifecycleEventV1,
 } from "@erl2/contracts";
-import { excerptCollectorTelemetry, parseCollectorTelemetry } from "@erl2/core";
+import { decideTrustedTelemetryAuthority, parseTrustedTelemetryRecords } from "@erl2/core";
+import { hashBytes } from "@erl2/integrity";
 import type { ArtifactIndex } from "./artifactIndex.js";
 
 const OBSERVATION_ROLE = "attributable-telemetry-observation";
-const OBSERVATION_SCHEMA = "attributable-telemetry-observation/v1";
 
 /** Groups every `produced` entry of the lifecycle by role. */
 function rolesOf(events: readonly LabLifecycleEventV1[]): Map<string, readonly Hash[]> {
@@ -144,10 +151,11 @@ export function deriveAttributableTelemetry(options: {
     );
   }
   const observationHash = observationHashes[0] as Hash;
-  const observation = options.index.typed<AttributableTelemetryObservationV1>(
-    observationHash,
-    OBSERVATION_SCHEMA,
-  );
+  // Read raw, not `typed`: the version question belongs to the authority
+  // decision below, and pinning a schema string here would answer it in the
+  // wrong place — and answer it differently from the producer the first time
+  // one of the two was updated and the other was not.
+  const retained: unknown = options.index.get(observationHash).value;
 
   // The placement is the liveness proof: an observation produced by any event
   // but `teardown_started` does not show the collector was read while the
@@ -161,6 +169,26 @@ export function deriveAttributableTelemetry(options: {
         "was read before teardown began",
     );
   }
+
+  // ADR-ERL2-038 R8. The same decision the producer's gate takes, taken here
+  // from the retained bytes: v2 governs, v1 is readable and authorizes nothing,
+  // and an invalid or absent v2 refuses rather than falling back. A run that
+  // never declared the observation obtainable still gets its retained record
+  // checked — a smuggled artifact must not become less checkable by being
+  // unnecessary — but its refusal is not this run's failure.
+  const authority = decideTrustedTelemetryAuthority([retained]);
+  if (!authority.authoritative) {
+    if (declared) {
+      throw new Erl2Error(
+        CODES.ENV_TELEMETRY_NOT_ATTRIBUTED,
+        "this run declares an obtainable attributable-telemetry observation and no retained record " +
+          `may authorize it (${authority.refusal}); ERL2-C-171 is the only authoritative format and ` +
+          "an absent, invalid or historical record is a refusal, never a downgrade",
+      );
+    }
+    return { declared: false, observed: false, runAttributedRecords: 0 };
+  }
+  const observation = authority.observation;
 
   if (observation.run_id !== options.runId) {
     throw new Erl2Error(
@@ -185,27 +213,68 @@ export function deriveAttributableTelemetry(options: {
     return { declared: false, observed: false, runAttributedRecords: 0 };
   }
 
-  // Defensive reads below the schema, deliberately: `ArtifactIndex.typed`
-  // checks the schema_version string and the recomputed core hash and nothing
-  // else, so "the schema would have caught it" is not a check here.
-  const excerpt = observation.log_excerpt;
-  if (excerpt === undefined) {
+  // Defensive reads below the schema, deliberately: the authority decision
+  // checks the contract and the record's own coherence, but every refusal on
+  // this page is verifier-owned and recomputed here from the retained bytes.
+  // The duplication is the point — two authorities that both *read* a count
+  // agree about nothing, which is how a forged `spans: 9999` verified clean at
+  // `6d28d543`.
+  const bytes = observation.trusted_records;
+  const artifact = observation.artifact;
+  if (bytes === undefined || artifact === undefined) {
     throw new Erl2Error(
       CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
-      "an observed telemetry record carries no log excerpt; counts with no derivable source attest nothing",
+      "an observed telemetry record carries no trusted records or no artifact block; counts with no derivable source attest nothing",
     );
   }
 
-  // The excerpt must be a fixed point of excerpting: a line that contributes
-  // to no count has no business in the bytes the counts are derived from.
-  if (excerptCollectorTelemetry(excerpt, observation.marker) !== excerpt) {
+  // R4, the half of cross-run binding this verifier can establish from bytes
+  // it already holds: the artifact names the environment this run actually
+  // provisioned. The collector image and configuration digests are checked
+  // against the substrate lock by package 3, which is what retains them.
+  if (observation.binding?.environment_archetype_hash !== archetypeHashes[0]) {
     throw new Erl2Error(
       CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
-      "the retained telemetry log excerpt carries lines that contribute to no count; an excerpt is exactly the lines the counts derive from",
+      "the retained telemetry observation binds an environment archetype this run did not use; " +
+        "an artifact produced against another environment says nothing about this one",
     );
   }
 
-  const derived = parseCollectorTelemetry(excerpt, observation.marker);
+  // R5: the bytes the counts derive from are the bytes whose digest is
+  // retained. Recomputed, so a producer that hashed one buffer and retained
+  // another is caught here rather than believed.
+  const recomputedDigest = hashBytes(Buffer.from(bytes, "utf8"));
+  if (artifact.content_digest !== recomputedDigest) {
+    throw new Erl2Error(
+      CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+      `the retained telemetry artifact declares digest ${artifact.content_digest} and its own ` +
+        `retained bytes hash to ${recomputedDigest}; the verifier reads the bytes, not the claim`,
+    );
+  }
+
+  const parsed = parseTrustedTelemetryRecords(bytes, observation.marker);
+  if (!parsed.ok) {
+    throw new Erl2Error(
+      CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+      `the retained telemetry artifact cannot be read as trusted records (${parsed.reasonCode}); ` +
+        "an artifact that is incomplete, oversized, unminimized or naming another run states no count",
+    );
+  }
+  const derived = parsed.counts;
+
+  if (
+    artifact.byte_length !== derived.byteLength ||
+    artifact.record_count !== derived.recordCount ||
+    artifact.final_record_terminated !== derived.finalRecordTerminated
+  ) {
+    throw new Erl2Error(
+      CODES.ENV_TELEMETRY_OBSERVATION_MISMATCH,
+      `the retained telemetry artifact declares ${String(artifact.byte_length)} bytes in ` +
+        `${String(artifact.record_count)} record(s), and the verifier reads ` +
+        `${String(derived.byteLength)} in ${String(derived.recordCount)} from the same retained bytes`,
+    );
+  }
+
   const declaredNames = observation.service_names ?? [];
   const namesAgree =
     declaredNames.length === derived.serviceNames.length &&
@@ -221,10 +290,19 @@ export function deriveAttributableTelemetry(options: {
       `the retained telemetry observation declares ${String(observation.trace_batches)} trace ` +
         `batches, ${String(observation.spans)} spans and ${String(observation.run_attributed_records)} ` +
         `run-attributed records, but the verifier derives ${String(derived.traceBatches)}, ` +
-        `${String(derived.spans)} and ${String(derived.runAttributedRecords)} from its own retained excerpt`,
+        `${String(derived.spans)} and ${String(derived.runAttributedRecords)} from its own retained bytes`,
     );
   }
 
+  // Two relationships that were checks here in v1 are now *impossibilities*, and
+  // saying so is more honest than asserting them. `runAttributedRecords` is
+  // incremented once per attributed span, so it cannot exceed `spans`; and an
+  // artifact with no records parses to zero counts, so a claimed zero over
+  // records cannot reach this point. Both were written as guards, both were
+  // measured unkillable by the campaign, and both are gone rather than left
+  // standing as coverage nobody has. What replaced them is stronger: every
+  // declared count is compared against a recomputation above, which is the
+  // relationship those guards were approximating.
   if (declared && derived.runAttributedRecords < 1) {
     throw new Erl2Error(
       CODES.ENV_TELEMETRY_NOT_ATTRIBUTED,

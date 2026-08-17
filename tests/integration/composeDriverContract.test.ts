@@ -38,6 +38,8 @@ import {
   SpawnDockerCli,
   SteppingClock,
   uuidV7From,
+  trustedVolumeMountOptions,
+  trustedVolumeName,
 } from "@erl2/core";
 import { ownedTempDir } from "../support/tempDirs.js";
 
@@ -97,14 +99,24 @@ function newDriver(runId: string): ComposeEnvironmentDriver {
   });
 }
 
-/** Removes this run's project by exact name, whatever the test did. */
-function reap(project: string): void {
+/**
+ * Removes this run's objects by exact name, whatever the test did.
+ *
+ * The trusted telemetry volume is here for a reason worth stating: it is the
+ * one object whose survival *wedges the next run* rather than merely littering.
+ * The driver refuses to provision over a volume of its own run's name — that
+ * refusal is the point of the design — so a test that failed before teardown
+ * would leave the following run unable to start, and the failure would name the
+ * volume rather than whatever actually broke. Exact names, never a prune.
+ */
+function reap(project: string, runId: string): void {
   for (const suffix of ["quote", "otel-collector"]) {
     spawnSync("docker", ["container", "rm", "--force", `${project}-${suffix}`], { encoding: "utf8" });
   }
   for (const suffix of ["challenge", "net"]) {
     spawnSync("docker", ["network", "rm", `${project}-${suffix}`], { encoding: "utf8" });
   }
+  spawnSync("docker", ["volume", "rm", trustedVolumeName(runId)], { encoding: "utf8" });
 }
 
 function live(seed: number): { readonly driver: ComposeEnvironmentDriver; readonly runId: string; readonly project: string } {
@@ -135,7 +147,10 @@ test("COMPOSE-CONTRACT: provision, probe, mutate, restore, destroy against a rea
     });
     assert.equal(provisioned.partial, false, "the qualified subset must come up whole");
     assert.equal(provisioned.receipt.status, "succeeded");
-    assert.equal(provisioned.inventory.resources.length, 5);
+    // Six since package 2: the trusted telemetry volume is an object this
+    // driver creates, so it is an object this driver is accountable for —
+    // inventoried, ownership-checked, and observed again as residue at teardown.
+    assert.equal(provisioned.inventory.resources.length, 6);
     for (const resource of provisioned.inventory.resources) {
       // Every identity derives from a name Docker really gave the object, and
       // every name embeds this run.
@@ -148,8 +163,38 @@ test("COMPOSE-CONTRACT: provision, probe, mutate, restore, destroy against a rea
     }
     assert.deepEqual(
       provisioned.inventory.resources.map((r) => r.kind).sort(),
-      ["container", "container", "network", "port", "project"],
+      ["container", "container", "network", "port", "project", "volume"],
     );
+
+    // The trusted volume, specifically: this run's name, and the tmpfs backing
+    // with the collector's ownership that the whole channel depends on. A volume
+    // the daemon created without these options starts the collector with
+    // `permission denied` rather than a writable trusted file.
+    const volume = provisioned.inventory.resources.find((r) => r.kind === "volume");
+    assert.equal(volume?.run_scoped_name, trustedVolumeName(runId));
+    const inspected = spawnSync(
+      "docker",
+      ["volume", "inspect", trustedVolumeName(runId), "--format", "{{.Options.type}} {{index .Options \"o\"}}"],
+      { encoding: "utf8" },
+    );
+    assert.equal(inspected.status, 0, `the trusted volume was not created: ${inspected.stderr}`);
+    assert.equal(inspected.stdout.trim(), `tmpfs ${trustedVolumeMountOptions()}`);
+
+    // And it is mounted into the collector and into nothing else. The rendered
+    // configuration asserts this too; here it is asked of the containers that
+    // actually exist.
+    for (const [serviceId, expected] of [["otel-collector", true], ["quote", false]] as const) {
+      const mounts = spawnSync(
+        "docker",
+        ["inspect", `${project}-${serviceId}`, "--format", "{{json .Mounts}}"],
+        { encoding: "utf8" },
+      ).stdout;
+      assert.equal(
+        mounts.includes(trustedVolumeName(runId)),
+        expected,
+        `${serviceId} mount topology is wrong: ${mounts}`,
+      );
+    }
 
     // -- completedOperation, gated on the substrate --------------------------
     assert.equal(
@@ -289,7 +334,7 @@ test("COMPOSE-CONTRACT: provision, probe, mutate, restore, destroy against a rea
     ).stdout.trim();
     assert.equal(remaining, "");
   } finally {
-    reap(project);
+    reap(project, runId);
   }
 });
 
@@ -317,7 +362,7 @@ test("COMPOSE-CONTRACT: destroyResource removes exactly one owned object", SKIP,
     assert.equal(remaining.includes(`${project}-otel-collector`), false);
     assert.equal(remaining.includes(`${project}-quote`), true, "only the named object may be removed");
   } finally {
-    reap(project);
+    reap(project, runId);
   }
 });
 
@@ -331,6 +376,6 @@ test("COMPOSE-CONTRACT: a driver bound to one run refuses to inspect another", S
       (error: unknown) => (error as { code: string }).code === "ENV_FOREIGN_RESOURCE_REJECTED",
     );
   } finally {
-    reap(project);
+    reap(project, runId);
   }
 });

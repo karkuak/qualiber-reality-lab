@@ -1,0 +1,43 @@
+✔ REFUSAL-ATOMIC: this is P1-10 — journey with a missing comparison policy freezes no cutoff policy (11017.522959ms)
+✔ REFUSAL-ATOMIC: every representative refusal cause leaves the run byte-identical (42187.466792ms)
+✖ REFUSAL-ATOMIC: a refused environment command creates no substrate or reservation directory (3585.847375ms)
+✔ REFUSAL-ATOMIC: nothing is written after the valid terminal, refused or replayed (16080.957292ms)
+✔ PREREQ-CLI: this is P1-9 — a committed post-capture step cannot run before activation (17048.041708ms)
+✔ CANCEL-BRANCH: a live environment never receives a pre-environment cleanup terminal (38873.135417ms)
+✔ CANCEL-BRANCH: the branch is not decided by one file's existence (4042.754166ms)
+✔ CANCEL-BRANCH: an unreadable binding refuses rather than answering pre-environment (3910.682333ms)
+✔ CANCEL-BRANCH: a pre-environment run still takes the pre-environment branch (3625.626666ms)
+✔ CANCEL-BRANCH: cancelling a cleanup interrupted mid-flight continues it, not restarts it (14943.8425ms)
+✔ CANCEL-BRANCH: cancelling after emergency cleanup completed returns its terminal (14836.980166ms)
+✔ CANCEL-BRANCH: cancelling a cancelled run returns the same record and writes nothing (4945.217708ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 11
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 175986.659125
+
+✖ failing tests:
+
+test at tests/dist/adversarial/lifecycleOrdering.test.js:134:1
+✖ REFUSAL-ATOMIC: a refused environment command creates no substrate or reservation directory (3585.847375ms)
+  AssertionError [ERR_ASSERTION]: a refused command created a reservation directory
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/lifecycleOrdering.test.js:158:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

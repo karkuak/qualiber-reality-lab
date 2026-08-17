@@ -1,0 +1,103 @@
+✔ PREREQ-MATRIX: every canonical journey intent has exactly one row (1.079375ms)
+✔ PREREQ-MATRIX: the pre-environment intents cannot run as environment steps (0.311542ms)
+✖ PREREQ-MATRIX: post-capture intents require activation, the cutoff and the bundle (0.948916ms)
+✖ PREREQ-MATRIX: setup intents do not require activation or the cutoff (0.167542ms)
+✔ PREREQ-MATRIX: every environment intent accepts its own departure states (0.121584ms)
+✔ PREREQ-MATRIX: every environment intent refuses every state it does not depart from (3.444417ms)
+✔ PREREQ-MATRIX: withholding any single prerequisite refuses the intent that owes it (0.895208ms)
+✖ PREREQ-MATRIX: this is P1-9 — a post-capture intent refuses in the pre-activation state (0.088041ms)
+✔ PREREQ-MATRIX: no intent departs from a state where subject execution is forbidden (0.068084ms)
+✔ PREREQ-MATRIX: the pre-reveal subject cleanup edge is recorded and not enabled (0.11575ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 7
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 158.070625
+
+✖ failing tests:
+
+test at tests/dist/integration/journeyPrerequisites.test.js:61:1
+✖ PREREQ-MATRIX: post-capture intents require activation, the cutoff and the bundle (0.948916ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   'exercise',
+  -   'observe',
+  -   'diagnose_decide',
+  -   'recover',
+  -   'upgrade',
+  -   'rollback',
+  -   'remove'
+  - ]
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/journeyPrerequisites.test.js:64:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'exercise', 'observe', 'diagnose_decide', 'recover', 'upgrade', 'rollback', 'remove' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/journeyPrerequisites.test.js:72:1
+✖ PREREQ-MATRIX: setup intents do not require activation or the cutoff (0.167542ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'install',
+      'configure',
+      'authenticate',
+      'connect',
+      'discover',
+  +   'exercise',
+  +   'observe',
+  +   'diagnose_decide',
+  +   'recover',
+  +   'upgrade',
+  +   'rollback',
+  +   'remove'
+    ]
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/journeyPrerequisites.test.js:74:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'install', 'configure', 'authenticate', 'connect', 'discover', 'exercise', 'observe', 'diagnose_decide', 'recover', 'upgrade', 'rollback', 'remove' ],
+    expected: [ 'install', 'configure', 'authenticate', 'connect', 'discover' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/journeyPrerequisites.test.js:116:1
+✖ PREREQ-MATRIX: this is P1-9 — a post-capture intent refuses in the pre-activation state (0.088041ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception: exercise must refuse before activation and before the cutoff
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/journeyPrerequisites.test.js:133:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }

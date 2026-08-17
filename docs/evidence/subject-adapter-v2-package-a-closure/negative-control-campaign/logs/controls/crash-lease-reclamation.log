@@ -1,0 +1,335 @@
+R_ASSERTION]: before_external_dispatch: exactly one invalid terminal
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:178:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:154:5
+✖ CRASH-STEP: a subject step crashed at after_external_dispatch is never invoked twice (6680.995625ms)
+  AssertionError [ERR_ASSERTION]: after_external_dispatch: exactly one invalid terminal
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:178:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:154:5
+✖ CRASH-STEP: a subject step crashed at before_receipt_freeze is never invoked twice (5146.914709ms)
+  AssertionError [ERR_ASSERTION]: before_receipt_freeze: exactly one invalid terminal
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:178:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:154:5
+✖ CRASH-STEP: a subject step crashed at after_receipt_freeze is never invoked twice (4939.863708ms)
+  AssertionError [ERR_ASSERTION]: after_receipt_freeze: exactly one invalid terminal
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:178:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:154:5
+✖ CRASH-STEP: a subject step crashed at before_lifecycle_append is never invoked twice (5116.56925ms)
+  AssertionError [ERR_ASSERTION]: before_lifecycle_append: exactly one invalid terminal
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:178:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:203:1
+✖ CRASH-STEP: a step whose lifecycle append landed is not re-dispatched, and the walk continues (5092.447083ms)
+  AssertionError [ERR_ASSERTION]: configure: [{"code":"POLICY_RUN_LEASE_HELD","message":"run is locked by a live command (owner pid-58123, command install); retry when it completes"}]
+  
+  2 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/environmentCli.js:109:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:215:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:220:5
+✖ CRASH-ACTIVATE: activation crashed at before_intent_freeze applies exactly one logical mutation (8399.727542ms)
+  AssertionError [ERR_ASSERTION]: before_intent_freeze: activation must resume to success
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:228:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:220:5
+✖ CRASH-ACTIVATE: activation crashed at after_intent_freeze applies exactly one logical mutation (9422.120375ms)
+  AssertionError [ERR_ASSERTION]: after_intent_freeze: activation must resume to success
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:228:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:220:5
+✖ CRASH-ACTIVATE: activation crashed at before_external_dispatch applies exactly one logical mutation (8227.450625ms)
+  AssertionError [ERR_ASSERTION]: before_external_dispatch: activation must resume to success
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:228:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:220:5
+✖ CRASH-ACTIVATE: activation crashed at after_external_dispatch applies exactly one logical mutation (7650.69025ms)
+  AssertionError [ERR_ASSERTION]: after_external_dispatch: activation must resume to success
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:228:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:220:5
+✖ CRASH-ACTIVATE: activation crashed at before_receipt_freeze applies exactly one logical mutation (8240.206583ms)
+  AssertionError [ERR_ASSERTION]: before_receipt_freeze: activation must resume to success
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:228:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:220:5
+✖ CRASH-ACTIVATE: activation crashed at after_receipt_freeze applies exactly one logical mutation (9284.14225ms)
+  AssertionError [ERR_ASSERTION]: after_receipt_freeze: activation must resume to success
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:228:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:220:5
+✖ CRASH-ACTIVATE: activation crashed at before_lifecycle_append applies exactly one logical mutation (9373.698833ms)
+  AssertionError [ERR_ASSERTION]: before_lifecycle_append: activation must resume to success
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:228:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:220:5
+✖ CRASH-ACTIVATE: activation crashed at after_lifecycle_append applies exactly one logical mutation (8108.643416ms)
+  AssertionError [ERR_ASSERTION]: after_lifecycle_append: activation must resume to success
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:228:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/crashBoundaryMatrix.test.js:238:1
+✖ CRASH-ACTIVATE: a reconstructed activation receipt is byte-stable, and the run still finalizes (8278.226375ms)
+  AssertionError [ERR_ASSERTION]: activate: [{"code":"POLICY_RUN_LEASE_HELD","message":"run is locked by a live command (owner pid-58572, command activate); retry when it completes"}]
+  
+  2 !== 0
+  
+      at drive (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/support/environmentCli.js:109:16)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/crashBoundaryMatrix.test.js:246:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/integration/runLease.test.js:77:1
+✖ RUN-LEASE: a lease whose holder is gone is reclaimed without waiting out the TTL (1951.5905ms)
+  AssertionError [ERR_ASSERTION]: a dead holder's lease must be reclaimable: [{"code":"POLICY_RUN_LEASE_HELD","message":"run is locked by a live command (owner pid-99999, command install); retry when it completes"}]
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/runLease.test.js:94:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -358,6 +358,29 @@ export class RunWorkspace {
   }
 
   /**
+   * The retained value for `hash`, with no contract pinned to it.
+   *
+   * For the one class of read where naming a schema would answer the wrong
+   * question: which *version* of a versioned artifact governs. The attributable
+   * telemetry observation is the case (ADR-ERL2-038 R8) — ERL2-C-160 records
+   * exist historically and ERL2-C-171 records are what a current run produces,
+   * and `decideTrustedTelemetryAuthority` is the single place entitled to decide
+   * between them. Pinning `AttributableTelemetryObservationV1` here would make
+   * this read *throw* on the authoritative format, and pinning V2 would make it
+   * throw on a historical one it is supposed to refuse rather than crash on.
+   *
+   * The offline verifier reads the same artifact the same way and for the same
+   * reason, so the two cannot drift on which format governs.
+   */
+  rawArtifact(hash: Hash): unknown {
+    const found = this.index().get(hash);
+    if (!found) {
+      throw new Erl2Error(CODES.ARTIFACT_NOT_FOUND, `no retained artifact with core hash ${hash}`);
+    }
+    return found.value;
+  }
+
+  /**
    * **Every** file beneath `retained/`, in walk order, core-hash collisions
    * included.
    *

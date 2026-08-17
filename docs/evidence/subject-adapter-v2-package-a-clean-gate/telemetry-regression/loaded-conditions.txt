@@ -1,0 +1,12 @@
+method: 8 CPU burner processes on 8 logical cores (same bounded method as the diagnosis)
+loadavg_at_start: { 10.31 17.18 14.85 }
+burner_pid=81311
+burner_pid=81312
+burner_pid=81313
+burner_pid=81314
+burner_pid=81315
+burner_pid=81316
+burner_pid=81317
+burner_pid=81318
+loadavg_at_end: { 69.40 33.74 21.40 }
+burners_remaining: 0

@@ -1,0 +1,26 @@
+✔ WINDOW-BASELINE: a shipped environment terminal commits exactly one window and verifies (21656.219375ms)
+✔ WINDOW-HARNESS: re-sealing the whole chain unchanged still verifies (368.490875ms)
+✔ WINDOW-SHIFTED-WITHIN-BOUNDS: a window moved inside the bounds no longer escapes (385.419875ms)
+✔ WINDOW-SHIFTED-COMMITMENT: moving the commitment to match a shifted window is caught too (369.487125ms)
+✔ WINDOW-OBSERVATION-DURATION: an observation window shifted within bounds is caught (324.467166ms)
+✔ WINDOW-BUNDLE-CUTOFF: an observation bundle whose cutoff disagrees with the commitment refuses (332.689833ms)
+✔ WINDOW-MISSING: a terminal that started traffic and dropped its commitment refuses (360.911542ms)
+✔ WINDOW-UNREACHED: a commitment retained but produced by no event refuses (325.182917ms)
+✔ WINDOW-LATE-COMMITMENT: a window committed after the capture it governs refuses (349.538417ms)
+✔ WINDOW-WRONG-SIGNER: a commitment signed by the traffic supervisor refuses (323.738416ms)
+✔ WINDOW-FOREIGN-RUN: a commitment naming another run refuses (322.403625ms)
+✔ WINDOW-POLICY-BINDING: a commitment naming a different cutoff policy refuses (328.29825ms)
+✔ WINDOW-PROCESS-BINDING: a commitment measured from a different process start refuses (329.586792ms)
+✔ WINDOW-CLOCK-BINDING: a commitment in a different clock domain refuses (332.794875ms)
+✔ WINDOW-OBSERVATION-BINDING: a commitment naming a different comparison policy refuses (335.218209ms)
+✔ WINDOW-RULE-BINDING: a commitment declaring another instant rule refuses (321.766167ms)
+✔ WINDOW-INVENTORY: the commitment is an applicable signed member of the terminal (63.143875ms)
+✔ WINDOW-INVENTORY-OMITTED: dropping the commitment from an otherwise complete inventory refuses (306.064042ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 27342.901792

@@ -1,0 +1,115 @@
+{
+  "probe": "qualiber-trusted-local-compatibility",
+  "steps": [
+    {
+      "name": "exact-bytes",
+      "entry_sha256": "sha256:bf45fbe0a23bd08657594a81848a24cc0c93a0dd0e90e7fcc2d7dd446196cb7f",
+      "entry_matches_expected": true,
+      "manifest_file_sha256": "sha256:ba87443f6d224924380e808e56c4ecdf7ad26f0da07cfa4f2642a1c5d2f774dd",
+      "manifest_file_matches_expected": true,
+      "manifest_core_hash_recomputed": "sha256:58ebd745b03694304d0e4b778cd6b3a3290aaee9723a54e1ff50bf709f67d211",
+      "manifest_core_matches_declared": true,
+      "manifest_core_matches_expected": true,
+      "declared_operations": [
+        "acquire",
+        "validate-package",
+        "install",
+        "configure",
+        "start",
+        "interact",
+        "uninstall",
+        "translate-evidence",
+        "project",
+        "report-residue",
+        "compensate"
+      ],
+      "declared_operation_count": 11
+    },
+    {
+      "name": "declaration",
+      "declaration_core_hash": "sha256:957f0205d60bd4d674c2f157dbe21b232bd66d02494f4e5abded96dd3c343d8c",
+      "binds_artifact": "sha256:bf45fbe0a23bd08657594a81848a24cc0c93a0dd0e90e7fcc2d7dd446196cb7f",
+      "binds_manifest_core": "sha256:58ebd745b03694304d0e4b778cd6b3a3290aaee9723a54e1ff50bf709f67d211",
+      "independent_certifier": null,
+      "certifier_is_adapter_owner": "not_applicable"
+    },
+    {
+      "name": "plan",
+      "plan_core_hash": "sha256:03f5ca3837139122a8d6afd2c4d9a7bf6d36648a542be3e78cfedc34f5d1924d",
+      "operations": [
+        "report-residue"
+      ],
+      "http_exercise_operations_planned": 0
+    },
+    {
+      "name": "run",
+      "ok": true,
+      "errors": [],
+      "data": {
+        "observation_id": "018f7777-6666-7555-8444-333333333333",
+        "trust_mode": "trusted_local_code",
+        "tier": "development",
+        "admission_authority": "trusted_local_code",
+        "adapter_artifact_hash": "sha256:bf45fbe0a23bd08657594a81848a24cc0c93a0dd0e90e7fcc2d7dd446196cb7f",
+        "adapter_manifest_hash": "sha256:58ebd745b03694304d0e4b778cd6b3a3290aaee9723a54e1ff50bf709f67d211",
+        "trusted_local_declaration_hash": "sha256:957f0205d60bd4d674c2f157dbe21b232bd66d02494f4e5abded96dd3c343d8c",
+        "operations": [
+          {
+            "sequence": 0,
+            "operation_id": "op-report-residue",
+            "operation": "report-residue",
+            "state": "completed",
+            "request_hash": "sha256:a470739f9309c23abce4b481f9eabf9d8fc86796452d41651871303659ba875a",
+            "operation_record_hash": "sha256:d8e7d6be064d3a87abfb43739b11ba2bafffb7e6b7fddd74f8acf356fcfa2cbb",
+            "response_envelope_hash": "sha256:4d40d620704e110b0d444bebaedd7cb13cb3c939261fb8767315d18d73549c45",
+            "response_status": "supported"
+          }
+        ],
+        "cleanup": {
+          "status": "cleanup_complete",
+          "stop": "not_applicable",
+          "compensation": "not_applicable",
+          "uninstall": "not_applicable",
+          "residue": "observed_clean",
+          "reason_codes": []
+        },
+        "residue": [
+          {
+            "checkpoint": "final",
+            "status": "clean",
+            "residual_resource_count": 0,
+            "residual_path_count": 0
+          }
+        ],
+        "terminal_status": "observed_complete",
+        "offline_verification": {
+          "ok": true,
+          "refusals": []
+        },
+        "independent_certification": "absent",
+        "confinement": "absent",
+        "not_scored": true,
+        "not_authenticated": true,
+        "record_file_hash": "sha256:5170df8f30c7679cebfeee71eb4e32e244fe2ec0ba2dc0ca21e379797b45f851"
+      }
+    },
+    {
+      "name": "retained-record",
+      "trust_mode": "trusted_local_code",
+      "independent_certification": "absent",
+      "confinement": "absent",
+      "host_sandbox_profile": "local-process",
+      "enforced_controls": 12,
+      "unsupported_controls": 13,
+      "excluded_claims": [
+        "score",
+        "qualification",
+        "governor_authorization",
+        "reveal",
+        "judge_evaluation",
+        "governed_finalization"
+      ],
+      "names_a_certification_receipt": false
+    }
+  ]
+}

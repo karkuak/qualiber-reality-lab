@@ -1,0 +1,4 @@
+report-residue MINIMAL => failed
+report-residue FIXTURE => supported
+compensate FIXTURE => THREW ADAPTER_COMPENSATION_TARGET_MISMATCH
+translate-evidence FIXTURE => failed

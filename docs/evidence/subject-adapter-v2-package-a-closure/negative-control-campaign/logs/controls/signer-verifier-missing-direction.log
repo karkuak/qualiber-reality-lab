@@ -1,0 +1,127 @@
+✔ INV-BASELINE: an honest CLI terminal lists every applicable signed member (8634.069459ms)
+✔ INV-HARNESS: re-sealing the chain unchanged still verifies (562.735875ms)
+✖ INV-MISSING: an inventory that omits generic-run-policy/v1 is refused (265.351458ms)
+✖ INV-MISSING: an inventory that omits trust-policy-manifest/v2 is refused (332.634875ms)
+✖ INV-MISSING: an inventory that omits trusted-timestamp-checkpoint/v1 is refused (497.473792ms)
+✖ INV-MISSING: an inventory that omits acquisition-preregistration/v1 is refused (279.590542ms)
+✖ INV-MISSING: a false completeness claim is not a separate rule — it is never read (259.698542ms)
+✔ INV-MISSING: a manipulated completeness flag is not representable at all (228.910875ms)
+✔ INV-WRONG: an entry naming a retained artifact that is not an applicable member is refused (223.905416ms)
+✔ INV-WRONG: an entry whose schema contradicts the artifact is refused (351.196667ms)
+✔ INV-WRONG: an entry whose key contradicts the artifact is refused (210.366833ms)
+✔ INV-WRONG: an entry whose signature hash contradicts the artifact is refused (332.87ms)
+✔ INV-WRONG: the correct key under an unauthorized role is refused (257.442625ms)
+✔ INV-WRONG: a signed member from another run is refused (3646.827208ms)
+✔ INV-WRONG: a lifecycle-unreachable signed member is refused (213.551708ms)
+✔ INV-WRONG: a member created after the inventory cutoff cannot be listed (360.855458ms)
+✔ INV-SET: a duplicated entry is refused (230.600541ms)
+✔ INV-SET: an inventory naming another run is refused even when every hash resolves (4302.478334ms)
+✔ INV-SET: the right count with one member substituted is refused (389.978167ms)
+✔ INV-SET: the verifier declares its own exclusions rather than reading the inventory's (441.179042ms)
+✔ INV-SET: entry order is not normative (267.021ms)
+✔ INV-INVALID: an invalid record that retains a signer inventory is refused (242.661083ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 17
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 22819.852792
+
+✖ failing tests:
+
+test at tests/dist/adversarial/signerInventoryCompleteness.test.js:170:5
+✖ INV-MISSING: an inventory that omits generic-run-policy/v1 is refused (265.351458ms)
+  AssertionError [ERR_ASSERTION]: omitting generic-run-policy/v1 must be refused
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/signerInventoryCompleteness.test.js:177:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/signerInventoryCompleteness.test.js:170:5
+✖ INV-MISSING: an inventory that omits trust-policy-manifest/v2 is refused (332.634875ms)
+  AssertionError [ERR_ASSERTION]: omitting trust-policy-manifest/v2 must be refused
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/signerInventoryCompleteness.test.js:177:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/signerInventoryCompleteness.test.js:170:5
+✖ INV-MISSING: an inventory that omits trusted-timestamp-checkpoint/v1 is refused (497.473792ms)
+  AssertionError [ERR_ASSERTION]: omitting trusted-timestamp-checkpoint/v1 must be refused
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/signerInventoryCompleteness.test.js:177:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/signerInventoryCompleteness.test.js:170:5
+✖ INV-MISSING: an inventory that omits acquisition-preregistration/v1 is refused (279.590542ms)
+  AssertionError [ERR_ASSERTION]: omitting acquisition-preregistration/v1 must be refused
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/signerInventoryCompleteness.test.js:177:16)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/signerInventoryCompleteness.test.js:182:1
+✖ INV-MISSING: a false completeness claim is not a separate rule — it is never read (259.698542ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '-'
+  - 'INVENTORY_ENTRY_MISSING'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/signerInventoryCompleteness.test.js:193:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '-',
+    expected: 'INVENTORY_ENTRY_MISSING',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

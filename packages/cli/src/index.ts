@@ -39,6 +39,8 @@ import {
 } from "@erl2/core";
 import { parseFlags, requireString, type ParsedFlags } from "./args.js";
 import { admitAdapter } from "./adapterAdmission.js";
+import { declareTrustedLocalAdapter } from "./trustedLocalDeclaration.js";
+import { runTrustedLocalObservation } from "./trustedLocalObservation.js";
 import { ISOLATION_EVIDENCE_DIR, isolationStatus } from "./isolationStatus.js";
 import { OTEL_DEMO_LOCK_FILE, composeSubstrateStatus } from "./composeStatus.js";
 import {
@@ -180,6 +182,10 @@ const IMPLEMENTED_COMMANDS = new Set([
   "verify",
   "verify-record",
   "admit-adapter",
+  // Owner-operated development path (ADR-ERL2-042). Neither command
+  // certifies anything, and neither produces a receipt.
+  "declare-trusted-local-adapter",
+  "run-trusted-local-observation",
   "preregister-acquisition",
   "preregister-challenge",
   "select",
@@ -257,6 +263,133 @@ const COMMAND_USAGE = {
     cleanup:
       "remove the printed registry_path directory beneath the registry root; admission creates " +
       "nothing else and starts no adapter",
+  },
+  "declare-trusted-local-adapter": {
+    summary:
+      "Write down that you, the adapter's owner, accept these exact adapter bytes executing " +
+      "with your own user's permissions. This is not certification and produces no receipt.",
+    required_flags: {
+      "--adapter-entry": "path to the adapter's entry module; its exact bytes are hashed and bound",
+      "--manifest": "path to the adapter's SubjectAdapterManifestV2 JSON",
+      "--acknowledge-trusted-local-code":
+        "the exact acknowledgement sentence below, quoted. There is no --yes, --force or boolean equivalent",
+      "--acknowledged-by": "who is accepting; retained verbatim in the declaration",
+      "--declaration-id": "a lowercase identifier for this declaration",
+      "--output": "path the declaration is written to; must not already exist",
+    },
+    optional_flags: {
+      "--source-repository / --source-commit / --source-tree":
+        "an exact source coordinate, supplied together; recorded as an owner assertion and not verified",
+      "--owner-test-evidence / --owner-test-evidence-label":
+        "a file whose digest and length are retained, labelled owner-supplied and unauthenticated; " +
+        "the Lab does not read, run or believe it",
+      "--seal-plan-draft / --plan-output":
+        "a plan draft to stamp with this declaration's hash and every hash the plan needs, " +
+        "supplied together; the draft must omit trusted_local_declaration_hash, core_hash, " +
+        "resource_limits.core_hash and egress_policy.core_hash. All four are computed here, in " +
+        "dependency order — limits, then egress policy, then the plan — and a draft that " +
+        "pre-carries any of them is refused rather than silently overwritten",
+    },
+    acknowledgement:
+      "I ACCEPT THAT THESE EXACT ADAPTER BYTES EXECUTE WITH MY LOCAL USER PERMISSIONS, ARE NOT " +
+      "SANDBOXED AND ARE NOT INDEPENDENTLY CERTIFIED, AND THAT THE RESULTS ARE DEVELOPMENT-ONLY, " +
+      "UNSCORED AND UNAUTHENTICATED",
+    trust_behaviour: {
+      what_it_is:
+        "an owner's own statement, bound to one artifact digest and one manifest, retained as " +
+        "reviewable bytes before anything runs",
+      what_it_is_not:
+        "there is no certifier, no signature, no review and no verdict; independent_certifier is " +
+        "null and certifier_is_adapter_owner is not_applicable, because with no certifier the " +
+        "question does not arise",
+      confinement:
+        "absent. The adapter runs as a child process with your filesystem and network authority. " +
+        "AdapterHost enforces process, deadline, byte-ceiling, output and environment bounds, " +
+        "which are operational limits on a cooperating adapter and not isolation from you",
+    },
+    outputs:
+      "a JSON object naming the declaration path, its core and file hashes, the adapter identity, " +
+      "the exact artifact and manifest digests it binds, and the trust ceiling",
+    then: "review the written declaration's bytes, then pass it to run-trusted-local-observation",
+    cleanup: "remove the written declaration and sealed plan; this command starts no adapter",
+  },
+  "run-trusted-local-observation": {
+    summary:
+      "Run one bounded, unscored, owner-operated local observation of an external " +
+      "subject-adapter/v2 adapter, under a trusted-local declaration you already wrote.",
+    required_flags: {
+      "--adapter-entry":
+        "path to the adapter's entry module; re-hashed at admission, before host construction and before every dispatch",
+      "--manifest": "path to the adapter's SubjectAdapterManifestV2 JSON",
+      "--plan": "path to the sealed local-observation plan naming the declaration's hash",
+      "--owner-declaration":
+        "path to the TrustedLocalAdapterDeclarationV1 written by declare-trusted-local-adapter",
+      "--output-root":
+        "directory the admission registry, materialized inputs, workspace, store, plan copy and " +
+        "record are written under",
+    },
+    optional_flags: {
+      "--bind-input":
+        "repeatable, <input_id>=<absolute-source-path>. Exactly one binding per plan input whose " +
+        "provenance_mode is host_provisioned; a missing, duplicate, unknown, extra or " +
+        "ineligible binding is refused, as is a relative path, a symbolic link, a non-regular " +
+        "file, and a source inside --output-root. A plan with no host-provisioned inputs needs " +
+        "none of these flags",
+    },
+    inputs: {
+      convention:
+        "each host-provisioned input's artifact.path is read as " +
+        "<input_root>/<mount_id>/<relative-file-path>, where input_root is " +
+        "resource_limits.input_root; the first segment beneath the input root names a mount and " +
+        "several inputs may share one",
+      copy_and_retain:
+        "the bound bytes are streamed once into <output-root>/inputs/<mount_id>/<relative-path>, " +
+        "hashed from the same stream, compared with the plan's file_sha256 and byte_length, set " +
+        "to mode 0400 and published atomically. A mismatch refuses before any admission byte or " +
+        "run record is retained, and leaves no partial input tree",
+      mounts:
+        "one read-only subject-visible-input mount per distinct mount id, rooted at " +
+        "<output-root>/inputs/<mount_id> and named to the adapter as <input_root>/<mount_id>",
+      ceilings:
+        "internal trusted-local ceilings, not plan fields: at most 64 host-provisioned inputs, " +
+        "64 MiB per input and 256 MiB in total. These are input-side limits and are deliberately " +
+        "not derived from max_output_files or max_output_bytes, which bound what the adapter produces",
+      offline_reverification:
+        "the retained input tree is re-hashed against the retained plan's own ArtifactRefs; " +
+        "modified bytes, a wrong length, a missing file, an unexpected file, a symbolic link and " +
+        "a non-regular file are each refused. The retained input root is reported in the summary " +
+        "so it can be re-verified later; it is not written into the portable record",
+      no_claim:
+        "a matching digest says the retained file is the file the plan described. It confers no " +
+        "certification, no confinement, no scoring, no authentication, no governor authorization " +
+        "and no production readiness, and says nothing about what the adapter does with the bytes",
+    },
+    refuses: {
+      governed_inputs:
+        "no acquisition source, actor, step, verified package, selected challenge, trust policy, " +
+        "governor registry or tier is accepted, and there is no flag through which one could be supplied",
+      certification_inputs:
+        "no certification receipt and no certifier identity is accepted; this path has no certifier",
+    },
+    trust_behaviour: {
+      trust_mode:
+        "trusted_local_code; development tier; unscored; unauthenticated; not governor authorized",
+      confinement: "absent, and the retained record says so in its own bytes",
+      certification:
+        "absent; the terminal is never described as certified, independently verified or production ready",
+    },
+    outputs:
+      "a JSON object naming the observation id, the exact artifact/manifest/declaration digests, " +
+      "the ordered operation outcomes and their chain, the cleanup result, the terminal status, " +
+      "the retained record, plan and input-root paths, the retained inputs and their read-only " +
+      "mounts, and the offline verification of all of them",
+    then:
+      "the retained record and plan verify offline together; nothing converts them into a score, " +
+      "a validity verdict or a public bundle",
+    cleanup:
+      "remove the --output-root directory; the materialized inputs live beneath it, so this is " +
+      "still the whole cleanup. The run creates nothing outside it, though the adapter's own " +
+      "reach is bounded only by your user's permissions",
   },
 } as const;
 
@@ -409,6 +542,10 @@ export function runCommand(argv: readonly string[]): CommandResult {
         return verifyRecord(rest);
       case "admit-adapter":
         return ok("admit-adapter", { data: admitAdapter(rest) });
+      case "declare-trusted-local-adapter":
+        return ok("declare-trusted-local-adapter", { data: declareTrustedLocalAdapter(rest) });
+      case "run-trusted-local-observation":
+        return ok("run-trusted-local-observation", { data: runTrustedLocalObservation(rest) });
       default: {
         const journey = JOURNEY_COMMANDS[command];
         if (journey) {

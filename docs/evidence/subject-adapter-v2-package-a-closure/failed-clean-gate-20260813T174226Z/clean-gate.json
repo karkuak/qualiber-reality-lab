@@ -1,0 +1,107 @@
+{
+  "schema": "erl2.validation-evidence.clean-gate",
+  "version": 1,
+  "generated_by": "scripts/capture-validation-evidence.mjs",
+  "executable": {
+    "repository": "qualiber-reality-lab",
+    "branch": "codex/subject-adapter-v2-package-a",
+    "commit": "25aea768a09ff6ba2011e25a00000d5b152990d1",
+    "tree": "b3885321e96418e75e63c6b4f5f7f4c93c4a26ac",
+    "clean": true,
+    "status": []
+  },
+  "after": {
+    "repository": "qualiber-reality-lab",
+    "branch": "codex/subject-adapter-v2-package-a",
+    "commit": "25aea768a09ff6ba2011e25a00000d5b152990d1",
+    "tree": "b3885321e96418e75e63c6b4f5f7f4c93c4a26ac",
+    "clean": false,
+    "status": [
+      "?? market-research-verifiable-behavioral-testing-2026-08-13.md"
+    ]
+  },
+  "started_at": "2026-08-13T17:42:27.509Z",
+  "ended_at": "2026-08-13T18:26:29.946Z",
+  "duration_ms": 2642437,
+  "steps": [
+    {
+      "name": "test",
+      "log": "logs/test.log",
+      "command": "npm test",
+      "started_at": "2026-08-13T17:42:27.518Z",
+      "ended_at": "2026-08-13T18:26:29.848Z",
+      "duration_ms": 2642330,
+      "exit_status": 1,
+      "exit_signal": null,
+      "output_truncated": false,
+      "output_bytes": 133056,
+      "output_sha256": "sha256:05f7f49a3af6a4624c4823a08d7e126abfebf98756f04ca3788d1a5635a7abf7"
+    }
+  ],
+  "totals": {
+    "tests": 1382,
+    "pass": 1378,
+    "fail": 2,
+    "cancelled": 0,
+    "skipped": 2
+  },
+  "skips": [
+    {
+      "name": "EXTERNAL-SUBJECT-E2E: an externally authored subject reaches an offline-valid terminal",
+      "reason": "EXTERNAL SUBJECT UNPROVEN: no external adapter entry was supplied"
+    },
+    {
+      "name": "EXTERNAL-SUBJECT-CANCEL: the supported cancellation path leaves zero residue",
+      "reason": "EXTERNAL SUBJECT UNPROVEN: no external adapter entry was supplied"
+    }
+  ],
+  "docker": {
+    "before": {
+      "containers": [
+        "4b78ccc28685 docker.litellm.ai/berriai/litellm:latest cranky_nobel exited",
+        "97173203d8a9 docker.litellm.ai/berriai/litellm:latest zealous_joliot exited"
+      ],
+      "networks": [
+        "2ad21e2e59d2 host host",
+        "87b528a92943 bridge bridge",
+        "fd185a9d8600 none null"
+      ],
+      "volumes": [],
+      "images": [
+        "078f96272f0c docker.litellm.ai/berriai/litellm:latest",
+        "14358309a308 alpine:3.22",
+        "1fef9f07f04e ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:<none>",
+        "370d920d330a ghcr.io/open-telemetry/demo:<none>",
+        "8f693eaa7e0a node:20-bookworm",
+        "bd214c0f505a erl2-adapter-runtime:test",
+        "c610fcdfb1d5 node:22-alpine",
+        "cc3808ff40b1 erl2-adapter-runtime:latest",
+        "d9e853e87e55 alpine:3.20"
+      ]
+    },
+    "after": {
+      "containers": [
+        "4b78ccc28685 docker.litellm.ai/berriai/litellm:latest cranky_nobel exited",
+        "97173203d8a9 docker.litellm.ai/berriai/litellm:latest zealous_joliot exited"
+      ],
+      "networks": [
+        "2ad21e2e59d2 host host",
+        "87b528a92943 bridge bridge",
+        "fd185a9d8600 none null"
+      ],
+      "volumes": [],
+      "images": [
+        "078f96272f0c docker.litellm.ai/berriai/litellm:latest",
+        "14358309a308 alpine:3.22",
+        "1fef9f07f04e ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:<none>",
+        "370d920d330a ghcr.io/open-telemetry/demo:<none>",
+        "8f693eaa7e0a node:20-bookworm",
+        "bd214c0f505a erl2-adapter-runtime:test",
+        "c610fcdfb1d5 node:22-alpine",
+        "cc3808ff40b1 erl2-adapter-runtime:latest",
+        "d9e853e87e55 alpine:3.20"
+      ]
+    }
+  },
+  "process_residue": []
+}

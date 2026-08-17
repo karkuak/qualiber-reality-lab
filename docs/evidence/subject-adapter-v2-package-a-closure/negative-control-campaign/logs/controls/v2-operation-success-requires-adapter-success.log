@@ -1,0 +1,37 @@
+✔ LOCAL-SUCCESS: an operation can complete while the adapter reports it failed (546.284041ms)
+✖ LOCAL-SUCCESS: a failed stop does not discharge the obligation a successful start created (463.750334ms)
+✔ LOCAL-SUCCESS: the same stop reported supported does discharge it (499.474916ms)
+✔ LOCAL-SUCCESS: the two verdicts reduce to observably different evidence (1012.778292ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2697.067209
+
+✖ failing tests:
+
+test at tests/dist/integration/localOperationSuccess.test.js:69:1
+✖ LOCAL-SUCCESS: a failed stop does not discharge the obligation a successful start created (463.750334ms)
+  AssertionError [ERR_ASSERTION]: a stop the adapter failed is not a stop that happened
+  + actual - expected
+  
+  + 'completed'
+  - 'failed'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localOperationSuccess.test.js:76:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'completed',
+    expected: 'failed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

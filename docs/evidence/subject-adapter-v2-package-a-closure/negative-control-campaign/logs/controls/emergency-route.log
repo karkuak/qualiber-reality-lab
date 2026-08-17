@@ -1,0 +1,88 @@
+✖ ENV-INVALID: a restoration failure enters emergency cleanup and freezes one invalid record (17015.645292ms)
+✔ ENV-INVALID: every independently safe emergency action is attempted and receipted (14368.465333ms)
+✔ ENV-INVALID: a teardown failure takes the same authorized route (16113.013375ms)
+✔ ENV-INVALID: a contaminated baseline is Lab-owned and never a subject defect (4496.979958ms)
+✔ ENV-INVALID: no attestation or public bundle descends from an invalid record (15063.321959ms)
+✖ ENV-INVALID: the run's substrate reservations are released (14025.15575ms)
+✔ ENV-INVALID: --fake-driver-fault is unreachable without the development profile (3757.340083ms)
+✖ ENV-INVALID: the invalid record verifies offline through the shipped verifier (13979.891042ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 5
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 99271.619083
+
+✖ failing tests:
+
+test at tests/dist/e2e/environmentInvalidTerminal.test.js:112:1
+✖ ENV-INVALID: a restoration failure enters emergency cleanup and freezes one invalid record (17015.645292ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'SCHEMA_VALIDATION_FAILED'
+  - 'RESTORATION_FAILED'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentInvalidTerminal.test.js:117:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SCHEMA_VALIDATION_FAILED',
+    expected: 'RESTORATION_FAILED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentInvalidTerminal.test.js:211:1
+✖ ENV-INVALID: the run's substrate reservations are released (14025.15575ms)
+  AssertionError [ERR_ASSERTION]: a failed run must not hold its identities forever
+  + actual - expected
+  
+  + [
+  +   'bmV0d29yazplcmwyLW5ldHdvcmstMDE5ZmZiM2ItYWNhZC03NzE0LTg3ZmQtZDRmMTRmMjdhMGNl.lease.json',
+  +   'cG9ydDplcmwyLXBvcnQtMDE5ZmZiM2ItYWNhZC03NzE0LTg3ZmQtZDRmMTRmMjdhMGNl.lease.json',
+  +   'cHJvamVjdDplcmwyLXByb2plY3QtMDE5ZmZiM2ItYWNhZC03NzE0LTg3ZmQtZDRmMTRmMjdhMGNl.lease.json',
+  +   'dm9sdW1lOmVybDItdm9sdW1lLTAxOWZmYjNiLWFjYWQtNzcxNC04N2ZkLWQ0ZjE0ZjI3YTBjZQ.lease.json'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentInvalidTerminal.test.js:216:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 'bmV0d29yazplcmwyLW5ldHdvcmstMDE5ZmZiM2ItYWNhZC03NzE0LTg3ZmQtZDRmMTRmMjdhMGNl.lease.json', 'cG9ydDplcmwyLXBvcnQtMDE5ZmZiM2ItYWNhZC03NzE0LTg3ZmQtZDRmMTRmMjdhMGNl.lease.json', 'cHJvamVjdDplcmwyLXByb2plY3QtMDE5ZmZiM2ItYWNhZC03NzE0LTg3ZmQtZDRmMTRmMjdhMGNl.lease.json', 'dm9sdW1lOmVybDItdm9sdW1lLTAxOWZmYjNiLWFjYWQtNzcxNC04N2ZkLWQ0ZjE0ZjI3YTBjZQ.lease.json' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/environmentInvalidTerminal.test.js:226:1
+✖ ENV-INVALID: the invalid record verifies offline through the shipped verifier (13979.891042ms)
+  AssertionError [ERR_ASSERTION]: [{"code":"CFG_MISSING_REQUIRED","message":"invalid run record not found: /var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-nc-stage-suite-RRtFEw/erl2-mid-1GvNZf/retained/invalid-run-record.json"}]
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/environmentInvalidTerminal.test.js:231:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

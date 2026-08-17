@@ -24,7 +24,9 @@
 import { appendFileSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
+  ADAPTER_LOCAL_EXECUTION_MODE,
   ADAPTER_PROTOCOL_VERSION,
+  ADAPTER_PROTOCOL_VERSION_V2,
   CODES,
   Erl2Error,
   decodeFrame,
@@ -32,17 +34,21 @@ import {
   isAdapterOperation,
   type AdapterOperation,
   type AdapterResponseMessage,
+  type AdapterResponseMessageV2,
+  type AnyHostMessage,
   type CompensationDraft,
   type CredentialHandleRequestDraft,
   type CredentialUseDraft,
   type EgressAttemptDraft,
   type HostMessage,
   type HostOperationMessage,
+  type HostOperationMessageV2,
   type MutationDraft,
 } from "@erl2/contracts";
 import {
   assertNoOracleCanary,
   assertNoOracleFields,
+  assertLocalObservationRequestV2,
   assertOperationMatchesPhase,
   assertRequestAncestry,
   type AdapterRequestPhase,
@@ -67,9 +73,11 @@ export interface AdapterOperationOutcome {
  */
 export interface AdapterOperationContext {
   readonly runId: string;
+  readonly protocolVersion: typeof ADAPTER_PROTOCOL_VERSION | typeof ADAPTER_PROTOCOL_VERSION_V2;
+  readonly executionMode: "governed" | typeof ADAPTER_LOCAL_EXECUTION_MODE;
   readonly operation: AdapterOperation;
   readonly operationId: string;
-  readonly phase: AdapterRequestPhase;
+  readonly phase: AdapterRequestPhase | typeof ADAPTER_LOCAL_EXECUTION_MODE;
   /** The validated, phase-appropriate request. */
   readonly request: Record<string, unknown>;
   readonly deadline: string;
@@ -116,15 +124,19 @@ export interface AdapterDefinition {
   readonly supportedPackageKinds: readonly ("archive" | "oci" | "native" | "bundle")[];
   readonly declaredEntrypoints: readonly string[];
   readonly handlers: Partial<Record<AdapterOperation, AdapterHandler>>;
+  /** Opt-in only. Omission preserves the byte-compatible V1 SDK behavior. */
+  readonly supportedProtocolVersions?: readonly (typeof ADAPTER_PROTOCOL_VERSION | typeof ADAPTER_PROTOCOL_VERSION_V2)[];
 }
 
 const MAX_DIAGNOSTIC_LINE_BYTES = 4096;
 
 class OperationContext implements AdapterOperationContext {
   readonly runId: string;
+  readonly protocolVersion: typeof ADAPTER_PROTOCOL_VERSION | typeof ADAPTER_PROTOCOL_VERSION_V2;
+  readonly executionMode: "governed" | typeof ADAPTER_LOCAL_EXECUTION_MODE;
   readonly operation: AdapterOperation;
   readonly operationId: string;
-  readonly phase: AdapterRequestPhase;
+  readonly phase: AdapterRequestPhase | typeof ADAPTER_LOCAL_EXECUTION_MODE;
   readonly request: Record<string, unknown>;
   readonly deadline: string;
   readonly grantedCapabilityIds: readonly string[];
@@ -139,8 +151,16 @@ class OperationContext implements AdapterOperationContext {
   private readonly outputDirectory: string;
   private readonly diagnosticsFile: string;
 
-  constructor(message: HostOperationMessage, phase: AdapterRequestPhase) {
-    this.runId = message.run_id;
+  private readonly maxDiagnosticLineBytes: number;
+
+  constructor(
+    message: HostOperationMessage | HostOperationMessageV2,
+    phase: AdapterRequestPhase | typeof ADAPTER_LOCAL_EXECUTION_MODE,
+  ) {
+    const v2 = "execution_id" in message;
+    this.runId = v2 ? message.execution_id : message.run_id;
+    this.protocolVersion = v2 ? ADAPTER_PROTOCOL_VERSION_V2 : ADAPTER_PROTOCOL_VERSION;
+    this.executionMode = v2 ? ADAPTER_LOCAL_EXECUTION_MODE : "governed";
     this.operation = message.operation;
     this.operationId = message.operation_id;
     this.phase = phase;
@@ -152,6 +172,14 @@ class OperationContext implements AdapterOperationContext {
     );
     this.outputDirectory = message.output_directory;
     this.diagnosticsFile = path.join(message.diagnostics_directory, `${message.operation_id}.log`);
+    const request = message.request as {
+      execution_context?: { resource_limits?: { max_diagnostic_line_bytes?: unknown } };
+    };
+    const requestedLineLimit = request.execution_context?.resource_limits?.max_diagnostic_line_bytes;
+    this.maxDiagnosticLineBytes =
+      v2 && typeof requestedLineLimit === "number"
+        ? Math.min(requestedLineLimit, MAX_DIAGNOSTIC_LINE_BYTES)
+        : MAX_DIAGNOSTIC_LINE_BYTES;
     mkdirSync(this.outputDirectory, { recursive: true });
     mkdirSync(message.diagnostics_directory, { recursive: true });
   }
@@ -213,7 +241,8 @@ class OperationContext implements AdapterOperationContext {
   }
 
   diagnostic(message: string): void {
-    const line = `${message.slice(0, MAX_DIAGNOSTIC_LINE_BYTES)}\n`;
+    const bytes = Buffer.from(message, "utf8").subarray(0, this.maxDiagnosticLineBytes);
+    const line = `${bytes.toString("utf8")}\n`;
     appendFileSync(this.diagnosticsFile, line, "utf8");
   }
 
@@ -298,6 +327,46 @@ function buildResponse(
   };
 }
 
+function buildResponseV2(
+  context: OperationContext,
+  outcome: AdapterOperationOutcome,
+): AdapterResponseMessageV2 {
+  const base = {
+    kind: "response" as const,
+    schema_version: "adapter-response-message/v2" as const,
+    protocol_version: ADAPTER_PROTOCOL_VERSION_V2,
+    execution_mode: ADAPTER_LOCAL_EXECUTION_MODE,
+    execution_id: context.runId,
+    operation: context.operation,
+    operation_id: context.operationId,
+    status: outcome.status,
+    mutations: context.mutations,
+    compensations: context.compensations,
+    credential_requests: context.credentialRequests,
+    credential_uses: context.credentialUses,
+    egress_attempts: context.egressAttempts,
+    unsupported_inputs: [...(outcome.unsupportedInputs ?? [])],
+    active_operator_ms: outcome.activeOperatorMs ?? 0,
+  };
+  if (outcome.status === "supported") {
+    return {
+      ...base,
+      ...(outcome.result === undefined ? {} : { result: outcome.result }),
+      ...(outcome.resultSchemaVersion === undefined
+        ? {}
+        : { result_schema_version: outcome.resultSchemaVersion }),
+    };
+  }
+  return {
+    ...base,
+    error: {
+      code: outcome.error?.code ?? CODES.ADAPTER_EXECUTION_FAULT,
+      owner: outcome.error?.owner ?? "adapter",
+      safe_message: (outcome.error?.safeMessage ?? "the adapter reported no detail").slice(0, 1024),
+    },
+  };
+}
+
 export interface RunAdapterStreams {
   readonly input: NodeJS.ReadableStream;
   readonly output: NodeJS.WritableStream;
@@ -314,6 +383,7 @@ export async function runAdapter(
 ): Promise<void> {
   let buffer = Buffer.alloc(0);
   let maxResponseBytes = 1024 * 1024;
+  let negotiatedProtocol: typeof ADAPTER_PROTOCOL_VERSION | typeof ADAPTER_PROTOCOL_VERSION_V2 | undefined;
   const write = (message: unknown): void => {
     streams.output.write(encodeFrame(message, maxResponseBytes));
   };
@@ -324,22 +394,109 @@ export async function runAdapter(
       const frame = decodeFrame(buffer);
       if (!frame) break;
       buffer = buffer.subarray(frame.consumed);
-      const message = frame.value as HostMessage;
+      const message = frame.value as AnyHostMessage;
       if (message.kind === "shutdown") return;
       if (message.kind === "negotiate") {
         maxResponseBytes = message.max_response_bytes;
-        write({
-          kind: "negotiation",
-          protocol_version: ADAPTER_PROTOCOL_VERSION,
-          adapter_id: definition.adapterId,
-          adapter_version: definition.version,
-          supported_operations: Object.keys(definition.handlers).filter(isAdapterOperation),
-          supported_package_kinds: definition.supportedPackageKinds,
-        });
+        if ("offered_protocol_versions" in message) {
+          const optsIn = definition.supportedProtocolVersions?.includes(ADAPTER_PROTOCOL_VERSION_V2) === true;
+          if (!optsIn || message.required_execution_mode !== ADAPTER_LOCAL_EXECUTION_MODE) {
+            negotiatedProtocol = undefined;
+            write({
+              kind: "negotiation",
+              schema_version: "adapter-negotiation-response/v2",
+              selected_protocol_version: ADAPTER_PROTOCOL_VERSION,
+              execution_mode: "governed",
+              adapter_id: definition.adapterId,
+              adapter_version: definition.version,
+              supported_operations: Object.keys(definition.handlers).filter(isAdapterOperation),
+              supported_package_kinds: definition.supportedPackageKinds,
+            });
+          } else {
+            negotiatedProtocol = ADAPTER_PROTOCOL_VERSION_V2;
+            write({
+              kind: "negotiation",
+              schema_version: "adapter-negotiation-response/v2",
+              selected_protocol_version: ADAPTER_PROTOCOL_VERSION_V2,
+              execution_mode: ADAPTER_LOCAL_EXECUTION_MODE,
+              adapter_id: definition.adapterId,
+              adapter_version: definition.version,
+              supported_operations: Object.keys(definition.handlers).filter(isAdapterOperation),
+              supported_package_kinds: definition.supportedPackageKinds,
+            });
+          }
+        } else {
+          negotiatedProtocol = ADAPTER_PROTOCOL_VERSION;
+          write({
+            kind: "negotiation",
+            protocol_version: ADAPTER_PROTOCOL_VERSION,
+            adapter_id: definition.adapterId,
+            adapter_version: definition.version,
+            supported_operations: Object.keys(definition.handlers).filter(isAdapterOperation),
+            supported_package_kinds: definition.supportedPackageKinds,
+          });
+        }
         continue;
       }
-      write(await dispatch(definition, message));
+      if ("execution_id" in message) {
+        if (negotiatedProtocol === ADAPTER_PROTOCOL_VERSION_V2) {
+          write(await dispatchV2(definition, message));
+        }
+      } else if (negotiatedProtocol === ADAPTER_PROTOCOL_VERSION) {
+        write(await dispatch(definition, message));
+      }
     }
+  }
+}
+
+async function dispatchV2(
+  definition: AdapterDefinition,
+  message: HostOperationMessageV2,
+): Promise<AdapterResponseMessageV2> {
+  let context: OperationContext | undefined;
+  try {
+    if (
+      message.protocol_version !== ADAPTER_PROTOCOL_VERSION_V2 ||
+      message.execution_mode !== ADAPTER_LOCAL_EXECUTION_MODE ||
+      message.schema_version !== "adapter-host-operation/v2"
+    ) {
+      throw new Erl2Error(
+        message.execution_mode === ADAPTER_LOCAL_EXECUTION_MODE
+          ? CODES.ADAPTER_PROTOCOL_VERSION_MISMATCH
+          : CODES.ADAPTER_EXECUTION_MODE_UNSUPPORTED,
+        "the operation frame does not match the negotiated local V2 profile",
+      );
+    }
+    const request = assertLocalObservationRequestV2(message.request);
+    if (
+      request.execution_id !== message.execution_id ||
+      request.operation_id !== message.operation_id ||
+      request.operation !== message.operation
+    ) {
+      throw new Erl2Error(
+        CODES.ADAPTER_PROTOCOL_RESPONSE_MISMATCH,
+        "the V2 operation frame and request identifiers differ",
+      );
+    }
+    context = new OperationContext(message, ADAPTER_LOCAL_EXECUTION_MODE);
+    const handler = definition.handlers[message.operation];
+    if (!handler) {
+      return buildResponseV2(context, {
+        status: "unsupported",
+        unsupportedInputs: [`operation:${message.operation}`],
+        error: {
+          code: CODES.ADAPTER_OPERATION_UNSUPPORTED,
+          safeMessage: `this adapter does not implement ${message.operation}`,
+        },
+      });
+    }
+    return buildResponseV2(context, await handler(context));
+  } catch (cause) {
+    const code = cause instanceof Erl2Error ? cause.code : CODES.ADAPTER_EXECUTION_FAULT;
+    const safeMessage = cause instanceof Error ? cause.message.slice(0, 512) : "unknown adapter fault";
+    const fallback =
+      context ?? new OperationContext(message, ADAPTER_LOCAL_EXECUTION_MODE);
+    return buildResponseV2(fallback, { status: "failed", error: { code, safeMessage } });
   }
 }
 

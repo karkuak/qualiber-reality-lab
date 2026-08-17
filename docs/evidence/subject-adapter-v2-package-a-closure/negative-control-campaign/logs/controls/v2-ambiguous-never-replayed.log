@@ -1,0 +1,28 @@
+✔ LOCAL-REDUCER: declared, dispatched and completed records are immutable and terminal replay is idempotent (484.145125ms)
+✔ LOCAL-REDUCER: the same operation id with different request bytes conflicts (2.807542ms)
+✖ LOCAL-REDUCER: ambiguous effects are never replayed and force cleanup-only progress (2.648833ms)
+✔ LOCAL-REDUCER: failed operations preserve typed failure and conservative cleanup (1.263375ms)
+✔ LOCAL-REDUCER: output freeze irreversibly refuses subsequent subject operations (2.065417ms)
+✔ LOCAL-REDUCER: every prerequisite edge is refused before dispatch (13.742667ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 5
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 696.599834
+
+✖ failing tests:
+
+test at tests/dist/integration/localObservationReducer.test.js:49:1
+✖ LOCAL-REDUCER: ambiguous effects are never replayed and force cleanup-only progress (2.648833ms)
+  Error: expected a typed refusal
+      at refusal (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localObservationReducer.test.js:17:11)
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/integration/localObservationReducer.test.js:60:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)

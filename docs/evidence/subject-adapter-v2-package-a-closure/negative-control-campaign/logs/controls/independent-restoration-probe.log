@@ -1,0 +1,70 @@
+✖ COMPENSATION-ADV: a receipt reading `succeeded` over a mutation that is still applied is refused (16246.452833ms)
+✖ COMPENSATION-ADV: the refused run reaches the authorized invalid terminal, and it verifies (13937.238792ms)
+✖ COMPENSATION-ADV: a compensation that reverts unrelated state is refused too (14868.31275ms)
+✔ COMPENSATION-ADV: a genuine compensation passes, freezes its probe, and verifies offline (15545.746542ms)
+✔ COMPENSATION-ADV: the verifier refuses every way a probe can be about something else (15012.076125ms)
+✔ COMPENSATION-ADV: a terminal that omits the observation entirely is refused (15444.527083ms)
+✔ COMPENSATION-ADV: `reverted nothing` and `had nothing to revert` are different answers (1.14225ms)
+✔ COMPENSATION-ADV: a resumed compensation that already ran is not mistaken for a no-op (0.058958ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 5
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 91457.56525
+
+✖ failing tests:
+
+test at tests/dist/adversarial/compensationAdversarial.test.js:71:1
+✖ COMPENSATION-ADV: a receipt reading `succeeded` over a mutation that is still applied is refused (16246.452833ms)
+  AssertionError [ERR_ASSERTION]: a no-op compensation must not pass restoration
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/compensationAdversarial.test.js:74:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/compensationAdversarial.test.js:87:1
+✖ COMPENSATION-ADV: the refused run reaches the authorized invalid terminal, and it verifies (13937.238792ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 0
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/compensationAdversarial.test.js:89:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/compensationAdversarial.test.js:102:1
+✖ COMPENSATION-ADV: a compensation that reverts unrelated state is refused too (14868.31275ms)
+  AssertionError [ERR_ASSERTION]: a collateral revert must not pass restoration
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/compensationAdversarial.test.js:118:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 0,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

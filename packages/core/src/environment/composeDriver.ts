@@ -81,6 +81,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import {
   assertContract,
@@ -93,6 +94,7 @@ import {
   type EnvironmentProbeResultV1,
   type EnvironmentResourceInventoryV1,
   type EnvironmentResourceV1,
+  type AttributableTelemetryObservationV2,
   type Hash,
   type SubstrateLockV1,
 } from "@erl2/contracts";
@@ -100,6 +102,8 @@ import { coreHash, domainHash, HASH_DOMAINS, sealSigned, type SigningKey } from 
 import type { Clock } from "../runtime/seams.js";
 import { buildBaselineFingerprint, type EvidenceSourceState } from "./cleanControl.js";
 import {
+  fileSha256,
+  lockedDigest,
   observeExecutingPlatform,
   OTEL_DEMO_ENDPOINT_SERVICE_ID,
   OTEL_DEMO_SERVICES,
@@ -112,11 +116,29 @@ import {
 } from "./composeSubstrate.js";
 import { SpawnDockerCli, type DockerCli } from "./dockerCli.js";
 import {
+  collectorWindowComplete,
+  decideTelemetryObservationWindow,
   excerptCollectorTelemetry,
   parseCollectorTelemetry,
   type AttributableTelemetryMaterial,
   type AttributableTelemetryObserver,
 } from "./telemetryObservation.js";
+import {
+  buildTrustedTelemetryObservation,
+  observeTrustedTelemetry,
+  trustedFreezeRoot,
+  trustedVolumeName,
+  TrustedTelemetryChannel,
+  TRUSTED_CHANNEL_REASONS,
+  type TrustedChannelBinding,
+  type TrustedChannelCleanup,
+  type TrustedTelemetryMaterial,
+  type VerifiedTrustedCollector,
+} from "./trustedChannel.js";
+import {
+  fileTrustedOwnershipStore,
+  type TrustedOwnershipStore,
+} from "./trustedOwnership.js";
 import {
   assertDriverEnabled,
   assertNarrowSelector,
@@ -192,6 +214,20 @@ export interface ComposeDriverOptions {
    * the world would otherwise spend the whole budget proving nothing.
    */
   readonly telemetrySettleAttempts?: number;
+  /**
+   * Where the trusted-channel freeze copies the collector's bytes to.
+   *
+   * Task-scoped and outside both the substrate and the repository, because the
+   * copy is working material rather than evidence: what becomes evidence is the
+   * bytes retained *inside* the ERL2-C-171 record, and this directory is
+   * removed by the channel's own cleanup. Defaults to the process temporary
+   * root, which is what `TMPDIR` already scopes for every other temporary this
+   * package creates.
+   */
+  readonly trustedFreezeRoot?: string;
+  /** Bounded stability reads before the trusted channel refuses. Injectable so a test does not sleep. */
+  readonly trustedStabilityAttempts?: number;
+  readonly trustedSleep?: (ms: number) => void;
 }
 
 // -- durable, substrate-anchored run state -----------------------------------
@@ -353,6 +389,20 @@ class ComposeRunStore {
   /** Deletes the endpoint record. Absent is success: the point is that it is gone. */
   removeEndpoint(): void {
     rmSync(path.join(this.endpointDirectory(), "endpoint.json"), { force: true });
+  }
+
+  /**
+   * Where the trusted volume's ownership is proved from.
+   *
+   * Rooted here, beside the receipts and the identity marker, because it is the
+   * same class of fact: bytes that cannot be re-derived by observing Docker. It
+   * is a separate document rather than a field on the run record because the
+   * ownership intent has to be written in the window before the volume exists,
+   * and that write must be one atomic rename of a small file rather than a
+   * rewrite of every receipt the run has accumulated.
+   */
+  trustedOwnership(): TrustedOwnershipStore {
+    return fileTrustedOwnershipStore({ root: this.root, runId: this.runId });
   }
 }
 
@@ -599,6 +649,17 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
   private platformCache: Platform | undefined;
   /** Image resolutions already asked of this daemon. See `newImageResolutionMemo`. */
   private readonly imageMemo = newImageResolutionMemo();
+  /**
+   * The run's trusted telemetry channel (ADR-ERL2-038, package 2).
+   *
+   * Constructed with the driver and provisioned by `provision`, because the
+   * overlay declares its volume `external`: Compose will not bring the project
+   * up until the volume exists, so a channel that failed to provision fails the
+   * run at `up` rather than producing a collector with nowhere to write.
+   */
+  private readonly trusted: TrustedTelemetryChannel;
+  /** The trusted volume's removal outcome, kept apart from every evidence verdict. */
+  private trustedCleanup: TrustedChannelCleanup = { attempted: false, removed: false, surviving: [] };
 
   constructor(options: ComposeDriverOptions) {
     this.runId = options.runId;
@@ -612,6 +673,20 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
     this.telemetrySettleAttempts = options.telemetrySettleAttempts ?? TELEMETRY_SETTLE_ATTEMPTS;
     this.project = composeProjectName(options.runId);
     this.store = new ComposeRunStore(options.substrateRoot, options.runId, this.project);
+    this.trusted = new TrustedTelemetryChannel({
+      runId: options.runId,
+      docker: this.docker,
+      freezeRoot: trustedFreezeRoot(options.trustedFreezeRoot ?? os.tmpdir(), options.runId),
+      project: this.project,
+      // The durable seam. Every lifecycle step runs in its own process, so the
+      // channel `destroy` builds is a different object from the one `provision`
+      // created — and this is where it learns what that one did.
+      ownership: this.store.trustedOwnership(),
+      ...(options.trustedStabilityAttempts === undefined
+        ? {}
+        : { stabilityAttempts: options.trustedStabilityAttempts }),
+      ...(options.trustedSleep === undefined ? {} : { sleep: options.trustedSleep }),
+    });
     this.manifest = assertContract<EnvironmentDriverManifestV1>(
       "EnvironmentDriverManifestV1",
       sealSigned(
@@ -683,6 +758,12 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
     const env: Record<string, string> = {
       ERL2_RUN_ID: this.runId,
       ERL2_NETWORK_NAME: this.networkName(),
+      // The trusted telemetry volume the overlay mounts into `otel-collector`
+      // and nothing else. Declared `external` there, so this name has to resolve
+      // to a volume this driver already created: Compose refuses to bring the
+      // project up otherwise, which is the fail-closed behaviour a channel whose
+      // absence would silently produce no evidence should have.
+      ERL2_TRUSTED_VOLUME_NAME: trustedVolumeName(this.runId),
       DOCKER_SOCK: "/dev/null",
       HOST_FILESYSTEM: "/dev/null",
       OTEL_COLLECTOR_CONFIG_EXTRAS: path.resolve(this.repositoryConfig.extrasPath),
@@ -1011,7 +1092,17 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
       resources.push(this.foreignResource("container", container.name, container.runLabel));
     }
     for (const volume of volumes) {
-      resources.push(this.foreignResource("volume", volume.name, volume.runLabel));
+      // The trusted telemetry volume is the one volume this driver creates, and
+      // it is this run's by the same rule every other object is: its name embeds
+      // the run's UUID. Every *other* labelled volume is still foreign — before
+      // package 2 the driver created none, so the blanket-foreign reading was
+      // right, and narrowing it to an exact name keeps it right rather than
+      // opening a kind-shaped hole.
+      resources.push(
+        volume.name === this.trustedVolume()
+          ? this.resource("volume", volume.name, `trusted-telemetry-${shortId(this.runId)}`)
+          : this.foreignResource("volume", volume.name, volume.runLabel),
+      );
     }
     // The published port belongs to this run only if the container publishing it
     // does, and only if it is the endpoint's own container port on loopback. A port
@@ -1195,6 +1286,23 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
       );
     }
     const startedAt = this.clock.now();
+
+    // The trusted telemetry channel, before anything that could write to it.
+    //
+    // A name already taken is refused rather than adopted: the volume is where
+    // the run's only authoritative telemetry bytes will live, and a volume this
+    // run did not create may already hold another run's. That refusal is the
+    // whole reason creation lives here instead of in the overlay, which would
+    // have adopted it silently.
+    const channel = this.trusted.provision();
+    if (!channel.provisioned) {
+      throw new Erl2Error(
+        CODES.ENV_PROVISION_FAILED,
+        `the trusted telemetry channel for run ${request.runId} could not be provisioned ` +
+          `(${channel.reasonCode}); the collector would have nowhere to write its trusted export`,
+        { owner: "lab" },
+      );
+    }
 
     // Images first, and nothing is created yet. `pull` names services explicitly
     // and resolves the digests the overlay pins, so no tag is consulted.
@@ -1591,10 +1699,26 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
    * exists only over a verified collector; anything else is an `absent` with a
    * typed reason, so a non-observation cannot be dressed as one.
    *
-   * The collector's exporter flushes on its own schedule, so while zero
-   * run-marked records are visible this retries briefly and then records
-   * honestly whatever it last saw. Waiting longer can only *add* records to an
-   * append-only log, never remove one, so the retry biases nothing.
+   * The collector's exporter flushes on its own schedule, so while no batch of
+   * this run's is fully readable this retries briefly, and then describes what
+   * it last saw rather than trusting it.
+   *
+   * Every read is one window and every decision is taken over that one window:
+   * the counts, the excerpt, the collector identity and the completeness check
+   * all come from the same `docker container logs` output, so a retained
+   * observation never pairs a span count from one read with an attribution from
+   * another. `decideTelemetryObservationWindow` is the only acceptance test —
+   * the container's log rotates from the head, and waiting cannot bring an
+   * evicted line back, so the settling is what gives the exporter room and the
+   * condition is what makes the result honest.
+   *
+   * **Historical since package 3, and no run calls it.** A run's telemetry comes
+   * from `freezeTrustedTelemetryObservation`, over a file only the collector can
+   * write. This reads the debug console stream, which the overlay also renders
+   * subject logs into — the forgeable channel ADR-ERL2-038 §2 closed — so
+   * nothing it returns may influence a gate, a count, an attribution or a claim,
+   * and since package 3 nothing consults it. It remains a driver capability for
+   * operator diagnostics and for the suites that pin what the v1 grammar meant.
    */
   observeAttributableTelemetry(marker: string): AttributableTelemetryMaterial {
     for (let attempt = 1; ; attempt += 1) {
@@ -1608,7 +1732,15 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
         };
       }
       const counts = parseCollectorTelemetry(observed.logs, marker);
-      if (counts.runAttributedRecords >= 1 || attempt >= this.telemetrySettleAttempts) {
+      const window = decideTelemetryObservationWindow({
+        counts,
+        windowComplete: collectorWindowComplete(observed.logs),
+        budgetExhausted: attempt >= this.telemetrySettleAttempts,
+      });
+      if (window.decision === "refuse") {
+        return { evidence: "absent", marker, reasonCode: window.reasonCode };
+      }
+      if (window.decision === "retain") {
         const image = observed.collector.image;
         return {
           evidence: "observed",
@@ -1627,6 +1759,94 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
       // one durable transition that must finish before teardown may begin.
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, TELEMETRY_SETTLE_DELAY_MS);
     }
+  }
+
+  // -- the trusted telemetry channel (ADR-ERL2-038, package 2) --------------
+
+  /**
+   * The identities ERL2-C-171 binds an artifact to (R4).
+   *
+   * Read from the run's own configuration rather than from the artifact, which
+   * is the whole point: an artifact lifted from another run, another substrate
+   * or another collector configuration carries that run's identities and cannot
+   * satisfy this one's.
+   */
+  private trustedBinding(): TrustedChannelBinding {
+    return {
+      environmentArchetypeHash: this.archetypeHash,
+      substrateLockCoreHash: this.lock.core_hash,
+      collectorImageDigest: lockedDigest(this.lock, "otel-collector", this.platform()),
+      collectorConfigDigest: fileSha256(this.repositoryConfig.extrasPath),
+    };
+  }
+
+  /** The collector, but only if Docker proves it is this run's and runs the locked image. */
+  private verifiedTrustedCollector(): VerifiedTrustedCollector | undefined {
+    const collector = this.observeExpectedContainers().find(
+      (entry) => entry.service.serviceId === "otel-collector",
+    );
+    if (collector === undefined || !ComposeEnvironmentDriver.verified(collector)) return undefined;
+    return {
+      serviceId: collector.service.serviceId,
+      containerName: collector.name,
+      imageId: collector.image?.containerImageId ?? "",
+      observedImageRepoDigests: [...(collector.image?.observedRepoDigests ?? [])].sort(),
+    };
+  }
+
+  /**
+   * Freezes the run's trusted telemetry artifact and returns the material.
+   *
+   * Read-only with respect to the substrate and, like `observeTelemetry`, not
+   * part of the `EnvironmentDriver` contract — it is a concrete observation this
+   * concrete driver can make. It is deliberately **not** called by
+   * `environmentRun`: the producer's validity composition still reads retained
+   * observations as ERL2-C-160 and would throw on a v2 record, and correcting
+   * that is package 3. This method is the seam package 3 connects.
+   *
+   * The collector is left running. The trusted volume is tmpfs-backed, so its
+   * contents are unmounted with the container — a freeze taken after
+   * `docker stop` would find nothing to copy, measured directly. Teardown
+   * happens afterwards, in `destroy`, which is also where the volume is removed.
+   */
+  observeTrustedTelemetryMaterial(marker: string): TrustedTelemetryMaterial {
+    return observeTrustedTelemetry({
+      channel: this.trusted,
+      collector: this.verifiedTrustedCollector(),
+      binding: this.trustedBinding(),
+      marker,
+    });
+  }
+
+  /**
+   * The same observation, sealed as an ERL2-C-171 record.
+   *
+   * `observed_at` comes from the driver's clock rather than the artifact, and
+   * nothing here consults the authority decision: producing a record and being
+   * entitled to act on one are separate questions, and this side only produces.
+   */
+  freezeTrustedTelemetryObservation(marker: string): AttributableTelemetryObservationV2 {
+    return buildTrustedTelemetryObservation({
+      runId: this.runId,
+      observedAt: this.clock.now(),
+      material: this.observeTrustedTelemetryMaterial(marker),
+    });
+  }
+
+  /** The trusted volume's run-scoped name, for inventory and cleanup accounting. */
+  trustedVolume(): string {
+    return trustedVolumeName(this.runId);
+  }
+
+  /**
+   * How the trusted volume's removal went.
+   *
+   * Reported separately from every artifact verdict, and never consulted by one.
+   * A clean cleanup does not make an artifact valid and a valid artifact does
+   * not make a cleanup clean.
+   */
+  trustedChannelCleanup(): TrustedChannelCleanup {
+    return this.trustedCleanup;
   }
 
   // -- mutate and restore ---------------------------------------------------
@@ -1831,6 +2051,13 @@ export class ComposeEnvironmentDriver implements EnvironmentDriver, Attributable
       ["down", "--volumes", "--remove-orphans", "--timeout", String(DOWN_TIMEOUT_SECONDS)],
       (DOWN_TIMEOUT_SECONDS + 120) * 1000,
     );
+    // The trusted volume is `external` to Compose, so `down --volumes` does not
+    // touch it. That is deliberate — removal is a named, owned act with its own
+    // reported outcome — and it means it has to happen here, after the collector
+    // that mounted it is gone. The outcome is *recorded*, not asserted: whether
+    // the volume went away says nothing about whether any artifact frozen from
+    // it was valid, and the residue observation below is what decides teardown.
+    this.trustedCleanup = this.trusted.cleanup();
     // Compose reporting success is not the verdict. The substrate is inspected
     // again, and what it still holds is the residue.
     const residue = this.observedResources();

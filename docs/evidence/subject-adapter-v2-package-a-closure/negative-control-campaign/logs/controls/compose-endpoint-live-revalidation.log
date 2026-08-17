@@ -1,0 +1,120 @@
+✔ COMPOSE-EGRESS-ADV: a record naming an arbitrary public host is refused (2.645541ms)
+✔ COMPOSE-EGRESS-ADV: a record naming a non-canonical loopback spelling is refused (1.705833ms)
+✔ COMPOSE-EGRESS-ADV: a record naming a different run is refused (0.494167ms)
+✔ COMPOSE-EGRESS-ADV: a record naming a different substrate is refused (0.370292ms)
+✔ COMPOSE-EGRESS-ADV: a record naming a different service is refused (0.34125ms)
+✔ COMPOSE-EGRESS-ADV: a record naming a different container is refused (0.764ms)
+✔ COMPOSE-EGRESS-ADV: a malformed or out-of-range port is refused (2.28775ms)
+✔ COMPOSE-EGRESS-ADV: a record missing a required field is refused (1.504041ms)
+✔ COMPOSE-EGRESS-ADV: a well-formed record over a verified live container grants the endpoint (1.04325ms)
+✖ COMPOSE-EGRESS-ADV: a record whose container no longer exists grants nothing (1.362084ms)
+✖ COMPOSE-EGRESS-ADV: a stale record surviving teardown grants nothing (0.613333ms)
+✔ COMPOSE-EGRESS-ADV: a live container missing or misvaluing an ownership label grants nothing (1.791042ms)
+✔ COMPOSE-EGRESS-ADV: a container that is not running grants nothing (1.228208ms)
+✔ COMPOSE-EGRESS-ADV: a container now publishing a different port grants nothing (0.294417ms)
+✔ COMPOSE-EGRESS-ADV: a container publishing nothing grants nothing (0.29075ms)
+✔ COMPOSE-EGRESS-ADV: the recorded port published from the WRONG container port grants nothing (1.306ms)
+✔ COMPOSE-EGRESS-ADV: a binding on any interface but 127.0.0.1 grants nothing (1.535208ms)
+✔ COMPOSE-EGRESS-ADV: an unrelated published binding does not stand in for the endpoint's (0.300458ms)
+✔ COMPOSE-EGRESS-ADV: the canonical binding — 8090/tcp on 127.0.0.1 at the recorded port — grants it (0.318583ms)
+✔ COMPOSE-EGRESS-ADV: the exact expected container running a substituted image grants nothing (0.293166ms)
+✔ COMPOSE-EGRESS-ADV: an unresolvable pinned image grants nothing (0.273125ms)
+✔ COMPOSE-EGRESS-ADV: image id and repository digest disagreeing grants nothing (0.999458ms)
+✔ COMPOSE-EGRESS-ADV: the exact locked image and endpoint mapping succeeds (0.608125ms)
+✖ COMPOSE-EGRESS-ADV: a foreign container that took over the port grants nothing (0.445583ms)
+✔ COMPOSE-EGRESS-ADV: no record at all grants nothing, and is not an error (0.12025ms)
+✔ COMPOSE-EGRESS-ADV: an unreadable record is a refusal, not an absence (0.508708ms)
+✔ COMPOSE-EGRESS-ADV: loopbackEgressPolicy refuses any host but 127.0.0.1 (0.157417ms)
+✔ COMPOSE-EGRESS-ADV: loopbackEgressPolicy refuses a port that is not a host port (0.121375ms)
+✔ COMPOSE-EGRESS-ADV: the granted policy is still one scheme, one host, one port (2.783917ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 26
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 274.887
+
+✖ failing tests:
+
+test at tests/dist/adversarial/composeEndpointEgress.test.js:238:1
+✖ COMPOSE-EGRESS-ADV: a record whose container no longer exists grants nothing (1.362084ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   container: 'erl2-019f9a4a-7a00-7262-a262-626262626262-quote',
+  +   host: '127.0.0.1',
+  +   port: 18090
+  + }
+  - undefined
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/composeEndpointEgress.test.js:240:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { host: '127.0.0.1', port: 18090, container: 'erl2-019f9a4a-7a00-7262-a262-626262626262-quote' },
+    expected: undefined,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/composeEndpointEgress.test.js:242:1
+✖ COMPOSE-EGRESS-ADV: a stale record surviving teardown grants nothing (0.613333ms)
+  AssertionError [ERR_ASSERTION]: a retained JSON record must never outlive the substrate it describes
+  + actual - expected
+  
+  + {
+  +   container: 'erl2-019f9a4a-7a00-7262-a262-626262626262-quote',
+  +   host: '127.0.0.1',
+  +   port: 18090
+  + }
+  - undefined
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/composeEndpointEgress.test.js:248:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { host: '127.0.0.1', port: 18090, container: 'erl2-019f9a4a-7a00-7262-a262-626262626262-quote' },
+    expected: undefined,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/adversarial/composeEndpointEgress.test.js:372:1
+✖ COMPOSE-EGRESS-ADV: a foreign container that took over the port grants nothing (0.445583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   container: 'erl2-019f9a4a-7a00-7262-a262-626262626262-quote',
+  +   host: '127.0.0.1',
+  +   port: 18090
+  + }
+  - undefined
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/composeEndpointEgress.test.js:378:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { host: '127.0.0.1', port: 18090, container: 'erl2-019f9a4a-7a00-7262-a262-626262626262-quote' },
+    expected: undefined,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

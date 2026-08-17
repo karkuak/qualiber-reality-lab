@@ -1,0 +1,44 @@
+✔ CONTAINER-PROFILE: with nothing derived, the profile is refused and reports why (1.333625ms)
+✔ CONTAINER-PROFILE: the local-process profile is untouched by the container profile existing (0.243625ms)
+✔ CONTAINER-PROFILE: a drifted substrate is refused before anything executes (27.375958ms)
+✔ CONTAINER-PROFILE: mocked probes qualify nothing, launcher or no launcher (4.034791ms)
+✔ CONTAINER-PROFILE: a qualified substrate with no launcher is still refused (3.305584ms)
+✔ CONTAINER-PROFILE: an opaque or third-party subject is refused a fully working profile (4.415084ms)
+✔ CONTAINER-PROFILE: probe evidence frozen against another lock licenses nothing (5.832584ms)
+✖ CONTAINER-PROFILE: the control report is derived per control, from the probe bytes (2.71775ms)
+✔ CONTAINER-PROFILE: an activation is re-derived from its evidence on every use (3.72ms)
+✔ CONTAINER-PROFILE: a container manifest that names no substrate lock is refused (14.639625ms)
+✔ CONTAINER-PROFILE: a host cannot be built on the container profile without an activation (7.516458ms)
+✔ CONTAINER-PROFILE: the module closure is the declared graph, resolved and bounded (3.038458ms)
+✔ CONTAINER-PROFILE: the launcher and the probes apply the same hardened flags (0.189625ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 12
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 354.907667
+
+✖ failing tests:
+
+test at tests/dist/adversarial/containerSandboxProfile.test.js:222:1
+✖ CONTAINER-PROFILE: the control report is derived per control, from the probe bytes (2.71775ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  13 !== 12
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/adversarial/containerSandboxProfile.test.js:245:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 13,
+    expected: 12,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

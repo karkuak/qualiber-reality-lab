@@ -19,13 +19,22 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
+  ADAPTER_LOCAL_EXECUTION_MODE,
+  ADAPTER_PROTOCOL_VERSION_V2,
+  assertLocalObservationClaimExclusions,
+  assertNoLocalObservationGovernedFields,
   assertContract,
   CODES,
   Erl2Error,
   type AdapterCertificationFindingV1,
   type Hash,
   type SubjectAdapterCertificationReceiptV1,
+  type SubjectAdapterCertificationReceiptV2,
   type SubjectAdapterManifestV1,
+  type SubjectAdapterManifestV2,
+  type AdapterProtocolNegotiationV2,
+  type AdapterRequestV2,
+  type SandboxControlId,
 } from "@erl2/contracts";
 import { ArtifactStore, coreHash, hashBytes, sealSigned, type SigningKey } from "@erl2/integrity";
 import type { Clock } from "../runtime/seams.js";
@@ -641,4 +650,230 @@ function build(
     "SubjectAdapterCertificationReceiptV1",
     sealed,
   );
+}
+
+export interface CertifyAdapterV2ScopeOptions {
+  readonly adapterManifest: SubjectAdapterManifestV2;
+  readonly adapterEntryPath: string;
+  readonly clock: Clock;
+  readonly certifierId: string;
+  /** Frozen host transcript from the neutral real-subprocess probe. */
+  readonly negotiation: AdapterProtocolNegotiationV2;
+  readonly localRequest: AdapterRequestV2;
+  readonly enforcedControls: readonly SandboxControlId[];
+  readonly unsupportedControls: readonly SandboxControlId[];
+  readonly recoveryDeclared: boolean;
+  readonly cleanupDeclared: boolean;
+}
+
+/**
+ * ADAPTER-CERT-V2 Package-A scope skeleton.
+ *
+ * It converts already-observed neutral probes into deterministic checks and an
+ * unsigned test receipt. It does not persist, sign, or claim the external
+ * assurance work reserved for Package D.
+ */
+export function certifyAdapterV2Scope(
+  options: CertifyAdapterV2ScopeOptions,
+): SubjectAdapterCertificationReceiptV2 {
+  const manifest = assertContract<SubjectAdapterManifestV2>(
+    "SubjectAdapterManifestV2",
+    options.adapterManifest,
+  );
+  const checks: Finding[] = [];
+  const profile = manifest.protocol_support.find(
+    (candidate) =>
+      candidate.protocol_version === ADAPTER_PROTOCOL_VERSION_V2 &&
+      candidate.execution_modes.includes(ADAPTER_LOCAL_EXECUTION_MODE),
+  );
+  const executableDigest = hashBytes(readFileSync(options.adapterEntryPath));
+
+  const negotiation = attempt(() =>
+    assertContract<AdapterProtocolNegotiationV2>(
+      "AdapterProtocolNegotiationV2",
+      options.negotiation,
+    ),
+  );
+  checks.push(
+    negotiation.ok &&
+      profile !== undefined &&
+      options.negotiation.selected_protocol_version === ADAPTER_PROTOCOL_VERSION_V2 &&
+      options.negotiation.execution_mode === ADAPTER_LOCAL_EXECUTION_MODE &&
+      options.negotiation.adapter_manifest_hash === manifest.core_hash &&
+      options.negotiation.adapter_artifact_hash === manifest.adapter_artifact_hash
+      ? pass("v2-strict-negotiation", "the transcript selected the exact V2 local profile")
+      : fail(
+          "v2-strict-negotiation",
+          "the transcript did not bind the exact V2 local profile",
+          CODES.ADAPTER_PROTOCOL_VERSION_MISMATCH,
+          "critical",
+        ),
+  );
+
+  checks.push(
+    profile !== undefined &&
+      !manifest.protocol_support.some(
+        (candidate) =>
+          candidate.protocol_version === ADAPTER_PROTOCOL_VERSION_V2 &&
+          candidate.execution_modes.some((mode) => mode !== ADAPTER_LOCAL_EXECUTION_MODE),
+      )
+      ? pass("v2-mode-scope", "V2 is declared for local observation only")
+      : fail(
+          "v2-mode-scope",
+          "governed or unknown V2 mode was advertised",
+          CODES.ADAPTER_EXECUTION_MODE_UNSUPPORTED,
+          "critical",
+        ),
+  );
+
+  const requestProbe = attempt(() => {
+    const request = assertContract<AdapterRequestV2>("AdapterRequestV2", options.localRequest);
+    assertNoLocalObservationGovernedFields(request);
+    assertLocalObservationClaimExclusions(request.execution_context);
+    return request;
+  });
+  checks.push(
+    requestProbe.ok
+      ? pass("local-forbidden-fields", "local request is closed against governed fields")
+      : fail(
+          "local-forbidden-fields",
+          "local request admitted a governed field or invalid context",
+          requestProbe.code,
+          "critical",
+        ),
+  );
+
+  const packageKind = localCertificationPackageKind(options.localRequest.operation_payload);
+  checks.push(
+    profile !== undefined &&
+      profile.operations.includes(options.localRequest.operation) &&
+      (packageKind === undefined || profile.supported_package_kinds.includes(packageKind))
+      ? pass("operation-package-scope", "request operation and package kind are declared")
+      : fail(
+          "operation-package-scope",
+          "request exceeds declared operation or package-kind scope",
+          CODES.ADAPTER_CERTIFICATION_SCOPE_MISMATCH,
+          "critical",
+        ),
+  );
+
+  const controlUnion = new Set<string>([
+    ...options.enforcedControls,
+    ...options.unsupportedControls,
+  ]);
+  const limits = (options.localRequest.execution_context as {
+    mode?: string;
+    resource_limits?: { control_expectations?: readonly { control_id: string; required_state: string }[] };
+  }).resource_limits;
+  const controlsDeclared =
+    profile !== undefined &&
+    limits !== undefined &&
+    profile.required_controls.every((control) => controlUnion.has(control)) &&
+    (limits.control_expectations ?? []).every(
+      (expectation) =>
+        controlUnion.has(expectation.control_id) &&
+        (expectation.required_state !== "enforced" ||
+          options.enforcedControls.includes(expectation.control_id as SandboxControlId)),
+    );
+  checks.push(
+    controlsDeclared
+      ? pass("limits-control-declarations", "limits and control expectations have an actual report")
+      : fail(
+          "limits-control-declarations",
+          "a local limit or required control has no enforceable/reportable backing",
+          CODES.ADAPTER_SANDBOX_CONTROL_UNSUPPORTED,
+          "critical",
+        ),
+  );
+
+  checks.push(
+    requestProbe.ok
+      ? pass("claim-exclusions", "the exact local claim ceiling is present")
+      : fail(
+          "claim-exclusions",
+          "the exact local claim ceiling is absent or altered",
+          CODES.ADAPTER_LOCAL_CONTEXT_FORBIDDEN,
+          "critical",
+        ),
+  );
+  checks.push(
+    options.recoveryDeclared
+      ? pass("recovery-declaration", "the neutral harness declares recovery observation")
+      : fail(
+          "recovery-declaration",
+          "the neutral harness exposes no recovery declaration hook",
+          CODES.ADAPTER_LOCAL_AMBIGUOUS_REPLAY_REFUSED,
+        ),
+  );
+  checks.push(
+    options.cleanupDeclared
+      ? pass("cleanup-declaration", "the neutral harness declares a cleanup suffix")
+      : fail(
+          "cleanup-declaration",
+          "the neutral harness exposes no cleanup declaration hook",
+          CODES.ADAPTER_LOCAL_CLEANUP_INCOMPLETE,
+        ),
+  );
+  checks.push(
+    executableDigest === manifest.adapter_artifact_hash
+      ? pass("artifact-binding", "the candidate bytes match the V2 manifest")
+      : fail(
+          "artifact-binding",
+          "the candidate bytes differ from the V2 manifest",
+          CODES.ADAPTER_IDENTITY_MISMATCH,
+          "critical",
+        ),
+  );
+
+  const failures = checks.filter((finding) => finding.status === "failed");
+  const certified = failures.length === 0 && profile !== undefined;
+  const certifiedProfile =
+    profile === undefined
+      ? undefined
+      : {
+          protocol_version: ADAPTER_PROTOCOL_VERSION_V2,
+          execution_modes: [ADAPTER_LOCAL_EXECUTION_MODE] as const,
+          operations: [...profile.operations],
+          supported_package_kinds: [...profile.supported_package_kinds],
+          required_controls: [...profile.required_controls],
+        };
+  const base = {
+    schema_version: "subject-adapter-certification-receipt/v2" as const,
+    receipt_id: `local-cert-${manifest.adapter_id}`,
+    suite: "ADAPTER-CERT-V2" as const,
+    suite_version: 2 as const,
+    adapter_manifest_hash: manifest.core_hash,
+    adapter_artifact_hash: executableDigest,
+    adapter_id: manifest.adapter_id,
+    adapter_version: manifest.version,
+    certified_profiles: certified && certifiedProfile !== undefined ? [certifiedProfile] : [],
+    certified_modes: certified ? [ADAPTER_LOCAL_EXECUTION_MODE] : [],
+    certified_operations: certified && certifiedProfile !== undefined ? certifiedProfile.operations : [],
+    certified_package_kinds:
+      certified && certifiedProfile !== undefined ? certifiedProfile.supported_package_kinds : [],
+    checks,
+    verdict: certified ? ("certified" as const) : ("refused" as const),
+    refusal_codes: [...new Set(failures.map((finding) => finding.refusal_code as string))].sort(),
+    certifier_id: options.certifierId,
+    certifier_is_adapter_owner: false as const,
+    enforced_controls: [...options.enforcedControls],
+    unsupported_controls: [...options.unsupportedControls],
+    certification_authenticity: "locally_observed_unauthenticated" as const,
+    signature_state: "unsigned" as const,
+    certified_at: options.clock.now(),
+  };
+  return assertContract<SubjectAdapterCertificationReceiptV2>(
+    "SubjectAdapterCertificationReceiptV2",
+    { ...base, core_hash: coreHash(base) },
+  );
+}
+
+function localCertificationPackageKind(
+  payload: AdapterRequestV2["operation_payload"],
+): "archive" | "oci" | "native" | "bundle" | undefined {
+  const record = payload as unknown as Record<string, unknown>;
+  const kind = record["package_kind"] ?? record["expected_package_kind"];
+  return kind === "archive" || kind === "oci" || kind === "native" || kind === "bundle"
+    ? kind
+    : undefined;
 }

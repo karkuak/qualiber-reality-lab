@@ -1,0 +1,103 @@
+✖ INTENT-CRASH: no external mutation happens without a durable intent (6533.140708ms)
+✖ INTENT-CRASH: a restart reconciles before it retries, and does not re-dispatch (3848.594916ms)
+✔ INTENT-CRASH: a crash before the intent freeze leaves no external effect (3566.311584ms)
+✔ INTENT-CRASH: the same operation id cannot carry different bytes (3747.339375ms)
+✖ INTENT-CRASH: a subject step is not blindly repeated after an ambiguous crash (4023.669125ms)
+✖ INTENT-CRASH: a crash between the receipt and the lifecycle append is idempotent on resume (6045.680208ms)
+✔ INTENT-CRASH: terminal closure stays reachable after a reconciled crash (15507.891042ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 3
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 43608.947959
+
+✖ failing tests:
+
+test at tests/dist/e2e/mutationIntentCrashMatrix.test.js:238:1
+✖ INTENT-CRASH: no external mutation happens without a durable intent (6533.140708ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'declared'
+  - 'dispatching'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/mutationIntentCrashMatrix.test.js:247:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'declared',
+    expected: 'dispatching',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/mutationIntentCrashMatrix.test.js:250:1
+✖ INTENT-CRASH: a restart reconciles before it retries, and does not re-dispatch (3848.594916ms)
+  AssertionError [ERR_ASSERTION]: a reconciled operation must not be dispatched again
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/mutationIntentCrashMatrix.test.js:263:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/mutationIntentCrashMatrix.test.js:294:1
+✖ INTENT-CRASH: a subject step is not blindly repeated after an ambiguous crash (4023.669125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'declared'
+  - 'dispatching'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/mutationIntentCrashMatrix.test.js:304:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'declared',
+    expected: 'dispatching',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/dist/e2e/mutationIntentCrashMatrix.test.js:310:1
+✖ INTENT-CRASH: a crash between the receipt and the lifecycle append is idempotent on resume (6045.680208ms)
+  AssertionError [ERR_ASSERTION]: the mutation must be adopted, not re-applied
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///private/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/erl2-negative-control-kjbPvx/tree/tests/dist/e2e/mutationIntentCrashMatrix.test.js:324:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

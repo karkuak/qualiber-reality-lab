@@ -36,7 +36,7 @@ import {
   type AdapterStepRequestV1,
   type AdapterTranslationReceiptV1,
   type ArtifactRef,
-  type AttributableTelemetryObservationV1,
+  type AttributableTelemetryObservationV2,
   type CancellationRequestV1,
   type ChallengeActivationReceiptV1,
   type ChallengeManifestV1,
@@ -131,9 +131,17 @@ import { freezeResourceFrontier } from "../environment/frontier.js";
 import {
   attributableTelemetryDeclared,
   attributableTelemetryGatePassed,
-  retainAttributableTelemetryObservation,
-  supportsAttributableTelemetry,
 } from "../environment/telemetryObservation.js";
+import {
+  supportsTrustedTelemetry,
+  type TrustedChannelCleanup,
+  type TrustedTelemetryProducer,
+} from "../environment/trustedChannel.js";
+import {
+  exerciseApplicable,
+  exerciseOutcomeGateVerdict,
+  exerciseSucceeded,
+} from "../journey/exerciseOutcome.js";
 import { buildEnvironmentRestoration, buildTeardownVerification, type TeardownCheck } from "../cleanup/cleanup.js";
 import {
   assertTelemetryOracleClean,
@@ -2611,9 +2619,14 @@ export class EnvironmentRun {
     if (!teardown.passed) {
       this.ws.store.freezeJson(`${RETAINED}/failed-destroy-receipt.json`, result.receipt, "INTERNAL");
       this.failedAttemptHash = result.receipt.core_hash;
+      // Where the trusted channel is what survived, the daemon's own words ride
+      // on the refusal. The residue verdict above is unchanged by this — it is
+      // the inventory's, not the channel's — and this only says why.
+      const channelDetail = this.trustedChannelCleanupDetail();
       throw new Erl2Error(
         CODES.TEARDOWN_FAILED,
-        `teardown left ${String(remaining.size)} resource(s); the authorized route is receipt-backed emergency cleanup`,
+        `teardown left ${String(remaining.size)} resource(s); the authorized route is receipt-backed emergency cleanup` +
+          (channelDetail === undefined ? "" : ` (trusted channel: ${channelDetail})`),
         { owner: "lab" },
       );
     }
@@ -2649,43 +2662,215 @@ export class EnvironmentRun {
   }
 
   /**
-   * The retained attributable-telemetry observation (ADR-ERL2-033).
+   * The retained attributable-telemetry observation — now ERL2-C-171
+   * (ADR-ERL2-038 R8, package 3).
    *
-   * Produced exactly where the capability and a declared metric source coexist
-   * — a driver that can observe attributable telemetry and an archetype
-   * declaring an evidence source of kind `metric` — and nowhere else: on every
-   * other run, including every fake-driver golden, the artifact's absence
-   * means *never produced* (ADR-ERL2-033 §2). Where the observation could not
-   * be made, or where what the collector emitted is not something the Lab can
-   * freeze, an `absent` record with a typed reason is retained instead, so
-   * absence of observation is a fact the gate can refuse on, not a missing
-   * file. The excerpt rides inside the observation, and the observation is
-   * frozen before the lifecycle event that anchors it.
+   * ## What changed, and why the old shape could not stand
+   *
+   * Until this package the run retained an ERL2-C-160 record: counts parsed out
+   * of the collector's *debug* console stream. The Lab's own overlay renders the
+   * subject's logs into that same stream, so a subject could write a line that
+   * parsed as a trace summary and state a span count no collector ever emitted —
+   * measured at `6d28d543`, a forged `spans: 9999` that verified clean.
+   * ADR-ERL2-038 closed that by building a physically separate channel, and
+   * package 1 made ERL2-C-171 the only authoritative format. What was left was
+   * this call still producing v1, so every declaring run failed its own gate with
+   * `telemetry_authority_v1_not_authoritative` — the sole remaining broad
+   * failure. This is the connection.
+   *
+   * ## What this does not do
+   *
+   * It does not know what a trusted volume is. Provisioning it, proving durable
+   * ownership across the four processes a lifecycle spans, waiting out the
+   * exporter, copying the bytes, parsing them, sealing the record and removing
+   * the resource all live behind `freezeTrustedTelemetryObservation`. This
+   * method chooses *whether* to ask and retains what comes back.
+   *
+   * ## Applicability, and why absence still means never produced
+   *
+   * Produced exactly where a driver can produce a trusted artifact and the
+   * archetype declares a metric evidence source, and nowhere else — so on every
+   * fake-driver run the artifact's absence still means *never produced*
+   * (ADR-ERL2-033 §2), and no run provisions a channel merely to freeze an empty
+   * one. Where the channel could not produce an authoritative artifact, an
+   * `absent` v2 record carrying the channel's own typed reason is retained
+   * instead: absence is a fact the gate refuses on, not a missing file.
+   *
+   * The record is frozen before the lifecycle event that anchors it, and that
+   * event is `teardown_started` — the offline verifier requires exactly that
+   * placement, because it is the proof the channel was read while this run's
+   * containers still lived.
    */
   private retainAttributableTelemetry(): readonly {
     readonly artifact_role: string;
     readonly artifact_core_hash: Hash;
     readonly artifact_schema_version: string;
   }[] {
-    if (!supportsAttributableTelemetry(this.driver)) return [];
+    const producer = this.trustedProducer();
+    if (producer === undefined) return [];
     if (!this.archetype.evidence_sources.some((source) => source.kind === "metric")) return [];
+    // ADR-ERL2-039. The conjunct this call used to be missing, and the whole of
+    // the false-valid terminal's second half: without it, a run whose exercising
+    // step did not succeed still provisioned, observed, sealed and froze an
+    // ERL2-C-171 record — while `attributableTelemetryApplicable()` answered
+    // `false` and omitted the gate that would have evaluated it. Retained
+    // evidence that no gate reads is evidence nobody checked, and an offline
+    // reader could not tell it from evidence that passed.
+    //
+    // Read through the same shared primitive the gate and the required-set both
+    // read, so retention and applicability cannot drift apart again; the
+    // coherence refusal in `buildEnvironmentValidity` is the check that says so
+    // out loud.
+    if (!exerciseSucceeded(this.ws.derivedStepOutcomes())) return [];
+    const path = `${RETAINED}/attributable-telemetry-observation.json`;
+    // Read what you wrote. The freeze precedes the lifecycle event that anchors
+    // it, so a crash between the two leaves a retained byte the lifecycle never
+    // reached; re-observing on resume would take a fresh reading over a channel
+    // that has since been torn down, and freezing again at the same logical path
+    // raises `ARTIFACT_ALREADY_FROZEN` and wedges the run forever.
+    const existing = this.ws.store.isFrozen(path)
+      ? assertContract<AttributableTelemetryObservationV2>(
+          "AttributableTelemetryObservationV2",
+          this.ws.store.readJson(path),
+        )
+      : undefined;
     // Every failure of retention leaves this call as a routable `TEARDOWN_FAILED`
-    // (ADR-ERL2-035 §4); the boundary lives with the retention itself so it can
-    // be measured without a substrate.
-    const observation = retainAttributableTelemetryObservation({
-      store: this.ws.store,
-      observationPath: `${RETAINED}/attributable-telemetry-observation.json`,
-      observer: this.driver,
-      runId: this.runId,
-      observedAt: () => this.now(),
-    });
+    // (ADR-ERL2-035 §4): this runs inside `destroy` and strictly before
+    // `teardown_started`, so anything thrown from here that `destroy` cannot
+    // classify would strand the run with no terminal at all and the substrate
+    // still live — the driver's own `destroy`, and with it the channel's
+    // cleanup, would never run.
+    let observation: AttributableTelemetryObservationV2;
+    try {
+      observation = existing ?? producer.freezeTrustedTelemetryObservation(this.runId);
+    } catch (cause) {
+      if (cause instanceof Erl2Error && cause.code === CODES.TEARDOWN_FAILED) throw cause;
+      const code = cause instanceof Erl2Error ? cause.code : "UNCLASSIFIED";
+      const detail = cause instanceof Error ? cause.message : String(cause);
+      throw new Erl2Error(
+        CODES.TEARDOWN_FAILED,
+        `the trusted attributable-telemetry observation could not be retained (${code}): ${detail}`,
+        { owner: "lab", cause },
+      );
+    }
+    if (existing === undefined) {
+      this.ws.store.freezeJson(path, observation, "INTERNAL");
+    }
     return [
       {
         artifact_role: "attributable-telemetry-observation",
         artifact_core_hash: observation.core_hash,
-        artifact_schema_version: "attributable-telemetry-observation/v1",
+        artifact_schema_version: "attributable-telemetry-observation/v2",
       },
     ];
+  }
+
+  /**
+   * This run's trusted-telemetry producer, or `undefined` if the driver has none.
+   *
+   * A named accessor rather than an inline guard, and deliberately so: a guard
+   * written as `if (!supportsTrustedTelemetry(this.driver)) return [];` is the
+   * *only* thing giving the call below its type, so removing it to measure it
+   * does not produce a wrong program — it produces one that will not compile,
+   * and a build failure is a harness error rather than a kill. Package 2 hit the
+   * same wall on its durable-ownership control and resolved it the same way:
+   * move the anchor to a place where the mutant is a semantic change rather
+   * than a type error. Withholding the capability check from *this* return is
+   * exactly the defect, and it type-checks.
+   */
+  private trustedProducer(): TrustedTelemetryProducer | undefined {
+    return supportsTrustedTelemetry(this.driver) ? this.driver : undefined;
+  }
+
+  /**
+   * Whether this run must produce an ERL2-C-171 artifact at all.
+   *
+   * **One authoritative answer**, asked here and nowhere else, so the gate that
+   * is composed, the required-gate set that is enforced and the applicability
+   * assertion that guards them cannot disagree. Every conjunct is the
+   * ADR-ERL2-033 declaration predicate, and every one is re-derivable from
+   * retained bytes — which is what lets `deriveAttributableTelemetry` recompute
+   * the identical predicate offline without trusting this one.
+   *
+   * Nothing the trusted channel *reports* is an input. A run cannot become
+   * inapplicable by failing to observe, by timing out, or by refusing a linked
+   * artifact: applicability is decided by what the run declared and what it did,
+   * never by how the observation turned out. That is the property that keeps
+   * omission honest rather than an escape hatch.
+   */
+  private attributableTelemetryApplicable(): boolean {
+    return attributableTelemetryDeclared({
+      driverKind: this.driver.manifest.driver_kind,
+      evidenceSources: this.archetype.evidence_sources,
+      outcomes: this.ws.derivedStepOutcomes(),
+    });
+  }
+
+  /**
+   * Whether the retained ERL2-C-171 record binds *this* run's environment.
+   *
+   * ADR-ERL2-038 R4 splits cross-run binding between the two authorities, and
+   * this is the producer's half — the half `deriveAttributableTelemetry` names
+   * explicitly as "checked against the substrate lock by package 3, which is
+   * what retains them". The verifier re-derives the archetype half from bytes it
+   * holds; the substrate-lock identity is only knowable to whoever retained the
+   * binding, which is this run.
+   *
+   * Both hashes are read from *this run's own* retained evidence rather than
+   * from the artifact, which is the entire point: an artifact lifted from
+   * another run, or produced against another substrate lock, carries that run's
+   * identities and cannot satisfy these. A record whose binding block is absent
+   * fails, because an observed record with nothing to bind proves nothing about
+   * where it came from.
+   *
+   * The collector image and configuration digests are not re-checked here. They
+   * are established where they are knowable: the channel refuses to observe a
+   * collector Docker will not confirm runs the locked image, and the digests it
+   * seals are read from the lock this run is running against. Re-deriving them
+   * in `environmentRun` would mean teaching it what a collector is, which is the
+   * boundary package 2 exists to hold.
+   */
+  private trustedTelemetryBindingMatches(): boolean {
+    const hashes = this.ws.hashesForRole("attributable-telemetry-observation");
+    if (hashes.length !== 1) return false;
+    const record = this.ws.rawArtifact(hashes[0] as Hash) as {
+      readonly binding?: {
+        readonly environment_archetype_hash?: unknown;
+        readonly substrate_lock_core_hash?: unknown;
+      };
+    };
+    const binding = record.binding;
+    if (binding === undefined) return false;
+    if (binding.environment_archetype_hash !== coreHash(this.archetype)) return false;
+    // A run whose driver declares no substrate lock cannot be checked against
+    // one, and saying so is more honest than asserting a match: the archetype
+    // half above still binds, and the Compose driver — the only driver that
+    // produces these artifacts — always carries a lock.
+    const expected = this.retainedSubstrateBinding()?.substrate_lock_hash;
+    if (expected === undefined) return true;
+    return binding.substrate_lock_core_hash === expected;
+  }
+
+  /**
+   * The trusted channel's own account of its teardown, as operator diagnostics.
+   *
+   * **Never consulted by a gate.** Cleanup success is not evidence validity and
+   * evidence validity is not cleanup success; reading this into the telemetry
+   * gate would let a clean teardown make an invalid artifact look verified,
+   * which is exactly the conflation ADR-ERL2-038 §3 separates. It is not
+   * retained as an artifact either: a surviving trusted volume is *already* a
+   * first-class run resource in the driver's inventory, so it is already counted
+   * as residue, already carries a run-scoped teardown selector, and already
+   * fails `teardown-verified`. What the channel adds that the inventory cannot
+   * is *why* — the daemon's own words for a removal it refused — and that
+   * belongs on the failure an operator reads, not in a second artifact making
+   * the same claim.
+   */
+  private trustedChannelCleanupDetail(): string | undefined {
+    if (!supportsTrustedTelemetry(this.driver)) return undefined;
+    const cleanup: TrustedChannelCleanup = this.driver.trustedChannelCleanup();
+    if (cleanup.removed || cleanup.surviving.length === 0) return undefined;
+    return cleanup.detail ?? `the trusted volume survived cleanup: ${cleanup.surviving.join(", ")}`;
   }
 
   // -- 12. validity and the generic index ------------------------------------
@@ -2760,6 +2945,18 @@ export class EnvironmentRun {
         : { adapterCertificationReceiptHash: this.ws.boundCertificationReceiptHash() as Hash }),
       runId: this.runId,
       terminalStage,
+      // The same single answer the gate composition used, so the required-gate
+      // set and the gate that was actually composed cannot disagree.
+      attributableTelemetryApplicable: this.attributableTelemetryApplicable(),
+      // ADR-ERL2-039, read through the same shared primitives the gate above and
+      // `retainAttributableTelemetry` read. `telemetryObservationRetained` is
+      // what closes the loop: it is the producer's own statement of what it
+      // froze, checked against what it declared applicable, so the retained-but-
+      // ungated shape is refused here rather than discovered later by a reader.
+      exerciseApplicable: exerciseApplicable(outcomes),
+      exerciseSucceeded: exerciseSucceeded(outcomes),
+      telemetryObservationRetained:
+        this.ws.hashesForRole("attributable-telemetry-observation").length > 0,
       genericRunPolicyHash: policyHash,
       gates,
       environmentRestorationHash: restorationHash,
@@ -3880,35 +4077,64 @@ export class EnvironmentRun {
           this.ws.hashesForRole("source-snapshot").length === baseline.evidence_source_states.length,
         evidence_refs: [baselineHash],
       },
-      // ADR-ERL2-033: binds to declaration, not to every run. A run that never
-      // declared the observation obtainable — a fake driver, an archetype with
-      // no metric source, a journey that never reached a succeeded exercising
-      // step — passes vacuously; a run that declared it and retained no
-      // observed, run-attributed observation of its own fails, and the failing
-      // gate freezes a finding like every other environment gate.
-      {
-        gate_id: "attributable-telemetry-retained",
-        passed: attributableTelemetryGatePassed({
-          declared: attributableTelemetryDeclared({
-            driverKind: this.driver.manifest.driver_kind,
-            evidenceSources: this.archetype.evidence_sources,
-            outcomes: this.ws.derivedStepOutcomes(),
-          }),
-          runId: this.runId,
-          observations: this.ws
-            .hashesForRole("attributable-telemetry-observation")
-            .map((hash) =>
-              this.ws.artifact<AttributableTelemetryObservationV1>(
-                hash,
-                "AttributableTelemetryObservationV1",
-              ),
-            ),
-        }),
-        evidence_refs:
-          this.ws.hashesForRole("attributable-telemetry-observation").length > 0
-            ? [...this.ws.hashesForRole("attributable-telemetry-observation")]
-            : [coreHash(this.driver.manifest)],
-      },
+      // ADR-ERL2-039. The independent failure the false-valid terminal had
+      // nothing to dominate it with. Composed wherever the committed journey
+      // ordered an exercising step — which, at a terminal, is exactly "an
+      // exercise outcome is retained", because `freezeOutput` refuses while any
+      // committed step is owed — and omitted where it ordered none.
+      //
+      // `passed: false` here is the whole correction: a required exercise that
+      // returned an unsuccessful verdict, or came back `unsupported`, now
+      // freezes a Lab invalidity finding and reaches an **invalid** terminal,
+      // instead of being recorded in a step outcome that no verdict read. The
+      // run is still permitted to finalize and keep its diagnostics; what it may
+      // no longer do is call itself valid.
+      ...((): readonly GateResult[] => {
+        const verdict = exerciseOutcomeGateVerdict(this.ws.derivedStepOutcomes());
+        return verdict === undefined
+          ? []
+          : [
+              {
+                gate_id: "subject-exercise-succeeded",
+                passed: verdict,
+                evidence_refs: [outputHash],
+              },
+            ];
+      })(),
+      // ADR-ERL2-038 R8, package 3. Composed only where the run declared the
+      // observation obtainable; a run that did not — a fake driver, an archetype
+      // with no metric source, a journey that never reached a succeeded
+      // exercising step — **omits** the gate rather than passing it vacuously,
+      // because `passed: true` over a run that could never have had telemetry is
+      // a boolean answering a question about applicability. Where it is
+      // composed, it derives from exactly one authority: the retained record
+      // must be an ERL2-C-171 record this run's channel produced, accepted by
+      // `decideTrustedTelemetryAuthority`, observed rather than absent, bound to
+      // this run and its marker, and carrying at least one run-attributed
+      // record. ERL2-C-160 is readable and authorizes nothing, so a historical
+      // record beside an invalid one is a refusal and never a downgrade.
+      ...(this.attributableTelemetryApplicable()
+        ? [
+            {
+              gate_id: "attributable-telemetry-retained",
+              passed:
+                attributableTelemetryGatePassed({
+                  declared: true,
+                  runId: this.runId,
+                  // Read raw. The version question is the authority's to answer,
+                  // and pinning a schema here would throw on the very format
+                  // this gate exists to require.
+                  observations: this.ws
+                    .hashesForRole("attributable-telemetry-observation")
+                    .map((hash) => this.ws.rawArtifact(hash)),
+                }) && this.trustedTelemetryBindingMatches(),
+              evidence_refs:
+                this.ws.hashesForRole("attributable-telemetry-observation").length > 0
+                  ? [...this.ws.hashesForRole("attributable-telemetry-observation")]
+                  : [coreHash(this.driver.manifest)],
+            },
+          ]
+        : []),
       ...adapterCertifiedGateResults({
         adapterManifestHash: this.ws.requireHashForRole("adapter-manifest"),
         subjectExecutionMode: this.ws.subjectExecutionMode() ?? "development_fake_port",

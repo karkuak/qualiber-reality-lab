@@ -43,9 +43,35 @@ export interface DockerResult {
   readonly timedOut: boolean;
 }
 
+/**
+ * A result whose stdout is bytes rather than text.
+ *
+ * `stdout` on `DockerResult` is UTF-8 decoded, which is right for every command
+ * that answers in text and destructive for one that answers in a tar stream:
+ * decoding replaces invalid sequences with U+FFFD, so the archive no longer
+ * parses and its bytes are no longer the bytes the daemon sent.
+ */
+export interface DockerBinaryResult {
+  readonly args: readonly string[];
+  readonly status: number;
+  readonly stdout: Buffer;
+  readonly stderr: string;
+  readonly timedOut: boolean;
+}
+
 /** The seam. A test substitutes it to observe argv without a daemon. */
 export interface DockerCli {
   run(invocation: DockerInvocation): DockerResult;
+  /**
+   * The same invocation, with stdout left as bytes.
+   *
+   * Exists for exactly one caller: `docker cp <container>:<path> -`, which the
+   * trusted channel uses to read the archive's own entry-type metadata *before*
+   * anything extracts or dereferences it. Optional so an existing test stub
+   * that only models text commands keeps compiling; a caller that needs bytes
+   * and finds it absent fails closed rather than falling back to a decoded read.
+   */
+  runBinary?(invocation: DockerInvocation): DockerBinaryResult;
 }
 
 /**
@@ -75,13 +101,45 @@ export class SpawnDockerCli implements DockerCli {
     this.binary = binary;
   }
 
-  run(invocation: DockerInvocation): DockerResult {
+  /** The curated child environment. Nothing else about the Lab crosses over. */
+  private childEnvironment(invocation: DockerInvocation): Record<string, string> {
     const env: Record<string, string> = {};
     for (const name of DOCKER_ENVIRONMENT_PASSTHROUGH) {
       const value = process.env[name];
       if (value !== undefined) env[name] = value;
     }
     for (const [name, value] of Object.entries(invocation.env ?? {})) env[name] = value;
+    return env;
+  }
+
+  runBinary(invocation: DockerInvocation): DockerBinaryResult {
+    // No `encoding`, so stdout stays a Buffer. stderr is decoded separately
+    // because it is a diagnostic, not evidence.
+    const result = spawnSync(this.binary, [...invocation.args], {
+      shell: false,
+      env: this.childEnvironment(invocation),
+      timeout: invocation.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+      maxBuffer: MAX_OUTPUT_BYTES,
+      windowsHide: true,
+    });
+    if (result.error !== undefined && (result.error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Erl2Error(
+        CODES.ENV_PROVISION_FAILED,
+        `the ${this.binary} command is not available on this host; the Compose driver cannot reach a substrate`,
+        { owner: "lab", cause: result.error },
+      );
+    }
+    return {
+      args: [...invocation.args],
+      status: result.status ?? -1,
+      stdout: Buffer.isBuffer(result.stdout) ? result.stdout : Buffer.alloc(0),
+      stderr: result.stderr === undefined ? "" : String(result.stderr),
+      timedOut: result.signal === "SIGTERM" && result.status === null,
+    };
+  }
+
+  run(invocation: DockerInvocation): DockerResult {
+    const env = this.childEnvironment(invocation);
 
     const result = spawnSync(this.binary, [...invocation.args], {
       encoding: "utf8",

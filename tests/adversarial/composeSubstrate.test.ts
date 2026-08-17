@@ -22,10 +22,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assertContract,
+  type AttributableTelemetryObservationV1,
   type Hash,
+  type Instant,
   type SubstrateLockV1,
 } from "@erl2/contracts";
-import { coreHash, developmentKey, sealSigned } from "@erl2/integrity";
+import { ArtifactStore, coreHash, developmentKey, sealSigned } from "@erl2/integrity";
 import {
   assertNarrowSelector,
   assertOwnedByRun,
@@ -34,10 +36,18 @@ import {
   dockerAvailable,
   fileSha256,
   OTEL_DEMO_SERVICES,
+  decideTelemetryObservationWindow,
   parseCollectorTelemetry,
   resourceIdentityHash,
+  retainAttributableTelemetryObservation,
   SteppingClock,
+  TELEMETRY_WINDOW_REASONS,
+  TRUSTED_CHANNEL_MOUNT_PATH,
+  trustedVolumeName,
   uuidV7From,
+  type DockerCli,
+  type DockerInvocation,
+  type DockerResult,
   type MaterializedUpstream,
   type RepositoryConfigPaths,
 } from "@erl2/core";
@@ -174,6 +184,13 @@ function fixture(
     readonly lockOverrides?: Parameters<typeof lockFor>[2];
     readonly platform?: string;
     readonly registryPlatforms?: Readonly<Record<string, string>>;
+    /**
+     * The observer's settle budget. One by default, because the stub has no
+     * exporter to wait for; a case that is about *waiting* says so.
+     */
+    readonly telemetrySettleAttempts?: number;
+    /** Wraps the stub daemon, so a case can change the world between reads. */
+    readonly wrapDocker?: (inner: DockerCli) => DockerCli;
   } = {},
 ): Fixture {
   const root = ownedTempDir("erl2-compose-adv-");
@@ -212,10 +229,10 @@ function fixture(
     substrateRoot: path.join(root, "substrate"),
     upstream,
     repositoryConfig: repository,
-    docker,
+    docker: options.wrapDocker === undefined ? docker : options.wrapDocker(docker),
     // The stub has no exporter to wait for: the world is already arranged when
     // the observation runs, so a settle budget would only spend wall clock.
-    telemetrySettleAttempts: 1,
+    telemetrySettleAttempts: options.telemetrySettleAttempts ?? 1,
   });
   return { driver, docker, world, lock, repository };
 }
@@ -796,7 +813,18 @@ const UPSTREAM_COMPOSE_FILE = path.join(UPSTREAM_ROOT, "compose.yaml");
  * render as two publications, one of them on every interface. Every run-varying
  * value is supplied exactly as the driver supplies it.
  */
-function renderedComposeConfig(): Record<string, { ports?: readonly Record<string, unknown>[] }> {
+interface RenderedService {
+  ports?: readonly Record<string, unknown>[];
+  volumes?: readonly Record<string, unknown>[];
+}
+
+/** The services of the rendered merge. */
+function renderedComposeConfig(): Record<string, RenderedService> {
+  return (JSON.parse(renderedComposeDocument()) as { services: Record<string, RenderedService> }).services;
+}
+
+/** The whole rendered merge, for the assertions that are about top-level blocks. */
+function renderedComposeDocument(): string {
   const overlay = path.join(repoRoot, "environments", "otel-demo", "compose", "erl2-overlay.yaml");
   const extras = path.join(repoRoot, "environments", "otel-demo", "compose", "erl2-otelcol-extras.yaml");
   const result = spawnSync(
@@ -824,14 +852,17 @@ function renderedComposeConfig(): Record<string, { ports?: readonly Record<strin
         DOCKER_SOCK: "/dev/null",
         HOST_FILESYSTEM: "/dev/null",
         OTEL_COLLECTOR_CONFIG_EXTRAS: extras,
+        ERL2_TRUSTED_VOLUME_NAME: TRUSTED_VOLUME,
       },
       maxBuffer: 64 * 1024 * 1024,
     },
   );
   if (result.status !== 0) throw new Error(`docker compose config failed: ${result.stderr ?? ""}`);
-  return (JSON.parse(result.stdout) as { services: Record<string, { ports?: readonly Record<string, unknown>[] }> })
-    .services;
+  return result.stdout;
 }
+
+/** The run-scoped trusted volume name the driver would supply for `RUN_ID`. */
+const TRUSTED_VOLUME = trustedVolumeName(RUN_ID);
 
 /**
  * Why the rendered topology cannot be observed here, or `undefined` when it can.
@@ -921,6 +952,48 @@ test("COMPOSE-ADV: the RENDERED configuration publishes one loopback port and no
   }
 });
 
+test("COMPOSE-ADV: the RENDERED configuration mounts the trusted volume into the collector alone", RENDER_SKIP, () => {
+  if (RENDER_REASON !== undefined) {
+    assert.fail(`ERL2_REQUIRE_LIVE_DOCKER=1 was set but ${RENDER_REASON}`);
+  }
+  const services = renderedComposeConfig();
+
+  // The whole trust argument rests on this: the collector writes the trusted
+  // record and nobody else can reach it. Asserted against the *merge* rather
+  // than the overlay's source text, because `volumes` merges across files
+  // exactly as `ports` does — an entry that looks collector-only in one file can
+  // render onto a second service.
+  const mountsOfService = (serviceId: string): readonly Record<string, unknown>[] =>
+    (services[serviceId]?.volumes ?? []).filter(
+      (mount) => mount["source"] === "erl2-trusted-telemetry" || mount["target"] === TRUSTED_CHANNEL_MOUNT_PATH,
+    );
+
+  const collector = mountsOfService("otel-collector");
+  assert.equal(collector.length, 1, `the collector renders ${collector.length} trusted mounts: ${JSON.stringify(collector)}`);
+  assert.equal(collector[0]?.["type"], "volume", "the trusted channel must be a named volume, never a host bind");
+  assert.equal(collector[0]?.["target"], TRUSTED_CHANNEL_MOUNT_PATH);
+
+  // And nowhere else in the rendered graph — including `quote`, the one
+  // container the subject's traffic reaches. A subject that can write the file
+  // the counts are read from is the whole defect this channel replaces.
+  for (const serviceId of Object.keys(services)) {
+    if (serviceId === "otel-collector") continue;
+    assert.deepEqual(
+      mountsOfService(serviceId),
+      [],
+      `${serviceId} renders a trusted-channel mount: ${JSON.stringify(mountsOfService(serviceId))}`,
+    );
+  }
+
+  // Declared `external`, so Compose creates nothing and adopts nothing. Creation
+  // — and the refusal of a name that is already taken — belongs to the driver.
+  const volumes = (JSON.parse(renderedComposeDocument()) as {
+    volumes?: Record<string, Record<string, unknown>>;
+  }).volumes ?? {};
+  assert.equal(volumes["erl2-trusted-telemetry"]?.["external"], true);
+  assert.equal(volumes["erl2-trusted-telemetry"]?.["name"], TRUSTED_VOLUME);
+});
+
 test("COMPOSE-ADV: the substrate identity changes when the daemon does", () => {
   const f = provisioned();
   const bound = f.driver.substrateInstance();
@@ -997,4 +1070,250 @@ test("COMPOSE-ADV: a verified collector that received nothing this run is observ
   if (material.evidence !== "observed") return;
   assert.equal(material.counts.runAttributedRecords, 0);
   assert.equal(material.counts.spans, 0);
+});
+
+// -- the observation window (the COMPOSE-E2E evidence-accuracy defect) -------
+//
+// The defect these close is not that the collector was misread. It is that the
+// observer derived its two numbers from evidence with *different survival*: the
+// records naming a run live in a batch's detailed dump, the span count lives in
+// the summary line above it, and the container's `json-file` log rotates from
+// the head. The settle loop waited for the half that survives and published the
+// half that does not, so a run whose spans were emitted, exported and marked
+// could freeze a retained artifact stating `spans: 0`.
+//
+// The gate predicate never read `spans`, so no run with no telemetry was ever
+// admitted by this — and that is exactly why the cases below assert on the
+// *retained artifact* rather than on a verdict. The lie was in the evidence.
+
+/** The collector's own start-up record, which precedes anything it exports. */
+const COLLECTOR_ORIGIN =
+  "2026-08-03T00:00:00.000Z\tinfo\tservice@v0.157.0/service.go\tEverything is ready. " +
+  'Begin running and processing data.\t{"resource": {"service.name": "otelcol-contrib"}}\n';
+
+/** One complete exported batch: the summary line, then its own detailed dump. */
+function batch(spans: number, marker: string | undefined): string {
+  return (
+    `2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"otelcol.signal": "traces", "resource spans": 1, "spans": ${String(spans)}}\n` +
+    "     -> service.name: Str(quote)\n" +
+    (marker === undefined
+      ? "     -> url.full: Str(http://127.0.0.1:18090/health)\n"
+      : `     -> url.full: Str(http://127.0.0.1:18090/getquote?erl2_run=${marker})\n`)
+  );
+}
+
+/**
+ * The dump half of a batch whose summary line has already rotated away.
+ *
+ * It ends with the record's own context line, because a window cut from the
+ * head keeps the tail of the record it landed in: the eviction takes bytes off
+ * the front, never the terminator. That line is also what tells the parser
+ * where the cut record stops and the collector's next whole record begins.
+ */
+function orphanedDump(marker: string): string {
+  return (
+    "     -> service.name: Str(quote)\n" +
+    `     -> url.full: Str(http://127.0.0.1:18090/getquote?erl2_run=${marker})\n` +
+    '\t{"resource": {"service.name": "otelcol-contrib"}}\n'
+  );
+}
+
+/** Replace the collector's whole readable window with exactly `logs`. */
+function windowIs(f: Fixture, logs: string): void {
+  const name = `${PROJECT}-otel-collector`;
+  const container = f.world.containers.get(name) as StubContainer;
+  f.world.containers.set(name, { ...container, logs });
+}
+
+const OTHER_RUN = uuidV7From(1_785_000_100_000, Buffer.alloc(10, 0x77));
+
+/**
+ * The retained artifact for one observation, through the production retention
+ * path — `EnvironmentRun.destroy`'s own call, over a real `ArtifactStore`.
+ *
+ * The cases below read *this*, not the driver's return value: the defect was
+ * that a frozen artifact stated a count nothing had established, and an
+ * assertion on a helper's return would not have seen it.
+ */
+function retainedObservation(f: Fixture): AttributableTelemetryObservationV1 {
+  return retainAttributableTelemetryObservation({
+    store: new ArtifactStore(ownedTempDir("erl2-compose-adv-retain-")),
+    observationPath: "retained/environment/attributable-telemetry-observation.json",
+    observer: f.driver,
+    runId: RUN_ID,
+    observedAt: () => "2026-08-03T00:00:30Z" as Instant,
+  });
+}
+
+test("COMPOSE-WINDOW: a complete same-run block retains a coherent count and attribution", () => {
+  const f = provisioned();
+  windowIs(f, COLLECTOR_ORIGIN + batch(7, RUN_ID) + batch(7, RUN_ID));
+  const observation = retainedObservation(f);
+  assert.equal(observation.evidence, "observed");
+  assert.equal(observation.spans, 14);
+  assert.equal(observation.trace_batches, 2);
+  assert.equal(observation.run_attributed_records, 2);
+  // The excerpt still derives every declared count — the property the offline
+  // verifier stands on, unchanged by the new acceptance condition.
+  const derived = parseCollectorTelemetry(observation.log_excerpt ?? "", RUN_ID);
+  assert.equal(derived.spans, observation.spans);
+  assert.equal(derived.runAttributedRecords, observation.run_attributed_records);
+  assert.equal(derived.runAttributedBatches, 2);
+});
+
+test("COMPOSE-WINDOW: the failed-gate signature cannot be retained as a definitive zero", () => {
+  const f = provisioned();
+  // The exact signature the clean gate recorded: two records naming this run
+  // are readable and the summary line counting their spans has rotated away.
+  // Before the correction this froze `evidence: observed, spans: 0` beside
+  // `run_attributed_records: 2` — a retained artifact stating a false count for
+  // a run whose spans the collector demonstrably received.
+  windowIs(f, orphanedDump(RUN_ID) + orphanedDump(RUN_ID));
+  const observation = retainedObservation(f);
+  assert.notEqual(
+    observation.evidence,
+    "observed",
+    "a window whose span-count line rotated away must not freeze as an observation",
+  );
+  assert.equal(observation.spans, undefined, "no span count may be stated at all");
+  assert.equal(observation.reason_code, TELEMETRY_WINDOW_REASONS.spanCountOutsideWindow);
+  // The failed-gate pair itself: never both at once, in either direction.
+  assert.equal(
+    observation.spans === 0 && (observation.run_attributed_records ?? 0) > 0,
+    false,
+    "the retained artifact reproduced the false-zero signature",
+  );
+});
+
+test("COMPOSE-WINDOW: a window that begins mid-record states no count, not even a zero", () => {
+  const f = provisioned();
+  // The window opens inside another batch's detailed dump — a continuation
+  // line, which no console record starts with — so bytes were lost before it.
+  // Nothing of this run is in it, and a zero derived from a cut window would be
+  // the absence of evidence dressed as evidence of absence.
+  windowIs(f, orphanedDump(OTHER_RUN));
+  const observation = retainedObservation(f);
+  assert.equal(observation.evidence, "absent");
+  assert.equal(observation.reason_code, TELEMETRY_WINDOW_REASONS.windowTruncated);
+  assert.equal(observation.spans, undefined);
+});
+
+test("COMPOSE-WINDOW: a re-exported start-up sentence does not make a cut window whole", () => {
+  const f = provisioned();
+  // The case a live loaded run found. At `verbosity: detailed` the collector
+  // exports its own logs back through the debug exporter, so `Everything is
+  // ready` reappears as a record body inside later dumps — nine times in one
+  // 74 kB window. A completeness check that searched for that sentence anywhere
+  // called this window whole and froze `spans: 0` beside five run-attributed
+  // records: the failed-gate signature, live, after the first correction.
+  windowIs(
+    f,
+    "Body: Str(Everything is ready. Begin running and processing data.)\n" + orphanedDump(RUN_ID),
+  );
+  const observation = retainedObservation(f);
+  assert.notEqual(observation.evidence, "observed");
+  assert.equal(observation.spans, undefined);
+  assert.equal(observation.reason_code, TELEMETRY_WINDOW_REASONS.spanCountOutsideWindow);
+});
+
+test("COMPOSE-WINDOW: another run's summary does not supply a count for this run's records", () => {
+  const f = provisioned();
+  // This run's records are orphaned — their own summary is gone — and the only
+  // summary in the window belongs to another run. Combining the two would state
+  // 7 spans for a run whose span count was never read.
+  windowIs(f, orphanedDump(RUN_ID) + batch(7, OTHER_RUN));
+  const observation = retainedObservation(f);
+  assert.equal(observation.evidence, "absent");
+  assert.equal(observation.reason_code, TELEMETRY_WINDOW_REASONS.spanCountOutsideWindow);
+  assert.equal(observation.spans, undefined);
+});
+
+test("COMPOSE-WINDOW: this run's summary is not attributed by another run's details", () => {
+  const f = provisioned();
+  // The mirror image, and it is *observed*: the window begins at a whole record
+  // and carries nothing of this run, so its own lines are the answer — the
+  // collector really did receive 7 spans and none of them are this run's. The
+  // gate refuses on the attribution floor, which is the honest refusal rather
+  // than a manufactured absence.
+  windowIs(f, COLLECTOR_ORIGIN + batch(7, OTHER_RUN));
+  const observation = retainedObservation(f);
+  assert.equal(observation.evidence, "observed");
+  assert.equal(observation.spans, 7);
+  assert.equal(observation.run_attributed_records, 0);
+});
+
+test("COMPOSE-WINDOW: a complete window that genuinely received nothing states zero as a fact", () => {
+  const f = provisioned();
+  // Whole and empty: the window begins where the collector began a record and
+  // carries no batch and no marker, so `spans: 0` is what its own lines say
+  // rather than a default. This is the one place a definitive zero is retained.
+  windowIs(f, COLLECTOR_ORIGIN);
+  const observation = retainedObservation(f);
+  assert.equal(observation.evidence, "observed");
+  assert.equal(observation.spans, 0);
+  assert.equal(observation.trace_batches, 0);
+  assert.equal(observation.run_attributed_records, 0);
+});
+
+test("COMPOSE-WINDOW: a summary with no dump yet keeps settling instead of concluding", () => {
+  // The third row of the diagnosed matrix: the batch is exported and its
+  // detailed dump has not been written. The observation is not complete, and
+  // the decision says so rather than combining it with anything.
+  const counts = parseCollectorTelemetry(
+    `2026-08-03T00:00:01.000Z\tinfo\tTraces\t{"otelcol.signal": "traces", "spans": 7}\n`,
+    RUN_ID,
+  );
+  assert.equal(counts.spans, 7);
+  assert.equal(counts.runAttributedRecords, 0);
+  assert.equal(counts.runAttributedBatches, 0);
+  assert.deepEqual(
+    decideTelemetryObservationWindow({ counts, windowComplete: true, budgetExhausted: false }),
+    { decision: "settle" },
+  );
+});
+
+test("COMPOSE-WINDOW: the artifact reflects one accepted snapshot when the window moves", () => {
+  // The window is incoherent on the first read and coherent on the second. The
+  // retained counts must be exactly the second window's — never the first
+  // window's attribution paired with the second window's count, or the reverse.
+  let reads = 0;
+  const f = provisioned({
+    telemetrySettleAttempts: 4,
+    wrapDocker: (inner) => ({
+      run: (invocation: DockerInvocation): DockerResult => {
+        if (invocation.args[0] === "container" && invocation.args[1] === "logs") {
+          reads += 1;
+          const name = `${PROJECT}-otel-collector`;
+          const container = f.world.containers.get(name) as StubContainer;
+          f.world.containers.set(name, {
+            ...container,
+            logs:
+              reads === 1
+                ? orphanedDump(RUN_ID)
+                : orphanedDump(RUN_ID) + batch(5, RUN_ID) + batch(6, RUN_ID),
+          });
+        }
+        return inner.run(invocation);
+      },
+    }),
+  });
+  const observation = retainedObservation(f);
+  assert.ok(reads >= 2, `the observer accepted the first window after ${String(reads)} read(s)`);
+  assert.equal(observation.evidence, "observed");
+  assert.equal(observation.spans, 11, "the retained count is not the accepted snapshot's");
+  assert.equal(observation.trace_batches, 2);
+  assert.equal(observation.run_attributed_records, 3);
+  const derived = parseCollectorTelemetry(observation.log_excerpt ?? "", RUN_ID);
+  assert.equal(derived.spans, observation.spans);
+  assert.equal(derived.runAttributedRecords, observation.run_attributed_records);
+});
+
+test("COMPOSE-WINDOW: exhausting the budget without a coherent window is incomplete, not zero", () => {
+  const f = provisioned({ telemetrySettleAttempts: 3 });
+  windowIs(f, orphanedDump(RUN_ID));
+  const material = f.driver.observeAttributableTelemetry(RUN_ID);
+  assert.equal(material.evidence, "absent");
+  if (material.evidence !== "absent") return;
+  assert.equal(material.reasonCode, TELEMETRY_WINDOW_REASONS.spanCountOutsideWindow);
+  assert.equal(material.marker, RUN_ID);
 });

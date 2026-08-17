@@ -1,0 +1,148 @@
+{
+  "schema": "erl2.validation-evidence.clean-gate",
+  "version": 1,
+  "generated_by": "scripts/capture-validation-evidence.mjs",
+  "executable": {
+    "repository": "gate2-clone",
+    "branch": "HEAD",
+    "commit": "b22e9fb4cb24b030ecaf84fa5d721ed0bf649d6a",
+    "tree": "b3df8f28d319343e85ac3aff9e0a6fbe3ca71f22",
+    "clean": true,
+    "status": []
+  },
+  "after": {
+    "repository": "gate2-clone",
+    "branch": "HEAD",
+    "commit": "b22e9fb4cb24b030ecaf84fa5d721ed0bf649d6a",
+    "tree": "b3df8f28d319343e85ac3aff9e0a6fbe3ca71f22",
+    "clean": true,
+    "status": []
+  },
+  "started_at": "2026-08-12T20:15:21.210Z",
+  "ended_at": "2026-08-12T20:37:45.093Z",
+  "duration_ms": 1343883,
+  "steps": [
+    {
+      "name": "test",
+      "log": "logs/test.log",
+      "command": "npm test",
+      "started_at": "2026-08-12T20:15:21.212Z",
+      "ended_at": "2026-08-12T20:36:21.665Z",
+      "duration_ms": 1260453,
+      "exit_status": 0,
+      "exit_signal": null,
+      "output_truncated": false,
+      "output_bytes": 128066,
+      "output_sha256": "sha256:f2b2332394b5559be9ad2374db9aa97c63e3398e9c8fc299dbd0ef760f77f6dd"
+    },
+    {
+      "name": "verify-generated",
+      "log": "logs/verify-generated.log",
+      "command": "npm run verify:generated",
+      "started_at": "2026-08-12T20:36:21.666Z",
+      "ended_at": "2026-08-12T20:36:22.045Z",
+      "duration_ms": 379,
+      "exit_status": 0,
+      "exit_signal": null,
+      "output_truncated": false,
+      "output_bytes": 112,
+      "output_sha256": "sha256:d8e07c7eac431ef9ad97ce676e0ffa73d6339114bfa373ad6d74854e258b4a45"
+    },
+    {
+      "name": "evidence-verify",
+      "log": "logs/evidence-verify.log",
+      "command": "npm run evidence:verify",
+      "started_at": "2026-08-12T20:36:22.045Z",
+      "ended_at": "2026-08-12T20:37:45.014Z",
+      "duration_ms": 82969,
+      "exit_status": 0,
+      "exit_signal": null,
+      "output_truncated": false,
+      "output_bytes": 5455,
+      "output_sha256": "sha256:e377ffd27bbdbf601e280e48cc10d49930a9664370d677677ff4ba97369dcf2a"
+    },
+    {
+      "name": "diff-check",
+      "log": "logs/diff-check.log",
+      "command": "git diff --check",
+      "started_at": "2026-08-12T20:37:45.015Z",
+      "ended_at": "2026-08-12T20:37:45.033Z",
+      "duration_ms": 18,
+      "exit_status": 0,
+      "exit_signal": null,
+      "output_truncated": false,
+      "output_bytes": 0,
+      "output_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "totals": {
+    "tests": 1345,
+    "pass": 1342,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 3
+  },
+  "skips": [
+    {
+      "name": "COMPOSE-ADV: the RENDERED configuration publishes one loopback port and nothing else",
+      "reason": "RENDERED TOPOLOGY UNPROVEN: the extracted upstream configuration is absent (environments/otel-demo/upstream/extracted-1bf3ef8fbaffc049/.env, environments/otel-demo/upstream/extracted-1bf3ef8fbaffc049/compose.yaml); `environments/otel-demo/upstream/` is git-ignored, so a fresh checkout does not carry it — run `node scripts/qualify-otel-demo.mjs --fetch-only` to materialise it"
+    },
+    {
+      "name": "EXTERNAL-SUBJECT-E2E: an externally authored subject reaches an offline-valid terminal",
+      "reason": "EXTERNAL SUBJECT UNPROVEN: no external adapter entry was supplied"
+    },
+    {
+      "name": "EXTERNAL-SUBJECT-CANCEL: the supported cancellation path leaves zero residue",
+      "reason": "EXTERNAL SUBJECT UNPROVEN: no external adapter entry was supplied"
+    }
+  ],
+  "docker": {
+    "before": {
+      "containers": [
+        "4b78ccc28685 docker.litellm.ai/berriai/litellm:latest cranky_nobel exited",
+        "97173203d8a9 docker.litellm.ai/berriai/litellm:latest zealous_joliot exited"
+      ],
+      "networks": [
+        "2ad21e2e59d2 host host",
+        "87b528a92943 bridge bridge",
+        "fd185a9d8600 none null"
+      ],
+      "volumes": [],
+      "images": [
+        "078f96272f0c docker.litellm.ai/berriai/litellm:latest",
+        "14358309a308 alpine:3.22",
+        "1fef9f07f04e ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:<none>",
+        "370d920d330a ghcr.io/open-telemetry/demo:<none>",
+        "8f693eaa7e0a node:20-bookworm",
+        "bd214c0f505a erl2-adapter-runtime:test",
+        "c610fcdfb1d5 node:22-alpine",
+        "cc3808ff40b1 erl2-adapter-runtime:latest",
+        "d9e853e87e55 alpine:3.20"
+      ]
+    },
+    "after": {
+      "containers": [
+        "4b78ccc28685 docker.litellm.ai/berriai/litellm:latest cranky_nobel exited",
+        "97173203d8a9 docker.litellm.ai/berriai/litellm:latest zealous_joliot exited"
+      ],
+      "networks": [
+        "2ad21e2e59d2 host host",
+        "87b528a92943 bridge bridge",
+        "fd185a9d8600 none null"
+      ],
+      "volumes": [],
+      "images": [
+        "078f96272f0c docker.litellm.ai/berriai/litellm:latest",
+        "14358309a308 alpine:3.22",
+        "1fef9f07f04e ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:<none>",
+        "370d920d330a ghcr.io/open-telemetry/demo:<none>",
+        "8f693eaa7e0a node:20-bookworm",
+        "bd214c0f505a erl2-adapter-runtime:test",
+        "c610fcdfb1d5 node:22-alpine",
+        "cc3808ff40b1 erl2-adapter-runtime:latest",
+        "d9e853e87e55 alpine:3.20"
+      ]
+    }
+  },
+  "process_residue": []
+}

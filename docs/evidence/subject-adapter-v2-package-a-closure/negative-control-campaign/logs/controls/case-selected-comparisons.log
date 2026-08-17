@@ -1,0 +1,29 @@
+✔ ENV-CLI: a run advances from case_selected to a finalized environment terminal (22030.841583ms)
+✔ ENV-VERIFY: the environment public bundle verifies offline, as an external reader (17145.090625ms)
+✔ ENV-VERIFY: a verifier without the pinned beacon cannot authorize the selection chain (16952.229083ms)
+✔ ENV-CLI: the environment is really torn down and the reservations released (17206.809917ms)
+✔ ENV-CLI: the plan executes exactly the persona the selection opened (4782.376084ms)
+✔ ENV-CLI: an unsupported step is a retained outcome, never a removed case (16769.170667ms)
+✔ ENV-CLI-CRASH: every phase boundary resumes from retained evidence (323672.029375ms)
+✔ ENV-CLI: replaying a finished run adds nothing, whether the phase is idempotent or refused (22288.8425ms)
+✔ ENV-NO-WRITE: every refused environment command adds zero retained evidence (19567.239916ms)
+✔ ENV-ORDER: a named step command may not reorder the committed journey (4696.87075ms)
+✔ ENV-SUBSTRATE: the driver's substrate lives outside the run root (3851.785916ms)
+✔ ENV-ORACLE: a canary in the subject's output bytes invalidates the run before it freezes (12191.097834ms)
+✔ SELECT-CLI: an uninterrupted select reaches the selected case (9052.883375ms)
+✔ SELECT-CLI-CRASH: crashing at every boundary still completes, with one randomness observation (52908.836959ms)
+✔ SELECT-CLI: a completed select is idempotent and adds nothing (3738.843834ms)
+✔ SELECT-CLI: the selection request binds the run's own retained artifacts (3311.061625ms)
+✔ SELECT-NO-WRITE: every refused select adds zero retained evidence (6043.997334ms)
+✔ SELECT-NO-WRITE: select before challenge preregistration is refused and writes nothing (2080.125042ms)
+✔ SELECT-NO-WRITE: tampered retained evidence is refused and writes nothing (3639.425792ms)
+✔ SELECT-NO-WRITE: the beacon-window refusal is raised inside the walk and writes nothing (4041.832666ms)
+✔ SELECT-BEACON: the development beacon refuses a second draw (0.619875ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 482737.202375
