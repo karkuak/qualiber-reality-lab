@@ -1,0 +1,31 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-offline-verification/v1",
+  "label": "QLB-EXT-002",
+  "verifier": "verifyTrustedLocalObservationRecord",
+  "verifier_package": "@erl2/core",
+  "lab_checkout_resolved_from": "/private/tmp/qlb-wave1-prospective-cC4jCP/work/lab-deps",
+  "inputs": {
+    "record_sha256": "sha256:b39df0db4e6411f2eca5839bdf03ce77a4e9119270b10543da804f3496b870ec",
+    "plan_sha256": "sha256:c891959cc67530c1990791452b463e3ffc403d274043e61c1a5d12148261900d",
+    "adapter_entry_sha256": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+    "registry_root": "/private/tmp/qlb-wave1-prospective-cC4jCP/work/scenarios/QLB-EXT-002/run-output/registry",
+    "retained_input_root": "/private/tmp/qlb-wave1-prospective-cC4jCP/work/scenarios/QLB-EXT-002/run-output/inputs"
+  },
+  "scope_note": "This verifier's input surface has no retained-output or response-envelope path. It does not open or validate any response envelope, and it does not recompute an envelope core hash. The four-step envelope bind is performed independently by compare-scenario.mjs.",
+  "ok": true,
+  "threw": null,
+  "outcome": {
+    "ok": true,
+    "refusals": [],
+    "verified": {
+      "observationId": "01a0160a-cf29-7ce0-85c5-c12098ab9e63",
+      "planHash": "sha256:150f9a879de95436c74705ccf93c5c64e88d615947e9986229bed08c3ba9b9bc",
+      "adapterArtifactHash": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+      "declarationHash": "sha256:b877ab255072a566c911e98e9e09c1636087b7df87436395a7720bab2f379947",
+      "trustMode": "trusted_local_code",
+      "terminalStatus": "observed_complete",
+      "independentCertification": "absent",
+      "confinement": "absent"
+    }
+  }
+}

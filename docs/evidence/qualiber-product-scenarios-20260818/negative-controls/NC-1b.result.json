@@ -1,0 +1,18 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-negative-control/v1",
+  "campaign": "qualiber-product-scenarios-20260818",
+  "run_against": "disposable copies under campaign scratch; no published evidence was touched",
+  "control_id": "NC-1b",
+  "targets_scenario": "QLB-EXT-003",
+  "method": "003's expected.json copied and edited in place (expected_run_status -> inconclusive), then compared normally",
+  "required_outcome": "unavailable / lab_harness_failure",
+  "observed_verdict": "unavailable",
+  "observed_classification": "lab_harness_failure",
+  "sub_reasons": [
+    "expectation_digest_not_precommitted"
+  ],
+  "detecting_gate": "expectation-digest binding against oracle-precommit.json, before any comparison",
+  "proves": "the gate that makes NC-1's pre-authored counterfactual necessary",
+  "no_semantic_read_happened": true,
+  "held": true
+}

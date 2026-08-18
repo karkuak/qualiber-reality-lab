@@ -1,0 +1,166 @@
+{
+  "schema_version": "local-observation-plan/v1",
+  "observation_id": "01a0160a-7cbe-7677-a28e-812592f97d26",
+  "mode": "local_observation",
+  "protocol_version": "subject-adapter/v2",
+  "operations": [
+    {
+      "sequence": 0,
+      "operation_id": "interact-validate-stimulus",
+      "operation": "interact",
+      "payload": {
+        "schema_version": "interact-payload/v1",
+        "interaction_input_ids": [
+          "capture-stimulus-input",
+          "contract-stimulus-input"
+        ]
+      },
+      "timeout_ms": 180000,
+      "cleanup": false
+    },
+    {
+      "sequence": 1,
+      "operation_id": "report-residue-final",
+      "operation": "report-residue",
+      "payload": {
+        "schema_version": "report-residue-payload/v1",
+        "checkpoint": "final"
+      },
+      "timeout_ms": 30000,
+      "cleanup": true
+    }
+  ],
+  "inputs": [
+    {
+      "input_id": "capture-stimulus-input",
+      "role": "capture-stimulus",
+      "provenance_mode": "host_provisioned",
+      "artifact": {
+        "path": "observation-inputs/capture-stimulus/stimulus.json",
+        "media_type": "application/json",
+        "byte_length": 773,
+        "file_sha256": "sha256:78210e2e912c635de91f91b18c1de7acfa386c324b9b3c69f111ab962485d7d4",
+        "classification": "INTERNAL"
+      }
+    },
+    {
+      "input_id": "contract-stimulus-input",
+      "role": "contract-stimulus",
+      "provenance_mode": "host_provisioned",
+      "artifact": {
+        "path": "observation-inputs/contract-stimulus/contract.json",
+        "media_type": "application/json",
+        "byte_length": 1180,
+        "file_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+        "classification": "INTERNAL"
+      }
+    }
+  ],
+  "resource_limits": {
+    "schema_version": "local-observation-limits/v1",
+    "wall_clock_ms": 180000,
+    "max_request_bytes": 262144,
+    "max_response_bytes": 262144,
+    "max_output_files": 32,
+    "max_output_bytes": 524288,
+    "max_output_path_depth": 4,
+    "max_diagnostic_bytes": 8192,
+    "max_diagnostic_line_bytes": 512,
+    "environment_variable_names": [
+      "ERL2_ADAPTER_PROTOCOL_VERSION",
+      "ERL2_EXECUTION_ID",
+      "ERL2_EXECUTION_MODE",
+      "ERL2_OPERATION_ID"
+    ],
+    "input_root": "observation-inputs",
+    "workspace_root": "observation-workspace",
+    "output_root": "local-observation-output",
+    "control_expectations": [
+      {
+        "control_id": "separate-process",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "process-tree-termination",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "wall-clock-deadline",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "bounded-request-bytes",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "bounded-response-bytes",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "writable-output-only",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "environment-variable-allowlist",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "bounded-diagnostics",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "input-mount-tamper-detection",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "egress-policy-adjudication",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "docker-socket-capability-denied",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "privileged-capability-denied",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "deny-by-default-egress",
+        "required_state": "unsupported_permitted"
+      }
+    ]
+  },
+  "egress_policy": {
+    "schema_version": "egress-allowlist-policy/v1",
+    "policy_id": "qualiber-erl2-validation-subject-deny-all",
+    "default_action": "deny",
+    "allowed_schemes": [],
+    "allowed_hosts": [],
+    "allowed_ports": [],
+    "max_redirects": 0,
+    "revalidate_redirect_targets": true,
+    "allow_loopback_hosts": [],
+    "deny_link_local": true,
+    "deny_metadata_service": true,
+    "deny_proxy_bypass": true
+  },
+  "allowed_capability_ids": [
+    "write-run-output",
+    "write-adapter-workspace",
+    "read-subject-visible-input"
+  ],
+  "allowed_credential_handle_ids": [],
+  "created_at": "2026-08-18T18:03:01Z",
+  "expires_at": "2026-08-18T20:03:01Z",
+  "not_scored": true,
+  "not_governor_authorized": true,
+  "unsupported_claims": [
+    "score",
+    "qualification",
+    "governor_authorization",
+    "reveal",
+    "judge_evaluation",
+    "governed_finalization"
+  ],
+  "evidence_authenticity": "unauthenticated_local_record"
+}

@@ -1,0 +1,146 @@
+{
+  "schema_version": "qualiber-reality-lab/oracle-precommit/v1",
+  "campaign": "qualiber-product-scenarios-20260818",
+  "revision": 1,
+  "note": "Stage 1. Written before any Qualiber execution against campaign inputs. It binds no adapter artifact, no manifest and no observation id, because none of those exists yet.",
+  "reviewed_plan": {
+    "file": "plan/qualiber-product-external-scenario-test-plan.md",
+    "revision": "4.3",
+    "reviewed_plan_sha256": "sha256:b1105dc7209cd8fcd32f10064ced6a4634c44b50faa582491376a37c9d019092",
+    "plan_application_note_sha256": "sha256:dadac9817ce2e05674aa39de1c5de8c9d2e132e6fc54997bf7fe94b11eefe2b5"
+  },
+  "qualiber_baseline": {
+    "repository": "https://github.com/karkuak/qualiber.git",
+    "branch": "preprod",
+    "head": "d3ebf37fc2cd5741c25eac22eaa20777153730ce",
+    "tree": "0d2a8c4de0196972ef1ed8844b3746a4cfa5df3a",
+    "validation_adapter_integration_commit": "a4c6e2b5a7164ae52af8d855bb256dd927b26867",
+    "validation_adapter_integration_tree": "99fe6f518fcb03802dc1c5d5f8dfe1dea8eb108d",
+    "note": "the merged checkout this campaign exercises. No feasibility spike was run; the plan's step-2 spike de-risked an unbuilt adapter and the adapter is merged."
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QLB-EXT-001",
+      "capture_stimulus_file": "stimulus-001.json",
+      "capture_stimulus_sha256": "sha256:78210e2e912c635de91f91b18c1de7acfa386c324b9b3c69f111ab962485d7d4",
+      "capture_stimulus_bytes": 773,
+      "contract_stimulus_file": "C-VALID.json",
+      "contract_stimulus_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:4084a5b1693664c734bf1beca6121c990a7eac54287c12637800da74594d7911",
+      "expectation_bytes": 422,
+      "definition": "three declared events in contract order with numeric numberOfItems; the tool must stay quiet"
+    },
+    {
+      "scenario_id": "QLB-EXT-002",
+      "capture_stimulus_file": "stimulus-002.json",
+      "capture_stimulus_sha256": "sha256:f7891699d3b24f609c3b11be98f2472497ae9f1e83168bc4cbe0416813714321",
+      "capture_stimulus_bytes": 551,
+      "contract_stimulus_file": "C-VALID.json",
+      "contract_stimulus_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:b9819905f51fa2bccc8714d71c5f5ca107eab0523ed62c87489663dbd849b131",
+      "expectation_bytes": 482,
+      "definition": "001's first two requests byte-identical with quote_requested_zero omitted; one missing_required_event on the absent event"
+    },
+    {
+      "scenario_id": "QLB-EXT-003",
+      "capture_stimulus_file": "stimulus-003.json",
+      "capture_stimulus_sha256": "sha256:054756605c6e21581b7cdf8c9561460bbe5e3ca9b6b8f73a38164ae0fde088f0",
+      "capture_stimulus_bytes": 773,
+      "contract_stimulus_file": "C-VALID.json",
+      "contract_stimulus_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:caa46aab6c9a47039a40d994546e7235b78f39dd258f2be0cfe43816b313a3a2",
+      "expectation_bytes": 472,
+      "definition": "001's three bodies with positions 1 and 2 swapped (three, one, zero); one wrong_order on quote_requested_three, the only event preceding its required predecessor"
+    },
+    {
+      "scenario_id": "QLB-EXT-004",
+      "capture_stimulus_file": "stimulus-004.json",
+      "capture_stimulus_sha256": "sha256:d080d77479c5fec02a02cdecc7b280e6ba466e582d41637973b77496f4e69f3d",
+      "capture_stimulus_bytes": 668,
+      "contract_stimulus_file": "C-VALID.json",
+      "contract_stimulus_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:36c6455780e0941f7bcc23dd1eb29cc6a6ed25d90c92e2cb58ebcacd4d7e721f",
+      "expectation_bytes": 529,
+      "definition": "three valid-JSON bodies with no event key, so no raw event resolves and health degrades; inconclusive with one no_telemetry_observed, never clean"
+    },
+    {
+      "scenario_id": "QLB-EXT-005",
+      "capture_stimulus_file": "stimulus-001.json",
+      "capture_stimulus_sha256": "sha256:78210e2e912c635de91f91b18c1de7acfa386c324b9b3c69f111ab962485d7d4",
+      "capture_stimulus_bytes": 773,
+      "contract_stimulus_file": "C-INVALID.json",
+      "contract_stimulus_sha256": "sha256:a3d2ed6428f4453395440a0851b1617dc6e0b4ab71f7cfaf5ddb38015d16eb96",
+      "contract_stimulus_bytes": 1087,
+      "expectation_sha256": "sha256:86cb2f9f3f5f3f9a20840a21186b18b4c5d50b698bb3901bc7296437964290e9",
+      "expectation_bytes": 709,
+      "definition": "001's capture bytes unchanged against a contract missing the required expected_path field; the product must refuse rather than evaluate"
+    }
+  ],
+  "tooling": {
+    "compare_scenario_mjs_sha256": "sha256:89e92a0324b123e57c4df3169609b9759da5cf9bfb30b6bd5a5e71cea1a00958",
+    "oracle_absence_scan_mjs_sha256": "sha256:5a17321bda0e53cfa10915f2e37f0af899dd130abacd8fcd8cf0652b00adde73",
+    "compare_scenario_test_mjs_sha256": "sha256:ecccd5a9b99c157b4153d7666ab8445ae222bae0d774b948fbab8272fbcefcdb",
+    "tooling_test_result_sha256": "sha256:27dcb8cfb3ae8429a79a65cf49c9923944c22742a439af75bcd65ca874940e20"
+  },
+  "campaign_local_verification_runner": {
+    "file": "campaign/run-offline-verification.mjs",
+    "sha256": "sha256:9ff27ced456616c2f5946b2e4decae01423db6def2a565b41c91c1eee37c597b",
+    "why_outside_the_tooling_block": "The plan's `tooling` block names exactly three scripts and this is a fourth. It is bound here rather than added to that block so the block still means what the plan says it means. It runs the Lab's own verifyTrustedLocalObservationRecord from @erl2/core, which is neither of the comparator's two permitted imports and is not one of the adapter's three provisioned peers, so it cannot be reached through the comparator's dependency anchor. It adds no assurance machinery and computes no verdict."
+  },
+  "negative_controls": [
+    {
+      "control_id": "NC-1",
+      "targets_scenario": "QLB-EXT-003",
+      "counterfactual_expectation_sha256": "sha256:cdbef04e9c1c65a80827cf253aa01b5ae47e5f06815878e73de234f92f103849",
+      "definition": "003's expectation with expected_run_status set to clean and nothing else changed; comparator NC-1 mode must return disagree / product_disagreement",
+      "required_outcome": "disagree / product_disagreement"
+    },
+    {
+      "control_id": "NC-1b",
+      "targets_scenario": "QLB-EXT-003",
+      "counterfactual_expectation_sha256": null,
+      "definition": "003's expected.json edited in place after the precommit bound its digest; the comparator must refuse before any comparison",
+      "required_outcome": "unavailable / lab_harness_failure"
+    },
+    {
+      "control_id": "NC-2",
+      "targets_scenario": "QLB-EXT-001",
+      "counterfactual_expectation_sha256": null,
+      "definition": "001's run-result.json deleted from a disposable copy; no fallback path exists",
+      "required_outcome": "unavailable; clean must never appear as an observed value"
+    },
+    {
+      "control_id": "NC-3",
+      "targets_scenario": "QLB-EXT-002",
+      "counterfactual_expectation_sha256": null,
+      "definition": "002's artifacts unmodified; exit 0, a product violation and comparator agreement must hold simultaneously",
+      "required_outcome": "recorded_exit_code 0 AND run_status rule_violation_detected AND verdict agree"
+    },
+    {
+      "control_id": "NC-4a",
+      "targets_scenario": "QLB-EXT-002 / QLB-EXT-003",
+      "counterfactual_expectation_sha256": null,
+      "definition": "the two scenarios' product-out/ subtrees exchanged, .frozen sidecars included",
+      "required_outcome": "both unavailable / lab_harness_failure"
+    },
+    {
+      "control_id": "NC-4b",
+      "targets_scenario": "QLB-EXT-002 / QLB-EXT-003",
+      "counterfactual_expectation_sha256": null,
+      "definition": "the two scenarios' entire qualiber/ subtrees exchanged, including run-summary.json and stimulus-identity.json",
+      "required_outcome": "both unavailable / lab_harness_failure"
+    },
+    {
+      "control_id": "NC-5",
+      "targets_scenario": "QLB-EXT-001",
+      "counterfactual_expectation_sha256": null,
+      "definition": "one byte flipped in a retained input stimulus in a disposable copy",
+      "required_outcome": "offline verification or binding refuses; the comparison is never agree"
+    }
+  ],
+  "amendments": []
+}

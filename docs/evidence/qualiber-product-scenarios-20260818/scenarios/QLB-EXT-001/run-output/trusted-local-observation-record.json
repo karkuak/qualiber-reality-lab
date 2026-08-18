@@ -1,0 +1,544 @@
+{
+  "schema_version": "trusted-local-observation-record/v1",
+  "observation_id": "01a0160a-7cbe-7677-a28e-812592f97d26",
+  "subject_execution_mode": "local_observation",
+  "protocol_version": "subject-adapter/v2",
+  "trust_mode": "trusted_local_code",
+  "tier": "development",
+  "plan_hash": "sha256:803fb0b043784c8d53e1365c41d82cf2da5ec304e28dbc3accda9f5b1bd7095c",
+  "plan_file_hash": "sha256:c940a49dfa835a758514a6bfd01f13f09fffb682c1b4652b07e39dcd7d84a68b",
+  "adapter_id": "qualiber-erl2-validation-subject",
+  "adapter_version": "0.1.0",
+  "adapter_artifact_hash": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+  "adapter_manifest_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+  "adapter_manifest_file_hash": "sha256:91e830d253e23194ecb9bbd0a206c20699b610333821c25074a6dc6345c9e85a",
+  "trusted_local_declaration": {
+    "schema_version": "trusted-local-adapter-declaration/v1",
+    "declaration_id": "qualiber-ext-qlb-ext-001",
+    "adapter_id": "qualiber-erl2-validation-subject",
+    "adapter_owner": "qualiber",
+    "protocol_version": "subject-adapter/v2",
+    "subject_execution_mode": "local_observation",
+    "trust_mode": "trusted_local_code",
+    "tier": "development",
+    "adapter_artifact_hash": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+    "adapter_manifest_file_hash": "sha256:91e830d253e23194ecb9bbd0a206c20699b610333821c25074a6dc6345c9e85a",
+    "adapter_manifest_core_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+    "adapter_source": {
+      "repository_label": "qualiber",
+      "commit": "d3ebf37fc2cd5741c25eac22eaa20777153730ce",
+      "tree": "0d2a8c4de0196972ef1ed8844b3746a4cfa5df3a"
+    },
+    "operator_acknowledgement": {
+      "acknowledgement_token": "I ACCEPT THAT THESE EXACT ADAPTER BYTES EXECUTE WITH MY LOCAL USER PERMISSIONS, ARE NOT SANDBOXED AND ARE NOT INDEPENDENTLY CERTIFIED, AND THAT THE RESULTS ARE DEVELOPMENT-ONLY, UNSCORED AND UNAUTHENTICATED",
+      "acknowledged_artifact_hash": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+      "acknowledged_manifest_core_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+      "adapter_code_is_not_confined": true,
+      "adapter_runs_with_operator_user_permissions": true,
+      "adapter_is_not_independently_certified": true,
+      "results_are_development_only": true,
+      "results_are_unscored": true,
+      "results_are_unauthenticated": true,
+      "acknowledged_by": "repository owner (karthik), qualiber-reality-lab prospective Wave 1 campaign 2026-08-18",
+      "acknowledged_at": "2026-08-18T18:03:01Z"
+    },
+    "independent_certifier": null,
+    "certifier_is_adapter_owner": "not_applicable",
+    "owner_test_evidence": null,
+    "excluded_claims": [
+      "score",
+      "qualification",
+      "governor_authorization",
+      "reveal",
+      "judge_evaluation",
+      "governed_finalization"
+    ],
+    "not_scored": true,
+    "not_governor_authorized": true,
+    "not_independently_certified": true,
+    "not_confined": true,
+    "not_production_ready": true,
+    "evidence_authenticity": "owner_asserted_unauthenticated",
+    "created_at": "2026-08-18T18:03:01Z",
+    "core_hash": "sha256:b3a6ee12627ab1d6c2301c88c513f03a763fced7e764f91acd2701af72ebd3b7"
+  },
+  "trusted_local_declaration_hash": "sha256:b3a6ee12627ab1d6c2301c88c513f03a763fced7e764f91acd2701af72ebd3b7",
+  "trusted_local_declaration_file_hash": "sha256:9fed2a9d978d0a0052225eeb9c785638e03ac0a502ea3cd7a9951fe2162ba887",
+  "admission_logical_path": "trusted-local-adapters/504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+  "host_sandbox_profile": "local-process",
+  "host_control_report": [
+    {
+      "control_id": "separate-process",
+      "state": "enforced"
+    },
+    {
+      "control_id": "process-tree-termination",
+      "state": "enforced"
+    },
+    {
+      "control_id": "wall-clock-deadline",
+      "state": "enforced"
+    },
+    {
+      "control_id": "bounded-request-bytes",
+      "state": "enforced"
+    },
+    {
+      "control_id": "bounded-response-bytes",
+      "state": "enforced"
+    },
+    {
+      "control_id": "writable-output-only",
+      "state": "enforced"
+    },
+    {
+      "control_id": "environment-variable-allowlist",
+      "state": "enforced"
+    },
+    {
+      "control_id": "bounded-diagnostics",
+      "state": "enforced"
+    },
+    {
+      "control_id": "input-mount-tamper-detection",
+      "state": "enforced"
+    },
+    {
+      "control_id": "egress-policy-adjudication",
+      "state": "enforced"
+    },
+    {
+      "control_id": "docker-socket-capability-denied",
+      "state": "enforced"
+    },
+    {
+      "control_id": "privileged-capability-denied",
+      "state": "enforced"
+    },
+    {
+      "control_id": "read-only-input-mounts",
+      "state": "unsupported_on_this_host",
+      "reason_code": "NO_CONTAINER_RUNTIME_MOUNT_ENFORCEMENT"
+    },
+    {
+      "control_id": "no-ambient-home-directory",
+      "state": "unsupported_on_this_host",
+      "reason_code": "PROCESS_PROFILE_SHARES_USER_FILESYSTEM"
+    },
+    {
+      "control_id": "no-docker-socket",
+      "state": "unsupported_on_this_host",
+      "reason_code": "PROCESS_PROFILE_SHARES_HOST_SOCKETS"
+    },
+    {
+      "control_id": "deny-by-default-egress",
+      "state": "unsupported_on_this_host",
+      "reason_code": "PROCESS_PROFILE_CANNOT_BLOCK_SOCKETS"
+    },
+    {
+      "control_id": "numeric-non-root-user",
+      "state": "unsupported_on_this_host",
+      "reason_code": "NO_CONTAINER_RUNTIME_USER_MAPPING"
+    },
+    {
+      "control_id": "read-only-root-filesystem",
+      "state": "unsupported_on_this_host",
+      "reason_code": "NO_CONTAINER_RUNTIME"
+    },
+    {
+      "control_id": "capability-drop-all",
+      "state": "unsupported_on_this_host",
+      "reason_code": "NO_CONTAINER_RUNTIME"
+    },
+    {
+      "control_id": "no-new-privileges",
+      "state": "unsupported_on_this_host",
+      "reason_code": "NO_CONTAINER_RUNTIME"
+    },
+    {
+      "control_id": "seccomp-default-profile",
+      "state": "unsupported_on_this_host",
+      "reason_code": "NO_CONTAINER_RUNTIME"
+    },
+    {
+      "control_id": "pid-limit",
+      "state": "unsupported_on_this_host",
+      "reason_code": "NO_CONTAINER_RUNTIME"
+    },
+    {
+      "control_id": "memory-limit",
+      "state": "unsupported_on_this_host",
+      "reason_code": "NO_CONTAINER_RUNTIME"
+    },
+    {
+      "control_id": "cpu-limit",
+      "state": "unsupported_on_this_host",
+      "reason_code": "NO_CONTAINER_RUNTIME"
+    },
+    {
+      "control_id": "network-namespace-isolation",
+      "state": "unsupported_on_this_host",
+      "reason_code": "NO_CONTAINER_RUNTIME"
+    }
+  ],
+  "operation_outcomes": [
+    {
+      "sequence": 0,
+      "operation_id": "interact-validate-stimulus",
+      "operation": "interact",
+      "state": "completed",
+      "request_hash": "sha256:2c458202db68506ffbf9edc6dd3d9e10a26fc461550fa784d77dc10c87149820",
+      "operation_record_hash": "sha256:019d5627b9474bb10306b6ec8f366ac63ec1aa8f245593b624d3f4160b1e0d15",
+      "response_envelope_hash": "sha256:dc9be0ca0c3b67df3a603ae61dcc12f13c0465d4566d5b53b9958e5377dc0b15",
+      "response_status": "supported"
+    },
+    {
+      "sequence": 1,
+      "operation_id": "report-residue-final",
+      "operation": "report-residue",
+      "state": "completed",
+      "request_hash": "sha256:eda0eacbf3f6eda4f3377665ad5dfcdabffa07a221a4c7596973dccd0d7faae1",
+      "operation_record_hash": "sha256:47d8eaeae6710d563be6b72238df96e826ccc322e4fbe730ff65ae40743dc381",
+      "response_envelope_hash": "sha256:474bd5323717998678d10a980a44216136bf084383d795cd0766475d049c6ad0",
+      "response_status": "supported",
+      "predecessor_operation_id": "interact-validate-stimulus",
+      "predecessor_operation_record_hash": "sha256:019d5627b9474bb10306b6ec8f366ac63ec1aa8f245593b624d3f4160b1e0d15"
+    }
+  ],
+  "operation_records": [
+    {
+      "schema_version": "local-observation-operation-record/v1",
+      "state": "declared",
+      "observation_id": "01a0160a-7cbe-7677-a28e-812592f97d26",
+      "plan_hash": "sha256:803fb0b043784c8d53e1365c41d82cf2da5ec304e28dbc3accda9f5b1bd7095c",
+      "operation_id": "interact-validate-stimulus",
+      "operation": "interact",
+      "sequence": 0,
+      "request_hash": "sha256:2c458202db68506ffbf9edc6dd3d9e10a26fc461550fa784d77dc10c87149820",
+      "idempotency_key": "280ed6536740705ee79aca34bedf62e803f52b0a5719abde07c8ff11db0a0db1",
+      "cleanup_eligible": false,
+      "declared_at": "2026-08-18T18:03:01Z",
+      "evidence_authenticity": "unauthenticated_local_record",
+      "core_hash": "sha256:f2c8016dbfdffdf34b85183c357715f44e5bcf7067775ce726e9d65e8bd80616"
+    },
+    {
+      "schema_version": "local-observation-operation-record/v1",
+      "state": "dispatched",
+      "observation_id": "01a0160a-7cbe-7677-a28e-812592f97d26",
+      "plan_hash": "sha256:803fb0b043784c8d53e1365c41d82cf2da5ec304e28dbc3accda9f5b1bd7095c",
+      "operation_id": "interact-validate-stimulus",
+      "operation": "interact",
+      "sequence": 0,
+      "request_hash": "sha256:2c458202db68506ffbf9edc6dd3d9e10a26fc461550fa784d77dc10c87149820",
+      "declared_record_hash": "sha256:f2c8016dbfdffdf34b85183c357715f44e5bcf7067775ce726e9d65e8bd80616",
+      "cleanup_eligible": false,
+      "dispatched_at": "2026-08-18T18:03:01Z",
+      "evidence_authenticity": "unauthenticated_local_record",
+      "core_hash": "sha256:6443d8d5e508062d039d5865d171a84e31fbfc556145b2a34af9c26d330b556d"
+    },
+    {
+      "schema_version": "local-observation-operation-record/v1",
+      "state": "completed",
+      "observation_id": "01a0160a-7cbe-7677-a28e-812592f97d26",
+      "plan_hash": "sha256:803fb0b043784c8d53e1365c41d82cf2da5ec304e28dbc3accda9f5b1bd7095c",
+      "operation_id": "interact-validate-stimulus",
+      "operation": "interact",
+      "sequence": 0,
+      "request_hash": "sha256:2c458202db68506ffbf9edc6dd3d9e10a26fc461550fa784d77dc10c87149820",
+      "dispatched_record_hash": "sha256:6443d8d5e508062d039d5865d171a84e31fbfc556145b2a34af9c26d330b556d",
+      "response_envelope_hash": "sha256:dc9be0ca0c3b67df3a603ae61dcc12f13c0465d4566d5b53b9958e5377dc0b15",
+      "sandbox_manifest_hash": "sha256:0cb783bc1dc913fe76c8385b52fbf7580ed8f75a96ed1cee455f1f81d0ef898f",
+      "sandbox_result_hash": "sha256:93b0e1660b79643e2e1fe3210fa444334a5979c8450d9ec8a243b4899c11779f",
+      "diagnostics_manifest_hash": "sha256:a4dfd11e04d871f1493106c2d6a673edb9d1588ecb886dcecf533078a85c91bb",
+      "mutation_receipt_hashes": [],
+      "compensation_receipt_hashes": [],
+      "retained_input_refs": [
+        {
+          "input_id": "capture-stimulus-input",
+          "role": "capture-stimulus",
+          "provenance_mode": "host_provisioned",
+          "artifact": {
+            "path": "observation-inputs/capture-stimulus/stimulus.json",
+            "media_type": "application/json",
+            "byte_length": 773,
+            "file_sha256": "sha256:78210e2e912c635de91f91b18c1de7acfa386c324b9b3c69f111ab962485d7d4",
+            "classification": "INTERNAL"
+          }
+        },
+        {
+          "input_id": "contract-stimulus-input",
+          "role": "contract-stimulus",
+          "provenance_mode": "host_provisioned",
+          "artifact": {
+            "path": "observation-inputs/contract-stimulus/contract.json",
+            "media_type": "application/json",
+            "byte_length": 1180,
+            "file_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+            "classification": "INTERNAL"
+          }
+        }
+      ],
+      "retained_output_refs": [
+        {
+          "path": "local-observation-output/interact-validate-stimulus/qualiber/capture.json",
+          "media_type": "application/json",
+          "byte_length": 6708,
+          "file_sha256": "sha256:c5fab27421597943d4479fd3cca1eca95a56ac3bda8eac39f326063f7576c34d",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/evidence-pack.json",
+          "media_type": "application/json",
+          "byte_length": 1402,
+          "file_sha256": "sha256:e5edfa45ee43587b6b5ebf4c6440e12e8ffaad9684fb5cbb4649791a532af6fd",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json",
+          "media_type": "application/json",
+          "byte_length": 4753,
+          "file_sha256": "sha256:c309a2a6fff201ee7f766ced7d08e37d090c58e50e96673e50a15c87d8ae4115",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/report.junit.xml",
+          "media_type": "text/plain",
+          "byte_length": 268,
+          "file_sha256": "sha256:0623bccf2eec055d923c898962fa89f503c167555948922b3f80bf3895317b1e",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/report.md",
+          "media_type": "text/plain",
+          "byte_length": 342,
+          "file_sha256": "sha256:0fadf97318508bcc9c0d3fe598090abe8b7cdd1f04f669e961602cead48f69c7",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/run-result.json",
+          "media_type": "application/json",
+          "byte_length": 286,
+          "file_sha256": "sha256:43b4b2cb26cfa5c51b1c738439b407e2a784872b7f5315c78b92da726cde6f4c",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.decision.local-1.0-msyz0n5g-749e15f1.2c66a695c495.snap.json",
+          "media_type": "application/json",
+          "byte_length": 1675,
+          "file_sha256": "sha256:c615573430f61fa89b39cabda581b8218c8948d90df44e07859747e33ae42b74",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.eligibility.json",
+          "media_type": "application/json",
+          "byte_length": 824,
+          "file_sha256": "sha256:ac74419c53e685bacc44b65abd6df2f31ec0032f81fcf7dc66888069b4e0a8dd",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/validation-evidence-pack.json",
+          "media_type": "application/json",
+          "byte_length": 2379,
+          "file_sha256": "sha256:3ac81b68e85b247445ff07309008afb930da5a9a4f43a0f587db3a48f639bc05",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validate-stimulus/qualiber/run-summary.json",
+          "media_type": "application/json",
+          "byte_length": 2021,
+          "file_sha256": "sha256:a07b920724ef143fa926f4ad8015b4131e2a7fa2c0950a8e3272b866ca39058f",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validate-stimulus/qualiber/stimulus-identity.json",
+          "media_type": "application/json",
+          "byte_length": 586,
+          "file_sha256": "sha256:37ba3e0a1044d4c55b1a0bfed68d0a24daf42cf778692835c98a6a0a8b8315cb",
+          "classification": "INTERNAL"
+        }
+      ],
+      "response_status": "supported",
+      "cleanup_eligible": false,
+      "started_at": "2026-08-18T18:03:01Z",
+      "ended_at": "2026-08-18T18:03:02Z",
+      "evidence_authenticity": "unauthenticated_local_record",
+      "core_hash": "sha256:019d5627b9474bb10306b6ec8f366ac63ec1aa8f245593b624d3f4160b1e0d15"
+    },
+    {
+      "schema_version": "local-observation-operation-record/v1",
+      "state": "declared",
+      "observation_id": "01a0160a-7cbe-7677-a28e-812592f97d26",
+      "plan_hash": "sha256:803fb0b043784c8d53e1365c41d82cf2da5ec304e28dbc3accda9f5b1bd7095c",
+      "operation_id": "report-residue-final",
+      "operation": "report-residue",
+      "sequence": 1,
+      "request_hash": "sha256:eda0eacbf3f6eda4f3377665ad5dfcdabffa07a221a4c7596973dccd0d7faae1",
+      "prior_record_hash": "sha256:019d5627b9474bb10306b6ec8f366ac63ec1aa8f245593b624d3f4160b1e0d15",
+      "idempotency_key": "b12bf38bb68d825218ff7d5a9e5002b37e31df10cb01fcb4960eebb6ac51085b",
+      "cleanup_eligible": true,
+      "declared_at": "2026-08-18T18:03:02Z",
+      "evidence_authenticity": "unauthenticated_local_record",
+      "core_hash": "sha256:d47c15a41e43075f0cb7895a5b342f3f59979289c6fa827374f21e8a2168d276"
+    },
+    {
+      "schema_version": "local-observation-operation-record/v1",
+      "state": "dispatched",
+      "observation_id": "01a0160a-7cbe-7677-a28e-812592f97d26",
+      "plan_hash": "sha256:803fb0b043784c8d53e1365c41d82cf2da5ec304e28dbc3accda9f5b1bd7095c",
+      "operation_id": "report-residue-final",
+      "operation": "report-residue",
+      "sequence": 1,
+      "request_hash": "sha256:eda0eacbf3f6eda4f3377665ad5dfcdabffa07a221a4c7596973dccd0d7faae1",
+      "declared_record_hash": "sha256:d47c15a41e43075f0cb7895a5b342f3f59979289c6fa827374f21e8a2168d276",
+      "cleanup_eligible": true,
+      "dispatched_at": "2026-08-18T18:03:02Z",
+      "evidence_authenticity": "unauthenticated_local_record",
+      "core_hash": "sha256:4dd5a6b8d6f4ea962b8edb83c55d7d1b7a8465254749b39bc6d349eb9bd89f70"
+    },
+    {
+      "schema_version": "local-observation-operation-record/v1",
+      "state": "completed",
+      "observation_id": "01a0160a-7cbe-7677-a28e-812592f97d26",
+      "plan_hash": "sha256:803fb0b043784c8d53e1365c41d82cf2da5ec304e28dbc3accda9f5b1bd7095c",
+      "operation_id": "report-residue-final",
+      "operation": "report-residue",
+      "sequence": 1,
+      "request_hash": "sha256:eda0eacbf3f6eda4f3377665ad5dfcdabffa07a221a4c7596973dccd0d7faae1",
+      "dispatched_record_hash": "sha256:4dd5a6b8d6f4ea962b8edb83c55d7d1b7a8465254749b39bc6d349eb9bd89f70",
+      "response_envelope_hash": "sha256:474bd5323717998678d10a980a44216136bf084383d795cd0766475d049c6ad0",
+      "sandbox_manifest_hash": "sha256:566ecaff2f0459c3c2baaacf168963b0c24b3da16ac6a81c654e2860edbf2a92",
+      "sandbox_result_hash": "sha256:c4a5d64d00de5d561ec4d74c432424aa9bc5e4af77e3bf3bd581247d4e2c9325",
+      "diagnostics_manifest_hash": "sha256:05a5eff8a6a17b6722423fde697648f4b8c63e731facb929832c1e6586e0a69d",
+      "mutation_receipt_hashes": [],
+      "compensation_receipt_hashes": [],
+      "retained_input_refs": [
+        {
+          "input_id": "capture-stimulus-input",
+          "role": "capture-stimulus",
+          "provenance_mode": "host_provisioned",
+          "artifact": {
+            "path": "observation-inputs/capture-stimulus/stimulus.json",
+            "media_type": "application/json",
+            "byte_length": 773,
+            "file_sha256": "sha256:78210e2e912c635de91f91b18c1de7acfa386c324b9b3c69f111ab962485d7d4",
+            "classification": "INTERNAL"
+          }
+        },
+        {
+          "input_id": "contract-stimulus-input",
+          "role": "contract-stimulus",
+          "provenance_mode": "host_provisioned",
+          "artifact": {
+            "path": "observation-inputs/contract-stimulus/contract.json",
+            "media_type": "application/json",
+            "byte_length": 1180,
+            "file_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+            "classification": "INTERNAL"
+          }
+        }
+      ],
+      "retained_output_refs": [],
+      "response_status": "supported",
+      "residue_observation": {
+        "checkpoint": "final",
+        "status": "clean",
+        "residual_resource_count": 0,
+        "residual_path_count": 0
+      },
+      "cleanup_eligible": true,
+      "started_at": "2026-08-18T18:03:02Z",
+      "ended_at": "2026-08-18T18:03:02Z",
+      "evidence_authenticity": "unauthenticated_local_record",
+      "core_hash": "sha256:47d8eaeae6710d563be6b72238df96e826ccc322e4fbe730ff65ae40743dc381"
+    }
+  ],
+  "residue_observations": [
+    {
+      "checkpoint": "final",
+      "status": "clean",
+      "residual_resource_count": 0,
+      "residual_path_count": 0
+    }
+  ],
+  "result": {
+    "schema_version": "local-observation-result/v1",
+    "observation_id": "01a0160a-7cbe-7677-a28e-812592f97d26",
+    "plan_hash": "sha256:803fb0b043784c8d53e1365c41d82cf2da5ec304e28dbc3accda9f5b1bd7095c",
+    "protocol_version": "subject-adapter/v2",
+    "adapter_id": "qualiber-erl2-validation-subject",
+    "adapter_version": "0.1.0",
+    "adapter_manifest_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+    "trusted_local_declaration_hash": "sha256:b3a6ee12627ab1d6c2301c88c513f03a763fced7e764f91acd2701af72ebd3b7",
+    "trust_mode": "trusted_local_code",
+    "not_independently_certified": true,
+    "not_confined": true,
+    "adapter_artifact_hash": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+    "operation_record_hashes": [
+      "sha256:f2c8016dbfdffdf34b85183c357715f44e5bcf7067775ce726e9d65e8bd80616",
+      "sha256:6443d8d5e508062d039d5865d171a84e31fbfc556145b2a34af9c26d330b556d",
+      "sha256:019d5627b9474bb10306b6ec8f366ac63ec1aa8f245593b624d3f4160b1e0d15",
+      "sha256:d47c15a41e43075f0cb7895a5b342f3f59979289c6fa827374f21e8a2168d276",
+      "sha256:4dd5a6b8d6f4ea962b8edb83c55d7d1b7a8465254749b39bc6d349eb9bd89f70",
+      "sha256:47d8eaeae6710d563be6b72238df96e826ccc322e4fbe730ff65ae40743dc381"
+    ],
+    "retained_input_refs": [],
+    "retained_output_refs": [],
+    "retained_evidence_refs": [
+      "sha256:f2c8016dbfdffdf34b85183c357715f44e5bcf7067775ce726e9d65e8bd80616",
+      "sha256:6443d8d5e508062d039d5865d171a84e31fbfc556145b2a34af9c26d330b556d",
+      "sha256:019d5627b9474bb10306b6ec8f366ac63ec1aa8f245593b624d3f4160b1e0d15",
+      "sha256:d47c15a41e43075f0cb7895a5b342f3f59979289c6fa827374f21e8a2168d276",
+      "sha256:4dd5a6b8d6f4ea962b8edb83c55d7d1b7a8465254749b39bc6d349eb9bd89f70",
+      "sha256:47d8eaeae6710d563be6b72238df96e826ccc322e4fbe730ff65ae40743dc381"
+    ],
+    "structural_validation": [],
+    "cleanup": {
+      "status": "cleanup_complete",
+      "stop": "not_applicable",
+      "compensation": "not_applicable",
+      "uninstall": "not_applicable",
+      "residue": "observed_clean",
+      "reason_codes": []
+    },
+    "status": "observed_complete",
+    "started_at": "2026-08-18T18:03:01Z",
+    "ended_at": "2026-08-18T18:03:02Z",
+    "not_scored": true,
+    "not_governor_authorized": true,
+    "unsupported_claims": [
+      "score",
+      "qualification",
+      "governor_authorization",
+      "reveal",
+      "judge_evaluation",
+      "governed_finalization"
+    ],
+    "evidence_authenticity": "unauthenticated_local_record",
+    "core_hash": "sha256:b6b92f8bc49319b73e17589cb45bd16d058aeaa4fd15aae4fb9acd43714230be"
+  },
+  "cleanup": {
+    "status": "cleanup_complete",
+    "stop": "not_applicable",
+    "compensation": "not_applicable",
+    "uninstall": "not_applicable",
+    "residue": "observed_clean",
+    "reason_codes": []
+  },
+  "terminal_status": "observed_complete",
+  "independent_certification": "absent",
+  "confinement": "absent",
+  "not_scored": true,
+  "not_governor_authorized": true,
+  "not_authenticated": true,
+  "not_production_ready": true,
+  "evidence_authenticity": "unauthenticated_local_record",
+  "excluded_claims": [
+    "score",
+    "qualification",
+    "governor_authorization",
+    "reveal",
+    "judge_evaluation",
+    "governed_finalization"
+  ],
+  "core_hash": "sha256:16ba128c48a30085c06bb47d757e489eec51cffd9493e964e5a2c5d4f3ed8d44"
+}

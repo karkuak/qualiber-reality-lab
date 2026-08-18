@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "test_run_capture_v0.1",
+  "testRunId": "01a0160b-062f-70f5-a5d7-8c451cc83178",
+  "testId": "adapters/erl2-subject::erl2_ext_journey",
+  "journeyId": "erl2_ext_journey",
+  "ciRunId": "01a0160b-062f-70f5-a5d7-8c451cc83178",
+  "events": [],
+  "markers": [
+    {
+      "kind": "start",
+      "ts": 1787076217048,
+      "relTs": 0
+    },
+    {
+      "kind": "step",
+      "stepId": "step-1",
+      "ts": 1787076217048,
+      "relTs": 0
+    },
+    {
+      "kind": "step",
+      "stepId": "step-2",
+      "ts": 1787076217049,
+      "relTs": 1
+    },
+    {
+      "kind": "step",
+      "stepId": "step-3",
+      "ts": 1787076217049,
+      "relTs": 1
+    },
+    {
+      "kind": "end",
+      "ts": 1787076217049,
+      "relTs": 1
+    }
+  ],
+  "summary": {
+    "schemaVersion": "collector_run_summary_v0.1",
+    "health": "degraded",
+    "eventsCaptured": 0,
+    "eventsValidationEligible": 0,
+    "eventsBackground": 0,
+    "eventsLate": 0,
+    "eventsOrphaned": 0,
+    "eventsUnknown": 0,
+    "interceptionErrors": 0,
+    "unsupportedBodyTypesObserved": [
+      "non_json_or_beacon"
+    ],
+    "captureStarted": true,
+    "captureEndedCleanly": true
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "runStatus": "inconclusive",
+  "inconclusiveReason": "collector_unhealthy",
+  "collectorHealth": "degraded",
+  "findingCount": 1,
+  "ciExitCode": 0,
+  "blocking": false,
+  "advisoryCommentEligible": false,
+  "evidencePackGenerated": true,
+  "customerVisibleMessage": "Result inconclusive — collector degraded or no eligible telemetry. Quality metrics have degraded — review eligibility state and consider returning to observe mode."
+}

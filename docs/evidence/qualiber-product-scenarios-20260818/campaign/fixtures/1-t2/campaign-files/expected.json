@@ -1,0 +1,13 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-expectation/v1",
+  "scenario_id": "QLB-EXT-005",
+  "expected_operation_state": "completed",
+  "expected_response_status": "failed",
+  "expected_envelope_error_code": "SUBJECT_PRODUCT_CLI_REFUSED",
+  "expected_envelope_error_owner": "subject",
+  "expected_run_status": "not_run",
+  "expected_not_run_reason": "config_invalid",
+  "expected_diagnostic_names_field": "expected_path",
+  "expected_product_reported": false,
+  "classification": "product_refusal_expected"
+}

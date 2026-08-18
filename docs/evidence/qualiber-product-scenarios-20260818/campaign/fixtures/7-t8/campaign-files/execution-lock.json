@@ -1,0 +1,25 @@
+{
+  "schema_version": "qualiber-reality-lab/execution-lock/v1",
+  "campaign": "fixture",
+  "oracle_precommit_revision": 1,
+  "adapter": {
+    "artifact_sha256": "sha256:6dda3abf803dfeda5d8c139ebb4c31b538aacc1c9793e177f701f903d7be57ec",
+    "manifest_sha256": "sha256:35c53b7986dfb2897e7e2e9cdf56c69a49d2c1bcccaea7c310d60b11b59c9397"
+  },
+  "comparator_dependencies": {
+    "anchor": "adapters/erl2-subject/package.json",
+    "resolved": [
+      {
+        "name": "@erl2/contracts",
+        "version": "0.1.0",
+        "entry_sha256": "sha256:da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c"
+      },
+      {
+        "name": "@erl2/integrity",
+        "version": "0.1.0",
+        "entry_sha256": "sha256:c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13"
+      }
+    ]
+  },
+  "amendments": []
+}

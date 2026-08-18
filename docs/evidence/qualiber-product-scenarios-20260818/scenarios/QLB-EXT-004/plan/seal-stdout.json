@@ -1,0 +1,31 @@
+{
+  "schema_version": "erl2-cli-response/v1",
+  "command": "declare-trusted-local-adapter",
+  "ok": true,
+  "exit_code": 0,
+  "authority_scope": "lab_orchestration_only",
+  "findings": [],
+  "errors": [],
+  "data": {
+    "declaration_path": "/private/tmp/qlb-wave1-prospective-cC4jCP/work/scenarios/QLB-EXT-004/declaration/trusted-local-declaration.json",
+    "declaration_core_hash": "sha256:f1c3048ab4ba13c06ec4fc7f750dfa8372a976af1da743b8501e357d6b6b271e",
+    "declaration_file_hash": "sha256:102bf0e00908fe326fb37e7a45e6b0474725bf2d7bb52eb232900f0446f217cc",
+    "adapter_id": "qualiber-erl2-validation-subject",
+    "adapter_owner": "qualiber",
+    "adapter_artifact_hash": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+    "adapter_manifest_core_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+    "adapter_manifest_file_hash": "sha256:91e830d253e23194ecb9bbd0a206c20699b610333821c25074a6dc6345c9e85a",
+    "trust_mode": "trusted_local_code",
+    "tier": "development",
+    "independent_certifier": null,
+    "confinement": "absent",
+    "sealed_plan_path": "/private/tmp/qlb-wave1-prospective-cC4jCP/work/scenarios/QLB-EXT-004/plan/plan-sealed.json",
+    "sealed_plan_core_hash": "sha256:b720915c37ab248406fcd4ce39c8414d80ea23147ebc293e171e9870abb41d5e",
+    "trust_warning": [
+      "TRUST MODE trusted_local_code: these exact adapter bytes execute as a child process with your own user's permissions.",
+      "The adapter is NOT sandboxed, NOT confined to a workspace, and NOT isolated from your filesystem or network.",
+      "No independent party certified this adapter. There is no certifier, no signature and no review.",
+      "Results are development-only: unscored, unauthenticated, not governor-authorized, and not evidence of production readiness."
+    ]
+  }
+}

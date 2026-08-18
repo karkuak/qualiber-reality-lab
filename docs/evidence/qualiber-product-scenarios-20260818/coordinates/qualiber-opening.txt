@@ -1,0 +1,6 @@
+worktree=qualiber
+head=d3ebf37fc2cd5741c25eac22eaa20777153730ce
+tree=0d2a8c4de0196972ef1ed8844b3746a4cfa5df3a
+branch=HEAD
+porcelain_lines=0
+porcelain_sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

@@ -1,0 +1,4 @@
+worktree=reality-lab (campaign baseline)
+head=3d2655f67ad14c16dd6148e4654cc0fa872cb4a4
+tree=74c633fb5546085de055abb92095442e375a03c4
+porcelain_sha256=5c3ca5662fe9ef05a3e31bafc1ad871bd060dfa3674f98a31255381818398501

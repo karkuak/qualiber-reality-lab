@@ -1,0 +1,83 @@
+{
+  "schema_version": "evidence_pack_v0.1",
+  "rule_id": "erl2_ext_journey",
+  "journey_id": "erl2_ext_journey",
+  "test_id": "adapters/erl2-subject::erl2_ext_journey",
+  "ci_run_id": "01a0160a-ea23-77d5-93fe-2e0133a77dd0",
+  "mode": "observe",
+  "validation_status": "rule_violation_detected",
+  "ci_blocking": false,
+  "collector_health": "healthy",
+  "findings": [
+    {
+      "finding": "wrong_order",
+      "severity": "high",
+      "association_confidence": "high",
+      "association_blocking_eligible": true,
+      "policy_blocking_allowed": false,
+      "severity_source": "fixed",
+      "event": "quote_requested_three",
+      "expected_sequence": [
+        "quote_requested_one",
+        "quote_requested_three",
+        "quote_requested_zero"
+      ],
+      "actual_sequence": [
+        "quote_requested_three",
+        "quote_requested_one",
+        "quote_requested_zero"
+      ],
+      "note": "no occurrence of quote_requested_three appears after quote_requested_one (nearest present predecessor)"
+    }
+  ],
+  "observed": {
+    "modeled": [
+      "quote_requested_three",
+      "quote_requested_one",
+      "quote_requested_zero"
+    ],
+    "knownUnknown": [],
+    "unmodeled": []
+  },
+  "excluded_candidates": {
+    "background": [],
+    "orphaned": [],
+    "late": [],
+    "unknown": []
+  },
+  "declared_constructs": [
+    {
+      "key": "expected_path:quote_requested_one"
+    },
+    {
+      "key": "expected_path:quote_requested_three"
+    },
+    {
+      "key": "expected_path:quote_requested_zero"
+    },
+    {
+      "key": "occurrence_bounds:quote_requested_one"
+    },
+    {
+      "key": "occurrence_bounds:quote_requested_three"
+    },
+    {
+      "key": "occurrence_bounds:quote_requested_zero"
+    },
+    {
+      "key": "ordering:quote_requested_three.after_any"
+    },
+    {
+      "key": "ordering:quote_requested_zero.after_any"
+    },
+    {
+      "key": "required_properties:quote_requested_one"
+    },
+    {
+      "key": "required_properties:quote_requested_three"
+    },
+    {
+      "key": "required_properties:quote_requested_zero"
+    }
+  ]
+}

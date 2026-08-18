@@ -1,0 +1,137 @@
+{
+  "schema_version": "erl2-cli-response/v1",
+  "command": "run-trusted-local-observation",
+  "ok": true,
+  "exit_code": 0,
+  "authority_scope": "lab_orchestration_only",
+  "findings": [],
+  "errors": [],
+  "data": {
+    "observation_id": "01a0160a-7cbe-7677-a28e-812592f97d26",
+    "subject_execution_mode": "local_observation",
+    "protocol_version": "subject-adapter/v2",
+    "trust_mode": "trusted_local_code",
+    "tier": "development",
+    "adapter_id": "qualiber-erl2-validation-subject",
+    "adapter_version": "0.1.0",
+    "adapter_artifact_hash": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+    "adapter_manifest_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+    "trusted_local_declaration_hash": "sha256:b3a6ee12627ab1d6c2301c88c513f03a763fced7e764f91acd2701af72ebd3b7",
+    "admission_authority": "trusted_local_code",
+    "admission_logical_path": "trusted-local-adapters/504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+    "plan_hash": "sha256:803fb0b043784c8d53e1365c41d82cf2da5ec304e28dbc3accda9f5b1bd7095c",
+    "operations": [
+      {
+        "sequence": 0,
+        "operation_id": "interact-validate-stimulus",
+        "operation": "interact",
+        "state": "completed",
+        "request_hash": "sha256:2c458202db68506ffbf9edc6dd3d9e10a26fc461550fa784d77dc10c87149820",
+        "operation_record_hash": "sha256:019d5627b9474bb10306b6ec8f366ac63ec1aa8f245593b624d3f4160b1e0d15",
+        "response_envelope_hash": "sha256:dc9be0ca0c3b67df3a603ae61dcc12f13c0465d4566d5b53b9958e5377dc0b15",
+        "response_status": "supported"
+      },
+      {
+        "sequence": 1,
+        "operation_id": "report-residue-final",
+        "operation": "report-residue",
+        "state": "completed",
+        "request_hash": "sha256:eda0eacbf3f6eda4f3377665ad5dfcdabffa07a221a4c7596973dccd0d7faae1",
+        "operation_record_hash": "sha256:47d8eaeae6710d563be6b72238df96e826ccc322e4fbe730ff65ae40743dc381",
+        "response_envelope_hash": "sha256:474bd5323717998678d10a980a44216136bf084383d795cd0766475d049c6ad0",
+        "response_status": "supported",
+        "predecessor_operation_id": "interact-validate-stimulus",
+        "predecessor_operation_record_hash": "sha256:019d5627b9474bb10306b6ec8f366ac63ec1aa8f245593b624d3f4160b1e0d15"
+      }
+    ],
+    "cleanup": {
+      "status": "cleanup_complete",
+      "stop": "not_applicable",
+      "compensation": "not_applicable",
+      "uninstall": "not_applicable",
+      "residue": "observed_clean",
+      "reason_codes": []
+    },
+    "residue": [
+      {
+        "checkpoint": "final",
+        "status": "clean",
+        "residual_resource_count": 0,
+        "residual_path_count": 0
+      }
+    ],
+    "terminal_status": "observed_complete",
+    "record_path": "/private/tmp/qlb-wave1-prospective-cC4jCP/work/scenarios/QLB-EXT-001/run-output/trusted-local-observation-record.json",
+    "record_file_hash": "sha256:000eb18236ff28aab2cc6b90f6735a806c10e78ed2ca373c403509aebb48997b",
+    "retained_plan_path": "/private/tmp/qlb-wave1-prospective-cC4jCP/work/scenarios/QLB-EXT-001/run-output/observation-plan.json",
+    "retained_input_root": "/private/tmp/qlb-wave1-prospective-cC4jCP/work/scenarios/QLB-EXT-001/run-output/inputs",
+    "retained_inputs": [
+      {
+        "input_id": "capture-stimulus-input",
+        "mount_id": "capture-stimulus",
+        "relative_path": "stimulus.json",
+        "byte_length": 773,
+        "file_sha256": "sha256:78210e2e912c635de91f91b18c1de7acfa386c324b9b3c69f111ab962485d7d4"
+      },
+      {
+        "input_id": "contract-stimulus-input",
+        "mount_id": "contract-stimulus",
+        "relative_path": "contract.json",
+        "byte_length": 1180,
+        "file_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4"
+      }
+    ],
+    "input_mounts": [
+      {
+        "mount_id": "capture-stimulus",
+        "logical_path": "observation-inputs/capture-stimulus",
+        "mode": "read_only",
+        "purpose": "subject-visible-input"
+      },
+      {
+        "mount_id": "contract-stimulus",
+        "logical_path": "observation-inputs/contract-stimulus",
+        "mode": "read_only",
+        "purpose": "subject-visible-input"
+      }
+    ],
+    "offline_verification": {
+      "ok": true,
+      "refusals": []
+    },
+    "independent_certification": "absent",
+    "confinement": "absent",
+    "not_scored": true,
+    "not_governor_authorized": true,
+    "not_authenticated": true,
+    "not_production_ready": true,
+    "evidence_authenticity": "unauthenticated_local_record",
+    "excluded_claims": [
+      "score",
+      "qualification",
+      "governor_authorization",
+      "reveal",
+      "judge_evaluation",
+      "governed_finalization"
+    ],
+    "operator_acknowledgement": {
+      "acknowledgement_token": "I ACCEPT THAT THESE EXACT ADAPTER BYTES EXECUTE WITH MY LOCAL USER PERMISSIONS, ARE NOT SANDBOXED AND ARE NOT INDEPENDENTLY CERTIFIED, AND THAT THE RESULTS ARE DEVELOPMENT-ONLY, UNSCORED AND UNAUTHENTICATED",
+      "acknowledged_artifact_hash": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+      "acknowledged_manifest_core_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+      "adapter_code_is_not_confined": true,
+      "adapter_runs_with_operator_user_permissions": true,
+      "adapter_is_not_independently_certified": true,
+      "results_are_development_only": true,
+      "results_are_unscored": true,
+      "results_are_unauthenticated": true,
+      "acknowledged_by": "repository owner (karthik), qualiber-reality-lab prospective Wave 1 campaign 2026-08-18",
+      "acknowledged_at": "2026-08-18T18:03:01Z"
+    },
+    "trust_warning": [
+      "TRUST MODE trusted_local_code: these exact adapter bytes execute as a child process with your own user's permissions.",
+      "The adapter is NOT sandboxed, NOT confined to a workspace, and NOT isolated from your filesystem or network.",
+      "No independent party certified this adapter. There is no certifier, no signature and no review.",
+      "Results are development-only: unscored, unauthenticated, not governor-authorized, and not evidence of production readiness."
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "qualiber-erl2-validation-run-summary/v1",
+  "run_id": "01a0160b-3f85-7698-b5cc-67cff6bd52f9",
+  "journey_id": "erl2_ext_journey",
+  "request_count": 3,
+  "product_cli": {
+    "command": "telemetrytest validate --contract <mounted contract bytes> --capture <this run's capture> --out <run-scoped dir>",
+    "exit_code": 0,
+    "run_status": "not_run",
+    "completed": false,
+    "refusal_reason": "the tool refused to evaluate this run: runStatus not_run"
+  },
+  "subject_role": "This subject reports what the product emitted and asserts nothing about whether that constitutes a pass. The product's own artifacts are under product-out/.",
+  "artifact_hashes": {
+    "qualiber/capture.json": "sha256:58e4b86eeabfd36865c28e929f01d8d20cf459a5f5bbc1e943e3703cc9312e22",
+    "qualiber/stimulus-identity.json": "sha256:ba4c4bc2d25467f348a8001757d9f3e5c11b3164c33708501b28ff3ce31e4f6d",
+    "qualiber/product-out/run-result.json": "sha256:f238599744326582b16173117f30463d6e1cf2be70d01cb28cfb302b28f063d7"
+  },
+  "telemetry_source": "Qualiber consumed the analytics JSON of the Lab-supplied request bodies. No request was issued, no socket was opened, and no OTLP was read."
+}

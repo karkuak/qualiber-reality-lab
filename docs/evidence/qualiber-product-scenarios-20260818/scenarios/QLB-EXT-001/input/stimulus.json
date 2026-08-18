@@ -1,0 +1,24 @@
+{
+  "schema_version": "erl2-capture-stimulus/v1",
+  "journey_id": "erl2_ext_journey",
+  "requests": [
+    {
+      "sequence": 1,
+      "path_and_query": "/getquote?erl2_step=1",
+      "method": "POST",
+      "body_text": "{\"numberOfItems\":1,\"event\":\"quote_requested_one\",\"properties\":{\"numberOfItems\":1}}"
+    },
+    {
+      "sequence": 2,
+      "path_and_query": "/getquote?erl2_step=2",
+      "method": "POST",
+      "body_text": "{\"numberOfItems\":3,\"event\":\"quote_requested_three\",\"properties\":{\"numberOfItems\":3}}"
+    },
+    {
+      "sequence": 3,
+      "path_and_query": "/getquote?erl2_step=3",
+      "method": "POST",
+      "body_text": "{\"numberOfItems\":0,\"event\":\"quote_requested_zero\",\"properties\":{\"numberOfItems\":0}}"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": "trusted-local-adapter-declaration/v1",
+  "declaration_id": "qualiber-ext-qlb-ext-004",
+  "adapter_id": "qualiber-erl2-validation-subject",
+  "adapter_owner": "qualiber",
+  "protocol_version": "subject-adapter/v2",
+  "subject_execution_mode": "local_observation",
+  "trust_mode": "trusted_local_code",
+  "tier": "development",
+  "adapter_artifact_hash": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+  "adapter_manifest_file_hash": "sha256:91e830d253e23194ecb9bbd0a206c20699b610333821c25074a6dc6345c9e85a",
+  "adapter_manifest_core_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+  "adapter_source": {
+    "repository_label": "qualiber",
+    "commit": "d3ebf37fc2cd5741c25eac22eaa20777153730ce",
+    "tree": "0d2a8c4de0196972ef1ed8844b3746a4cfa5df3a"
+  },
+  "operator_acknowledgement": {
+    "acknowledgement_token": "I ACCEPT THAT THESE EXACT ADAPTER BYTES EXECUTE WITH MY LOCAL USER PERMISSIONS, ARE NOT SANDBOXED AND ARE NOT INDEPENDENTLY CERTIFIED, AND THAT THE RESULTS ARE DEVELOPMENT-ONLY, UNSCORED AND UNAUTHENTICATED",
+    "acknowledged_artifact_hash": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+    "acknowledged_manifest_core_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+    "adapter_code_is_not_confined": true,
+    "adapter_runs_with_operator_user_permissions": true,
+    "adapter_is_not_independently_certified": true,
+    "results_are_development_only": true,
+    "results_are_unscored": true,
+    "results_are_unauthenticated": true,
+    "acknowledged_by": "repository owner (karthik), qualiber-reality-lab prospective Wave 1 campaign 2026-08-18",
+    "acknowledged_at": "2026-08-18T18:03:36Z"
+  },
+  "independent_certifier": null,
+  "certifier_is_adapter_owner": "not_applicable",
+  "owner_test_evidence": null,
+  "excluded_claims": [
+    "score",
+    "qualification",
+    "governor_authorization",
+    "reveal",
+    "judge_evaluation",
+    "governed_finalization"
+  ],
+  "not_scored": true,
+  "not_governor_authorized": true,
+  "not_independently_certified": true,
+  "not_confined": true,
+  "not_production_ready": true,
+  "evidence_authenticity": "owner_asserted_unauthenticated",
+  "created_at": "2026-08-18T18:03:36Z",
+  "core_hash": "sha256:f1c3048ab4ba13c06ec4fc7f750dfa8372a976af1da743b8501e357d6b6b271e"
+}
