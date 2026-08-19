@@ -1,0 +1,9 @@
+{
+  "schema": "qualiber/erl2-subject-build-receipt/v1",
+  "artifact_id": "validation-subject",
+  "artifact_path": "dist/qualiber-erl2-validation-subject.mjs",
+  "artifact_sha256": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+  "input_digest": "sha256:a0bc5288c9c8f960fdc6fa9d316cf171d7be2cd39d631b90a28c461f7bbbc96d",
+  "topology": "package-local-tarball",
+  "built_by": "scripts/build-artifact.mjs"
+}

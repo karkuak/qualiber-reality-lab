@@ -1,0 +1,49 @@
+{
+  "shard_schema_version": "1.0",
+  "run_id": "local-1.0-mszhw5le-bc71389e",
+  "journey_id": "erl2_ext_journey",
+  "snapshot_id": "sha256:9b709cba7ddfcf9cf2ac6e3572d417360e75eeca73f28d7957b713c5ba948a7d",
+  "snapshot": {
+    "snapshot_schema_version": "1.1",
+    "decision_type": "advisory",
+    "journey_id": "erl2_ext_journey",
+    "rule_id": "erl2_ext_journey",
+    "inputs_digest": "evp_10a3871b9cda",
+    "eligibility_digest": "sha256:e2dc2d3bf309c02909c284c44e2fe6f754ac33da4d171531c5b7a0a1aaaf009d",
+    "version_linkage": {
+      "rule_contract_version": "erl2_ext_journey_v1",
+      "action_version": "dev",
+      "validator_version": "validator_0.2",
+      "collector_version": "erl2_validation_subject_collector_0.1"
+    },
+    "run_context": {
+      "run_id": "local-1.0-mszhw5le-bc71389e",
+      "ci_run_id": "local",
+      "workflow_run_attempt": "1",
+      "repository": "local",
+      "ref": "local",
+      "branch": "local",
+      "commit_sha": "local",
+      "pr_number": null,
+      "matrix_job": null,
+      "actor": null,
+      "action_run_url": null
+    },
+    "decision_time": "2026-08-19T02:51:25.393Z",
+    "approvals": [],
+    "waiver_ref": null,
+    "target_mode": null,
+    "snapshot_id": "sha256:9b709cba7ddfcf9cf2ac6e3572d417360e75eeca73f28d7957b713c5ba948a7d",
+    "content_hash": "sha256:9b709cba7ddfcf9cf2ac6e3572d417360e75eeca73f28d7957b713c5ba948a7d",
+    "emitted_at": "2026-08-19T02:51:25.397Z",
+    "signature": {
+      "status": "unsigned_pending",
+      "mode": "provenance",
+      "subject": "unconfigured",
+      "issuer": "none",
+      "value": null
+    }
+  },
+  "source_ref": "local",
+  "written_at": "2026-08-19T02:51:25.397Z"
+}

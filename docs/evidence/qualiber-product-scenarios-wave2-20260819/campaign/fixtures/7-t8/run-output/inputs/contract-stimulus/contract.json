@@ -1,0 +1,7 @@
+{
+  "rule_id": "erl2_ext_journey",
+  "journey_id": "erl2_ext_journey",
+  "expected_path": [
+    "a"
+  ]
+}

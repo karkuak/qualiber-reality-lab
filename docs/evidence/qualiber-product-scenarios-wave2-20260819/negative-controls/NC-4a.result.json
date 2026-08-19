@@ -1,0 +1,31 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-negative-control/v1",
+  "campaign": "qualiber-product-scenarios-wave2-20260819",
+  "run_against": "disposable copies under campaign scratch; no published evidence and no Wave 1 byte was touched",
+  "control_id": "NC-4a",
+  "targets_scenario": "QLB-EXT-007 / QLB-EXT-008",
+  "method": "the two scenarios' product-out/ subtrees exchanged, .frozen sidecars included so they travelled with their files",
+  "required_outcome": "both refuse",
+  "observed": [
+    {
+      "scenario": "QLB-EXT-007",
+      "verdict": "unavailable",
+      "classification": "lab_harness_failure",
+      "sub_reasons": [
+        "adapter_artifact_hashes_binding_failed",
+        "retained_output_refs_binding_failed"
+      ]
+    },
+    {
+      "scenario": "QLB-EXT-008",
+      "verdict": "unavailable",
+      "classification": "lab_harness_failure",
+      "sub_reasons": [
+        "adapter_artifact_hashes_binding_failed",
+        "retained_output_refs_binding_failed"
+      ]
+    }
+  ],
+  "detecting_gate": "record retained_output_refs AND adapter artifact_hashes; the .frozen sidecars travelled with their files and did NOT fire, which is exactly why both bindings are required",
+  "held": true
+}

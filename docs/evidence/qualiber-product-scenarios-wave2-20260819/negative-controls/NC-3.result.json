@@ -1,0 +1,18 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-negative-control/v1",
+  "campaign": "qualiber-product-scenarios-wave2-20260819",
+  "run_against": "disposable copies under campaign scratch; no published evidence and no Wave 1 byte was touched",
+  "control_id": "NC-3",
+  "targets_scenario": "QLB-EXT-006",
+  "method": "006's artifacts unmodified; the three properties asserted simultaneously",
+  "required_outcome": "recorded_exit_code 0 AND run_status rule_violation_detected AND verdict agree",
+  "observed_verdict": "agree",
+  "observed_classification": "product_agreement",
+  "sub_reasons": [],
+  "recorded_exit_code": 0,
+  "recorded_ci_exit_code": 0,
+  "observed_run_status": "rule_violation_detected",
+  "detecting_gate": "§10.5 rule 3 — no comparator branch reads a process exit code (tooling test T8)",
+  "all_three_simultaneously": true,
+  "held": true
+}

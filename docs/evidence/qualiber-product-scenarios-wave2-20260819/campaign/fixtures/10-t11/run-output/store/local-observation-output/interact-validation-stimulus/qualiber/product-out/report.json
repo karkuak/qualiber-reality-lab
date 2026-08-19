@@ -1,0 +1,17 @@
+{
+  "run": {
+    "journeyId": "erl2_ext_journey"
+  },
+  "result": {
+    "validationStatus": "rule_violation_detected",
+    "collectorHealth": "healthy",
+    "findings": [
+      {
+        "type": "missing_required_event",
+        "detail": {
+          "event": "quote_requested_zero"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-negative-control/v1",
+  "campaign": "qualiber-product-scenarios-wave2-20260819",
+  "run_against": "disposable copies under campaign scratch; no published evidence and no Wave 1 byte was touched",
+  "control_id": "NC-5",
+  "targets_scenario": "QLB-EXT-006",
+  "method": "one byte flipped in a retained input stimulus on a disposable copy, following the prospectively precommitted corrected procedure",
+  "corrected_procedure_followed": [
+    "the retained input was mode 0400 and was made writable first",
+    "exactly one byte was changed (offset 240)",
+    "the digest change was PROVEN before either leg ran",
+    "only then were the verifier and comparator legs executed"
+  ],
+  "pre_mutation_sha256": "sha256:fef741e0984dbd52b445386e6c6ef22a6493614c5c6e2cd9bf49ae7ffe2b2073",
+  "post_mutation_sha256": "sha256:3f2a8c46b55c32373e617cd443468dab3b011897834bb217f815498f1bfbc9a8",
+  "mutation_proven": true,
+  "required_outcome": "offline verification and/or comparator binding refuses; the comparison is never agree",
+  "verifier_leg": {
+    "ok": false,
+    "refusals": [],
+    "exit_code": 1
+  },
+  "binding_leg": {
+    "verdict": "unavailable",
+    "classification": "lab_harness_failure",
+    "sub_reasons": [
+      "input_digest_binding_failed"
+    ]
+  },
+  "both_legs_refused": true,
+  "note": "Wave 1's first NC-5 attempt mutated nothing because the host writes retained inputs mode 0444 and the write was silently refused, so both legs passed trivially. Wave 2 precommitted the corrected procedure in advance and executed it; the void-mutation mistake was not repeated and no aborted attempt occurred.",
+  "held": true
+}

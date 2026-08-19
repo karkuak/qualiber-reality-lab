@@ -1,0 +1,18 @@
+{
+  "schema_version": "qualiber-reality-lab/oracle-precommit/v1",
+  "campaign": "fixture",
+  "revision": 1,
+  "scenarios": [
+    {
+      "scenario_id": "QLB-EXT-005",
+      "capture_stimulus_sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468",
+      "capture_stimulus_bytes": 105,
+      "contract_stimulus_sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c",
+      "contract_stimulus_bytes": 106,
+      "expectation_sha256": "sha256:c64bce6ad4e1f762678e44cfe0fed7db19b426af7d74cb7a8c263bf81dd476e4",
+      "definition": "fixture scenario"
+    }
+  ],
+  "negative_controls": [],
+  "amendments": []
+}

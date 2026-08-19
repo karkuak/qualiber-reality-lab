@@ -1,0 +1,186 @@
+{
+  "schema_version": "qualiber-reality-lab/oracle-precommit/v1",
+  "campaign": "qualiber-product-scenarios-wave2-20260819",
+  "revision": 1,
+  "note": "Wave 2 stage 1. Written before any Qualiber execution against Wave 2 inputs. It binds no adapter artifact, no manifest, no observation id and no sealed-plan hash, because none of those exists yet. Wave 1 is frozen and is not amended by this document.",
+  "reviewed_plan": {
+    "file": "plan/qualiber-product-external-scenario-test-plan.md",
+    "revision": "4.3",
+    "reviewed_plan_sha256": "sha256:b1105dc7209cd8fcd32f10064ced6a4634c44b50faa582491376a37c9d019092",
+    "plan_application_note_sha256": "sha256:b49d761cb2d645bcc7a69f13b159c40c0992292d785c884aae03724597b1272a",
+    "wave2_specified_in": "§9"
+  },
+  "wave1_frozen_reference": {
+    "campaign": "qualiber-product-scenarios-20260818",
+    "evidence_index_sha256": "sha256:ec00d60fac6433c001aef78cb45724b248903f9bf1ab4a04ba9b3c5ae1e7ae08",
+    "validated_at_wave2_open": "732 of 732 indexed files matched sha256 and byte length; exact path-set equality; not re-run and not amended"
+  },
+  "qualiber_baseline": {
+    "repository": "https://github.com/karkuak/qualiber.git",
+    "branch": "preprod",
+    "head": "d3ebf37fc2cd5741c25eac22eaa20777153730ce",
+    "tree": "0d2a8c4de0196972ef1ed8844b3746a4cfa5df3a",
+    "validation_adapter_integration_commit": "a4c6e2b5a7164ae52af8d855bb256dd927b26867",
+    "validation_adapter_integration_tree": "99fe6f518fcb03802dc1c5d5f8dfe1dea8eb108d",
+    "preprod_advanced_to": "a3d05f01bccd9590add9b61ad643d4fa07f3ef74",
+    "preprod_advancement_assessment": "one commit ahead, documentation only (docs/HANDOFF.md, docs/process/critical-review-2026-07-20-remediation-tracker.md, docs/process/validation.md). A non-docs path filter over the delta is empty, so product validation behavior, collector behavior, the adapter, manifests, build topology, contracts and CLI behavior are byte-identical to the pin. Recorded; campaign stays pinned to d3ebf37."
+  },
+  "reality_lab_baseline": {
+    "repository": "https://github.com/karkuak/qualiber-reality-lab.git",
+    "campaign_baseline_commit": "87a87e535db6f74f95f6de5f14b4870d973b00d7",
+    "campaign_baseline_tree": "36c588658cf9abc9de01a6dbe4a8dc04cdf98e43",
+    "dependency_pin_commit": "69ace16fb7ee021dddbcf3fa70e4295c2e5a400b",
+    "dependency_pin_tree": "89988e5588b04534316c73901e34c56861caa494"
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QLB-EXT-006",
+      "capture_stimulus_file": "stimulus-006.json",
+      "capture_stimulus_sha256": "sha256:fef741e0984dbd52b445386e6c6ef22a6493614c5c6e2cd9bf49ae7ffe2b2073",
+      "capture_stimulus_bytes": 994,
+      "contract_stimulus_file": "C-VALID.json",
+      "contract_stimulus_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:708f257ac6a9b1e0f1fba89855d4567128f2a1548349759d16253405a821b4f6",
+      "expectation_bytes": 474,
+      "expected_run_status": "rule_violation_detected",
+      "required_finding_types": [
+        "duplicate_event"
+      ],
+      "definition": "QLB-EXT-001's stimulus with quote_requested_one emitted twice (4 requests: one, one, three, zero); ordering and payload shape otherwise valid, so the only breach is cardinality",
+      "derivation": "C-VALID.occurrence_bounds.quote_requested_one.max = 1; the stimulus emits it twice. C-VALID.expected_path yields two predecessor-ordering constraints (three.after_any, zero.after_any); both still hold against one,one,three,zero, so no ordering finding is derivable. No required property is absent or mistyped.",
+      "expected_finding_count": 1,
+      "permitted_additional_types": [],
+      "target_event": "quote_requested_one",
+      "expected_operation_state": "completed",
+      "expected_response_status": "supported",
+      "forbidden_statuses": [
+        "clean",
+        "not_run",
+        "inconclusive"
+      ],
+      "evidence_required": "product-out/run-result.json runStatus rule_violation_detected; report.json result.findings containing exactly one finding of type duplicate_event naming quote_requested_one; record state completed and response_status supported; all four binding gates and offline verification passing before any semantic read"
+    },
+    {
+      "scenario_id": "QLB-EXT-007",
+      "capture_stimulus_file": "stimulus-007.json",
+      "capture_stimulus_sha256": "sha256:f4c129d1fd76a31f826a74671e10005bab034aa572423627e50193f44cda5ce6",
+      "capture_stimulus_bytes": 754,
+      "contract_stimulus_file": "C-VALID.json",
+      "contract_stimulus_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:c7aa459e8b25afe56265d58e982d91babc93bef17f0064cde81fcb42372814a0",
+      "expectation_bytes": 486,
+      "expected_run_status": "rule_violation_detected",
+      "required_finding_types": [
+        "missing_required_property"
+      ],
+      "definition": "QLB-EXT-001's stimulus with the properties object retained on quote_requested_three and only the numberOfItems key removed; the complete three-event sequence is preserved",
+      "derivation": "C-VALID.required_properties.quote_requested_three.numberOfItems = 'number'. The carrier event is present and in position, so no missing_required_event is derivable; its properties object no longer carries the required key, which is exactly missing_required_property. Wave 1's retained capture bytes establish that the collector sources canonical event properties from the request body's properties object, so removing that key is what the contract's property constraint actually sees. Derived from C-VALID alone; Qualiber's own carrier-absent reference fixture is disqualified as a Lab oracle and was not consulted.",
+      "expected_finding_count": 1,
+      "permitted_additional_types": [],
+      "target_event": "quote_requested_three",
+      "expected_operation_state": "completed",
+      "expected_response_status": "supported",
+      "forbidden_statuses": [
+        "clean",
+        "not_run",
+        "inconclusive"
+      ],
+      "evidence_required": "product-out/run-result.json runStatus rule_violation_detected; report.json result.findings containing exactly one finding of type missing_required_property naming quote_requested_three; record state completed and response_status supported; binding gates and offline verification passing before any semantic read"
+    },
+    {
+      "scenario_id": "QLB-EXT-008",
+      "capture_stimulus_file": "stimulus-008.json",
+      "capture_stimulus_sha256": "sha256:5a565eef939a96f2e05c8121af8f4689aae9ecfc9b8ed490f95721b7cbe40dda",
+      "capture_stimulus_bytes": 777,
+      "contract_stimulus_file": "C-VALID.json",
+      "contract_stimulus_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:1cbff8d79af13cb10125471ba3f5bbc7212ea8ad84a2b10da090dc395d59f718",
+      "expectation_bytes": 483,
+      "expected_run_status": "rule_violation_detected",
+      "required_finding_types": [
+        "property_type_mismatch"
+      ],
+      "definition": "QLB-EXT-001's stimulus with properties.numberOfItems set to the string \"3\" on quote_requested_three; all other structure preserved",
+      "derivation": "C-VALID.required_properties.quote_requested_three.numberOfItems declares type 'number' and the observed value is a string, which is property_type_mismatch. The key is present, so missing_required_property is not derivable. C-VALID.property_consistency is empty, so no consistency finding is derivable from the untouched decorative top-level field. Only the properties carrier is mutated, because Wave 1's retained capture bytes show that is the field the contract constraint reaches.",
+      "expected_finding_count": 1,
+      "permitted_additional_types": [],
+      "target_event": "quote_requested_three",
+      "expected_operation_state": "completed",
+      "expected_response_status": "supported",
+      "forbidden_statuses": [
+        "clean",
+        "not_run",
+        "inconclusive"
+      ],
+      "evidence_required": "product-out/run-result.json runStatus rule_violation_detected; report.json result.findings containing exactly one finding of type property_type_mismatch naming quote_requested_three; record state completed and response_status supported; binding gates and offline verification passing before any semantic read"
+    }
+  ],
+  "tooling": {
+    "compare_scenario_mjs_sha256": "sha256:89e92a0324b123e57c4df3169609b9759da5cf9bfb30b6bd5a5e71cea1a00958",
+    "oracle_absence_scan_mjs_sha256": "sha256:5a17321bda0e53cfa10915f2e37f0af899dd130abacd8fcd8cf0652b00adde73",
+    "compare_scenario_test_mjs_sha256": "sha256:ecccd5a9b99c157b4153d7666ab8445ae222bae0d774b948fbab8272fbcefcdb",
+    "tooling_test_result_sha256": "sha256:27dcb8cfb3ae8429a79a65cf49c9923944c22742a439af75bcd65ca874940e20",
+    "unchanged_from_wave1": true,
+    "unchanged_note": "All four scripts were copied byte-identically from the published Wave 1 bundle and their digests match the Wave 1 identities exactly. No script, fixture, schema, comparator branch, plan generator, adapter operation or helper was added or edited for Wave 2."
+  },
+  "campaign_local_verification_runner": {
+    "file": "campaign/run-offline-verification.mjs",
+    "sha256": "sha256:9ff27ced456616c2f5946b2e4decae01423db6def2a565b41c91c1eee37c597b",
+    "why_outside_the_tooling_block": "The plan's `tooling` block names exactly three scripts and this is a fourth. It is bound here rather than added to that block so the block still means what the plan says it means. Reused byte-for-byte from Wave 1."
+  },
+  "negative_controls": [
+    {
+      "control_id": "NC-1",
+      "targets_scenario": "QLB-EXT-006",
+      "counterfactual_expectation_sha256": "sha256:06c588b60ae3d0708f5ba069db78d821f1eb8d7f2bc5ef4df9ab1ce711fa8331",
+      "definition": "006's expectation with expected_run_status set to clean and nothing else changed; comparator NC-1 mode must return disagree / product_disagreement",
+      "required_outcome": "disagree / product_disagreement"
+    },
+    {
+      "control_id": "NC-1b",
+      "targets_scenario": "QLB-EXT-006",
+      "counterfactual_expectation_sha256": null,
+      "definition": "006's expected.json edited in place after this precommit bound its digest; the comparator must refuse before any comparison",
+      "required_outcome": "unavailable / lab_harness_failure"
+    },
+    {
+      "control_id": "NC-2",
+      "targets_scenario": "QLB-EXT-006",
+      "counterfactual_expectation_sha256": null,
+      "definition": "006's run-result.json deleted from a disposable copy; no fallback path exists",
+      "required_outcome": "unavailable; a binding-first classification of lab_harness_failure is accepted; clean must never appear as an observed value; binding precedence must not be weakened"
+    },
+    {
+      "control_id": "NC-3",
+      "targets_scenario": "QLB-EXT-006",
+      "counterfactual_expectation_sha256": null,
+      "definition": "006's artifacts unmodified; process exit 0, a product violation and comparator agreement must hold simultaneously",
+      "required_outcome": "recorded_exit_code 0 AND run_status rule_violation_detected AND verdict agree"
+    },
+    {
+      "control_id": "NC-4a",
+      "targets_scenario": "QLB-EXT-007 / QLB-EXT-008",
+      "counterfactual_expectation_sha256": null,
+      "definition": "the two scenarios' product-out/ subtrees exchanged, .frozen sidecars included",
+      "required_outcome": "both refuse"
+    },
+    {
+      "control_id": "NC-4b",
+      "targets_scenario": "QLB-EXT-007 / QLB-EXT-008",
+      "counterfactual_expectation_sha256": null,
+      "definition": "the two scenarios' entire qualiber/ subtrees exchanged, including run-summary.json and stimulus-identity.json",
+      "required_outcome": "both refuse through plan / precommit / input binding"
+    },
+    {
+      "control_id": "NC-5",
+      "targets_scenario": "QLB-EXT-006",
+      "counterfactual_expectation_sha256": null,
+      "definition": "one byte flipped in a retained input stimulus in a disposable copy, with the pre- and post-mutation digests recorded and the change proven before either leg runs",
+      "required_outcome": "offline verification and/or comparator binding refuses; the comparison is never agree"
+    }
+  ],
+  "amendments": []
+}

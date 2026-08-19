@@ -1,0 +1,31 @@
+{
+  "schema_version": "local-observation-plan/v1",
+  "observation_id": "01a017e7-a1ba-7684-8bf5-641dc6bd6248",
+  "inputs": [
+    {
+      "input_id": "capture-stimulus-input",
+      "role": "capture-stimulus",
+      "provenance_mode": "host_provisioned",
+      "artifact": {
+        "path": "observation-inputs/capture-stimulus/stimulus.json",
+        "media_type": "application/json",
+        "byte_length": 105,
+        "file_sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468",
+        "classification": "INTERNAL"
+      }
+    },
+    {
+      "input_id": "contract-stimulus-input",
+      "role": "contract-stimulus",
+      "provenance_mode": "host_provisioned",
+      "artifact": {
+        "path": "observation-inputs/contract-stimulus/contract.json",
+        "media_type": "application/json",
+        "byte_length": 106,
+        "file_sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c",
+        "classification": "INTERNAL"
+      }
+    }
+  ],
+  "core_hash": "sha256:8e3ba7a9bbb292484757d19863d38ecb115bc33e46b4459edc31f5a9e764709e"
+}

@@ -1,0 +1,232 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-comparison/v1",
+  "scenario_id": "QLB-EXT-007",
+  "mode": "scenario",
+  "observation_id": "01a017ef-9353-74ef-93fc-27ac76cf2746",
+  "oracle_precommit_sha256": "sha256:f22309b860304163c9195196161fe7897b3d80db0a5edb8c349a1c77dad745ca",
+  "oracle_precommit_revision": 1,
+  "execution_lock_sha256": "sha256:165480e83e61343773651f5ae13759f262dbe9b64fbfb4527c3c6f03f910c16b",
+  "expectation_sha256": "sha256:c7aa459e8b25afe56265d58e982d91babc93bef17f0064cde81fcb42372814a0",
+  "comparator_dependencies_resolved": [
+    {
+      "name": "@erl2/contracts",
+      "version": "0.1.0",
+      "entry_sha256": "sha256:da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c"
+    },
+    {
+      "name": "@erl2/integrity",
+      "version": "0.1.0",
+      "entry_sha256": "sha256:c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13"
+    }
+  ],
+  "binding": {
+    "bound": true,
+    "dependency_triples_matched": true,
+    "expectation_digest_matched": true,
+    "expectation_binding_mode": "scenario",
+    "record_retained_output_refs_matched": [
+      "local-observation-output/interact-validate-stimulus/qualiber/product-out/run-result.json",
+      "local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json",
+      "local-observation-output/interact-validate-stimulus/qualiber/run-summary.json",
+      "local-observation-output/interact-validate-stimulus/qualiber/capture.json",
+      "local-observation-output/interact-validate-stimulus/qualiber/stimulus-identity.json"
+    ],
+    "record_retained_output_refs_mismatched": [],
+    "adapter_artifact_hashes_matched": true,
+    "frozen_sidecars_matched": true,
+    "response_envelope_bytes_matched": null,
+    "response_envelope_schema_valid": null,
+    "response_envelope_core_hash_recomputed": null,
+    "response_envelope_core_hash_matched": null,
+    "plan_hash": "sha256:7777d0c512a7962e5897dda481f83ff409b6fbe28d4b2710c1535bcb3e6ab66a",
+    "adapter_artifact_hash": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+    "capture_stimulus_sha256": "sha256:f4c129d1fd76a31f826a74671e10005bab034aa572423627e50193f44cda5ce6",
+    "contract_stimulus_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+    "oracle_precommit_digests_matched": true,
+    "execution_lock_digests_matched": true,
+    "campaign_index_observation_id_matched": true,
+    "input_digest_checks": [
+      {
+        "role": "capture-stimulus",
+        "agreed": true,
+        "sha256": "sha256:f4c129d1fd76a31f826a74671e10005bab034aa572423627e50193f44cda5ce6"
+      },
+      {
+        "role": "contract-stimulus",
+        "agreed": true,
+        "sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4"
+      }
+    ],
+    "adapter_artifact_hashes_witnessed": [
+      {
+        "path": "qualiber/capture.json",
+        "agreed": true
+      },
+      {
+        "path": "qualiber/stimulus-identity.json",
+        "agreed": true
+      },
+      {
+        "path": "qualiber/product-out/evidence-pack.json",
+        "agreed": true
+      },
+      {
+        "path": "qualiber/product-out/report.json",
+        "agreed": true
+      },
+      {
+        "path": "qualiber/product-out/report.junit.xml",
+        "agreed": true
+      },
+      {
+        "path": "qualiber/product-out/report.md",
+        "agreed": true
+      },
+      {
+        "path": "qualiber/product-out/run-result.json",
+        "agreed": true
+      },
+      {
+        "path": "qualiber/product-out/telemetrytest.decision.local-1.0-mszhy0z9-4e6f8097.eef0c9eb248e.snap.json",
+        "agreed": true
+      },
+      {
+        "path": "qualiber/product-out/telemetrytest.eligibility.json",
+        "agreed": true
+      },
+      {
+        "path": "qualiber/product-out/validation-evidence-pack.json",
+        "agreed": true
+      }
+    ],
+    "frozen_sidecar_checks": [
+      {
+        "path": "product-out/evidence-pack.json",
+        "agreed": true
+      },
+      {
+        "path": "product-out/report.json",
+        "agreed": true
+      },
+      {
+        "path": "product-out/report.junit.xml",
+        "agreed": true
+      },
+      {
+        "path": "product-out/report.md",
+        "agreed": true
+      },
+      {
+        "path": "product-out/run-result.json",
+        "agreed": true
+      },
+      {
+        "path": "product-out/telemetrytest.decision.local-1.0-mszhy0z9-4e6f8097.eef0c9eb248e.snap.json",
+        "agreed": true
+      },
+      {
+        "path": "product-out/telemetrytest.eligibility.json",
+        "agreed": true
+      },
+      {
+        "path": "product-out/validation-evidence-pack.json",
+        "agreed": true
+      }
+    ],
+    "frozen_sidecar_note": "weak local consistency check only; sidecars travel with their files and cannot detect a cross-scenario swap"
+  },
+  "expected": {
+    "run_status": "rule_violation_detected",
+    "forbidden_run_status": [],
+    "required_finding_types": [
+      "missing_required_property"
+    ],
+    "permitted_additional_types": [],
+    "target_event": "quote_requested_three",
+    "max_finding_count": 1,
+    "operation_state": "completed",
+    "response_status": "supported",
+    "product_reported": true,
+    "not_run_reason": null,
+    "envelope_error_code": null,
+    "envelope_error_owner": null,
+    "diagnostic_names_field": null,
+    "present_artifacts": null,
+    "absent_artifacts": null,
+    "requires_inconclusive_reason": false
+  },
+  "observed": {
+    "operation_state": "completed",
+    "response_status": "supported",
+    "envelope_error_code": null,
+    "envelope_error_owner": null,
+    "envelope_error_safe_message": null,
+    "run_status": "rule_violation_detected",
+    "not_run_reason": null,
+    "inconclusive_reason": null,
+    "collector_health": "healthy",
+    "customer_visible_message": "Deterministic telemetry rule violation detected (advisory; CI not affected).",
+    "finding_count": 1,
+    "finding_types": [
+      "missing_required_property"
+    ],
+    "finding_events": [
+      "quote_requested_three"
+    ],
+    "recorded_exit_code": 0,
+    "recorded_ci_exit_code": 0,
+    "artifacts_present": [
+      "evidence-pack.json",
+      "report.json",
+      "report.junit.xml",
+      "report.md",
+      "run-result.json",
+      "telemetrytest.decision.local-1.0-mszhy0z9-4e6f8097.eef0c9eb248e.snap.json",
+      "telemetrytest.eligibility.json",
+      "validation-evidence-pack.json"
+    ],
+    "artifacts_absent": [],
+    "terminal_status_recorded_not_used": "observed_complete"
+  },
+  "verdict": "agree",
+  "classification": "product_agreement",
+  "sub_reasons": [],
+  "evidence_refs": [
+    {
+      "field": "input:capture-stimulus",
+      "path": "run-output/inputs/capture-stimulus/stimulus.json",
+      "sha256": "sha256:f4c129d1fd76a31f826a74671e10005bab034aa572423627e50193f44cda5ce6",
+      "json_pointer": null
+    },
+    {
+      "field": "input:contract-stimulus",
+      "path": "run-output/inputs/contract-stimulus/contract.json",
+      "sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+      "json_pointer": null
+    },
+    {
+      "field": "operation_state",
+      "path": "run-output/trusted-local-observation-record.json",
+      "sha256": "sha256:2188647d7234844d71c748d2e1c9785e5150a522fc216325b5a9d3e9b51c0f06",
+      "json_pointer": "/operation_outcomes/0/state"
+    },
+    {
+      "field": "response_status",
+      "path": "run-output/trusted-local-observation-record.json",
+      "sha256": "sha256:2188647d7234844d71c748d2e1c9785e5150a522fc216325b5a9d3e9b51c0f06",
+      "json_pointer": "/operation_outcomes/0/response_status"
+    },
+    {
+      "field": "run_status",
+      "path": "run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/run-result.json",
+      "sha256": "sha256:93c57674171f546e5e22b65de28037da0692335f5d11338386c927687258f8bd",
+      "json_pointer": "/runStatus"
+    },
+    {
+      "field": "finding_types",
+      "path": "run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json",
+      "sha256": "sha256:f8f010a4ed03b7213b455b152363fee1790d86deb213e7f7923d5c9fbdb7db4c",
+      "json_pointer": "/result/findings"
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-comparison/v1",
+  "scenario_id": "QLB-EXT-002",
+  "mode": "scenario",
+  "observation_id": null,
+  "oracle_precommit_sha256": "sha256:98dd96d2bfb90da0b7999256d4bbf95d4ece44bf18380198e9a795f4d7bbd8b8",
+  "oracle_precommit_revision": 1,
+  "execution_lock_sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815",
+  "expectation_sha256": "sha256:45108885ef492813ed3e7e457cec01123d521a0ffa75f016090f8423c597290c",
+  "comparator_dependencies_resolved": [
+    {
+      "name": "@erl2/contracts",
+      "version": "0.1.0",
+      "entry_sha256": "sha256:da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c"
+    },
+    {
+      "name": "@erl2/integrity",
+      "version": "0.1.0",
+      "entry_sha256": "sha256:c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13"
+    }
+  ],
+  "binding": {
+    "bound": false,
+    "dependency_triples_matched": true,
+    "expectation_digest_matched": false,
+    "expectation_binding_mode": "scenario",
+    "record_retained_output_refs_matched": [],
+    "record_retained_output_refs_mismatched": [],
+    "adapter_artifact_hashes_matched": null,
+    "frozen_sidecars_matched": null,
+    "response_envelope_bytes_matched": null,
+    "response_envelope_schema_valid": null,
+    "response_envelope_core_hash_recomputed": null,
+    "response_envelope_core_hash_matched": null,
+    "plan_hash": null,
+    "adapter_artifact_hash": null,
+    "capture_stimulus_sha256": null,
+    "contract_stimulus_sha256": null,
+    "oracle_precommit_digests_matched": null,
+    "execution_lock_digests_matched": null,
+    "campaign_index_observation_id_matched": null
+  },
+  "expected": null,
+  "observed": {
+    "operation_state": null,
+    "response_status": null,
+    "envelope_error_code": null,
+    "envelope_error_owner": null,
+    "envelope_error_safe_message": null,
+    "run_status": null,
+    "not_run_reason": null,
+    "inconclusive_reason": null,
+    "collector_health": null,
+    "customer_visible_message": null,
+    "finding_count": null,
+    "finding_types": null,
+    "finding_events": null,
+    "recorded_exit_code": null,
+    "recorded_ci_exit_code": null,
+    "artifacts_present": [],
+    "artifacts_absent": [],
+    "terminal_status_recorded_not_used": null
+  },
+  "verdict": "unavailable",
+  "classification": "lab_harness_failure",
+  "sub_reasons": [
+    "expectation_digest_not_precommitted"
+  ],
+  "evidence_refs": []
+}

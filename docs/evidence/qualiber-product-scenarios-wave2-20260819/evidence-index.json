@@ -1,0 +1,3342 @@
+{
+  "schema_version": "qualiber-reality-lab/evidence-index/v1",
+  "campaign": "qualiber-product-scenarios-wave2-20260819",
+  "file_count": 666,
+  "total_bytes": 1091242,
+  "excluded_from_index": [
+    "evidence-index.json",
+    "evidence-index.sha256"
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "byte_length": 6196,
+      "sha256": "sha256:9a01268849614a28703b5ff72a2be30ccb98c65a384d912bbc5cefa7b832d9d6"
+    },
+    {
+      "path": "adapter/qualiber-erl2-validation-subject.mjs",
+      "byte_length": 41472,
+      "sha256": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762"
+    },
+    {
+      "path": "adapter/runtime-dependency-provenance.json",
+      "byte_length": 1047,
+      "sha256": "sha256:0f4d9bc20dc505c35a26e6915713525550c97ec14de738ff5527bdaa547850a1"
+    },
+    {
+      "path": "adapter/validation-adapter-manifest.v2.json",
+      "byte_length": 1699,
+      "sha256": "sha256:91e830d253e23194ecb9bbd0a206c20699b610333821c25074a6dc6345c9e85a"
+    },
+    {
+      "path": "adapter/validation-subject.provenance-receipt.json",
+      "byte_length": 432,
+      "sha256": "sha256:8294c780ab7b3237b1ad6ba5e85a08aa76e1d6c61472ffc1990558a9fb999920"
+    },
+    {
+      "path": "campaign-index.json",
+      "byte_length": 1102,
+      "sha256": "sha256:bad6214ee0f01363652c47d106d60dc3ab9c3bd7c4518d2030f671b4fd6aafdb"
+    },
+    {
+      "path": "campaign/compare-scenario.mjs",
+      "byte_length": 35463,
+      "sha256": "sha256:89e92a0324b123e57c4df3169609b9759da5cf9bfb30b6bd5a5e71cea1a00958"
+    },
+    {
+      "path": "campaign/compare-scenario.test.mjs",
+      "byte_length": 35535,
+      "sha256": "sha256:ecccd5a9b99c157b4153d7666ab8445ae222bae0d774b948fbab8272fbcefcdb"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:a919667e19d1fadeda1cf4599c80b665c5ac152e2dadcd67486c302bae02099c"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/campaign-files/expected.json",
+      "byte_length": 741,
+      "sha256": "sha256:14d388e2ace1b160bbd9ff81b3c1d64dc4dc565894eb63b48643aa972100d322"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/campaign-files/oracle-precommit.json",
+      "byte_length": 660,
+      "sha256": "sha256:acee4bf91aac9c7ce30c79c1585dd5ee4129f805fdae79843f83bf80883801af"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/comparison/comparison.json",
+      "byte_length": 7195,
+      "sha256": "sha256:234bc28e011a114fb4edd5b0fdd74b14ffda2a81984d0f9e1e32198db15a40aa"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:0c4cbba9e7645b13a964b5b0391cb118e55e29ddfd01a02df2c821ab8c8cf2e8"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 214,
+      "sha256": "sha256:036180cd869faac9d34a1b23f48cbd587b8b69f9fdc5dc9e17940b85a2d2c6e5"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:5aebf810451aeb5bb7af26655f168e61afadecc71933c0ef3c56b997760f2d34"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 618,
+      "sha256": "sha256:52f43c06661d122408a945c89201c14c20f90c8a73892e376b4a4bdf59ce2902"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 265,
+      "sha256": "sha256:3799e1b7d1e941d2994b6d2718fae65431b5cead32c47ae4115e00413d5c8b92"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 847,
+      "sha256": "sha256:3ae1fadfb8e46eb07a887728b2a74ac72f82e697ec694cc89664dab4576bbc48"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:ea25c427aff73645503e99764cce4031101aeb65e23289b7703d83f8cee2cffd"
+    },
+    {
+      "path": "campaign/fixtures/0-t1/run-output/trusted-local-observation-record.json",
+      "byte_length": 3343,
+      "sha256": "sha256:7e7830b6ffc124c095f80f5157a0ace1014bd0a993d5169233e5524ec9ddfb66"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:9230b8bf29310827a3849a947b65a65afae99a9fc6d2ae1ad5a77c3bb628b5b5"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/campaign-files/expected.json",
+      "byte_length": 520,
+      "sha256": "sha256:c64bce6ad4e1f762678e44cfe0fed7db19b426af7d74cb7a8c263bf81dd476e4"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/campaign-files/oracle-precommit.json",
+      "byte_length": 660,
+      "sha256": "sha256:324bd2dba6e3c0242f409cf139a61590f2f61cc97f075c0b4b8c3c2a94cac0b1"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/comparison/comparison.json",
+      "byte_length": 5609,
+      "sha256": "sha256:55c655396d2b2441cf1c2eb6ac04e0bd35fdcf045b00b1a08a729bfc21b55a5a"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:57bc9bc702e81873629bcf9cd97eed86e334d317c8ce8b46ac43fb7aa7e6acbf"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 214,
+      "sha256": "sha256:036180cd869faac9d34a1b23f48cbd587b8b69f9fdc5dc9e17940b85a2d2c6e5"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:5aebf810451aeb5bb7af26655f168e61afadecc71933c0ef3c56b997760f2d34"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 618,
+      "sha256": "sha256:52f43c06661d122408a945c89201c14c20f90c8a73892e376b4a4bdf59ce2902"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 265,
+      "sha256": "sha256:3799e1b7d1e941d2994b6d2718fae65431b5cead32c47ae4115e00413d5c8b92"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 854,
+      "sha256": "sha256:438b87a6e06770b0a87cc971bdf360bccbcbd956db190af5f94a090440b2972a"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:eefbb14da43341256d9bbe69d08aaf55273da001b7d6d20c9a238626404b7376"
+    },
+    {
+      "path": "campaign/fixtures/1-t2/run-output/trusted-local-observation-record.json",
+      "byte_length": 3343,
+      "sha256": "sha256:ae33afab1a93c2b2527b278e92a46abef063de727ea4124155fcb6b35598c609"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:1c525e72c778a3eab4b679f04561f02f97633081342c37d663fccdcc10eb73cd"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/campaign-files/expected.json",
+      "byte_length": 472,
+      "sha256": "sha256:45108885ef492813ed3e7e457cec01123d521a0ffa75f016090f8423c597290c"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/campaign-files/oracle-precommit.json",
+      "byte_length": 660,
+      "sha256": "sha256:98dd96d2bfb90da0b7999256d4bbf95d4ece44bf18380198e9a795f4d7bbd8b8"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/comparison/comparison.json",
+      "byte_length": 2448,
+      "sha256": "sha256:0de1689099ff1da52c0fcc53052511fd151b67b409f766b2aa684c2439fa2a26"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:f63c5f81c0d73536af55dbd4eddc7b2d8198977d398e4d0148f74f82f3b2f285"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 27,
+      "sha256": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:2bf7397c47ab80d59664b4f02dc7bdc16e1305e5ae158b107b26f2e14b5e9c2b"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json",
+      "byte_length": 313,
+      "sha256": "sha256:b6887130d435b2928be6283ac0dec31c25eb64e4685cc1df35052fc22210437e"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:ee6eb7aceda0fc4dcb7e41f3ad7856b3916a3921532070057d41f5250cfcae1c"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 25,
+      "sha256": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:083381a012917c2acc5ea0def3e906acfc9daa0c6f3fb324ab16e29080b8126e"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md",
+      "byte_length": 18,
+      "sha256": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:9dd8e407454738e6dac0f0e570fba589046abb08d3bb517e4694d23145712642"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 234,
+      "sha256": "sha256:7b0144a878c281da36ed0bc4b3de6778634b61f297e157d2d0e157a99d259ab2"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:2f110555f74c6930076cf3fd0dd2884ffb81e9e4336e1b3d7849fdebc24c689a"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 38,
+      "sha256": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:cea2d26852fc89a84d4344f13877bc72cdadeb6de156ca44df177d83452ca38d"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 1236,
+      "sha256": "sha256:6c0f41d58152f26f174257b427147f5862a194ca7b2ec99b9e12b5f6b9b7a690"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 266,
+      "sha256": "sha256:d6c6ceea120555f81232dc2c2d10af209df3fb093b49efe7f37511b26896dab0"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 896,
+      "sha256": "sha256:2516ef17e3e5a41e1a02b157b063823ea1de2285e4c1420cee984994f1a2d22b"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:81bc0525f6dad777f556c8d9c36f1e563c3cbd4da71391178260b57147f180ef"
+    },
+    {
+      "path": "campaign/fixtures/10-t11/run-output/trusted-local-observation-record.json",
+      "byte_length": 5084,
+      "sha256": "sha256:fe983af06fdc5c7a3a82b34914ae562f9a9c6538db54d233c111c3bea4391c48"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:ff54631ee489011aa4c6ebf5a5530e8bbda666fece2ebbd8924eadf35757da3f"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/campaign-files/expected.json",
+      "byte_length": 490,
+      "sha256": "sha256:19fca5ecfa94b3a0f3e81fb97d3a12c9d981c1860e11da3a746e0502f205a3ab"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/campaign-files/oracle-precommit.json",
+      "byte_length": 660,
+      "sha256": "sha256:98dd96d2bfb90da0b7999256d4bbf95d4ece44bf18380198e9a795f4d7bbd8b8"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/comparison/comparison.json",
+      "byte_length": 6365,
+      "sha256": "sha256:a4dc5acfa0e4102c3cde5934f931613bbbf0ade8eea7e2c2278d486a2b293ac1"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:94c2bf5ffd56d3a3027f0d85355fff0322db787e0d91217c199372a98503419b"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 27,
+      "sha256": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:2bf7397c47ab80d59664b4f02dc7bdc16e1305e5ae158b107b26f2e14b5e9c2b"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json",
+      "byte_length": 313,
+      "sha256": "sha256:b6887130d435b2928be6283ac0dec31c25eb64e4685cc1df35052fc22210437e"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:ee6eb7aceda0fc4dcb7e41f3ad7856b3916a3921532070057d41f5250cfcae1c"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 25,
+      "sha256": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:083381a012917c2acc5ea0def3e906acfc9daa0c6f3fb324ab16e29080b8126e"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md",
+      "byte_length": 18,
+      "sha256": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:9dd8e407454738e6dac0f0e570fba589046abb08d3bb517e4694d23145712642"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 234,
+      "sha256": "sha256:7b0144a878c281da36ed0bc4b3de6778634b61f297e157d2d0e157a99d259ab2"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:2f110555f74c6930076cf3fd0dd2884ffb81e9e4336e1b3d7849fdebc24c689a"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 38,
+      "sha256": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:cea2d26852fc89a84d4344f13877bc72cdadeb6de156ca44df177d83452ca38d"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 1236,
+      "sha256": "sha256:6c0f41d58152f26f174257b427147f5862a194ca7b2ec99b9e12b5f6b9b7a690"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 266,
+      "sha256": "sha256:d6c6ceea120555f81232dc2c2d10af209df3fb093b49efe7f37511b26896dab0"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 896,
+      "sha256": "sha256:94868fd7f91c6ee6b3d0ccb322b3943fe3199f1503b9df42d261bc9a1c7d106c"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:74a8b1daad2e64c263c70c8098eb8f4bbe2a888dab9bb7b4ae4a3358529769db"
+    },
+    {
+      "path": "campaign/fixtures/11-t12/run-output/trusted-local-observation-record.json",
+      "byte_length": 5084,
+      "sha256": "sha256:dd5514e0e9b3eb9749c81cf7b69ebe6bbc4bb45963c648dd67df3300c965512d"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:81926856da1547a699b91ab6887c441a681e83bb4280e01ac5a9ee8a7d560dd5"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/campaign-files/expected.json",
+      "byte_length": 490,
+      "sha256": "sha256:19fca5ecfa94b3a0f3e81fb97d3a12c9d981c1860e11da3a746e0502f205a3ab"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/campaign-files/oracle-precommit.json",
+      "byte_length": 660,
+      "sha256": "sha256:98dd96d2bfb90da0b7999256d4bbf95d4ece44bf18380198e9a795f4d7bbd8b8"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/comparison/comparison.json",
+      "byte_length": 7579,
+      "sha256": "sha256:5512380f1bed46e59cce037d32d422cc82dbfa67b630c1063cc9fd7681006785"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:b7ae761bcb2d8a85af32f01ff607cb78073ccb0356f3fe0c7af624aa714f6633"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 27,
+      "sha256": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:2bf7397c47ab80d59664b4f02dc7bdc16e1305e5ae158b107b26f2e14b5e9c2b"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json",
+      "byte_length": 313,
+      "sha256": "sha256:b6887130d435b2928be6283ac0dec31c25eb64e4685cc1df35052fc22210437e"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:ee6eb7aceda0fc4dcb7e41f3ad7856b3916a3921532070057d41f5250cfcae1c"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 25,
+      "sha256": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:083381a012917c2acc5ea0def3e906acfc9daa0c6f3fb324ab16e29080b8126e"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md",
+      "byte_length": 18,
+      "sha256": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:9dd8e407454738e6dac0f0e570fba589046abb08d3bb517e4694d23145712642"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 234,
+      "sha256": "sha256:7b0144a878c281da36ed0bc4b3de6778634b61f297e157d2d0e157a99d259ab2"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:2f110555f74c6930076cf3fd0dd2884ffb81e9e4336e1b3d7849fdebc24c689a"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 38,
+      "sha256": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:cea2d26852fc89a84d4344f13877bc72cdadeb6de156ca44df177d83452ca38d"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 1236,
+      "sha256": "sha256:6c0f41d58152f26f174257b427147f5862a194ca7b2ec99b9e12b5f6b9b7a690"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 266,
+      "sha256": "sha256:d6c6ceea120555f81232dc2c2d10af209df3fb093b49efe7f37511b26896dab0"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 896,
+      "sha256": "sha256:6489feaaf3f367b069f3faaed6bda87fa1fe35112a68890acfcb484e3facfd0d"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:7023ca5c9b001e233e43e39e1e5e8007c8bfc69e0a53e2ea1f55b4e27ebdb3fb"
+    },
+    {
+      "path": "campaign/fixtures/2-t3/run-output/trusted-local-observation-record.json",
+      "byte_length": 5084,
+      "sha256": "sha256:f0bf3516b9c81117a4d00ffed828e91f5b35ab52ad77b95076246af6f7a172ac"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:9ea4ab0f9c73328c80a43b892b2fd68999449c8a4f1160cb7deaaba89d4cec8d"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/campaign-files/expected.json",
+      "byte_length": 490,
+      "sha256": "sha256:19fca5ecfa94b3a0f3e81fb97d3a12c9d981c1860e11da3a746e0502f205a3ab"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/campaign-files/oracle-precommit.json",
+      "byte_length": 660,
+      "sha256": "sha256:98dd96d2bfb90da0b7999256d4bbf95d4ece44bf18380198e9a795f4d7bbd8b8"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:3fd6f0b907504e1323230c5b0a4e2d87f170269b02e21ccb218e858821f535f7"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 27,
+      "sha256": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:2bf7397c47ab80d59664b4f02dc7bdc16e1305e5ae158b107b26f2e14b5e9c2b"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json",
+      "byte_length": 313,
+      "sha256": "sha256:b6887130d435b2928be6283ac0dec31c25eb64e4685cc1df35052fc22210437e"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:ee6eb7aceda0fc4dcb7e41f3ad7856b3916a3921532070057d41f5250cfcae1c"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 25,
+      "sha256": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:083381a012917c2acc5ea0def3e906acfc9daa0c6f3fb324ab16e29080b8126e"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md",
+      "byte_length": 18,
+      "sha256": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:9dd8e407454738e6dac0f0e570fba589046abb08d3bb517e4694d23145712642"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 234,
+      "sha256": "sha256:7b0144a878c281da36ed0bc4b3de6778634b61f297e157d2d0e157a99d259ab2"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:2f110555f74c6930076cf3fd0dd2884ffb81e9e4336e1b3d7849fdebc24c689a"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 38,
+      "sha256": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:cea2d26852fc89a84d4344f13877bc72cdadeb6de156ca44df177d83452ca38d"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 1236,
+      "sha256": "sha256:6c0f41d58152f26f174257b427147f5862a194ca7b2ec99b9e12b5f6b9b7a690"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 266,
+      "sha256": "sha256:d6c6ceea120555f81232dc2c2d10af209df3fb093b49efe7f37511b26896dab0"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 896,
+      "sha256": "sha256:20a5bbc7e93cfee05aeabe03812cb7576fc01a52c11c76081dadaeba6244ece4"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:f6cc6804ca6866c88f329b6b27a510216ce96b154a3cb7e30c9724fcce823a3a"
+    },
+    {
+      "path": "campaign/fixtures/3-t4/run-output/trusted-local-observation-record.json",
+      "byte_length": 5084,
+      "sha256": "sha256:69c8828dbb4f9a9c0a4a4fd32981ac623650802a51136ad780f9d1d32b6979eb"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:81a4bd604dbde961d52845a47744bb502c8a8fca3edf3ce773946acdbee7b705"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/campaign-files/expected.json",
+      "byte_length": 490,
+      "sha256": "sha256:19fca5ecfa94b3a0f3e81fb97d3a12c9d981c1860e11da3a746e0502f205a3ab"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/campaign-files/oracle-precommit.json",
+      "byte_length": 660,
+      "sha256": "sha256:98dd96d2bfb90da0b7999256d4bbf95d4ece44bf18380198e9a795f4d7bbd8b8"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/lonely/package.json",
+      "byte_length": 52,
+      "sha256": "sha256:d37e67bc5b03bbcc8f6826d5bd42c16bf7c5cd42927c9b03510a9fd7d933b207"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:dff44d292c184d98f07f65e3c596ec58adf9849b9cf607d6e86eaa06512ef32c"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 27,
+      "sha256": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:2bf7397c47ab80d59664b4f02dc7bdc16e1305e5ae158b107b26f2e14b5e9c2b"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json",
+      "byte_length": 313,
+      "sha256": "sha256:b6887130d435b2928be6283ac0dec31c25eb64e4685cc1df35052fc22210437e"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:ee6eb7aceda0fc4dcb7e41f3ad7856b3916a3921532070057d41f5250cfcae1c"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 25,
+      "sha256": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:083381a012917c2acc5ea0def3e906acfc9daa0c6f3fb324ab16e29080b8126e"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md",
+      "byte_length": 18,
+      "sha256": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:9dd8e407454738e6dac0f0e570fba589046abb08d3bb517e4694d23145712642"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 234,
+      "sha256": "sha256:7b0144a878c281da36ed0bc4b3de6778634b61f297e157d2d0e157a99d259ab2"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:2f110555f74c6930076cf3fd0dd2884ffb81e9e4336e1b3d7849fdebc24c689a"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 38,
+      "sha256": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:cea2d26852fc89a84d4344f13877bc72cdadeb6de156ca44df177d83452ca38d"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 1236,
+      "sha256": "sha256:6c0f41d58152f26f174257b427147f5862a194ca7b2ec99b9e12b5f6b9b7a690"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 266,
+      "sha256": "sha256:d6c6ceea120555f81232dc2c2d10af209df3fb093b49efe7f37511b26896dab0"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 896,
+      "sha256": "sha256:ea57dda9607753356187a35e6da5745afc106e3619966b005c5a7bd61804928f"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:058ce53dbd007f30527bd9ba8c451a9127bfdec0900317f1ce1d6fa32d53ca49"
+    },
+    {
+      "path": "campaign/fixtures/4-t5/run-output/trusted-local-observation-record.json",
+      "byte_length": 5084,
+      "sha256": "sha256:15b5fde97f37792adbed2adf56a838276e3aef8877215eff422f6e244ccd0cc8"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:449326ea33a6623e48cdc52ed0a7e02411e32c99d46fc3faf56a85d0852dba4a"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/campaign-files/expected.json",
+      "byte_length": 490,
+      "sha256": "sha256:19fca5ecfa94b3a0f3e81fb97d3a12c9d981c1860e11da3a746e0502f205a3ab"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/campaign-files/oracle-precommit.json",
+      "byte_length": 660,
+      "sha256": "sha256:98dd96d2bfb90da0b7999256d4bbf95d4ece44bf18380198e9a795f4d7bbd8b8"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/comparison/comparison.json",
+      "byte_length": 7623,
+      "sha256": "sha256:b335c5fb8835e3a36fda90c853f1cbdc791311b730dfae2845ae6893b8e8d702"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:4dd85a2afb54f4860af7a32d33f799f31311db2cb5741e3d8f47f3e005bb6354"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 27,
+      "sha256": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:2bf7397c47ab80d59664b4f02dc7bdc16e1305e5ae158b107b26f2e14b5e9c2b"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json",
+      "byte_length": 313,
+      "sha256": "sha256:b6887130d435b2928be6283ac0dec31c25eb64e4685cc1df35052fc22210437e"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:ee6eb7aceda0fc4dcb7e41f3ad7856b3916a3921532070057d41f5250cfcae1c"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 25,
+      "sha256": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:083381a012917c2acc5ea0def3e906acfc9daa0c6f3fb324ab16e29080b8126e"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md",
+      "byte_length": 18,
+      "sha256": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:9dd8e407454738e6dac0f0e570fba589046abb08d3bb517e4694d23145712642"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 234,
+      "sha256": "sha256:7b0144a878c281da36ed0bc4b3de6778634b61f297e157d2d0e157a99d259ab2"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:2f110555f74c6930076cf3fd0dd2884ffb81e9e4336e1b3d7849fdebc24c689a"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 38,
+      "sha256": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:cea2d26852fc89a84d4344f13877bc72cdadeb6de156ca44df177d83452ca38d"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 1236,
+      "sha256": "sha256:6c0f41d58152f26f174257b427147f5862a194ca7b2ec99b9e12b5f6b9b7a690"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 266,
+      "sha256": "sha256:d6c6ceea120555f81232dc2c2d10af209df3fb093b49efe7f37511b26896dab0"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 818,
+      "sha256": "sha256:1e0a5e08dc126275ae6710713d7c7ad65a19f1c02321306588e8576a2c667fb0"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:72c994572e0a0acec8ed5b6537bc4da7692a45addb6103b9e8ed4a15677d1cdf"
+    },
+    {
+      "path": "campaign/fixtures/5-t6/run-output/trusted-local-observation-record.json",
+      "byte_length": 5078,
+      "sha256": "sha256:48bc72bc365e9e9de1733aaa005ff3feadc0aaf3ea54b930e28792b4260c1d8a"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:2e028f9886c854e895c985666c34999b20374df3f5ad689e93d04df757431629"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/campaign-files/expected.json",
+      "byte_length": 490,
+      "sha256": "sha256:19fca5ecfa94b3a0f3e81fb97d3a12c9d981c1860e11da3a746e0502f205a3ab"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/campaign-files/oracle-precommit.json",
+      "byte_length": 660,
+      "sha256": "sha256:98dd96d2bfb90da0b7999256d4bbf95d4ece44bf18380198e9a795f4d7bbd8b8"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/comparison/comparison.json",
+      "byte_length": 6573,
+      "sha256": "sha256:bc41f41e0de8e39c792699c8cd5c421aa03134b37e07b042024c2f73136bccb9"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:a2995160a9863acc7c1bbbcd3598619e59ef106edf236899b1b29adae5983905"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 27,
+      "sha256": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:2bf7397c47ab80d59664b4f02dc7bdc16e1305e5ae158b107b26f2e14b5e9c2b"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json",
+      "byte_length": 313,
+      "sha256": "sha256:b6887130d435b2928be6283ac0dec31c25eb64e4685cc1df35052fc22210437e"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:ee6eb7aceda0fc4dcb7e41f3ad7856b3916a3921532070057d41f5250cfcae1c"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 25,
+      "sha256": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:083381a012917c2acc5ea0def3e906acfc9daa0c6f3fb324ab16e29080b8126e"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md",
+      "byte_length": 18,
+      "sha256": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:9dd8e407454738e6dac0f0e570fba589046abb08d3bb517e4694d23145712642"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 38,
+      "sha256": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:cea2d26852fc89a84d4344f13877bc72cdadeb6de156ca44df177d83452ca38d"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 1117,
+      "sha256": "sha256:3929db6ea1f3be9eef1d5d4aaa7b4417728e4fd2cdeb6f3f3ae285fc63ee9e11"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 266,
+      "sha256": "sha256:0d98f44ed3d807b93df54fa58c1e909db69b76709aae77aabf8637907726cd3f"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 896,
+      "sha256": "sha256:df08ad0a96af620aa6a594779702404ccded437671e336ce1ab44d7f045192f3"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:b34a88b8a0097dc279c7260092ce346fa16559c6637c670e4bf9b042ee24758f"
+    },
+    {
+      "path": "campaign/fixtures/6-t7/run-output/trusted-local-observation-record.json",
+      "byte_length": 4738,
+      "sha256": "sha256:78cec1f35918bbd26e2a72d704ed14e096aec3e4d16db6bb2df023f3592f1bc8"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:cd793f12a70074b30973a6256fd8e210d3ff51a7dcd51227d170ccb35e36d5e4"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/campaign-files/expected.json",
+      "byte_length": 490,
+      "sha256": "sha256:19fca5ecfa94b3a0f3e81fb97d3a12c9d981c1860e11da3a746e0502f205a3ab"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/campaign-files/oracle-precommit.json",
+      "byte_length": 660,
+      "sha256": "sha256:98dd96d2bfb90da0b7999256d4bbf95d4ece44bf18380198e9a795f4d7bbd8b8"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/comparison/comparison.json",
+      "byte_length": 7579,
+      "sha256": "sha256:32fed702f9fbbcc6321ea875273261b2b23080a380f927b2ae2c1a2ba9bd2e8e"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:ac80fed9ea2f41bdbcb1b16a6c2604d1ec7a850582ab517f9ba369963242d7a0"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 27,
+      "sha256": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:2bf7397c47ab80d59664b4f02dc7bdc16e1305e5ae158b107b26f2e14b5e9c2b"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json",
+      "byte_length": 313,
+      "sha256": "sha256:b6887130d435b2928be6283ac0dec31c25eb64e4685cc1df35052fc22210437e"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:ee6eb7aceda0fc4dcb7e41f3ad7856b3916a3921532070057d41f5250cfcae1c"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 25,
+      "sha256": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:083381a012917c2acc5ea0def3e906acfc9daa0c6f3fb324ab16e29080b8126e"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md",
+      "byte_length": 18,
+      "sha256": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:9dd8e407454738e6dac0f0e570fba589046abb08d3bb517e4694d23145712642"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 234,
+      "sha256": "sha256:acbf22da67c26e728018764d38385e4a88f61e86c59d9a12fab2339b63a21b13"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:b525d82d40d190eeb5a77d0adc66cffa69b04abeb89753e6ba2cfcdf4c8f578c"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 38,
+      "sha256": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:cea2d26852fc89a84d4344f13877bc72cdadeb6de156ca44df177d83452ca38d"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 1236,
+      "sha256": "sha256:511472b2fdfb9e5a8d21c2e19309a990f716e325d5b09af46b9073f437c98741"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 266,
+      "sha256": "sha256:61a3d1fe5a551e9ac6cb47feff7d040db99cfd07112c9d1b8bb4cbf476a4ff83"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 896,
+      "sha256": "sha256:3f63b92c3d169dceb91a1ff52ed2739c4b9b987965c2adb4f59f87b05d9dc746"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:449e5542669ed9b353ba4aed11adc954dbe2912923e22ec656c82bb548f4ca74"
+    },
+    {
+      "path": "campaign/fixtures/7-t8/run-output/trusted-local-observation-record.json",
+      "byte_length": 5084,
+      "sha256": "sha256:257a9285bbb0eb8052be1e612f2616870666a9785ec680a8572b8b4e36b19e2c"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:ced477f5d25f34962156ea712f0a4cb526fe3fffe17a4e571982f3c2e7e0d909"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/campaign-files/expected.json",
+      "byte_length": 490,
+      "sha256": "sha256:19fca5ecfa94b3a0f3e81fb97d3a12c9d981c1860e11da3a746e0502f205a3ab"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/campaign-files/oracle-precommit.json",
+      "byte_length": 660,
+      "sha256": "sha256:98dd96d2bfb90da0b7999256d4bbf95d4ece44bf18380198e9a795f4d7bbd8b8"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/comparison/comparison.json",
+      "byte_length": 7748,
+      "sha256": "sha256:76e190847ff5c50c240765340864427a7caf2b23130d6ed0e0a8d01424a7f659"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:7194f2e234667947d1bf7649986424168d5fcdda95a0e8cc26d0ff8154f7c4cf"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 27,
+      "sha256": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:2bf7397c47ab80d59664b4f02dc7bdc16e1305e5ae158b107b26f2e14b5e9c2b"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json",
+      "byte_length": 447,
+      "sha256": "sha256:0cb7be2f6fb86e10df5ab8f1c862b1a37f4cfe0210a298373d32b7876fd1ad8d"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:7dadbe746962e9075c0f9bc25640453f40be37296d35b4932d2d3c8bd56df7cd"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 25,
+      "sha256": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:083381a012917c2acc5ea0def3e906acfc9daa0c6f3fb324ab16e29080b8126e"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md",
+      "byte_length": 18,
+      "sha256": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:9dd8e407454738e6dac0f0e570fba589046abb08d3bb517e4694d23145712642"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 234,
+      "sha256": "sha256:4dd6af1fe88f242031dd1a5f8cbd227f0a7015b75e962d6e720872fa7b8ed6c7"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:80a1384f767d04f9ac03bfd235300688a8f19307df14eb60ae40053b3d8ddf55"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 38,
+      "sha256": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:cea2d26852fc89a84d4344f13877bc72cdadeb6de156ca44df177d83452ca38d"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 1236,
+      "sha256": "sha256:e6c6649fcf023ac73b429cfe41d517d805116d87be9ebc7c5e7d41f648da2995"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 266,
+      "sha256": "sha256:3043e06371fbb3b8500dd4f46dd571bd9eb8de3311533b0aab7fffdcf218fc9b"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 896,
+      "sha256": "sha256:7df11b33066140105262834724655e9fed63a5e37901a20b7a0e7d40df442c69"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:986c75c5f13802e6db592ae3ed548b924faf180730d2bf50d780a5bed203baee"
+    },
+    {
+      "path": "campaign/fixtures/8-t9a/run-output/trusted-local-observation-record.json",
+      "byte_length": 5084,
+      "sha256": "sha256:c39e172e9910d55394c6386ed354e38b7ca3617eca22dea79843ae9891e83a2b"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:c25be4fde66925687e78788a4798e0fada361b60e28e3b3526b39317f4eeca97"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/campaign-files/expected.json",
+      "byte_length": 480,
+      "sha256": "sha256:c474c5f3d9f04f2be189d3d675fe693b5fa24031969cecfb575a66de45ee4670"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/campaign-files/oracle-precommit.json",
+      "byte_length": 660,
+      "sha256": "sha256:4dbf3dd5836a149be19885a432fe50ef840d0769ccd1576cf922daf5340b3aa8"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/comparison/comparison.json",
+      "byte_length": 7597,
+      "sha256": "sha256:301825846a000d338a7a983c48d9abdb1920ef977a73c40853e2292523ae3e95"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:788f17934b8d369cf6ebba222ce39e10c15239eaa1ed7a4a0cc6200e547ff713"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 27,
+      "sha256": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:2bf7397c47ab80d59664b4f02dc7bdc16e1305e5ae158b107b26f2e14b5e9c2b"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json",
+      "byte_length": 301,
+      "sha256": "sha256:c2d6131cebd9286254fe00c4e2a9e6ae9e524de2c443b1792d9face880960632"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:9e7b75c63061e227b99a4577884bb365d13898e7a823bc547ff95721b70b5c9e"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 25,
+      "sha256": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:083381a012917c2acc5ea0def3e906acfc9daa0c6f3fb324ab16e29080b8126e"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md",
+      "byte_length": 18,
+      "sha256": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:9dd8e407454738e6dac0f0e570fba589046abb08d3bb517e4694d23145712642"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 234,
+      "sha256": "sha256:7b0144a878c281da36ed0bc4b3de6778634b61f297e157d2d0e157a99d259ab2"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:2f110555f74c6930076cf3fd0dd2884ffb81e9e4336e1b3d7849fdebc24c689a"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 38,
+      "sha256": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:cea2d26852fc89a84d4344f13877bc72cdadeb6de156ca44df177d83452ca38d"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 1236,
+      "sha256": "sha256:dc42185e8a21e52f2b7ac15d705810d749e58bd565b4ee496a5bb6bf3bbf37b7"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 266,
+      "sha256": "sha256:e5831b666672e4ecc20813e1dcb19c89565fd6d0efd646f9968ccebcd787f97e"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 896,
+      "sha256": "sha256:e847ad18ce2b6da1e11eb215c845d4cd0626d0d648c7ebde52e072f261193294"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:b74640c72ff5ee2126476d0229c3ada1a093aab02a710041b7731eee3b3cef84"
+    },
+    {
+      "path": "campaign/fixtures/8-t9b/run-output/trusted-local-observation-record.json",
+      "byte_length": 5084,
+      "sha256": "sha256:c39ab6fbb36267e56821edf9815b9bb0e025cf7e02978937081cb7577fc274aa"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/campaign-files/NC-1.counterfactual.expected.json",
+      "byte_length": 462,
+      "sha256": "sha256:839dee12524153c85b020689db4a8986e695a5204fe57635390c5399e4a32572"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/campaign-files/arbitrary.expected.json",
+      "byte_length": 469,
+      "sha256": "sha256:85a3815c24928dba81eb444b6b6165949d4c59ef137cb6cfacbf0ca49c1a8858"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/campaign-files/campaign-index.json",
+      "byte_length": 304,
+      "sha256": "sha256:61ee34bae1d1b2f9c37e9d19e5d6e3d98be51da562a8b68736887214a00e0d65"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/campaign-files/execution-lock.json",
+      "byte_length": 826,
+      "sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/campaign-files/expected.json",
+      "byte_length": 480,
+      "sha256": "sha256:c474c5f3d9f04f2be189d3d675fe693b5fa24031969cecfb575a66de45ee4670"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/campaign-files/oracle-precommit.json",
+      "byte_length": 907,
+      "sha256": "sha256:db3336aebce2bda8d64d5801968f02a0f4f820d24d4f0c02a4eebeaa7e6cd4b5"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/comparison/comparison-nc1.json",
+      "byte_length": 2434,
+      "sha256": "sha256:945b9b5e39d088a40e463e5c0fe6991b605be284c02e2a1257df3a91df3d3a11"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/input/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/input/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/plan/plan-sealed.json",
+      "byte_length": 1099,
+      "sha256": "sha256:1e2e12497344e64003bbbc1726372d6d7ab83b761a1c9c57ae714218090441fa"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 105,
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 106,
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "byte_length": 49,
+      "sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:f0e22315d60fcd2d8eab289d2abea36c2bcff5d33261a56deabdb94acfdbe854"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 27,
+      "sha256": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:2bf7397c47ab80d59664b4f02dc7bdc16e1305e5ae158b107b26f2e14b5e9c2b"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json",
+      "byte_length": 303,
+      "sha256": "sha256:df934f2ae0736b606ee79ed4c0138f2444c8fb698de06075b864bdb45d64c59e"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:3044b79635aa1f2b8927e4082972d95d767cda81b3349220cda9405bb3d51073"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 25,
+      "sha256": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:083381a012917c2acc5ea0def3e906acfc9daa0c6f3fb324ab16e29080b8126e"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md",
+      "byte_length": 18,
+      "sha256": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:9dd8e407454738e6dac0f0e570fba589046abb08d3bb517e4694d23145712642"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 234,
+      "sha256": "sha256:7b0144a878c281da36ed0bc4b3de6778634b61f297e157d2d0e157a99d259ab2"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 276,
+      "sha256": "sha256:2f110555f74c6930076cf3fd0dd2884ffb81e9e4336e1b3d7849fdebc24c689a"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 38,
+      "sha256": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:cea2d26852fc89a84d4344f13877bc72cdadeb6de156ca44df177d83452ca38d"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "byte_length": 1236,
+      "sha256": "sha256:7e6733551baeff5fe2ad90b320e4672efe72b0b5c3c7c0851c37816399414408"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 266,
+      "sha256": "sha256:7c8367ec76e0e981c14d7a214e3fe09bf0fcd7e9428071dcf334b85c7ff2f6db"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 480,
+      "sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:a2ec5f528b93328c772ef414f9d880bd7806d3b808fe2de0d86ba8a57900f531"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json",
+      "byte_length": 896,
+      "sha256": "sha256:52d539b7453b611c4012bd0a8e67570f6addf3ff389badb38b2027770e66f347"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/store/retained/local-observation-adapter/interact-validation-stimulus/response-envelope.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:6c224c4239f927f2917865a610e9569a18b3c5fbf5cd4a783979d9e7a0032ab6"
+    },
+    {
+      "path": "campaign/fixtures/9-t10/run-output/trusted-local-observation-record.json",
+      "byte_length": 5084,
+      "sha256": "sha256:b8b32ff891e52ed18a8881f9bac01400ad887567305e9a94ff794c369ed8ff4a"
+    },
+    {
+      "path": "campaign/oracle-absence-scan.mjs",
+      "byte_length": 7958,
+      "sha256": "sha256:5a17321bda0e53cfa10915f2e37f0af899dd130abacd8fcd8cf0652b00adde73"
+    },
+    {
+      "path": "campaign/run-offline-verification.mjs",
+      "byte_length": 4993,
+      "sha256": "sha256:9ff27ced456616c2f5946b2e4decae01423db6def2a565b41c91c1eee37c597b"
+    },
+    {
+      "path": "campaign/tooling-test-result.json",
+      "byte_length": 5390,
+      "sha256": "sha256:27dcb8cfb3ae8429a79a65cf49c9923944c22742a439af75bcd65ca874940e20"
+    },
+    {
+      "path": "campaign/tooling-tests-stdout.log",
+      "byte_length": 1197,
+      "sha256": "sha256:d90a0b892f93ab066501d3cbc6e43a5a3c47f9a8d39400b75637de9cc81e4d75"
+    },
+    {
+      "path": "claim-ceiling.verbatim.txt",
+      "byte_length": 2395,
+      "sha256": "sha256:bdf8c332dc0b19b9a1d183ee3ae833ac84d0d69c90c5ca913a304fdabc87beea"
+    },
+    {
+      "path": "commands/command-log.tsv",
+      "byte_length": 32151,
+      "sha256": "sha256:9af125b7e72bd76e8e6c31d9fa8ce134fbd496968e0bedc99875f6d22b5f935f"
+    },
+    {
+      "path": "coordinates/qualiber-closing-status.txt",
+      "byte_length": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "coordinates/qualiber-closing.txt",
+      "byte_length": 41,
+      "sha256": "sha256:eba823d10da1c4358e3ca5bc06d84a6beaeb7319b3e0f062712c19d8f8ff0cb5"
+    },
+    {
+      "path": "coordinates/qualiber-opening-status.txt",
+      "byte_length": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "coordinates/qualiber-opening.txt",
+      "byte_length": 41,
+      "sha256": "sha256:eba823d10da1c4358e3ca5bc06d84a6beaeb7319b3e0f062712c19d8f8ff0cb5"
+    },
+    {
+      "path": "coordinates/reality-lab-closing-status.txt",
+      "byte_length": 60,
+      "sha256": "sha256:ee9c2021fac0c7fc34639c1efdc39e295e91598b442a37637b02afb5a07e7075"
+    },
+    {
+      "path": "coordinates/reality-lab-closing.txt",
+      "byte_length": 41,
+      "sha256": "sha256:a81b0ebe2e5802ff9df894fdce78138e87de33f04e281c7764c1ab71b0ec939e"
+    },
+    {
+      "path": "coordinates/reality-lab-dependency-pin.txt",
+      "byte_length": 41,
+      "sha256": "sha256:4fcab5d1f301b652de9dc29b62c3915cd2d581ee4e947527710e76620fc1c0e3"
+    },
+    {
+      "path": "coordinates/reality-lab-opening-status.txt",
+      "byte_length": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "coordinates/reality-lab-opening.txt",
+      "byte_length": 41,
+      "sha256": "sha256:a81b0ebe2e5802ff9df894fdce78138e87de33f04e281c7764c1ab71b0ec939e"
+    },
+    {
+      "path": "execution-lock.json",
+      "byte_length": 6969,
+      "sha256": "sha256:165480e83e61343773651f5ae13759f262dbe9b64fbfb4527c3c6f03f910c16b"
+    },
+    {
+      "path": "execution-lock.sha256",
+      "byte_length": 93,
+      "sha256": "sha256:06051273c0284c2b7909ec392ae8b31df2ade6c5f9c340e008e6038b1771cd65"
+    },
+    {
+      "path": "expectations/QLB-EXT-006.expected.json",
+      "byte_length": 474,
+      "sha256": "sha256:708f257ac6a9b1e0f1fba89855d4567128f2a1548349759d16253405a821b4f6"
+    },
+    {
+      "path": "expectations/QLB-EXT-007.expected.json",
+      "byte_length": 486,
+      "sha256": "sha256:c7aa459e8b25afe56265d58e982d91babc93bef17f0064cde81fcb42372814a0"
+    },
+    {
+      "path": "expectations/QLB-EXT-008.expected.json",
+      "byte_length": 483,
+      "sha256": "sha256:1cbff8d79af13cb10125471ba3f5bbc7212ea8ad84a2b10da090dc395d59f718"
+    },
+    {
+      "path": "failed-attempts/README.md",
+      "byte_length": 1671,
+      "sha256": "sha256:ca8d795ffa4d702bb0f764dd5a7be54e23974219017ccbe01e40225fd9007b53"
+    },
+    {
+      "path": "negative-controls/NC-1.counterfactual.expected.json",
+      "byte_length": 456,
+      "sha256": "sha256:06c588b60ae3d0708f5ba069db78d821f1eb8d7f2bc5ef4df9ab1ce711fa8331"
+    },
+    {
+      "path": "negative-controls/NC-1.result.json",
+      "byte_length": 862,
+      "sha256": "sha256:9edb4a085d52bb8a42c67606cad733559a9557fafb4db229a696fe0842a9b903"
+    },
+    {
+      "path": "negative-controls/NC-1b.result.json",
+      "byte_length": 982,
+      "sha256": "sha256:23e3532d6acc4e5fd64390d4d82d1c4427f4d1daf595889ca065e21842b685a0"
+    },
+    {
+      "path": "negative-controls/NC-2.result.json",
+      "byte_length": 1617,
+      "sha256": "sha256:fb39e3ea8beec51cffd34cfb95f1f0a2feaef1ba879c4e8ae225ad38b39934df"
+    },
+    {
+      "path": "negative-controls/NC-3.result.json",
+      "byte_length": 871,
+      "sha256": "sha256:da4d144c7e00261a9d36868accd4d9f013b5314437e6c3f7aad5aee23aeeb278"
+    },
+    {
+      "path": "negative-controls/NC-4a.result.json",
+      "byte_length": 1225,
+      "sha256": "sha256:f8708feb85d5da8f1600efd142a339f877c7b8d71d66d63ace29e51fdc189527"
+    },
+    {
+      "path": "negative-controls/NC-4b.result.json",
+      "byte_length": 1255,
+      "sha256": "sha256:edb703e38f928bb3283f09354b7c51d8f8304281e58cf1755a7a832ae6dbab9c"
+    },
+    {
+      "path": "negative-controls/NC-5.result.json",
+      "byte_length": 1683,
+      "sha256": "sha256:c49ca8248773c4b4cb8b06933331d539fd9d0d19d5dbe6c575e4a42f9b3d7955"
+    },
+    {
+      "path": "negative-controls/README.md",
+      "byte_length": 3491,
+      "sha256": "sha256:32817d5b9e04c2b39c59fbbb690c121f29931a3f52a7c1159367c32a339a8d0a"
+    },
+    {
+      "path": "oracle-precommit.json",
+      "byte_length": 12461,
+      "sha256": "sha256:f22309b860304163c9195196161fe7897b3d80db0a5edb8c349a1c77dad745ca"
+    },
+    {
+      "path": "oracle-precommit.sha256",
+      "byte_length": 95,
+      "sha256": "sha256:aab3355fd9b22760562fe0edddaf33a88664402c3853634e08ebaaa7cb3e7eb0"
+    },
+    {
+      "path": "plan/campaign-plan-application.md",
+      "byte_length": 6813,
+      "sha256": "sha256:b49d761cb2d645bcc7a69f13b159c40c0992292d785c884aae03724597b1272a"
+    },
+    {
+      "path": "plan/qualiber-product-external-scenario-test-plan.md",
+      "byte_length": 152749,
+      "sha256": "sha256:b1105dc7209cd8fcd32f10064ced6a4634c44b50faa582491376a37c9d019092"
+    },
+    {
+      "path": "provisioning/lab-build.log",
+      "byte_length": 65,
+      "sha256": "sha256:92ba67f09d96d0a90b63e29fb2b28b309844436cf6b3adb54aae595f1710b23a"
+    },
+    {
+      "path": "provisioning/lab-npm-ci.log",
+      "byte_length": 312,
+      "sha256": "sha256:4958ccd494aeb6d2d1b8435c535e9cf2e8d834a612e2669d883d9ec81ee196ef"
+    },
+    {
+      "path": "provisioning/qlb-install-lab-packages.log",
+      "byte_length": 611,
+      "sha256": "sha256:1d95dea433478129691f686938c95fba3545e18d1f641265a1aa31a74412040f"
+    },
+    {
+      "path": "provisioning/qlb-npm-ci.log",
+      "byte_length": 1722,
+      "sha256": "sha256:d92948c4087af605b890ff11a571c7c00c4c16335b79e0efc086c217ec655802"
+    },
+    {
+      "path": "provisioning/qlb-test-adapters.log",
+      "byte_length": 8981,
+      "sha256": "sha256:2126820a456ddd9439c8f779957825578c4b3ee7999401197dc144872084ed9f"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/comparison/comparison.json",
+      "byte_length": 8196,
+      "sha256": "sha256:bf096946d453193560e58a91df85aac7fc0b5c4e5b7fc73f06f3bebac3a6fc2a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/declaration/trusted-local-declaration.json",
+      "byte_length": 2384,
+      "sha256": "sha256:218000ceff619e97cc23ab2f1f10cd355f945229d3d69397fc6c1c8dc39886cd"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/input/contract.json",
+      "byte_length": 1180,
+      "sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/input/stimulus.json",
+      "byte_length": 994,
+      "sha256": "sha256:fef741e0984dbd52b445386e6c6ef22a6493614c5c6e2cd9bf49ae7ffe2b2073"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/plan/plan-draft.generated.json",
+      "byte_length": 4738,
+      "sha256": "sha256:e89077a1cd4b500be8e7bb33560904410a4285250ee54c9c6031a149a7637254"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/plan/plan-sealed.json",
+      "byte_length": 5447,
+      "sha256": "sha256:7f863784153b93b13c29e44ae5586df8eb73b3c2d7dea28ad31dc08267786e91"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/plan/seal-stdout.json",
+      "byte_length": 1847,
+      "sha256": "sha256:9ff8d8c528cfe9ef58b4ca1a54a65ccbc3dc6d733be44d82d29b0719b2bff571"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 994,
+      "sha256": "sha256:fef741e0984dbd52b445386e6c6ef22a6493614c5c6e2cd9bf49ae7ffe2b2073"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 1180,
+      "sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/observation-plan.json",
+      "byte_length": 5447,
+      "sha256": "sha256:7f863784153b93b13c29e44ae5586df8eb73b3c2d7dea28ad31dc08267786e91"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/registry/trusted-local-adapters/504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393/adapter-manifest.v2.json",
+      "byte_length": 1699,
+      "sha256": "sha256:91e830d253e23194ecb9bbd0a206c20699b610333821c25074a6dc6345c9e85a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/registry/trusted-local-adapters/504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393/trusted-local-declaration.v1.json",
+      "byte_length": 2384,
+      "sha256": "sha256:218000ceff619e97cc23ab2f1f10cd355f945229d3d69397fc6c1c8dc39886cd"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/run-stdout.json",
+      "byte_length": 6250,
+      "sha256": "sha256:9961f7cc60309de506b00abd875f8ca533759452a5b19460e46266fddfa9338e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/capture.json",
+      "byte_length": 8668,
+      "sha256": "sha256:9cf8479213e4a7ec535e03ceab0b4a446a1ee069bf9e1ec5fae66361dd85006c"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:83bdee1d031169bb62034935cceab37b24a468a7fa5973c7219d629c6f96b1db"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 1746,
+      "sha256": "sha256:a2e22bbc428c2c625ac5d856e062ccc26a44a835a6a4a207dcdd7b6b40c76899"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:574212d7a47a38202abf7008135ebeb30d19b6e1620e929104ab609375779d58"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json",
+      "byte_length": 5289,
+      "sha256": "sha256:20f603bdbe30b6101a4f5afde1c05411e8c57830977d88e894723ed08f605bcb"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:72c06827d2ea44ddb9ee76d74a09b9f089bc9908589f7d49f94ea8990c518f37"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 268,
+      "sha256": "sha256:0623bccf2eec055d923c898962fa89f503c167555948922b3f80bf3895317b1e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:9d86fbf86f3d21804f70907192c02542b168f773356f6cc4fc530be27f008f41"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.md",
+      "byte_length": 427,
+      "sha256": "sha256:d04f6216a861a86b14e0bab99fde02b8d5173c392a7af7aa86c1cb0af0bbbca4"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 262,
+      "sha256": "sha256:4f2e2d58b8e09265c586097666b83343a672581ba5e72c46da340b3205ec39f7"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 314,
+      "sha256": "sha256:93c57674171f546e5e22b65de28037da0692335f5d11338386c927687258f8bd"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 274,
+      "sha256": "sha256:6ba24bd52c43df230ef04b8aa5f9cee84b036d0487de5a36889c767aa14f5699"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.decision.local-1.0-mszhw5le-bc71389e.9b709cba7ddf.snap.json",
+      "byte_length": 1675,
+      "sha256": "sha256:b966f8483842b5c1e5cec317914d3143e87ade5afabdd2c77a12b187e6f8dc35"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.decision.local-1.0-mszhw5le-bc71389e.9b709cba7ddf.snap.json.frozen",
+      "byte_length": 333,
+      "sha256": "sha256:89995e36395545884d550d92e0bcc28ddac7b677b0ccb7b55c1e1db7d53fe078"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.eligibility.json",
+      "byte_length": 842,
+      "sha256": "sha256:4af22324595f6dbd2760fc542c8f2af87bf82f00861258c144310a344fa26230"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.eligibility.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:7f45211657b968beed1ca0daad48e60c984be46e53a8d63f5872e06ad478fcc0"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 2452,
+      "sha256": "sha256:d972daef7a102b935b1bf74f067010983bf9c4c5c3f5be22f4a904dee241bb8e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:cb255d5de13c6df7b13fe5c6c5f83f34131b236f1579a461441985c677800bbd"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/run-summary.json",
+      "byte_length": 2039,
+      "sha256": "sha256:b4018a4cbb5d495eec69a670272c0976263e3260de6177baf5e0fb518b0fa679"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 264,
+      "sha256": "sha256:de99c635d3466b7bd1d6a49399755a863dd569e0f488647f4365028d77b46f1a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 586,
+      "sha256": "sha256:9906d33eb470654460c6c5221c9bd66f54dcbfefaaa185f91b3ffbc84fb3413b"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:700d0e5811578164bfe3671a5499e3eb73fcbd0c223b5c81831a266970801204"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/capability-grant.json",
+      "byte_length": 671,
+      "sha256": "sha256:24181a3f07b1f3fb20af09dc466ac86c0a4debd62500689ac5b3ec64fee858b5"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/capability-grant.json.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:06dfb3c604ad70415fd1a6f3bc4111341b4f873470552a3d0c3966bee354bc2f"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/diagnostics-manifest.json",
+      "byte_length": 817,
+      "sha256": "sha256:e16070d11bf799feeea501c5111e7834234afe8b4b38e43fade4a08f861e269a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/diagnostics-manifest.json.frozen",
+      "byte_length": 273,
+      "sha256": "sha256:25654d772b5ea590b41a0a80cce7bcde24843ac4772fb394b4ac11fe7eef9eca"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/response-envelope.json",
+      "byte_length": 894,
+      "sha256": "sha256:f1b760ce7ee9ebde1c182a5c63eace3e2407a670d42bce4bf66f1e66654d9df2"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/response-envelope.json.frozen",
+      "byte_length": 270,
+      "sha256": "sha256:5e4defca0123d2f5e94767935868e979154ec06429a4af238c879213c1d66d25"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/sandbox-invocation-manifest.json",
+      "byte_length": 5329,
+      "sha256": "sha256:0d6e1ccf3e5101157079df8bab18696598705549f1dce1329d85e16b7dcc4194"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/sandbox-invocation-manifest.json.frozen",
+      "byte_length": 281,
+      "sha256": "sha256:48f087e605d1d44a414da665259b0a199fb2a15b6d6bfb71b96b50d729eade23"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/sandbox-invocation-result.json",
+      "byte_length": 578,
+      "sha256": "sha256:bec9ca9d0501c290d76f2519c25726a5720d7bf3521870037b689dfb9aeab427"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/sandbox-invocation-result.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:8af0e2b716ae3647d271a171d1c07d31393362d008fb3cd5a1e2d428cbe3015c"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/report-residue-final/capability-grant.json",
+      "byte_length": 665,
+      "sha256": "sha256:221eae941f1186873705ab80331ac6912def62ca1eaa5b7d9dda6cf02f8a6f03"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/report-residue-final/capability-grant.json.frozen",
+      "byte_length": 263,
+      "sha256": "sha256:c13e48dcab271e16245175fd048c680e322a8b11619e99314badf8d3dafd9717"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/report-residue-final/diagnostics-manifest.json",
+      "byte_length": 797,
+      "sha256": "sha256:a313b9bc845ca2eef549836757ce5cecb42337d9fef65df13dcc9f35d7dbe57a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/report-residue-final/diagnostics-manifest.json.frozen",
+      "byte_length": 267,
+      "sha256": "sha256:b6cd000f4860b1132b92a22b3449ce573d49d8857cc8ca88bc7f1cc340bbed66"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/report-residue-final/response-envelope.json",
+      "byte_length": 883,
+      "sha256": "sha256:6ce15a76c4ab0317b47c335c9bb7e2233f78c27dbf3948cda2f64f341f7f8eb7"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/report-residue-final/response-envelope.json.frozen",
+      "byte_length": 264,
+      "sha256": "sha256:9d115ef7c9c5d4dda215f50abaf50aa4b2ed4413080ecb15be28e6981d76ac3e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-manifest.json",
+      "byte_length": 5311,
+      "sha256": "sha256:21f366b4bf6419e9682ee302897884504073d5c8e9d23a0d14551838ae729e85"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-manifest.json.frozen",
+      "byte_length": 275,
+      "sha256": "sha256:3094f75a2136bb5c1a650897759f5048dab5ae16e3ae0d6b063a73c0fd885f3e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-result.json",
+      "byte_length": 578,
+      "sha256": "sha256:d8ef4aae081eaa7e15ee39896ae3d085b14349691b30f50663f9f22c5ab234cb"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-result.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:791cae1a8e1c359b04e55e81d45ea0a0bddb2bcf377ee8bfdd2dbaa5a2f62c66"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/subject-output/diagnostics/interact-validate-stimulus/interact-validate-stimulus.log",
+      "byte_length": 137,
+      "sha256": "sha256:22ebf63fa7de9f4134095889ec82d0188ad7113fd8a8bdb79b003e174c8beced"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/subject-output/diagnostics/interact-validate-stimulus/interact-validate-stimulus.log.frozen",
+      "byte_length": 264,
+      "sha256": "sha256:773d4ebb3e27f949a67dd9e8a1fe4d15d7f4d63a6d6eaf958d350408811be2d5"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/subject-output/diagnostics/report-residue-final/report-residue-final.log",
+      "byte_length": 46,
+      "sha256": "sha256:e6b7f1e842fe1406a2208b00ba8554fc09b08a9a96bb2d0c887f457b5f39002d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/store/subject-output/diagnostics/report-residue-final/report-residue-final.log.frozen",
+      "byte_length": 251,
+      "sha256": "sha256:23185065c825d909947f02c80a7848282a68a8bf28ae472e18e2ececb5a2e796"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/trusted-local-observation-record.json",
+      "byte_length": 23751,
+      "sha256": "sha256:4d94f355d9eb5f5153979e9993d68bad933623abaf6a522b067be4c7fdab8aa7"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/diagnostics/interact-validate-stimulus.log",
+      "byte_length": 137,
+      "sha256": "sha256:22ebf63fa7de9f4134095889ec82d0188ad7113fd8a8bdb79b003e174c8beced"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/output/qualiber/capture.json",
+      "byte_length": 8668,
+      "sha256": "sha256:9cf8479213e4a7ec535e03ceab0b4a446a1ee069bf9e1ec5fae66361dd85006c"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/evidence-pack.json",
+      "byte_length": 1746,
+      "sha256": "sha256:a2e22bbc428c2c625ac5d856e062ccc26a44a835a6a4a207dcdd7b6b40c76899"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/report.json",
+      "byte_length": 5289,
+      "sha256": "sha256:20f603bdbe30b6101a4f5afde1c05411e8c57830977d88e894723ed08f605bcb"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/report.junit.xml",
+      "byte_length": 268,
+      "sha256": "sha256:0623bccf2eec055d923c898962fa89f503c167555948922b3f80bf3895317b1e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/report.md",
+      "byte_length": 427,
+      "sha256": "sha256:d04f6216a861a86b14e0bab99fde02b8d5173c392a7af7aa86c1cb0af0bbbca4"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/run-result.json",
+      "byte_length": 314,
+      "sha256": "sha256:93c57674171f546e5e22b65de28037da0692335f5d11338386c927687258f8bd"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/telemetrytest.decision.local-1.0-mszhw5le-bc71389e.9b709cba7ddf.snap.json",
+      "byte_length": 1675,
+      "sha256": "sha256:b966f8483842b5c1e5cec317914d3143e87ade5afabdd2c77a12b187e6f8dc35"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/telemetrytest.eligibility.json",
+      "byte_length": 842,
+      "sha256": "sha256:4af22324595f6dbd2760fc542c8f2af87bf82f00861258c144310a344fa26230"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 2452,
+      "sha256": "sha256:d972daef7a102b935b1bf74f067010983bf9c4c5c3f5be22f4a904dee241bb8e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/output/qualiber/run-summary.json",
+      "byte_length": 2039,
+      "sha256": "sha256:b4018a4cbb5d495eec69a670272c0976263e3260de6177baf5e0fb518b0fa679"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/output/qualiber/stimulus-identity.json",
+      "byte_length": 586,
+      "sha256": "sha256:9906d33eb470654460c6c5221c9bd66f54dcbfefaaa185f91b3ffbc84fb3413b"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/interact-validate-stimulus/request.frames",
+      "byte_length": 5297,
+      "sha256": "sha256:03411a7b6fd7aa5937455f0b01543591c21796f357579130e29d06775214d326"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/report-residue-final/diagnostics/report-residue-final.log",
+      "byte_length": 46,
+      "sha256": "sha256:e6b7f1e842fe1406a2208b00ba8554fc09b08a9a96bb2d0c887f457b5f39002d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/run-output/workspace/report-residue-final/request.frames",
+      "byte_length": 5584,
+      "sha256": "sha256:71935c1367f4acf00403f62d3d8f855420c06636d3cfa71125730d52e40c72c0"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/scans/scan-1-mounted-inputs.json",
+      "byte_length": 740,
+      "sha256": "sha256:a1242cd6ffbfc6d3337d5ae557c0c98d4c1a937854509f60374bdd325fdcfe83"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/scans/scan-2-sealed-plan.json",
+      "byte_length": 753,
+      "sha256": "sha256:c1afdaead8ae8142c943c203e83eafa8f4e2b0041c1bbbec6d83fe06a7742155"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/scans/scan-3-retained.json",
+      "byte_length": 1121,
+      "sha256": "sha256:1db6e934680db94bbb211af120627c30fe769eeb452a7c3a384c9d50e3d1dd7a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-006/verification/verification-result.json",
+      "byte_length": 1744,
+      "sha256": "sha256:dcc2bd15c3790e42e25da1af75f469be812a6309624397db681e55f12a143ad8"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/comparison/comparison.json",
+      "byte_length": 8220,
+      "sha256": "sha256:62983da460d8408ba56e02a773ea19cf0234aed092f56c0ef9dd91a76cecd5b9"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/declaration/trusted-local-declaration.json",
+      "byte_length": 2384,
+      "sha256": "sha256:07b62e377fc642242afa49b2d90c1a3b1adcf682ae88a2b7a50188aeee5deee1"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/input/contract.json",
+      "byte_length": 1180,
+      "sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/input/stimulus.json",
+      "byte_length": 754,
+      "sha256": "sha256:f4c129d1fd76a31f826a74671e10005bab034aa572423627e50193f44cda5ce6"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/plan/plan-draft.generated.json",
+      "byte_length": 4738,
+      "sha256": "sha256:1c13674c9bc525636b86c5541a15997f5570d342734f7793bcd57e0648c9f11c"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/plan/plan-sealed.json",
+      "byte_length": 5447,
+      "sha256": "sha256:7310b05efac1f4b5abe740a8bdbe114f5d3fd033fae4b6de3182ff961e1cefc5"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/plan/seal-stdout.json",
+      "byte_length": 1847,
+      "sha256": "sha256:246ce2b3d8391b8effa3c7c844a3a512bcaeffbc6a7f07b5d388a14b81d6095a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 754,
+      "sha256": "sha256:f4c129d1fd76a31f826a74671e10005bab034aa572423627e50193f44cda5ce6"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 1180,
+      "sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/observation-plan.json",
+      "byte_length": 5447,
+      "sha256": "sha256:7310b05efac1f4b5abe740a8bdbe114f5d3fd033fae4b6de3182ff961e1cefc5"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/registry/trusted-local-adapters/504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393/adapter-manifest.v2.json",
+      "byte_length": 1699,
+      "sha256": "sha256:91e830d253e23194ecb9bbd0a206c20699b610333821c25074a6dc6345c9e85a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/registry/trusted-local-adapters/504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393/trusted-local-declaration.v1.json",
+      "byte_length": 2384,
+      "sha256": "sha256:07b62e377fc642242afa49b2d90c1a3b1adcf682ae88a2b7a50188aeee5deee1"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/run-stdout.json",
+      "byte_length": 6250,
+      "sha256": "sha256:c5dcef21cb4b1d6ff6d8618d3e76e7bdc3e8d488f39ad2bafe68dc48ed016088"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/capture.json",
+      "byte_length": 6674,
+      "sha256": "sha256:b175c798fe76bcf1932714ad5a60ad7d6bd6e418cc7158227994ffbeb43aefc8"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:76ad35e45d62e7dd1120fb41080482f8e722231c87243e2cd8fb58c0cf277383"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 1821,
+      "sha256": "sha256:9b4133380d0145937261edda4535127e69d287a20e9d1f3f538e7e7d8beaf6af"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:af61397274f886231792ac5f8d241881bbbdade7caac71317aa866a63cb00024"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json",
+      "byte_length": 5332,
+      "sha256": "sha256:f8f010a4ed03b7213b455b152363fee1790d86deb213e7f7923d5c9fbdb7db4c"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:c97e66aac986c5393ede57e70ca4d885b99f6bd0fa21c2fb05655211892f99cc"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 389,
+      "sha256": "sha256:554e7342570796cc8c3d65993c33e2d710c8f588af44205975840b2332210e0d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:3a5d86ae83b82714d1483ce3c91d669e8771f0d83a12218a527a43a6d2e64ebf"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.md",
+      "byte_length": 465,
+      "sha256": "sha256:c3bf17a9472eb2efcc6b77a700eb0a55e4fd1bf5a25e6c213a54e57cf0ea54e5"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 262,
+      "sha256": "sha256:162f5fb7945f27f4cd30d78377aacbfdf9effe43151fd712b4c1b3d0916aff3d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 314,
+      "sha256": "sha256:93c57674171f546e5e22b65de28037da0692335f5d11338386c927687258f8bd"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 274,
+      "sha256": "sha256:6ba24bd52c43df230ef04b8aa5f9cee84b036d0487de5a36889c767aa14f5699"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.decision.local-1.0-mszhy0z9-4e6f8097.eef0c9eb248e.snap.json",
+      "byte_length": 1675,
+      "sha256": "sha256:4071db608d9dd10b0f351d7de49dfcd172d0b8ed3ee65f80fbca63fb7e7d9177"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.decision.local-1.0-mszhy0z9-4e6f8097.eef0c9eb248e.snap.json.frozen",
+      "byte_length": 333,
+      "sha256": "sha256:d4da6afc6be627ee7c690ea235eb5a93f033ae4bcacdb6cf7768fab7ceeb5b97"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.eligibility.json",
+      "byte_length": 842,
+      "sha256": "sha256:9d1ad4de0a4e22899fbad961dbb90296131c54c06defe8f96b3dfc70b6546382"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.eligibility.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:ebccd231c1c51934998dcaae4e8e1b05200a33e7ae1902e92e3b18dd51395727"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 2419,
+      "sha256": "sha256:5b5e637893cb1279bced4a78ef1d2ea168a020df62fc805500a16dbbf3e6f129"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:2ec4ac1f01a3e279a7e3a853737696c22f9ff6889e08accf3cfa0d48f6be5a12"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/run-summary.json",
+      "byte_length": 2039,
+      "sha256": "sha256:6354f7d6f9753be8c555733243809d77e127b2ef38524e34476af5023df6a53e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 264,
+      "sha256": "sha256:a4185c3736e9812e84a642e305ae4c527612099c81fd06eb998e670f5f0133f3"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 586,
+      "sha256": "sha256:ec81f9f52cc1e477d036401151a48cfeb82d564f57615513745e577c520cecce"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:e711d23da5cc63d26214df9044aff169b4117d3defb5160d47d0b6ec069fe30d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/capability-grant.json",
+      "byte_length": 671,
+      "sha256": "sha256:a916e4fc8598d00ce5310ce2197888b0dfdbf1f5a05a79a5873645d1eb3c0dae"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/capability-grant.json.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:af9a8d2ef83154419985a328c8a5c8e592bd24327dda247ee6459b0c925fb44f"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/diagnostics-manifest.json",
+      "byte_length": 817,
+      "sha256": "sha256:785986e5c589b22ffeffbcddff9d48d7ba93feb4bd5c35d4922a6f426ae8972e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/diagnostics-manifest.json.frozen",
+      "byte_length": 273,
+      "sha256": "sha256:a8aba282d9d9c63d93c06805159ee1063eb2593b7f1726cbd715a3c20f7911be"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/response-envelope.json",
+      "byte_length": 894,
+      "sha256": "sha256:cc3378fe667e59749d06aa7ecf9382950aae53c8791cada67dcac36767410050"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/response-envelope.json.frozen",
+      "byte_length": 270,
+      "sha256": "sha256:18d04f12f6c6460c230a0f0b056ea7444c794af2758f3d3347febcece41adb2e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/sandbox-invocation-manifest.json",
+      "byte_length": 5329,
+      "sha256": "sha256:bda4026367845277d4a56780351aecec3945f779c309a0be08a39a4d05227fac"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/sandbox-invocation-manifest.json.frozen",
+      "byte_length": 281,
+      "sha256": "sha256:cbb18d1b4a9e294e67de247bfc32f4849708e3a69d7bdefbf826b6b61f2de5cc"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/sandbox-invocation-result.json",
+      "byte_length": 578,
+      "sha256": "sha256:7d1f5f1a467b55f04c81e6321f66e578a90ef2f7692ac9290878b2031241efb4"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/sandbox-invocation-result.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:5c9049113a26dbd9b17dd1c52997af6d98c856f850d2a30fcb549fba6d818b1a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/report-residue-final/capability-grant.json",
+      "byte_length": 665,
+      "sha256": "sha256:e2f5da95422410fc76f5b8ae9ca010557548c6e938192b11bcef57b5fc6478b8"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/report-residue-final/capability-grant.json.frozen",
+      "byte_length": 263,
+      "sha256": "sha256:32cdec0f990b085cab73d5061f971a6defce61b9a3d1706a92143b97b3bafac8"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/report-residue-final/diagnostics-manifest.json",
+      "byte_length": 797,
+      "sha256": "sha256:0fd3b7a9b1ff157b92350e070ccdac0c9b8d627e878400cba9fb79d5eb72a883"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/report-residue-final/diagnostics-manifest.json.frozen",
+      "byte_length": 267,
+      "sha256": "sha256:32409a2f1b1f15c8f44378f90bd4ea2e170f0f5a91217cc1c39c09442ff94f86"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/report-residue-final/response-envelope.json",
+      "byte_length": 883,
+      "sha256": "sha256:0904f76a2756354477708918e8d155669134915354d3419c7a274c0265db9c51"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/report-residue-final/response-envelope.json.frozen",
+      "byte_length": 264,
+      "sha256": "sha256:f1130d6a985d7b10fa9e6a1369f3935f711ab96c9afc0f3407124a03be9f003c"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-manifest.json",
+      "byte_length": 5311,
+      "sha256": "sha256:ab870c7d299eb36d99c9622e4afe9cd9e15c3374b08017e8881c9fe174254d15"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-manifest.json.frozen",
+      "byte_length": 275,
+      "sha256": "sha256:5121f568901290125006c8a741695ff952cdd0bebcb04e54010a1c57010baadc"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-result.json",
+      "byte_length": 578,
+      "sha256": "sha256:08d9b699262172f46a669af4fead35acec0402450bf37b5dbb7332b1a48565f1"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-result.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:d469663cd23d9dbcb1462cb805b2591db62ae20f4d4d6ff0c61cb1a46ce036c1"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/subject-output/diagnostics/interact-validate-stimulus/interact-validate-stimulus.log",
+      "byte_length": 137,
+      "sha256": "sha256:1b76794ef2dbd59f57c15d6e5470c9b6dd64a1995c9ba41c516660dd1852831d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/subject-output/diagnostics/interact-validate-stimulus/interact-validate-stimulus.log.frozen",
+      "byte_length": 264,
+      "sha256": "sha256:91e94ecf092162ff176542f7ab5dd5971723911e80479d1e039050551007ee20"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/subject-output/diagnostics/report-residue-final/report-residue-final.log",
+      "byte_length": 46,
+      "sha256": "sha256:e6b7f1e842fe1406a2208b00ba8554fc09b08a9a96bb2d0c887f457b5f39002d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/store/subject-output/diagnostics/report-residue-final/report-residue-final.log.frozen",
+      "byte_length": 251,
+      "sha256": "sha256:23185065c825d909947f02c80a7848282a68a8bf28ae472e18e2ececb5a2e796"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/trusted-local-observation-record.json",
+      "byte_length": 23751,
+      "sha256": "sha256:2188647d7234844d71c748d2e1c9785e5150a522fc216325b5a9d3e9b51c0f06"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/diagnostics/interact-validate-stimulus.log",
+      "byte_length": 137,
+      "sha256": "sha256:1b76794ef2dbd59f57c15d6e5470c9b6dd64a1995c9ba41c516660dd1852831d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/output/qualiber/capture.json",
+      "byte_length": 6674,
+      "sha256": "sha256:b175c798fe76bcf1932714ad5a60ad7d6bd6e418cc7158227994ffbeb43aefc8"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/evidence-pack.json",
+      "byte_length": 1821,
+      "sha256": "sha256:9b4133380d0145937261edda4535127e69d287a20e9d1f3f538e7e7d8beaf6af"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/report.json",
+      "byte_length": 5332,
+      "sha256": "sha256:f8f010a4ed03b7213b455b152363fee1790d86deb213e7f7923d5c9fbdb7db4c"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/report.junit.xml",
+      "byte_length": 389,
+      "sha256": "sha256:554e7342570796cc8c3d65993c33e2d710c8f588af44205975840b2332210e0d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/report.md",
+      "byte_length": 465,
+      "sha256": "sha256:c3bf17a9472eb2efcc6b77a700eb0a55e4fd1bf5a25e6c213a54e57cf0ea54e5"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/run-result.json",
+      "byte_length": 314,
+      "sha256": "sha256:93c57674171f546e5e22b65de28037da0692335f5d11338386c927687258f8bd"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/telemetrytest.decision.local-1.0-mszhy0z9-4e6f8097.eef0c9eb248e.snap.json",
+      "byte_length": 1675,
+      "sha256": "sha256:4071db608d9dd10b0f351d7de49dfcd172d0b8ed3ee65f80fbca63fb7e7d9177"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/telemetrytest.eligibility.json",
+      "byte_length": 842,
+      "sha256": "sha256:9d1ad4de0a4e22899fbad961dbb90296131c54c06defe8f96b3dfc70b6546382"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 2419,
+      "sha256": "sha256:5b5e637893cb1279bced4a78ef1d2ea168a020df62fc805500a16dbbf3e6f129"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/output/qualiber/run-summary.json",
+      "byte_length": 2039,
+      "sha256": "sha256:6354f7d6f9753be8c555733243809d77e127b2ef38524e34476af5023df6a53e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/output/qualiber/stimulus-identity.json",
+      "byte_length": 586,
+      "sha256": "sha256:ec81f9f52cc1e477d036401151a48cfeb82d564f57615513745e577c520cecce"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/interact-validate-stimulus/request.frames",
+      "byte_length": 5297,
+      "sha256": "sha256:9f3c4cdd6d28f9ae3aa8dce0f87d2ce38806f3db05486059ab204f5570f1166f"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/report-residue-final/diagnostics/report-residue-final.log",
+      "byte_length": 46,
+      "sha256": "sha256:e6b7f1e842fe1406a2208b00ba8554fc09b08a9a96bb2d0c887f457b5f39002d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/run-output/workspace/report-residue-final/request.frames",
+      "byte_length": 5584,
+      "sha256": "sha256:ff62b21577eb731a38538d9ab5b4fc5fc1bb09c3adabe25420a05031dcdb3d57"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/scans/scan-1-mounted-inputs.json",
+      "byte_length": 740,
+      "sha256": "sha256:dcf9a55874e1c3bf3ba915c0b467fb205cd5b60a090f73d5220bb7a6b5168c11"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/scans/scan-2-sealed-plan.json",
+      "byte_length": 753,
+      "sha256": "sha256:3e7d8734bfd92f17e514be462435da90534d835ba4cfebcd4f19dc9a53eb1ed6"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/scans/scan-3-retained.json",
+      "byte_length": 1121,
+      "sha256": "sha256:b33c60fd7ad0d046bca327a4ea70524b5caf385c3c4ce2bd43cfd078ecca1c83"
+    },
+    {
+      "path": "scenarios/QLB-EXT-007/verification/verification-result.json",
+      "byte_length": 1744,
+      "sha256": "sha256:1fc301d5a41f21ce425979025f12edf83f0530c294e57e7421995f01d3e685d9"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/comparison/comparison.json",
+      "byte_length": 8214,
+      "sha256": "sha256:1d809001c7c75aaf5b29cdde78f62025b4982de86f6c7fe7c69598d93d70a87c"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/declaration/trusted-local-declaration.json",
+      "byte_length": 2384,
+      "sha256": "sha256:5e8e9c7347a39d4417f8bd6bd4439ceefd2a2a23e7e2ef6f9abe33c7a1da517f"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/input/contract.json",
+      "byte_length": 1180,
+      "sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/input/stimulus.json",
+      "byte_length": 777,
+      "sha256": "sha256:5a565eef939a96f2e05c8121af8f4689aae9ecfc9b8ed490f95721b7cbe40dda"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/plan/plan-draft.generated.json",
+      "byte_length": 4738,
+      "sha256": "sha256:f1fafefba94d9f13e544c028f87676f9bf9182721e10c5e6e6a3757e27b5494e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/plan/plan-sealed.json",
+      "byte_length": 5447,
+      "sha256": "sha256:6c6449155524825666a1a96774e1455f9bf705628f498634df664f15720d735a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/plan/seal-stdout.json",
+      "byte_length": 1847,
+      "sha256": "sha256:a3ae0c4d5638d556307070fd66287df7c19b95cad273240a78569966d2736984"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/inputs/capture-stimulus/stimulus.json",
+      "byte_length": 777,
+      "sha256": "sha256:5a565eef939a96f2e05c8121af8f4689aae9ecfc9b8ed490f95721b7cbe40dda"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/inputs/contract-stimulus/contract.json",
+      "byte_length": 1180,
+      "sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/observation-plan.json",
+      "byte_length": 5447,
+      "sha256": "sha256:6c6449155524825666a1a96774e1455f9bf705628f498634df664f15720d735a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/registry/trusted-local-adapters/504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393/adapter-manifest.v2.json",
+      "byte_length": 1699,
+      "sha256": "sha256:91e830d253e23194ecb9bbd0a206c20699b610333821c25074a6dc6345c9e85a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/registry/trusted-local-adapters/504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393/trusted-local-declaration.v1.json",
+      "byte_length": 2384,
+      "sha256": "sha256:5e8e9c7347a39d4417f8bd6bd4439ceefd2a2a23e7e2ef6f9abe33c7a1da517f"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/run-stdout.json",
+      "byte_length": 6250,
+      "sha256": "sha256:4bbfbbefcb0e66567e86be33fdc124cacb62d9c2ed6f650236dd73c1e107b185"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/capture.json",
+      "byte_length": 6710,
+      "sha256": "sha256:9a30263f3376922811429321126e761565d7edddab23167cdf20093921f51ca9"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/capture.json.frozen",
+      "byte_length": 260,
+      "sha256": "sha256:714581690e46e1488449143ebd168aa6667c53eb7eb57355ab6e372a5e9009f1"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/evidence-pack.json",
+      "byte_length": 1809,
+      "sha256": "sha256:e10cedc0df2fd4583aa24771a2f98109d541afaee4d45bd9a607b13f823b4a7d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/evidence-pack.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:ee0c0ef962ec8e3d3df1ce667369d58ce551f608b84c3efe51d92d0017646205"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json",
+      "byte_length": 5316,
+      "sha256": "sha256:e0ac9b78fd7938e279385e16db3256e9f59a4c3169c21bea747c914d9a140f5d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json.frozen",
+      "byte_length": 271,
+      "sha256": "sha256:51f26cd5615ee94ae012f8919e17859d8569a813634586ec430d6406a99d67ac"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.junit.xml",
+      "byte_length": 386,
+      "sha256": "sha256:b573dd16e34413e7eafe78576c5a00d4326ef14af99fe1d4efd78d3a042553f7"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.junit.xml.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:6de5b58177005710a723313b35faf3480856d019b09c1a2bc33b52e9ee358032"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.md",
+      "byte_length": 433,
+      "sha256": "sha256:c781a6cf62c575a1f8a83abad9d74e54ae63f79e04e393b140fdf513c808e4b8"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/report.md.frozen",
+      "byte_length": 262,
+      "sha256": "sha256:daee3170acf569365ae89a13a7f43149f5182940a59bcce5454843b843ed1743"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/run-result.json",
+      "byte_length": 314,
+      "sha256": "sha256:93c57674171f546e5e22b65de28037da0692335f5d11338386c927687258f8bd"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/run-result.json.frozen",
+      "byte_length": 274,
+      "sha256": "sha256:6ba24bd52c43df230ef04b8aa5f9cee84b036d0487de5a36889c767aa14f5699"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.decision.local-1.0-mszhy5s5-48cf4e14.1d89814679e9.snap.json",
+      "byte_length": 1675,
+      "sha256": "sha256:c087ef27e4591849054f4ec69c0fd53797d4232a0eada10797223863bfe3be41"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.decision.local-1.0-mszhy5s5-48cf4e14.1d89814679e9.snap.json.frozen",
+      "byte_length": 333,
+      "sha256": "sha256:e6e7783c754510d23ae9d19970b6272137e4cd25874f87908ad0e43fcef35b98"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.eligibility.json",
+      "byte_length": 842,
+      "sha256": "sha256:a42627e4c243bc073868bc4b59ea372cec04c36cbb38778e56dc70cc7ff20f40"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.eligibility.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:6cb7436aba5d6ed9ff30f625984477a81953102155f32b1c65941b0c056e735a"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 2416,
+      "sha256": "sha256:af07da230a032b0f9ee6abd34dcbb2f5541dcaa2e0e23fe25bf38cda70cb7421"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/validation-evidence-pack.json.frozen",
+      "byte_length": 289,
+      "sha256": "sha256:bf6453c4f619ab754c59a28e4bbef981708f84f5b02f1835dfa310889a77b1a9"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/run-summary.json",
+      "byte_length": 2039,
+      "sha256": "sha256:970e30c26d44fe84301a340450c71764060a11159387c6b0fdd9ae028cd4209e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/run-summary.json.frozen",
+      "byte_length": 264,
+      "sha256": "sha256:14e5a8e58e03b2f16b8729fdcfdcf5b8d3fa275aac513ea7a4d8153d4044020c"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/stimulus-identity.json",
+      "byte_length": 586,
+      "sha256": "sha256:a2f536b1671d2441f3c567638aa1cc1c3c01aef5aaf2dbc72d5d6de9794bf156"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/stimulus-identity.json.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:55751c4261b366fe8f5140c77c596b11147dd04c9fe3c8566266c6d5ca3cd253"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/capability-grant.json",
+      "byte_length": 671,
+      "sha256": "sha256:fdacd62b5669602abf814b2c8a8f468faec300ee06587c0e793687029c3f2d34"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/capability-grant.json.frozen",
+      "byte_length": 269,
+      "sha256": "sha256:685db7f593c22dc285931280f54429809a1d5a6e3055e0b9bb5fab213f4ac631"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/diagnostics-manifest.json",
+      "byte_length": 817,
+      "sha256": "sha256:ef33e54d1bad4a66564b7653f5f8f438250abcf94fd83f5a488b628d43ecf286"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/diagnostics-manifest.json.frozen",
+      "byte_length": 273,
+      "sha256": "sha256:06f93e3e6be8f2a7c647c16f0bd13ec63e06a281cfeb0ed54d905d6ecfd80266"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/response-envelope.json",
+      "byte_length": 893,
+      "sha256": "sha256:75ba37bacd324d59a39198df9a960e42c02b10b9c0a7886ffb724dd9ee351e76"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/response-envelope.json.frozen",
+      "byte_length": 270,
+      "sha256": "sha256:81a798b54e05f4f590782d247d824df8e187b606a12bdc8b683a78977c28e9eb"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/sandbox-invocation-manifest.json",
+      "byte_length": 5329,
+      "sha256": "sha256:1ff8a660e1c9824936330c467ccc35658ad945fae31d5110c203f7ff8ee69277"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/sandbox-invocation-manifest.json.frozen",
+      "byte_length": 281,
+      "sha256": "sha256:d773f1602f6c49ed6dceaea738b4cb71edd5d8ac19d53298b5c1a7e6518da9a9"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/sandbox-invocation-result.json",
+      "byte_length": 578,
+      "sha256": "sha256:5df480714beca5e03ea33689077f298193e5e697495be50d9ab734c0905e19df"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/interact-validate-stimulus/sandbox-invocation-result.json.frozen",
+      "byte_length": 278,
+      "sha256": "sha256:6d7f2a8878ada5c2ca852a191d97f97843ed5c844094c1761a33e54eeb175d3e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/report-residue-final/capability-grant.json",
+      "byte_length": 665,
+      "sha256": "sha256:5d75f8b6caef2762fad96baa6da35053b7931edefc7d4b66b1f23d4cbd54cad8"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/report-residue-final/capability-grant.json.frozen",
+      "byte_length": 263,
+      "sha256": "sha256:fb6b46d58294471b224fd9753be8736cefa53fe5f87ee5509594c4353d72b5b5"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/report-residue-final/diagnostics-manifest.json",
+      "byte_length": 797,
+      "sha256": "sha256:f950363acf7870098808126de2512be5bb9af8cf6eae9da963c339b83eef9e77"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/report-residue-final/diagnostics-manifest.json.frozen",
+      "byte_length": 267,
+      "sha256": "sha256:1db6440a91c3260369bcb5daa0f87dd1e541649df220e354aae2c4e8d3144725"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/report-residue-final/response-envelope.json",
+      "byte_length": 883,
+      "sha256": "sha256:36059ae5d4b619903502f38fbaedae09c7ea3de113bcbb6683c54f75f3be4325"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/report-residue-final/response-envelope.json.frozen",
+      "byte_length": 264,
+      "sha256": "sha256:15a95332fb850e789367b64b8f38c2be8a9039189fd04038dd76063d88a3fad8"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-manifest.json",
+      "byte_length": 5311,
+      "sha256": "sha256:82b5650b61ad4dfffecfc162e7b9b474241717e14cf359bf088f1f813b285dab"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-manifest.json.frozen",
+      "byte_length": 275,
+      "sha256": "sha256:701886b1746d9a79a965d61f705ac20d6ff141d8e60bf1f194b7e11a640c1482"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-result.json",
+      "byte_length": 578,
+      "sha256": "sha256:13ce5de66b4fbbc35ad9109e232dfa769cc276e6badea8052353b631931b7282"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/retained/local-observation-adapter/report-residue-final/sandbox-invocation-result.json.frozen",
+      "byte_length": 272,
+      "sha256": "sha256:d83d02bd3c3961cb6e3038c280c3b3f84edd9ef40b9a91b43e36e4d7134f6d69"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/subject-output/diagnostics/interact-validate-stimulus/interact-validate-stimulus.log",
+      "byte_length": 137,
+      "sha256": "sha256:1b76794ef2dbd59f57c15d6e5470c9b6dd64a1995c9ba41c516660dd1852831d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/subject-output/diagnostics/interact-validate-stimulus/interact-validate-stimulus.log.frozen",
+      "byte_length": 264,
+      "sha256": "sha256:91e94ecf092162ff176542f7ab5dd5971723911e80479d1e039050551007ee20"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/subject-output/diagnostics/report-residue-final/report-residue-final.log",
+      "byte_length": 46,
+      "sha256": "sha256:e6b7f1e842fe1406a2208b00ba8554fc09b08a9a96bb2d0c887f457b5f39002d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/store/subject-output/diagnostics/report-residue-final/report-residue-final.log.frozen",
+      "byte_length": 251,
+      "sha256": "sha256:23185065c825d909947f02c80a7848282a68a8bf28ae472e18e2ececb5a2e796"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/trusted-local-observation-record.json",
+      "byte_length": 23751,
+      "sha256": "sha256:6564cfd869ff28eaef141b1eda4eaecdef880cce6e307f3b454aaa69e7c14dfd"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/diagnostics/interact-validate-stimulus.log",
+      "byte_length": 137,
+      "sha256": "sha256:1b76794ef2dbd59f57c15d6e5470c9b6dd64a1995c9ba41c516660dd1852831d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/output/qualiber/capture.json",
+      "byte_length": 6710,
+      "sha256": "sha256:9a30263f3376922811429321126e761565d7edddab23167cdf20093921f51ca9"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/evidence-pack.json",
+      "byte_length": 1809,
+      "sha256": "sha256:e10cedc0df2fd4583aa24771a2f98109d541afaee4d45bd9a607b13f823b4a7d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/report.json",
+      "byte_length": 5316,
+      "sha256": "sha256:e0ac9b78fd7938e279385e16db3256e9f59a4c3169c21bea747c914d9a140f5d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/report.junit.xml",
+      "byte_length": 386,
+      "sha256": "sha256:b573dd16e34413e7eafe78576c5a00d4326ef14af99fe1d4efd78d3a042553f7"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/report.md",
+      "byte_length": 433,
+      "sha256": "sha256:c781a6cf62c575a1f8a83abad9d74e54ae63f79e04e393b140fdf513c808e4b8"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/run-result.json",
+      "byte_length": 314,
+      "sha256": "sha256:93c57674171f546e5e22b65de28037da0692335f5d11338386c927687258f8bd"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/telemetrytest.decision.local-1.0-mszhy5s5-48cf4e14.1d89814679e9.snap.json",
+      "byte_length": 1675,
+      "sha256": "sha256:c087ef27e4591849054f4ec69c0fd53797d4232a0eada10797223863bfe3be41"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/telemetrytest.eligibility.json",
+      "byte_length": 842,
+      "sha256": "sha256:a42627e4c243bc073868bc4b59ea372cec04c36cbb38778e56dc70cc7ff20f40"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/output/qualiber/product-out/validation-evidence-pack.json",
+      "byte_length": 2416,
+      "sha256": "sha256:af07da230a032b0f9ee6abd34dcbb2f5541dcaa2e0e23fe25bf38cda70cb7421"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/output/qualiber/run-summary.json",
+      "byte_length": 2039,
+      "sha256": "sha256:970e30c26d44fe84301a340450c71764060a11159387c6b0fdd9ae028cd4209e"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/output/qualiber/stimulus-identity.json",
+      "byte_length": 586,
+      "sha256": "sha256:a2f536b1671d2441f3c567638aa1cc1c3c01aef5aaf2dbc72d5d6de9794bf156"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/interact-validate-stimulus/request.frames",
+      "byte_length": 5297,
+      "sha256": "sha256:60da12ed63411d166998664068747ccb8966b1c61a05a258ab034508edf361e1"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/report-residue-final/diagnostics/report-residue-final.log",
+      "byte_length": 46,
+      "sha256": "sha256:e6b7f1e842fe1406a2208b00ba8554fc09b08a9a96bb2d0c887f457b5f39002d"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/run-output/workspace/report-residue-final/request.frames",
+      "byte_length": 5584,
+      "sha256": "sha256:9966e76c5ac4a5ca766274d2392c54ce705ae6793ea970fef0b6842bce9dbe32"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/scans/scan-1-mounted-inputs.json",
+      "byte_length": 740,
+      "sha256": "sha256:b5d27cda9ee46889226c2b4d372e86d9a7ec4f37915fe13a466f0fee79df9829"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/scans/scan-2-sealed-plan.json",
+      "byte_length": 753,
+      "sha256": "sha256:0575e64271a3df7d6f57ac56abadcf3f4ec4bb44b34ff1c730dc8ab1e81a55d2"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/scans/scan-3-retained.json",
+      "byte_length": 1121,
+      "sha256": "sha256:c897c53d705ead6a6b0e43ee2227bc30fb4eb411fd329d5a7530aba88d59b820"
+    },
+    {
+      "path": "scenarios/QLB-EXT-008/verification/verification-result.json",
+      "byte_length": 1744,
+      "sha256": "sha256:610fb3a6450bee486876d4feb663263398396b6b067a395140aa69c8230753db"
+    }
+  ]
+}
