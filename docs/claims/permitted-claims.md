@@ -22,6 +22,53 @@ re-derived by the offline verifier, and the structured file cannot widen what a 
 may claim. And where the structured ceiling and this document disagree, that is a
 documentation defect to be repaired — never permission to select the wider reading.
 
+### What holds the identifier to its meaning
+
+Two checks, and both are ordinary repository checks. There is no signature, no
+authentication, no certification authority, no registry service and no new trust tier
+anywhere in this mechanism: it records what the ceiling *is*, never who vouches for
+it, and it confers no standing on a run that its own evidence did not earn.
+
+- **Every clause is bound to its source in this file.** Each clause in the structured
+  file is bound to the exact sentence, or sentences, here that it projects, and the
+  binding has to cover the whole clause set. So a clause cannot move without its
+  source, a source sentence cannot move without its clause, and a clause with no
+  authoritative sentence in this document cannot exist at all — which is what keeps
+  wording the Lab does not own out of the Lab-owned ceiling.
+- **The identifier history only grows.** `docs/claims/claim-ceiling-history.json`
+  records each identifier against the digest of the projection it was minted for, and
+  that file is compared against itself at an explicit, immutable base commit. A
+  published row cannot be rewritten, renamed or deleted by the same change that would
+  benefit from doing so.
+
+### What requires a new identifier, and what does not
+
+A **new identifier is required** whenever the ordered clause ids and statements in the
+structured file change — a clause added, removed or restated. Widening the ceiling is
+one such change, and it can only ever arrive under a new identifier.
+
+A **new identifier is not required, and must not be minted, for** reformatting,
+reordering the file's top-level keys, `status`, the `source` path, added rationale, or
+any editing of the explanations here that no clause projects. Editing a sentence a
+clause *does* project re-affirms that clause's binding without minting an identifier,
+because the projection itself has not moved.
+
+### Minting the next identifier
+
+One change does all of this together, and the checks pass only when all of it holds:
+
+1. restate the clause set in `claim-ceiling.json`;
+2. edit the sentence in this file that the changed clause projects, and re-affirm that
+   clause's binding;
+3. append a row to `claim-ceiling-history.json` carrying the next sequential
+   identifier and the digest of the new projection, leaving every earlier row exactly
+   as it stands;
+4. set `claim_ceiling_id` to that new identifier.
+
+Sequencing is a general rule over the declared rows, not a fixed list: no revision
+ordinal is written into a test, and an identifier minted over semantics that did not
+change has nowhere to land, because the recorded digests must stay distinct.
+
 Since ADR-ERL2-025 it is no longer only checked by review. `claim_scope` is
 **derived from the run's own retained evidence** and re-derived independently by
 the offline verifier, so the ceiling this file describes is the ceiling the

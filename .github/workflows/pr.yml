@@ -13,8 +13,16 @@ permissions:
 jobs:
   pr:
     runs-on: ubuntu-latest
+    # The claim-ceiling append-only check compares the identifier history with the
+    # same file at the pull request's own base commit, so the lane needs the base
+    # object present and the base sha named explicitly. It fails closed rather than
+    # skipping when a pull request does not supply one.
+    env:
+      CLAIM_CEILING_BASE: ${{ github.event.pull_request.base.sha }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 22
