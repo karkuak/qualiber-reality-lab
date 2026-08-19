@@ -1,0 +1,74 @@
+{
+  "schema_version": "evidence_pack_v0.1",
+  "rule_id": "erl2_ext_journey",
+  "journey_id": "erl2_ext_journey",
+  "test_id": "adapters/erl2-subject::erl2_ext_journey",
+  "ci_run_id": "01a017ed-d25e-7b39-8e26-f2c24dad56f5",
+  "mode": "observe",
+  "validation_status": "advisory",
+  "ci_blocking": false,
+  "collector_health": "healthy",
+  "findings": [
+    {
+      "finding": "duplicate_event",
+      "severity": "warning",
+      "association_confidence": "high",
+      "association_blocking_eligible": true,
+      "policy_blocking_allowed": false,
+      "severity_source": "fixed",
+      "event": "quote_requested_one",
+      "note": "observed 2, max 1"
+    }
+  ],
+  "observed": {
+    "modeled": [
+      "quote_requested_one",
+      "quote_requested_one",
+      "quote_requested_three",
+      "quote_requested_zero"
+    ],
+    "knownUnknown": [],
+    "unmodeled": []
+  },
+  "excluded_candidates": {
+    "background": [],
+    "orphaned": [],
+    "late": [],
+    "unknown": []
+  },
+  "declared_constructs": [
+    {
+      "key": "expected_path:quote_requested_one"
+    },
+    {
+      "key": "expected_path:quote_requested_three"
+    },
+    {
+      "key": "expected_path:quote_requested_zero"
+    },
+    {
+      "key": "occurrence_bounds:quote_requested_one"
+    },
+    {
+      "key": "occurrence_bounds:quote_requested_three"
+    },
+    {
+      "key": "occurrence_bounds:quote_requested_zero"
+    },
+    {
+      "key": "ordering:quote_requested_three.after_any"
+    },
+    {
+      "key": "ordering:quote_requested_zero.after_any"
+    },
+    {
+      "key": "required_properties:quote_requested_one"
+    },
+    {
+      "key": "required_properties:quote_requested_three"
+    },
+    {
+      "key": "required_properties:quote_requested_zero"
+    }
+  ]
+}

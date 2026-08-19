@@ -1,0 +1,19 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-negative-control/v1",
+  "campaign": "qualiber-product-scenarios-wave2-20260819",
+  "run_against": "disposable copies under campaign scratch; no published evidence and no Wave 1 byte was touched",
+  "control_id": "NC-2",
+  "targets_scenario": "QLB-EXT-006",
+  "method": "run-result.json deleted from a disposable copy of 006 (the .frozen sidecar deliberately retained), then compared normally",
+  "required_outcome": "unavailable; a binding-first classification of lab_harness_failure is accepted; clean must never appear as an observed value; binding precedence must not be weakened",
+  "observed_verdict": "unavailable",
+  "observed_classification": "lab_harness_failure",
+  "sub_reasons": [
+    "adapter_artifact_hashes_binding_failed"
+  ],
+  "detecting_gate": "adapter artifact_hashes witness — run-summary.json declares a digest for qualiber/product-out/run-result.json and the file is gone",
+  "clean_absent_from_observed": true,
+  "observed_run_status": null,
+  "note_on_classification": "This outcome was precommitted PROSPECTIVELY for Wave 2 rather than rediscovered. Wave 1 established that deleting run-result.json also breaks the adapter's artifact_hashes witness and that §10.5 rule 7 runs the binding gate before any comparison, so §10.5 rule 5 is never reached and the refusal classifies as lab_harness_failure. Wave 2's oracle-precommit records that classification as ACCEPTED in advance. The comparator was not edited and binding precedence was not weakened. Rule 5 remains covered directly by tooling test T7, which passed.",
+  "held": true
+}

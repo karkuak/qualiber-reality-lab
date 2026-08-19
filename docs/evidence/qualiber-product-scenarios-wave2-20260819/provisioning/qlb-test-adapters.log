@@ -1,0 +1,150 @@
+
+> telemetrytest-ai@0.6.1 test:adapters
+> node adapters/erl2-subject/scripts/install-lab-packages.mjs && node adapters/erl2-subject/scripts/install-collector-from-tarball.mjs && node adapters/erl2-subject/scripts/build-artifact.mjs && vitest run --config adapters/erl2-subject/vitest.config.ts
+
+installed @erl2/adapter-sdk@0.1.0 from erl2-adapter-sdk-0.1.0.tgz into adapters/erl2-subject/node_modules/@erl2/adapter-sdk
+installed @erl2/contracts@0.1.0 from erl2-contracts-0.1.0.tgz into adapters/erl2-subject/node_modules/@erl2/contracts
+installed @erl2/integrity@0.1.0 from erl2-integrity-0.1.0.tgz into adapters/erl2-subject/node_modules/@erl2/integrity
+provenance receipt: adapters/erl2-subject/node_modules/@erl2/.provenance.json @ 69ace16fb7ee021dddbcf3fa70e4295c2e5a400b
+npm notice
+npm notice package: @qualgraph/collector@0.1.0
+npm notice Tarball Contents
+npm notice 4.0kB README.md
+npm notice 3.8kB dist/collector/adapter.d.ts
+npm notice 8.9kB dist/collector/adapter.js
+npm notice 8.0kB dist/collector/adapter.js.map
+npm notice 901B dist/collector/associator.d.ts
+npm notice 4.4kB dist/collector/associator.js
+npm notice 3.4kB dist/collector/associator.js.map
+npm notice 595B dist/collector/classifier.d.ts
+npm notice 2.9kB dist/collector/classifier.js
+npm notice 2.1kB dist/collector/classifier.js.map
+npm notice 971B dist/collector/config.d.ts
+npm notice 1.1kB dist/collector/config.js
+npm notice 851B dist/collector/config.js.map
+npm notice 798B dist/collector/cypress/plugin.d.ts
+npm notice 2.7kB dist/collector/cypress/plugin.js
+npm notice 2.0kB dist/collector/cypress/plugin.js.map
+npm notice 359B dist/collector/cypress/support.d.ts
+npm notice 3.0kB dist/collector/cypress/support.js
+npm notice 2.4kB dist/collector/cypress/support.js.map
+npm notice 761B dist/collector/health-report.d.ts
+npm notice 2.7kB dist/collector/health-report.js
+npm notice 1.7kB dist/collector/health-report.js.map
+npm notice 628B dist/collector/index.d.ts
+npm notice 665B dist/collector/index.js
+npm notice 417B dist/collector/index.js.map
+npm notice 873B dist/collector/normalizer.d.ts
+npm notice 2.2kB dist/collector/normalizer.js
+npm notice 1.8kB dist/collector/normalizer.js.map
+npm notice 853B dist/collector/pipeline.d.ts
+npm notice 2.9kB dist/collector/pipeline.js
+npm notice 2.8kB dist/collector/pipeline.js.map
+npm notice 1.1kB dist/collector/playwright/beacon.d.ts
+npm notice 4.5kB dist/collector/playwright/beacon.js
+npm notice 3.0kB dist/collector/playwright/beacon.js.map
+npm notice 3.8kB dist/collector/playwright/fixture.d.ts
+npm notice 5.3kB dist/collector/playwright/fixture.js
+npm notice 2.8kB dist/collector/playwright/fixture.js.map
+npm notice 219B dist/collector/playwright/index.d.ts
+npm notice 466B dist/collector/playwright/index.js
+npm notice 293B dist/collector/playwright/index.js.map
+npm notice 1.2kB dist/collector/types.d.ts
+npm notice 44B dist/collector/types.js
+npm notice 121B dist/collector/types.js.map
+npm notice 496B dist/contract/aliases.d.ts
+npm notice 675B dist/contract/aliases.js
+npm notice 589B dist/contract/aliases.js.map
+npm notice 3.0kB dist/contract/types.d.ts
+npm notice 44B dist/contract/types.js
+npm notice 120B dist/contract/types.js.map
+npm notice 1.3kB dist/redaction/engine.d.ts
+npm notice 8.1kB dist/redaction/engine.js
+npm notice 4.5kB dist/redaction/engine.js.map
+npm notice 1.8kB dist/redaction/rules.d.ts
+npm notice 6.9kB dist/redaction/rules.js
+npm notice 2.5kB dist/redaction/rules.js.map
+npm notice 2.6kB dist/types.d.ts
+npm notice 247B dist/types.js
+npm notice 145B dist/types.js.map
+npm notice 567B dist/util/ordering.d.ts
+npm notice 856B dist/util/ordering.js
+npm notice 860B dist/util/ordering.js.map
+npm notice 10.5kB dist/validator/types.d.ts
+npm notice 423B dist/validator/types.js
+npm notice 315B dist/validator/types.js.map
+npm notice 1.1kB package.json
+npm notice Tarball Details
+npm notice name: @qualgraph/collector
+npm notice version: 0.1.0
+npm notice filename: qualgraph-collector-0.1.0.tgz
+npm notice package size: 43.2 kB
+npm notice unpacked size: 141.9 kB
+npm notice shasum: b20c42c474c59f01201bc1603556a381f20aefb3
+npm notice integrity: sha512-frBPzjxn/KOx7[...]2LKOmYYEqhSMA==
+npm notice total files: 65
+npm notice
+installed @qualgraph/collector@0.1.0 from qualgraph-collector-0.1.0.tgz into adapters/erl2-subject/node_modules/@qualgraph/collector
+topology : package-local-tarball (@qualgraph/collector@0.1.0)
+artifact : live-quote-subject
+  path   : <CAMP>/work/qualiber/adapters/erl2-subject/dist/qualiber-erl2-subject.mjs
+  sha256 : sha256:d757168a6f1623d78a922434b5f05f45389891574105ebf1c2bf505591efec94
+  bytes  : 43891
+  inputs : sha256:dc68d5a7e51ed6ec3184c04deb980ba89b62ee7d065dadd9bda083f69a3acdde
+artifact : validation-subject
+  path   : <CAMP>/work/qualiber/adapters/erl2-subject/dist/qualiber-erl2-validation-subject.mjs
+  sha256 : sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762
+  bytes  : 41472
+  inputs : sha256:a0bc5288c9c8f960fdc6fa9d316cf171d7be2cd39d631b90a28c461f7bbbc96d
+built    : 2 of 2 declared artifact(s)
+
+ RUN  v2.1.9 <CAMP>/work/qualiber/adapters/erl2-subject
+
+ ✓ tests/plan-draft-io.test.ts (35 tests) 122ms
+ ✓ tests/artifact-provenance.test.ts (27 tests) 195ms
+ ✓ tests/adapter.test.ts (14 tests) 1314ms
+   ✓ operations without the environment > compensate and report-residue are honest no-ops 490ms
+ ✓ tests/topology-refuses-before-bytes.test.ts (4 tests) 1070ms
+   ✓ the shipped build refuses a non-canonical topology before writing bytes > the control: under the canonical layout the same fixture builds every declared artifact 369ms
+   ✓ the shipped build refuses a non-canonical topology before writing bytes > 🔴 does not purge an existing declared artifact on its way to refusing 503ms
+ ✓ tests/lab-package-provisioning.test.ts (19 tests) 1177ms
+stdout | tests/validation-plan-draft.test.ts > arguments and output > writes the draft and never overwrites an existing one
+plan draft        : /var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/qualiber-erl2-vplan-pfibKC/plan-draft.json
+observation id    : 01a017e1-376d-706e-bace-a2abac5ffb57
+created / expires : 2026-08-19T02:37:10Z / 2026-08-19T04:37:10Z
+capture  sha256   : sha256:782ed5b864db8e46a42702925e57a930caa155f56f2959ef62acd3c7bfeaeda4 (179 bytes)
+contract sha256   : sha256:ceb28640b49e3959850802577a455d8ae2d5073cf705160c90e0351e2c4f1410 (52 bytes)
+capabilities      : write-run-output, write-adapter-workspace, read-subject-visible-input (no network-egress)
+egress            : deny-everything (no scheme, host or port allowed)
+operations        : interact -> report-residue
+unsealed          : seal with `erl2 declare-trusted-local-adapter --seal-plan-draft`
+bind with         : --bind-input capture-stimulus-input=/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/qualiber-erl2-vplan-pfibKC/stimulus.json --bind-input contract-stimulus-input=/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/qualiber-erl2-vplan-pfibKC/contract.json
+
+stdout | tests/validation-plan-draft.test.ts > arguments and output > leaves no temporary beside the output
+plan draft        : /var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/qualiber-erl2-vplan-L3NHMV/plan.json
+observation id    : 01a017e1-376e-7731-83b5-44b44c50ca21
+created / expires : 2026-08-19T02:37:10Z / 2026-08-19T04:37:10Z
+capture  sha256   : sha256:782ed5b864db8e46a42702925e57a930caa155f56f2959ef62acd3c7bfeaeda4 (179 bytes)
+contract sha256   : sha256:ceb28640b49e3959850802577a455d8ae2d5073cf705160c90e0351e2c4f1410 (52 bytes)
+capabilities      : write-run-output, write-adapter-workspace, read-subject-visible-input (no network-egress)
+egress            : deny-everything (no scheme, host or port allowed)
+operations        : interact -> report-residue
+unsealed          : seal with `erl2 declare-trusted-local-adapter --seal-plan-draft`
+bind with         : --bind-input capture-stimulus-input=/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/qualiber-erl2-vplan-L3NHMV/stimulus.json --bind-input contract-stimulus-input=/var/folders/gy/fgcsxyg95yxdym1qs1tvkzj80000gp/T/qualiber-erl2-vplan-L3NHMV/contract.json
+
+ ✓ tests/validation-plan-draft.test.ts (18 tests) 11ms
+ ✓ tests/validation-adapter.test.ts (17 tests) 1823ms
+ ✓ tests/stimulus.test.ts (20 tests) 14ms
+ ✓ tests/pipeline.test.ts (20 tests) 2018ms
+   ✓ contractBytes > a contract supplied as bytes produces the same result as the same contract supplied as a path 345ms
+ ✓ tests/tarball-consumption.test.ts (13 tests) 417ms
+   ✓ #340 — every declared exports subpath resolves, exists, and imports > ./playwright — actually imports 393ms
+ ✓ tests/v2-boundary.test.ts (38 tests) 2952ms
+ ✓ tests/plan-draft.test.ts (30 tests) 3724ms
+   ✓ endpoint refusals > refuses a non-loopback host rather than writing a policy that cannot authorize it 308ms
+
+ Test Files  12 passed (12)
+      Tests  255 passed (255)
+   Start at  22:37:08
+   Duration  4.11s (transform 410ms, setup 0ms, collect 920ms, tests 14.84s, environment 1ms, prepare 1.05s)
+

@@ -1,0 +1,10 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-index/v1",
+  "scenarios": [
+    {
+      "scenario_id": "QLB-EXT-002",
+      "observation_id": "01a017e7-a272-7575-ae55-9becc7755275",
+      "sealed_plan_core_hash": "sha256:a923c42128e7824ccc019dc431d4f173f9cde52b06d0407c11f45d5140300d80"
+    }
+  ]
+}

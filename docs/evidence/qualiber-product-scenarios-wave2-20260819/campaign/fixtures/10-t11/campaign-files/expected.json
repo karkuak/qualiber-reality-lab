@@ -1,0 +1,15 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-expectation/v1",
+  "scenario_id": "QLB-EXT-002",
+  "expected_operation_state": "completed",
+  "expected_response_status": "supported",
+  "expected_run_status": "clean",
+  "required_finding_types": [
+    "missing_required_event"
+  ],
+  "permitted_additional_types": [],
+  "permitted_additional_justification": {},
+  "target_event": "quote_requested_zero",
+  "max_finding_count": 1,
+  "expected_product_reported": true
+}

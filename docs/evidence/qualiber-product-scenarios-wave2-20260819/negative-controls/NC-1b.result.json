@@ -1,0 +1,18 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-negative-control/v1",
+  "campaign": "qualiber-product-scenarios-wave2-20260819",
+  "run_against": "disposable copies under campaign scratch; no published evidence and no Wave 1 byte was touched",
+  "control_id": "NC-1b",
+  "targets_scenario": "QLB-EXT-006",
+  "method": "006's expectation edited in place (target_event changed) after the precommit bound its digest",
+  "required_outcome": "unavailable / lab_harness_failure",
+  "observed_verdict": "unavailable",
+  "observed_classification": "lab_harness_failure",
+  "sub_reasons": [
+    "expectation_digest_not_precommitted"
+  ],
+  "detecting_gate": "expectation-digest binding against oracle-precommit.json, before any semantic comparison",
+  "precommitted_expectation_sha256": "sha256:708f257ac6a9b1e0f1fba89855d4567128f2a1548349759d16253405a821b4f6",
+  "mutated_expectation_sha256": "sha256:03b5a6b7e95e28d7cae7e819466144faa94890ec45b21883a89301cc2105203f",
+  "held": true
+}

@@ -1,0 +1,143 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-comparison/v1",
+  "scenario_id": "QLB-EXT-005",
+  "mode": "scenario",
+  "observation_id": "01a017e7-a154-7338-ae73-5b8dc976ce3e",
+  "oracle_precommit_sha256": "sha256:324bd2dba6e3c0242f409cf139a61590f2f61cc97f075c0b4b8c3c2a94cac0b1",
+  "oracle_precommit_revision": 1,
+  "execution_lock_sha256": "sha256:796396d230a94ec3f696cc228ac3c4d6710510b08865655925557111222e4815",
+  "expectation_sha256": "sha256:c64bce6ad4e1f762678e44cfe0fed7db19b426af7d74cb7a8c263bf81dd476e4",
+  "comparator_dependencies_resolved": [
+    {
+      "name": "@erl2/contracts",
+      "version": "0.1.0",
+      "entry_sha256": "sha256:da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c"
+    },
+    {
+      "name": "@erl2/integrity",
+      "version": "0.1.0",
+      "entry_sha256": "sha256:c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13"
+    }
+  ],
+  "binding": {
+    "bound": false,
+    "dependency_triples_matched": true,
+    "expectation_digest_matched": true,
+    "expectation_binding_mode": "scenario",
+    "record_retained_output_refs_matched": [
+      "local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+      "local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+      "local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+      "local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json"
+    ],
+    "record_retained_output_refs_mismatched": [],
+    "adapter_artifact_hashes_matched": true,
+    "frozen_sidecars_matched": true,
+    "response_envelope_bytes_matched": true,
+    "response_envelope_schema_valid": true,
+    "response_envelope_core_hash_recomputed": "sha256:42a221ccabaa8665ceb928d34354e8d2cecc15cd695e85bca09dcd94ac268d55",
+    "response_envelope_core_hash_matched": false,
+    "plan_hash": "sha256:e29196fcdf6556493735ada0b662b5b7f165a66c2b68ea30c01e742bc46df836",
+    "adapter_artifact_hash": "sha256:6dda3abf803dfeda5d8c139ebb4c31b538aacc1c9793e177f701f903d7be57ec",
+    "capture_stimulus_sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468",
+    "contract_stimulus_sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c",
+    "oracle_precommit_digests_matched": true,
+    "execution_lock_digests_matched": true,
+    "campaign_index_observation_id_matched": true,
+    "input_digest_checks": [
+      {
+        "role": "capture-stimulus",
+        "agreed": true,
+        "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468"
+      },
+      {
+        "role": "contract-stimulus",
+        "agreed": true,
+        "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c"
+      }
+    ],
+    "adapter_artifact_hashes_witnessed": [
+      {
+        "path": "qualiber/capture.json",
+        "agreed": true
+      },
+      {
+        "path": "qualiber/stimulus-identity.json",
+        "agreed": true
+      },
+      {
+        "path": "qualiber/product-out/run-result.json",
+        "agreed": true
+      }
+    ],
+    "frozen_sidecar_checks": [
+      {
+        "path": "product-out/run-result.json",
+        "agreed": true
+      }
+    ],
+    "frozen_sidecar_note": "weak local consistency check only; sidecars travel with their files and cannot detect a cross-scenario swap",
+    "response_envelope_file_sha256": "sha256:438b87a6e06770b0a87cc971bdf360bccbcbd956db190af5f94a090440b2972a",
+    "response_envelope_declared_core_hash": "sha256:3b9c213ae48fa2e74baacc691660c8cb81c96420bd4d95cc02e21a1db15b3388",
+    "response_envelope_record_hash": "sha256:3b9c213ae48fa2e74baacc691660c8cb81c96420bd4d95cc02e21a1db15b3388"
+  },
+  "expected": {
+    "run_status": "not_run",
+    "forbidden_run_status": [],
+    "required_finding_types": null,
+    "permitted_additional_types": null,
+    "target_event": null,
+    "max_finding_count": null,
+    "operation_state": "completed",
+    "response_status": "failed",
+    "product_reported": false,
+    "not_run_reason": "config_invalid",
+    "envelope_error_code": "SUBJECT_PRODUCT_CLI_REFUSED",
+    "envelope_error_owner": "subject",
+    "diagnostic_names_field": "expected_path",
+    "present_artifacts": null,
+    "absent_artifacts": null,
+    "requires_inconclusive_reason": false
+  },
+  "observed": {
+    "operation_state": null,
+    "response_status": null,
+    "envelope_error_code": null,
+    "envelope_error_owner": null,
+    "envelope_error_safe_message": null,
+    "run_status": null,
+    "not_run_reason": null,
+    "inconclusive_reason": null,
+    "collector_health": null,
+    "customer_visible_message": null,
+    "finding_count": null,
+    "finding_types": null,
+    "finding_events": null,
+    "recorded_exit_code": null,
+    "recorded_ci_exit_code": null,
+    "artifacts_present": [
+      "run-result.json"
+    ],
+    "artifacts_absent": [],
+    "terminal_status_recorded_not_used": "observed_complete"
+  },
+  "verdict": "unavailable",
+  "classification": "lab_harness_failure",
+  "sub_reasons": [
+    "response_envelope_core_hash_binding_failed"
+  ],
+  "evidence_refs": [
+    {
+      "field": "input:capture-stimulus",
+      "path": "run-output/inputs/capture-stimulus/stimulus.json",
+      "sha256": "sha256:a03fba26506396fd10d53ef1f21ffca8b532e52afea129cb0e03149938460468",
+      "json_pointer": null
+    },
+    {
+      "field": "input:contract-stimulus",
+      "path": "run-output/inputs/contract-stimulus/contract.json",
+      "sha256": "sha256:04c45773bac4cd9034f59016412d75460e92bab065830c4dbb7dac3fe40fa19c",
+      "json_pointer": null
+    }
+  ]
+}

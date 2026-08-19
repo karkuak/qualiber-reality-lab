@@ -1,0 +1,8 @@
+
+> @qualiber/erl2-subject@0.2.0 install:lab-packages
+> node scripts/install-lab-packages.mjs --lab-checkout <CAMP>/work/lab-deps
+
+installed @erl2/adapter-sdk@0.1.0 from erl2-adapter-sdk-0.1.0.tgz into adapters/erl2-subject/node_modules/@erl2/adapter-sdk
+installed @erl2/contracts@0.1.0 from erl2-contracts-0.1.0.tgz into adapters/erl2-subject/node_modules/@erl2/contracts
+installed @erl2/integrity@0.1.0 from erl2-integrity-0.1.0.tgz into adapters/erl2-subject/node_modules/@erl2/integrity
+provenance receipt: adapters/erl2-subject/node_modules/@erl2/.provenance.json @ 69ace16fb7ee021dddbcf3fa70e4295c2e5a400b

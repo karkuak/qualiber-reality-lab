@@ -1,0 +1,8 @@
+{
+  "runStatus": "rule_violation_detected",
+  "collectorHealth": "healthy",
+  "findingCount": 2,
+  "ciExitCode": 0,
+  "blocking": false,
+  "customerVisibleMessage": "1 telemetry rule violation detected (advisory; CI not affected)."
+}

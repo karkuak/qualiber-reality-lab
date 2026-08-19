@@ -1,0 +1,17 @@
+ok    T1 four-step response-envelope bind passes on honest bytes
+ok    T2 mutated /error/code with stale core_hash is refused at step 4
+ok    T3 --dependency-anchor resolves both Lab packages and records triples
+ok    T4 missing --dependency-anchor is a hard tooling exit, not a verdict
+ok    T5 unresolvable package through the anchor is a hard tooling exit
+ok    T6 state and response_status are compared as separate fields
+ok    T7 missing run-result.json yields unavailable and never clean
+ok    T8 no branch reads a process exit code
+ok    T9 finding-set bounds: allowlist and count both enforced
+ok    T10 NC-1 mode accepts only a digest-bound precommitted counterfactual
+ok    T11 a mutated expectation is refused before any comparison (NC-1b gate)
+ok    T12 a retained_output_refs digest mismatch refuses before any verdict
+
+ALL PASSED — 12 tests
+comparator tested: sha256:89e92a0324b123e57c4df3169609b9759da5cf9bfb30b6bd5a5e71cea1a00958
+result written: <CAMP>/work/lab-evidence/docs/evidence/qualiber-product-scenarios-wave2-20260819/campaign/tooling-test-result.json
+fixtures retained: <CAMP>/work/lab-evidence/docs/evidence/qualiber-product-scenarios-wave2-20260819/campaign/fixtures

@@ -1,0 +1,21 @@
+{
+  "schema_version": "qualiber-erl2-validation-run-summary/v1",
+  "run_id": "fixture-run",
+  "journey_id": "erl2_ext_journey",
+  "product_cli": {
+    "exit_code": 0,
+    "run_status": "rule_violation_detected",
+    "completed": true
+  },
+  "artifact_hashes": {
+    "qualiber/capture.json": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801",
+    "qualiber/stimulus-identity.json": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2",
+    "qualiber/product-out/evidence-pack.json": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011",
+    "qualiber/product-out/report.json": "sha256:0cb7be2f6fb86e10df5ab8f1c862b1a37f4cfe0210a298373d32b7876fd1ad8d",
+    "qualiber/product-out/report.junit.xml": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb",
+    "qualiber/product-out/report.md": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30",
+    "qualiber/product-out/run-result.json": "sha256:4dd6af1fe88f242031dd1a5f8cbd227f0a7015b75e962d6e720872fa7b8ed6c7",
+    "qualiber/product-out/validation-evidence-pack.json": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2"
+  },
+  "subject_role": "fixture"
+}

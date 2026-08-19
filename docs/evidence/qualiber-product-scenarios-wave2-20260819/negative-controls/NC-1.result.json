@@ -1,0 +1,17 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-negative-control/v1",
+  "campaign": "qualiber-product-scenarios-wave2-20260819",
+  "run_against": "disposable copies under campaign scratch; no published evidence and no Wave 1 byte was touched",
+  "control_id": "NC-1",
+  "targets_scenario": "QLB-EXT-006",
+  "method": "comparator NC-1 mode against the stage-1 precommitted counterfactual (006's expectation with expected_run_status set to clean, nothing else changed)",
+  "required_outcome": "disagree / product_disagreement",
+  "observed_verdict": "disagree",
+  "observed_classification": "product_disagreement",
+  "sub_reasons": [
+    "run_status_mismatch"
+  ],
+  "detecting_gate": "run_status equality, reached because the counterfactual's digest binds under oracle-precommit.json negative_controls",
+  "nc1_control_id_recorded": "NC-1",
+  "held": true
+}
