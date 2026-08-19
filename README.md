@@ -120,7 +120,9 @@ load-bearing and none may be dropped: a Compose run that fails any of them
 declares nothing, and its retained observation — which may honestly report zero,
 or report `absent` with a reason code — supports **no** receipt claim at all.
 Read [`docs/claims/permitted-claims.md`](docs/claims/permitted-claims.md) for
-the statement at exactly its width, including what it still may not say
+the statement at exactly its width — external consumers should cite
+[`docs/claims/claim-ceiling.json`](docs/claims/claim-ceiling.json) and pin its
+`claim_ceiling_id` — including what it still may not say
 (ADR-ERL2-033, discharging the ERL2-OQ-005 deferred obligation; ADR-ERL2-035 for
 what happens to collector bytes the Lab cannot freeze; the evidence window and
 the T1 ceiling are unchanged).

@@ -3,6 +3,25 @@
 Design v2 §25 fixes the claim ceiling for each release level. This file records
 what the current implementation may and may not state.
 
+## Citing this ceiling
+
+The structured citation surface for this ceiling is
+[`docs/claims/claim-ceiling.json`](claim-ceiling.json). External consumers should
+pin its `claim_ceiling_id` — currently `reality-lab-claim-ceiling-1` — rather than
+a content digest of this Markdown file.
+
+The identifier is semantic, not a digest. It changes only when the set of clauses
+in the structured file changes meaning: a clause added, removed or restated.
+Formatting, section anchors, wording of the explanations below, added rationale
+and unrelated editorial changes to this document do **not** change it, and must
+not.
+
+Two boundaries hold. The structured file does not replace evidence-derived runtime
+enforcement: `claim_scope` is still derived from a run's own retained evidence and
+re-derived by the offline verifier, and the structured file cannot widen what a run
+may claim. And where the structured ceiling and this document disagree, that is a
+documentation defect to be repaired — never permission to select the wider reading.
+
 Since ADR-ERL2-025 it is no longer only checked by review. `claim_scope` is
 **derived from the run's own retained evidence** and re-derived independently by
 the offline verifier, so the ceiling this file describes is the ceiling the
