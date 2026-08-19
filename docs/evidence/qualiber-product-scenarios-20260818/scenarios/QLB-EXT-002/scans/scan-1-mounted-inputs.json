@@ -1,0 +1,25 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-oracle-scan/v1",
+  "label": "QLB-EXT-002/mounted-inputs",
+  "targets": [
+    "/private/tmp/qlb-wave1-prospective-cC4jCP/work/scenarios/QLB-EXT-002/input"
+  ],
+  "needle_count": 51,
+  "needle_kinds": [
+    "campaign_field_name",
+    "campaign_path_fragment",
+    "campaign_schema_id",
+    "declared_digest_in:oracle-precommit.json",
+    "declared_prefixed_digest_in:oracle-precommit.json",
+    "digest_of:execution-lock.json",
+    "digest_of:oracle-precommit.json",
+    "expectation_path",
+    "prefixed_digest_of:execution-lock.json",
+    "prefixed_digest_of:oracle-precommit.json",
+    "scenario_id"
+  ],
+  "scanned_files": 2,
+  "scanned_bytes": 1731,
+  "clean": true,
+  "hits": []
+}

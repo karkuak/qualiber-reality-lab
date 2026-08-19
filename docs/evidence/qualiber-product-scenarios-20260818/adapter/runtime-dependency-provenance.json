@@ -1,0 +1,27 @@
+{
+  "schema": "qualiber/erl2-subject-lab-provenance/v1",
+  "note": "written by scripts/install-lab-packages.mjs; lives in gitignored node_modules and is never committed",
+  "repository": "https://github.com/karkuak/qualiber-reality-lab.git",
+  "commit": "69ace16fb7ee021dddbcf3fa70e4295c2e5a400b",
+  "lab_checkout": "<campaign-local Reality Lab checkout; absolute path recorded in the command log only>",
+  "packages": [
+    {
+      "name": "@erl2/adapter-sdk",
+      "version": "0.1.0",
+      "tarball": "erl2-adapter-sdk-0.1.0.tgz",
+      "tarball_sha256": "sha256:0eaaa9650260a9e7e3ab80e308f2a72a51d04cb1edb90bb02c16544ce0b6cf95"
+    },
+    {
+      "name": "@erl2/contracts",
+      "version": "0.1.0",
+      "tarball": "erl2-contracts-0.1.0.tgz",
+      "tarball_sha256": "sha256:af1b36d3e154ada6a7fb152dfeb2a494f96a8d6e2345c58b38b0e0ed7ecce4f3"
+    },
+    {
+      "name": "@erl2/integrity",
+      "version": "0.1.0",
+      "tarball": "erl2-integrity-0.1.0.tgz",
+      "tarball_sha256": "sha256:85a148ff7d4698c46f8b8eb8b0dcb4fae47a9e0a684297770015573bb01eb517"
+    }
+  ]
+}

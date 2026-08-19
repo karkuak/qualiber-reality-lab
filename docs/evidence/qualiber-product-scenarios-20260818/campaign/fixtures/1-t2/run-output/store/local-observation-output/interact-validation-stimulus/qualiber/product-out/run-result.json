@@ -1,0 +1,8 @@
+{
+  "runStatus": "not_run",
+  "notRunReason": "config_invalid",
+  "findingCount": 0,
+  "ciExitCode": 0,
+  "blocking": false,
+  "customerVisibleMessage": "contract health check refused: expected_path is required"
+}

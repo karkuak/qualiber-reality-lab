@@ -1,0 +1,49 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-negative-control/v1",
+  "campaign": "qualiber-product-scenarios-20260818",
+  "run_against": "disposable copies under campaign scratch; no published evidence was touched",
+  "control_id": "NC-4b",
+  "targets_scenario": "QLB-EXT-002 / QLB-EXT-003",
+  "method": "002's and 003's entire qualiber/ subtrees exchanged, including run-summary.json and stimulus-identity.json",
+  "required_outcome": "both legs unavailable / lab_harness_failure",
+  "legs": [
+    {
+      "scenario_id": "QLB-EXT-002",
+      "verdict": "unavailable",
+      "classification": "lab_harness_failure",
+      "sub_reasons": [
+        "input_digest_binding_failed",
+        "retained_output_refs_binding_failed"
+      ],
+      "retained_output_refs_mismatched": [
+        "local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json",
+        "local-observation-output/interact-validate-stimulus/qualiber/run-summary.json",
+        "local-observation-output/interact-validate-stimulus/qualiber/capture.json",
+        "local-observation-output/interact-validate-stimulus/qualiber/stimulus-identity.json"
+      ],
+      "adapter_artifact_hashes_matched": true,
+      "frozen_sidecars_matched": true,
+      "no_semantic_read_happened": true
+    },
+    {
+      "scenario_id": "QLB-EXT-003",
+      "verdict": "unavailable",
+      "classification": "lab_harness_failure",
+      "sub_reasons": [
+        "input_digest_binding_failed",
+        "retained_output_refs_binding_failed"
+      ],
+      "retained_output_refs_mismatched": [
+        "local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json",
+        "local-observation-output/interact-validate-stimulus/qualiber/run-summary.json",
+        "local-observation-output/interact-validate-stimulus/qualiber/capture.json",
+        "local-observation-output/interact-validate-stimulus/qualiber/stimulus-identity.json"
+      ],
+      "adapter_artifact_hashes_matched": true,
+      "frozen_sidecars_matched": true,
+      "no_semantic_read_happened": true
+    }
+  ],
+  "detecting_gate": "stimulus-identity.json vs the sealed plan and oracle-precommit input digests, AND record retained_output_refs; the swap is internally consistent but still contradicts its own scenario's plan",
+  "held": true
+}

@@ -1,0 +1,201 @@
+{
+  "run": {
+    "runStatus": "rule_violation_detected",
+    "collectorHealth": "healthy",
+    "findingCount": 1,
+    "ciExitCode": 0,
+    "blocking": false,
+    "advisoryCommentEligible": false,
+    "evidencePackGenerated": true,
+    "customerVisibleMessage": "Deterministic telemetry rule violation detected (advisory; CI not affected)."
+  },
+  "result": {
+    "schemaVersion": "validation_result_v0.1",
+    "ruleId": "erl2_ext_journey",
+    "journeyId": "erl2_ext_journey",
+    "testId": "adapters/erl2-subject::erl2_ext_journey",
+    "mode": "observe",
+    "validationStatus": "rule_violation_detected",
+    "ciBlocking": false,
+    "findings": [
+      {
+        "type": "wrong_order",
+        "severity": "high",
+        "severitySource": "fixed",
+        "ruleId": "erl2_ext_journey",
+        "detail": {
+          "event": "quote_requested_three",
+          "expectedSequence": [
+            "quote_requested_one",
+            "quote_requested_three",
+            "quote_requested_zero"
+          ],
+          "actualSequence": [
+            "quote_requested_three",
+            "quote_requested_one",
+            "quote_requested_zero"
+          ],
+          "note": "no occurrence of quote_requested_three appears after quote_requested_one (nearest present predecessor)"
+        },
+        "associationConfidence": "high",
+        "associationBlockingEligible": true,
+        "policyBlockingAllowed": false
+      }
+    ],
+    "observed": {
+      "modeled": [
+        "quote_requested_three",
+        "quote_requested_one",
+        "quote_requested_zero"
+      ],
+      "knownUnknown": [],
+      "unmodeled": []
+    },
+    "excluded": {
+      "background": [],
+      "orphaned": [],
+      "late": [],
+      "unknown": []
+    },
+    "declaredConstructs": [
+      {
+        "key": "expected_path:quote_requested_one"
+      },
+      {
+        "key": "expected_path:quote_requested_three"
+      },
+      {
+        "key": "expected_path:quote_requested_zero"
+      },
+      {
+        "key": "occurrence_bounds:quote_requested_one"
+      },
+      {
+        "key": "occurrence_bounds:quote_requested_three"
+      },
+      {
+        "key": "occurrence_bounds:quote_requested_zero"
+      },
+      {
+        "key": "ordering:quote_requested_three.after_any"
+      },
+      {
+        "key": "ordering:quote_requested_zero.after_any"
+      },
+      {
+        "key": "required_properties:quote_requested_one"
+      },
+      {
+        "key": "required_properties:quote_requested_three"
+      },
+      {
+        "key": "required_properties:quote_requested_zero"
+      }
+    ],
+    "collectorHealth": "healthy"
+  },
+  "pack": {
+    "evidence_pack_schema_version": "1.0",
+    "product_context": {
+      "product": "TelemetryTest AI",
+      "phase": "Phase 1",
+      "mode": "observe",
+      "environment": "ci"
+    },
+    "rule_context": {
+      "rule_id": "erl2_ext_journey",
+      "rule_source": "reality_lab_external_campaign",
+      "rule_contract_version": "erl2_ext_journey_v1",
+      "severity": "medium",
+      "policy": "non_blocking",
+      "owner": "reality_lab_external_campaign"
+    },
+    "journey_context": {
+      "journey_id": "erl2_ext_journey",
+      "display_name": null,
+      "known_unknowns": []
+    },
+    "test_context": {
+      "test_id": "adapters/erl2-subject::erl2_ext_journey",
+      "test_file": "adapters/erl2-subject",
+      "test_title": "erl2_ext_journey",
+      "test_run_id": "01a0160a-ea23-77d5-93fe-2e0133a77dd0",
+      "ci_run_id": "01a0160a-ea23-77d5-93fe-2e0133a77dd0",
+      "pull_request_id": null,
+      "framework": "Playwright",
+      "browser": "chromium"
+    },
+    "collector_context": {
+      "collector_version": "erl2_validation_subject_collector_0.1",
+      "collector_health": "healthy",
+      "capture_coverage": 1,
+      "drop_rate": 0,
+      "background_event_ratio": 0
+    },
+    "association_context": {
+      "distribution": {
+        "high": 3,
+        "medium": 0,
+        "low": 0,
+        "unknown": 0
+      },
+      "late_event_count": 0,
+      "orphan_event_count": 0,
+      "unknown_event_count": 0
+    },
+    "validation_context": {
+      "validator_version": "validator_0.2",
+      "validation_status": "rule_violation_detected",
+      "failure_type": "wrong_order",
+      "expected_sequence": [
+        "quote_requested_one",
+        "quote_requested_three",
+        "quote_requested_zero"
+      ],
+      "actual_sequence": [
+        "quote_requested_three",
+        "quote_requested_one",
+        "quote_requested_zero"
+      ],
+      "missing_event": null,
+      "validator_quality_score": 90,
+      "validator_quality_band": "Strong",
+      "vqs_cold_start": true
+    },
+    "payload_summary": {
+      "included_fields": [
+        "numberOfItems"
+      ],
+      "redacted_fields": [],
+      "raw_payload_included": false
+    },
+    "ai_context": {
+      "ai_explanation_used": false,
+      "prompt_version": null,
+      "model_decision_authority": "none"
+    },
+    "human_feedback": {
+      "status": "pending",
+      "feedback_ids": []
+    },
+    "content_hash": "sha256:f0cfab53a3f01a0a962204782a78f0058ff2aef9c51265e3f9f7f8744fbed651",
+    "evidence_pack_id": "evp_f0cfab53a3f0",
+    "created_at": "2026-08-18T18:03:29.989Z"
+  },
+  "eligibility": {
+    "eligible": false,
+    "consecutiveObserveRuns": 1,
+    "minVqsBand": "Strong",
+    "avgCaptureCoverage": 1,
+    "avgHighMediumRatio": 1,
+    "fpRate": 0,
+    "aiOverclaimCount": 0,
+    "humanApprovalsComplete": false,
+    "failedCriteria": [
+      "insufficient_observe_runs",
+      "missing_human_approvals"
+    ],
+    "rollbackRecommended": false,
+    "rollbackReasons": []
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-negative-control/v1",
+  "campaign": "qualiber-product-scenarios-20260818",
+  "run_against": "disposable copies under campaign scratch; no published evidence was touched",
+  "control_id": "NC-4a",
+  "targets_scenario": "QLB-EXT-002 / QLB-EXT-003",
+  "method": "002's and 003's product-out/ subtrees exchanged on disposable copies, .frozen sidecars included",
+  "required_outcome": "both legs unavailable / lab_harness_failure",
+  "legs": [
+    {
+      "scenario_id": "QLB-EXT-002",
+      "verdict": "unavailable",
+      "classification": "lab_harness_failure",
+      "sub_reasons": [
+        "adapter_artifact_hashes_binding_failed",
+        "retained_output_refs_binding_failed"
+      ],
+      "retained_output_refs_mismatched": [
+        "local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json"
+      ],
+      "adapter_artifact_hashes_matched": false,
+      "frozen_sidecars_matched": true,
+      "no_semantic_read_happened": true
+    },
+    {
+      "scenario_id": "QLB-EXT-003",
+      "verdict": "unavailable",
+      "classification": "lab_harness_failure",
+      "sub_reasons": [
+        "adapter_artifact_hashes_binding_failed",
+        "retained_output_refs_binding_failed"
+      ],
+      "retained_output_refs_mismatched": [
+        "local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json"
+      ],
+      "adapter_artifact_hashes_matched": false,
+      "frozen_sidecars_matched": true,
+      "no_semantic_read_happened": true
+    }
+  ],
+  "detecting_gate": "record retained_output_refs digests AND the adapter's artifact_hashes witness; the .frozen sidecars travelled with their files and did not fire",
+  "held": true
+}

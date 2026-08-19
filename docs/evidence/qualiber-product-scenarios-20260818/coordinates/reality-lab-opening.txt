@@ -1,0 +1,6 @@
+worktree=lab-evidence
+head=3d2655f67ad14c16dd6148e4654cc0fa872cb4a4
+tree=74c633fb5546085de055abb92095442e375a03c4
+branch=HEAD
+porcelain_lines=0
+porcelain_sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

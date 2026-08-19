@@ -1,0 +1,66 @@
+{
+  "schema_version": "qualiber-reality-lab/execution-lock/v1",
+  "campaign": "qualiber-product-scenarios-20260818",
+  "note": "Stage 2. Written after the clean product build and before the first official scenario. It restates no stimulus or expectation digest \u2014 stage 1 owns those. It carries no observation id and no sealed-plan hash; those originate per scenario and live in campaign-index.json.",
+  "oracle_precommit_sha256": "sha256:b8f5fdb4786c1500d6d77454316c6e29a53d3cc51e3274ba0a425f1b30e62b69",
+  "oracle_precommit_revision": 1,
+  "coordinates": {
+    "qualiber": {
+      "repository": "https://github.com/karkuak/qualiber.git",
+      "branch": "preprod (detached)",
+      "head": "d3ebf37fc2cd5741c25eac22eaa20777153730ce",
+      "tree": "0d2a8c4de0196972ef1ed8844b3746a4cfa5df3a",
+      "porcelain_form": "git status --porcelain=v1 -uall",
+      "porcelain_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "porcelain_lines": 0
+    },
+    "reality_lab_campaign_baseline": {
+      "repository": "https://github.com/karkuak/qualiber-reality-lab.git",
+      "branch": "main (detached)",
+      "head": "3d2655f67ad14c16dd6148e4654cc0fa872cb4a4",
+      "tree": "74c633fb5546085de055abb92095442e375a03c4",
+      "porcelain_form": "git status --porcelain=v1 (collapsed). -uall is deliberately not used here: it would enumerate every file of the evidence bundle being written, so the digest could not be stable across the campaign it is meant to bind.",
+      "porcelain_sha256": "sha256:5c3ca5662fe9ef05a3e31bafc1ad871bd060dfa3674f98a31255381818398501",
+      "porcelain_lines": 1
+    },
+    "reality_lab_dependency_pin": {
+      "head": "69ace16fb7ee021dddbcf3fa70e4295c2e5a400b",
+      "tree": "89988e5588b04534316c73901e34c56861caa494",
+      "note": "the commit adapters/erl2-subject/lab-packages.json pins; the three Lab peers were packed from it"
+    }
+  },
+  "adapter": {
+    "adapter_id": "qualiber-erl2-validation-subject",
+    "artifact_path": "adapters/erl2-subject/dist/qualiber-erl2-validation-subject.mjs",
+    "artifact_sha256": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+    "artifact_bytes": 41472,
+    "manifest_path": "adapters/erl2-subject/certification/validation-adapter-manifest.v2.json",
+    "manifest_sha256": "sha256:91e830d253e23194ecb9bbd0a206c20699b610333821c25074a6dc6345c9e85a",
+    "manifest_core_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+    "provenance_receipt_sha256": "sha256:8294c780ab7b3237b1ad6ba5e85a08aa76e1d6c61472ffc1990558a9fb999920",
+    "receipt_input_digest": "sha256:a0bc5288c9c8f960fdc6fa9d316cf171d7be2cd39d631b90a28c461f7bbbc96d",
+    "runtime_dependency_provenance_sha256": "sha256:0919b66917bae1f50db5b53117ba3d8c7dad9b1fa8156b47ad91c65a931ee89a",
+    "topology": "package-local-tarball (@qualgraph/collector@0.1.0)",
+    "declared_artifacts_built": "2 of 2"
+  },
+  "comparator_dependencies": {
+    "anchor": "adapters/erl2-subject/package.json",
+    "anchor_note": "repository-relative on purpose. The absolute anchor path on this machine is recorded in the command log only; an absolute location is not portable evidence.",
+    "resolved": [
+      {
+        "name": "@erl2/contracts",
+        "version": "0.1.0",
+        "entry_sha256": "sha256:da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c"
+      },
+      {
+        "name": "@erl2/integrity",
+        "version": "0.1.0",
+        "entry_sha256": "sha256:c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13"
+      }
+    ],
+    "limitation": "name, version and entry_sha256 bind the resolved ENTRYPOINT and nothing further. @erl2/integrity's entrypoint re-exports coreHash from ./hash/hash.js, so the implementing file is not covered by the entrypoint digest. Together with the provisioning receipt (pinned Lab commit 69ace16 and package tarball digests) this establishes neither complete dependency closure nor the absence of post-install mutation inside a package. Accepted under the trusted-local claim ceiling; no package-tree inventory is added."
+  },
+  "claim_ceiling": "This campaign does **not** establish: certification; independent assurance; confinement or sandboxing; scoring or authentication; governor authorization; production readiness; reproducibility from a clean checkout; complete executable-dependency closure; or correctness of Qualiber outside the five scenarios tested here. No `network-egress` capability was requested and no HTTP operation was intentionally performed, but the adapter ran as an ordinary child process with the operator's own user permissions and was **not** isolated from the operator's filesystem or network. Finding-level claims are bounded by \u00a77.1: outcome class, finding type against a precommitted set and allowlist, finding count, and target event. Severity, detail prose, finding order, evidence-pack contents, scoring and eligibility behavior were recorded but not asserted upon. On the comparator's own dependencies: `execution-lock.json` binds the name, version and **entrypoint** digest of `@erl2/contracts` and `@erl2/integrity`, and the provisioning receipt records the pinned Lab commit and package tarball digests. An entrypoint digest does not cover a package's internal modules \u2014 `@erl2/integrity`'s entrypoint re-exports `coreHash` from another file \u2014 so this establishes neither complete dependency closure nor the absence of post-install mutation inside a package. That limitation is accepted here rather than closed. On chronology: the campaign **records** that the operator fixed the expectations before execution, in a self-authored precommit and command log. It does not independently **prove** that ordering \u2014 nothing here is countersigned, timestamped or witnessed by a third party, and a reader who does not trust the operator should treat the ordering as asserted rather than demonstrated. What *is* checkable from the retained bytes alone is that no expectation appears in any product input.",
+  "claim_ceiling_sha256": "sha256:4924012a60e53262c4f96259fc3c57bf862e49a805ee887e96a916d76bdae71f",
+  "amendments": []
+}

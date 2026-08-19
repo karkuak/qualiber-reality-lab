@@ -1,0 +1,16 @@
+{
+  "schema_version": "qualiber-erl2-validation-stimulus-identity/v1",
+  "capture_stimulus": {
+    "mount": "capture-stimulus",
+    "file": "stimulus.json",
+    "sha256": "sha256:054756605c6e21581b7cdf8c9561460bbe5e3ca9b6b8f73a38164ae0fde088f0",
+    "byte_length": 773
+  },
+  "contract_stimulus": {
+    "mount": "contract-stimulus",
+    "file": "contract.json",
+    "sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+    "byte_length": 1180
+  },
+  "note": "digests of both mounted files as this subject read them, before anything was done with them"
+}

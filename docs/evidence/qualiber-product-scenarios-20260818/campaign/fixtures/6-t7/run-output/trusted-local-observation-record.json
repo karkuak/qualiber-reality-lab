@@ -1,0 +1,110 @@
+{
+  "schema_version": "trusted-local-observation-record/v1",
+  "observation_id": "01a01606-b0a6-72b4-9c99-257a6942665e",
+  "plan_hash": "sha256:2e052d36f6e56adff67ef3e7bcd6dac74acf3e55eb42a547c0f3c220322cb0da",
+  "adapter_artifact_hash": "sha256:6dda3abf803dfeda5d8c139ebb4c31b538aacc1c9793e177f701f903d7be57ec",
+  "terminal_status": "observed_complete",
+  "operation_outcomes": [
+    {
+      "sequence": 0,
+      "operation_id": "interact-validation-stimulus",
+      "operation": "interact",
+      "state": "completed",
+      "request_hash": "sha256:df888653ff06b055a0272aec6e0bbd81c42ea82437f237c027932bd679aef6aa",
+      "response_envelope_hash": "sha256:91535a669886b78a59315a81800d585342f056f0af7151486203e46fe188953d",
+      "response_status": "supported"
+    },
+    {
+      "sequence": 1,
+      "operation_id": "report-residue-final",
+      "operation": "report-residue",
+      "state": "completed",
+      "request_hash": "sha256:de790defb8525b43fb46bfcd1ae09e4d52210a0887fa80c94b1c46a67fb55775",
+      "response_envelope_hash": "sha256:cde2e1fd1812642ca470fdf621be864861b957d29c5fac51997eed3caf249d3a",
+      "response_status": "supported"
+    }
+  ],
+  "operation_records": [
+    {
+      "schema_version": "local-observation-operation-record/v1",
+      "operation": "interact",
+      "operation_id": "interact-validation-stimulus",
+      "state": "declared"
+    },
+    {
+      "schema_version": "local-observation-operation-record/v1",
+      "operation": "interact",
+      "operation_id": "interact-validation-stimulus",
+      "state": "dispatched"
+    },
+    {
+      "schema_version": "local-observation-operation-record/v1",
+      "operation": "interact",
+      "operation_id": "interact-validation-stimulus",
+      "state": "completed",
+      "response_status": "supported",
+      "response_envelope_hash": "sha256:91535a669886b78a59315a81800d585342f056f0af7151486203e46fe188953d",
+      "retained_output_refs": [
+        {
+          "path": "local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+          "media_type": "application/json",
+          "byte_length": 49,
+          "file_sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+          "media_type": "application/json",
+          "byte_length": 480,
+          "file_sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+          "media_type": "application/json",
+          "byte_length": 1117,
+          "file_sha256": "sha256:3929db6ea1f3be9eef1d5d4aaa7b4417728e4fd2cdeb6f3f3ae285fc63ee9e11",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validation-stimulus/qualiber/product-out/evidence-pack.json",
+          "media_type": "application/json",
+          "byte_length": 27,
+          "file_sha256": "sha256:8b17a7854e5f0f67d5259f940c743daae54f793a373b52f47a6597d29b9d8011",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validation-stimulus/qualiber/product-out/report.json",
+          "media_type": "application/json",
+          "byte_length": 313,
+          "file_sha256": "sha256:b6887130d435b2928be6283ac0dec31c25eb64e4685cc1df35052fc22210437e",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validation-stimulus/qualiber/product-out/report.junit.xml",
+          "media_type": "application/json",
+          "byte_length": 25,
+          "file_sha256": "sha256:25a1cf65780ebc3a4272618efd6727e3aa737112f5235d02b6ce8bf09efdd0cb",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validation-stimulus/qualiber/product-out/report.md",
+          "media_type": "application/json",
+          "byte_length": 18,
+          "file_sha256": "sha256:a5ecb208f596ad2dafefb4b3133aa274fe46023d801cd62b45957f60dddbfc30",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validation-stimulus/qualiber/product-out/validation-evidence-pack.json",
+          "media_type": "application/json",
+          "byte_length": 38,
+          "file_sha256": "sha256:3c52d70bc771140f290abe966cff82f8f51dc3d7e396c76361b341ffade2e2e2",
+          "classification": "INTERNAL"
+        }
+      ]
+    }
+  ],
+  "cleanup": {
+    "status": "cleanup_complete"
+  }
+}

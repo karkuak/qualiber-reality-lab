@@ -1,0 +1,90 @@
+{
+  "schema_version": "evidence_pack_v0.1",
+  "rule_id": "erl2_ext_journey",
+  "journey_id": "erl2_ext_journey",
+  "test_id": "adapters/erl2-subject::erl2_ext_journey",
+  "ci_run_id": "01a0160b-062f-70f5-a5d7-8c451cc83178",
+  "mode": "observe",
+  "validation_status": "inconclusive",
+  "ci_blocking": false,
+  "collector_health": "degraded",
+  "findings": [
+    {
+      "finding": "no_telemetry_observed",
+      "severity": "warning",
+      "association_confidence": "high",
+      "association_blocking_eligible": true,
+      "policy_blocking_allowed": false,
+      "severity_source": "fixed",
+      "note": "collector health=degraded; results inconclusive"
+    }
+  ],
+  "observed": {
+    "modeled": [],
+    "knownUnknown": [],
+    "unmodeled": []
+  },
+  "excluded_candidates": {
+    "background": [],
+    "orphaned": [],
+    "late": [],
+    "unknown": []
+  },
+  "declared_constructs": [
+    {
+      "key": "expected_path:quote_requested_one",
+      "applied": false,
+      "decided": false
+    },
+    {
+      "key": "expected_path:quote_requested_three",
+      "applied": false,
+      "decided": false
+    },
+    {
+      "key": "expected_path:quote_requested_zero",
+      "applied": false,
+      "decided": false
+    },
+    {
+      "key": "occurrence_bounds:quote_requested_one",
+      "applied": false,
+      "decided": false
+    },
+    {
+      "key": "occurrence_bounds:quote_requested_three",
+      "applied": false,
+      "decided": false
+    },
+    {
+      "key": "occurrence_bounds:quote_requested_zero",
+      "applied": false,
+      "decided": false
+    },
+    {
+      "key": "ordering:quote_requested_three.after_any",
+      "applied": false,
+      "decided": false
+    },
+    {
+      "key": "ordering:quote_requested_zero.after_any",
+      "applied": false,
+      "decided": false
+    },
+    {
+      "key": "required_properties:quote_requested_one",
+      "applied": false,
+      "decided": false
+    },
+    {
+      "key": "required_properties:quote_requested_three",
+      "applied": false,
+      "decided": false
+    },
+    {
+      "key": "required_properties:quote_requested_zero",
+      "applied": false,
+      "decided": false
+    }
+  ]
+}

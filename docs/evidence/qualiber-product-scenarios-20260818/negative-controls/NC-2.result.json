@@ -1,0 +1,20 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-negative-control/v1",
+  "campaign": "qualiber-product-scenarios-20260818",
+  "run_against": "disposable copies under campaign scratch; no published evidence was touched",
+  "control_id": "NC-2",
+  "targets_scenario": "QLB-EXT-001",
+  "method": "run-result.json deleted from a disposable copy of 001, then compared normally",
+  "required_outcome": "unavailable; clean must never appear as an observed value",
+  "observed_verdict": "unavailable",
+  "observed_classification": "lab_harness_failure",
+  "sub_reasons": [
+    "adapter_artifact_hashes_binding_failed"
+  ],
+  "detecting_gate": "adapter artifact_hashes witness \u2014 run-summary.json declares a digest for qualiber/product-out/run-result.json and the file is gone",
+  "clean_absent_from_observed": true,
+  "observed_run_status": null,
+  "retained_output_refs_matched_count": 4,
+  "note_on_classification": "The plan's \u00a711 row anticipates `unavailable` / `unavailable` via \u00a710.5 rule 5 (no fallback from a missing run-result.json). What actually happens is stronger and is reported as it happened: deleting the file ALSO breaks the adapter's artifact_hashes witness, and \u00a710.5 rule 7 requires the binding gate to run before any comparison \u2014 so the refusal is classified lab_harness_failure and rule 5 is never reached. The required outcome is met: the verdict is `unavailable` and `clean` never appears as an observed value. The comparator was NOT edited to make the classification match the table, because doing so would mean relaxing the binding-first rule the plan mandates.",
+  "held": true
+}

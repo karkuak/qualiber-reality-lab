@@ -1,0 +1,32 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-negative-control/v1",
+  "campaign": "qualiber-product-scenarios-20260818",
+  "run_against": "disposable copies under campaign scratch; no published evidence was touched",
+  "control_id": "NC-5",
+  "targets_scenario": "QLB-EXT-001",
+  "method": "exactly one byte flipped inside a body_text numeric literal of the retained run-output/inputs/capture-stimulus/stimulus.json on a disposable copy ('1' -> '2' at offset 241)",
+  "required_outcome": "offline verification or binding refuses; the comparison is never agree",
+  "aborted_first_attempt": {
+    "what_happened": "the first attempt did not mutate anything: the host writes retained inputs mode 0444, so the write was refused and both legs trivially passed",
+    "why_recorded": "a control that did not actually run must not be reported as one that held",
+    "resolution": "a fresh disposable copy was made, the copy's file made writable, and the flip verified by digest before either leg ran"
+  },
+  "input_sha256_before": "sha256:78210e2e912c635de91f91b18c1de7acfa386c324b9b3c69f111ab962485d7d4",
+  "input_sha256_after": "sha256:431f94c9e4cd583936b55a5f315d78bd1c3fc50a078c2445f58c5e7604f323ba",
+  "leg_1_offline_verification": {
+    "ok": false,
+    "refusals": [
+      "retained input capture-stimulus/stimulus.json no longer hashes to the digest the plan declares"
+    ]
+  },
+  "leg_2_comparator_binding": {
+    "verdict": "unavailable",
+    "classification": "lab_harness_failure",
+    "sub_reasons": [
+      "input_digest_binding_failed"
+    ],
+    "no_semantic_read_happened": true
+  },
+  "detecting_gate": "BOTH legs fired: verifyTrustedLocalObservationRecord refused on the sealed plan's declared input digest, and the comparator's input-digest binding refused across sealed plan, retained inputs, stimulus-identity.json and oracle-precommit.json",
+  "held": true
+}

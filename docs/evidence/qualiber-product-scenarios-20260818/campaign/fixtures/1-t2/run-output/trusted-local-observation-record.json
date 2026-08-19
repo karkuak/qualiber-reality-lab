@@ -1,0 +1,82 @@
+{
+  "schema_version": "trusted-local-observation-record/v1",
+  "observation_id": "01a01606-aecc-749a-93ed-3316675728f8",
+  "plan_hash": "sha256:a2c4fcc75b261f9d3e22b8f78b2659f1e8982dd962e0cde9b0749cadad114f81",
+  "adapter_artifact_hash": "sha256:6dda3abf803dfeda5d8c139ebb4c31b538aacc1c9793e177f701f903d7be57ec",
+  "terminal_status": "observed_complete",
+  "operation_outcomes": [
+    {
+      "sequence": 0,
+      "operation_id": "interact-validation-stimulus",
+      "operation": "interact",
+      "state": "completed",
+      "request_hash": "sha256:df888653ff06b055a0272aec6e0bbd81c42ea82437f237c027932bd679aef6aa",
+      "response_envelope_hash": "sha256:59c5343b06c1f53b5e72b19c56e3134a9abca42f4288bdc6294234956c61db56",
+      "response_status": "failed"
+    },
+    {
+      "sequence": 1,
+      "operation_id": "report-residue-final",
+      "operation": "report-residue",
+      "state": "completed",
+      "request_hash": "sha256:de790defb8525b43fb46bfcd1ae09e4d52210a0887fa80c94b1c46a67fb55775",
+      "response_envelope_hash": "sha256:cde2e1fd1812642ca470fdf621be864861b957d29c5fac51997eed3caf249d3a",
+      "response_status": "supported"
+    }
+  ],
+  "operation_records": [
+    {
+      "schema_version": "local-observation-operation-record/v1",
+      "operation": "interact",
+      "operation_id": "interact-validation-stimulus",
+      "state": "declared"
+    },
+    {
+      "schema_version": "local-observation-operation-record/v1",
+      "operation": "interact",
+      "operation_id": "interact-validation-stimulus",
+      "state": "dispatched"
+    },
+    {
+      "schema_version": "local-observation-operation-record/v1",
+      "operation": "interact",
+      "operation_id": "interact-validation-stimulus",
+      "state": "completed",
+      "response_status": "failed",
+      "response_envelope_hash": "sha256:59c5343b06c1f53b5e72b19c56e3134a9abca42f4288bdc6294234956c61db56",
+      "retained_output_refs": [
+        {
+          "path": "local-observation-output/interact-validation-stimulus/qualiber/capture.json",
+          "media_type": "application/json",
+          "byte_length": 49,
+          "file_sha256": "sha256:79f1b6ffe0bbc675fea7a6e80da4d61967cb8369c2a5faedba9a247f907e5801",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validation-stimulus/qualiber/stimulus-identity.json",
+          "media_type": "application/json",
+          "byte_length": 480,
+          "file_sha256": "sha256:9ffafec0f46e0599853f11ffe839df9840e8e82ee56a06eda1ee64dc537a37d2",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validation-stimulus/qualiber/run-summary.json",
+          "media_type": "application/json",
+          "byte_length": 618,
+          "file_sha256": "sha256:52f43c06661d122408a945c89201c14c20f90c8a73892e376b4a4bdf59ce2902",
+          "classification": "INTERNAL"
+        },
+        {
+          "path": "local-observation-output/interact-validation-stimulus/qualiber/product-out/run-result.json",
+          "media_type": "application/json",
+          "byte_length": 214,
+          "file_sha256": "sha256:036180cd869faac9d34a1b23f48cbd587b8b69f9fdc5dc9e17940b85a2d2c6e5",
+          "classification": "INTERNAL"
+        }
+      ]
+    }
+  ],
+  "cleanup": {
+    "status": "cleanup_complete"
+  }
+}

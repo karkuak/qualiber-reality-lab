@@ -1,0 +1,163 @@
+{
+  "schema_version": "qualiber-reality-lab/tooling-test-result/v1",
+  "generated_by": "compare-scenario.test.mjs",
+  "outcome": "passed",
+  "test_count": 12,
+  "passed_count": 12,
+  "failed_count": 0,
+  "comparator_sha256_tested": "sha256:89e92a0324b123e57c4df3169609b9759da5cf9bfb30b6bd5a5e71cea1a00958",
+  "oracle_absence_scan_mjs_sha256": "sha256:5a17321bda0e53cfa10915f2e37f0af899dd130abacd8fcd8cf0652b00adde73",
+  "compare_scenario_test_mjs_sha256": "sha256:ecccd5a9b99c157b4153d7666ab8445ae222bae0d774b948fbab8272fbcefcdb",
+  "dependency_anchor_used": "adapters/erl2-subject/package.json",
+  "dependency_anchor_absolute_recorded_in_command_log_only": true,
+  "tests": [
+    {
+      "name": "T1 four-step response-envelope bind passes on honest bytes",
+      "passed": true,
+      "error": null,
+      "checks": [
+        "exit 0, got 0 ()",
+        "step 1 bytes matched",
+        "step 2 schema valid",
+        "step 3 recomputed",
+        "step 4 three-way identity",
+        "file sha256 and record core_hash are different values (never compared to each other)",
+        "error code read from envelope",
+        "verdict agree, got agree",
+        "classification product_refusal_expected, got product_refusal_expected"
+      ]
+    },
+    {
+      "name": "T2 mutated /error/code with stale core_hash is refused at step 4",
+      "passed": true,
+      "error": null,
+      "checks": [
+        "step 1 still passes — the sidecar travelled with the file",
+        "step 2 still passes — it is still a valid envelope",
+        "step 4 refuses",
+        "named sub_reason",
+        "unavailable, got unavailable",
+        "lab_harness_failure, got lab_harness_failure"
+      ]
+    },
+    {
+      "name": "T3 --dependency-anchor resolves both Lab packages and records triples",
+      "passed": true,
+      "error": null,
+      "checks": [
+        "exit 0, got 0",
+        "both resolved, got @erl2/contracts,@erl2/integrity",
+        "triples match the lock",
+        "no absolute dependency path leaks into comparison.json"
+      ]
+    },
+    {
+      "name": "T4 missing --dependency-anchor is a hard tooling exit, not a verdict",
+      "passed": true,
+      "error": null,
+      "checks": [
+        "exit 3, got 3",
+        "no comparison.json written",
+        "stderr says it is not a verdict",
+        "exit 3 for nonexistent anchor, got 3"
+      ]
+    },
+    {
+      "name": "T5 unresolvable package through the anchor is a hard tooling exit",
+      "passed": true,
+      "error": null,
+      "checks": [
+        "exit 3, got 3",
+        "stderr names the unresolvable package",
+        "no comparison written"
+      ]
+    },
+    {
+      "name": "T6 state and response_status are compared as separate fields",
+      "passed": true,
+      "error": null,
+      "checks": [
+        "state read as completed",
+        "response_status read as failed",
+        "response_status mismatch named",
+        "state itself agreed",
+        "disagree, got disagree",
+        "adapter_operational_failure, got adapter_operational_failure",
+        "terminal_status recorded for the reader but not used to classify"
+      ]
+    },
+    {
+      "name": "T7 missing run-result.json yields unavailable and never clean",
+      "passed": true,
+      "error": null,
+      "checks": [
+        "unavailable, got unavailable",
+        "classification unavailable, got unavailable",
+        "run_status stays null",
+        "the string clean never appears as an observed value",
+        "named sub_reason"
+      ]
+    },
+    {
+      "name": "T8 no branch reads a process exit code",
+      "passed": true,
+      "error": null,
+      "checks": [
+        "exit code is recorded",
+        "still agrees despite exit 9, got agree",
+        "no exit-code comparison in source; found: "
+      ]
+    },
+    {
+      "name": "T9 finding-set bounds: allowlist and count both enforced",
+      "passed": true,
+      "error": null,
+      "checks": [
+        "a type outside required ∪ permitted disagrees",
+        "names the offending type",
+        "count bound also breached",
+        "published as a product disagreement",
+        "counterpart sub_reason used",
+        "still a disagreement, not silently accepted"
+      ]
+    },
+    {
+      "name": "T10 NC-1 mode accepts only a digest-bound precommitted counterfactual",
+      "passed": true,
+      "error": null,
+      "checks": [
+        "counterfactual binds",
+        "control id recorded",
+        "disagree, got disagree",
+        "product_disagreement, got product_disagreement",
+        "reached run_status equality",
+        "an unbound counterfactual is refused",
+        "as a harness failure",
+        "named sub_reason"
+      ]
+    },
+    {
+      "name": "T11 a mutated expectation is refused before any comparison (NC-1b gate)",
+      "passed": true,
+      "error": null,
+      "checks": [
+        "digest no longer binds",
+        "unavailable, got unavailable",
+        "lab_harness_failure, got lab_harness_failure",
+        "no semantic read happened"
+      ]
+    },
+    {
+      "name": "T12 a retained_output_refs digest mismatch refuses before any verdict",
+      "passed": true,
+      "error": null,
+      "checks": [
+        "mismatch recorded",
+        "named sub_reason",
+        "unavailable, got unavailable",
+        "lab_harness_failure, got lab_harness_failure",
+        "binding gate ran before semantics"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "runStatus": "not_run",
+  "notRunReason": "config_invalid",
+  "ciExitCode": 0,
+  "blocking": false,
+  "advisoryCommentEligible": false,
+  "evidencePackGenerated": false,
+  "customerVisibleMessage": "TelemetryTest AI did not run. Reason: config_invalid — rule contract cannot be validated — missing or empty required field(s): expected_path. Validation requires rule_contract_version + rule_id + journey_id + source, and expected_path listing at least one event."
+}
