@@ -14,6 +14,7 @@ import {
   type Ceiling,
   type Clause,
   type History,
+  type HistoryEntry,
   type SourceBindings,
 } from "../support/claimCeiling.js";
 
@@ -24,6 +25,19 @@ function parsed(): Ceiling {
 }
 
 const history: History = validateHistory(JSON.parse(rawHistory));
+
+/**
+ * The active revision is the history's final row — the same active-row semantics
+ * {@link ../support/claimCeiling.ts assertIdentity} and the append-only check enforce.
+ * `validateHistory` has already refused an empty entry list, so this names a revision
+ * rather than assuming one. Nothing in this suite may name a revision ordinal instead:
+ * a literal passes on the revision it was written for and fails the next honest mint.
+ */
+function activeRevision(): HistoryEntry {
+  const entry = history.entries.at(-1);
+  assert.ok(entry !== undefined, "the validated history names an active revision");
+  return entry;
+}
 
 function validate(
   value: unknown,
@@ -379,7 +393,7 @@ for (const [description, index, statement] of DEMONSTRATED_BYPASSES) {
     });
     assert.equal(
       widened["claim_ceiling_id"],
-      "reality-lab-claim-ceiling-1",
+      activeRevision().claim_ceiling_id,
       "the bypass keeps the reviewed identifier, which is what makes it a bypass",
     );
 
@@ -394,6 +408,121 @@ for (const [description, index, statement] of DEMONSTRATED_BYPASSES) {
     );
   });
 }
+
+// --- the legitimate evolution path -----------------------------------------------
+
+/**
+ * A tightening: it narrows what may be claimed and widens nothing. Kept out of the
+ * published document, so this suite exercises the mint without performing one.
+ */
+const NEXT_REVISION_SENTENCE =
+  "No release authority exists at this revision, and none may be asserted until that calibration work has completed.";
+
+/**
+ * A complete, legitimate next revision, built the way the authorized path builds one:
+ * the authoritative source moves, the clause that projects it moves with it, the
+ * binding is re-derived over both sides at once, the projection digest is whatever the
+ * new semantics hash to, and the published rows are appended to rather than edited.
+ * No revision ordinal is named anywhere in it.
+ */
+function nextMint(): {
+  ceiling: Ceiling;
+  history: History;
+  bindings: SourceBindings;
+  sourceDocument: string;
+} {
+  const clauseId = "no-production-certification";
+  const bound = CLAUSE_SOURCE_BINDINGS.get(clauseId);
+  assert.ok(bound !== undefined, `no source binding for ${clauseId}`);
+  assert.equal(
+    normalizeSource(claimsMarkdown).includes(normalizeSource(NEXT_REVISION_SENTENCE)),
+    false,
+    "the fixture sentence has entered the published document; give the fixture its own wording",
+  );
+
+  const ceiling = parsed();
+  const clauses = ceiling.clauses.map((clause) =>
+    clause.clause_id === clauseId
+      ? { ...clause, statement: `${clause.statement} ${NEXT_REVISION_SENTENCE}` }
+      : clause,
+  );
+  const moved = clauses.find((clause) => clause.clause_id === clauseId);
+  assert.ok(moved !== undefined);
+
+  const statements = [...bound.statements, NEXT_REVISION_SENTENCE];
+  const bindings: SourceBindings = new Map([
+    ...CLAUSE_SOURCE_BINDINGS,
+    [clauseId, { statements, binding_digest: bindingDigest(clauseId, statements, moved.statement) }],
+  ]);
+
+  const nextId = nextSemanticId(history);
+  return {
+    ceiling: { ...ceiling, claim_ceiling_id: nextId, clauses },
+    history: {
+      ...history,
+      entries: [
+        ...history.entries,
+        { claim_ceiling_id: nextId, semantic_projection_digest: semanticDigest({ clauses }) },
+      ],
+    },
+    bindings,
+    sourceDocument: `${claimsMarkdown}\n\n${NEXT_REVISION_SENTENCE}\n`,
+  };
+}
+
+/**
+ * Regression for the `reality-lab-claim-ceiling-1` literal this suite used to carry
+ * beside the demonstrated bypasses. Those bypasses are refused because the semantics
+ * moved, not because the ceiling happens to sit on its first revision — so the same
+ * fixtures, re-based onto a legitimately minted next revision, must be refused on the
+ * same grounds, and the mint itself must pass. A suite that names the current ordinal
+ * is green today and red on the next honest mint; this one cannot be.
+ */
+test("the legitimate next mint is accepted and the demonstrated bypasses stay refused", () => {
+  const mint = nextMint();
+  const context = {
+    sourceDocument: mint.sourceDocument,
+    history: mint.history,
+    bindings: mint.bindings,
+  };
+
+  // The evolution path is open: the next revision passes the identity gate whole.
+  validate(mint.ceiling, context);
+  assert.equal(mint.ceiling.claim_ceiling_id, nextSemanticId(history), "an ordinary append");
+  assert.notEqual(
+    mint.ceiling.claim_ceiling_id,
+    activeRevision().claim_ceiling_id,
+    "the fixture really moves the active revision",
+  );
+  assert.deepEqual(
+    mint.history.entries.slice(0, -1),
+    history.entries,
+    "every already-published row is carried over unchanged",
+  );
+  assert.notEqual(
+    semanticDigest(mint.ceiling),
+    activeRevision().semantic_projection_digest,
+    "the new revision means something new",
+  );
+
+  // And the shifted revision loosens none of the demonstrated bypasses.
+  for (const [description, index, statement] of DEMONSTRATED_BYPASSES) {
+    const clauses = mint.ceiling.clauses.map((clause, at) =>
+      at === index ? { ...clause, statement } : clause,
+    );
+    const widened: Ceiling = { ...mint.ceiling, clauses };
+    assert.equal(
+      widened.claim_ceiling_id,
+      mint.history.entries.at(-1)?.claim_ceiling_id,
+      "the bypass keeps the newly active identifier, which is what makes it a bypass",
+    );
+    assert.throws(
+      () => validate(widened, context),
+      /no longer agree|semantics the id was minted for/,
+      `still refused one revision on: ${description}`,
+    );
+  }
+});
 
 // --- stability: non-semantic change must not move the projection -----------------
 
