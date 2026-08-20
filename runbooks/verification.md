@@ -6,6 +6,14 @@ with `VERIFY_OFFLINE_REQUIRED` and exit code 10.
 
 ## Inputs you control
 
+`--root-config` is the **only** verifier-controlled input, and the only trust
+anchor. `--public-bundle`, `--artifact-root` and `--lifecycle` are all
+**caller-supplied evidence**: they arrive from the party whose claim you are
+checking, and nothing in them is believed because it is presented. The lifecycle
+stream in particular is evidence, not testimony — the verifier re-derives the
+required artifact set from its hash chain and refuses anything the signed
+terminal does not account for.
+
 `--root-config` is **verifier-controlled local configuration**. It must be
 populated out of band and never from a policy, receipt, bundle or report. It
 declares:
@@ -36,7 +44,12 @@ What the verifier does, in order:
 1. Validates the bundle against the closed `public-verification-bundle/v2`
    schema and refuses any execution body.
 2. Scans the artifact root itself, recomputing every `core_hash`. A file whose
-   declared hash disagrees with its canonical bytes is rejected on sight.
+   declared hash disagrees with its canonical bytes is rejected on sight. A
+   retained file declaring a `schema_version` this verifier's contract registry
+   defines must also *satisfy* one of the contracts registered under it, or it is
+   refused with `GRAPH_CLOSURE_RETAINED_CONTRACT_INVALID` before anything can
+   resolve it. A `schema_version` the registry does not define stays opaque
+   product output and is not parsed as a Lab artifact.
 3. Loads the presented trust policy and refuses it unless your local
    configuration already pins its head and root key.
 4. Verifies the timestamp checkpoint chain: contiguous sequences, correct
@@ -65,7 +78,31 @@ What the verifier does, in order:
 7. Runs `erl2-mandatory-closure/v1`, deriving the required artifact set from the
    **lifecycle chain**, not from any producer array, and reporting missing roles
    and rejected extras.
-8. Re-derives the **evidence cutoff** for a run that realized one (ADR-ERL2-029
+
+   The terminal is closed structurally. The event that published the run record
+   is located by the *signed* `run_record_hash`, and it must publish exactly the
+   role set its terminal variant publishes — no missing role, no extra, no
+   duplicate (`GRAPH_CLOSURE_TERMINAL_EVENT_EXTRA_PRODUCT`) — and nothing may
+   enter the closure after it (`GRAPH_CLOSURE_LIFECYCLE_TAIL_AFTER_TERMINAL`). A
+   valid terminal's publishing event is the last event outright; an invalid
+   terminal may be followed only by the non-producing `invalidated` transition.
+   Together with the signed `lifecycle_head_hash`, which pins every event up to
+   the freeze point, this leaves no unbound surface for an appended or injected
+   `produced` entry to enter through.
+8. Re-derives **Lab validity** from the retained validity result on both terminal
+   branches. The declared `status` is not read as an answer: it is recomputed
+   from the result's own `gate_results`, and a result that disagrees with its own
+   gates, evaluates a gate twice, leaves a failed gate unexplained by any
+   retained invalidity finding, or cites an invalidity while every gate passed is
+   refused with `EVALUATOR_VALIDITY_GATE_FAILED`. A public bundle whose retained
+   result derives `invalid` is refused with `BUNDLE_VARIANT_MISMATCH`, whatever
+   the signed `lab_validity` constant says.
+
+   Read the boundary before quoting it: the verifier does not re-run the gates —
+   several read evidence a public reader does not hold. It requires the retained
+   gate set to be self-consistent and corroborated, and it owns the verdict.
+
+9. Re-derives the **evidence cutoff** for a run that realized one (ADR-ERL2-029
    §3). All three cutoff inputs are resolved by exact hash *and* schema; the
    runtime milestone must bind the process-start receipt the **cutoff** names and
    be lifecycle-reached and run-bound; clock domains must agree; wall and
@@ -73,7 +110,7 @@ What the verifier does, in order:
    and the warmup and observation windows — derived from three separately signed
    instants — must satisfy every committed policy bound.
 
-9. Re-derives the **exact evidence window** for a run that started traffic
+10. Re-derives the **exact evidence window** for a run that started traffic
    (ADR-ERL2-031). The run freezes a signed `evidence-window-commitment/v1`
    carrying the exact warmup and observation durations before it observes the
    milestone, sealed under `policy_author` — the authority that already bounds the
@@ -97,7 +134,7 @@ What the verifier does, in order:
    Step 8 was bounds-exact until this landed — a window moved *within* the
    committed bounds, with its milestone moved to match, verified. It no longer
    does.
-10. Accounts the **subject-output payload root** in both directions
+11. Accounts the **subject-output payload root** in both directions
    (ADR-ERL2-029 §5): every declared payload must exist as a regular file inside
    the authorized root with its exact declared length and digest, and every file
    in that root must be a declared payload or the freeze marker of one. Declared

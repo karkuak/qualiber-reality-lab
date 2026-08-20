@@ -29,7 +29,7 @@ import {
 import { verifyLifecycleChain } from "@erl2/core";
 import { coreHash } from "@erl2/integrity";
 import type { ArtifactIndex } from "./artifactIndex.js";
-import { ADAPTER_HOST_EVIDENCE_ROLES, type ClosureInput } from "./closure.js";
+import { ADAPTER_HOST_EVIDENCE_ROLES, assertTerminalClosure, type ClosureInput } from "./closure.js";
 
 /** Roles a valid environment terminal must close, in derivation order. */
 const ENVIRONMENT_ROLES = [
@@ -333,6 +333,16 @@ export function deriveEnvironmentClosure(
       "run record does not reference the lifecycle head derived at its freeze point",
     );
   }
+  // RL-D-027. The environment terminal publishes the same three roles as the
+  // pre-environment one and is likewise the last event, so the invariant is
+  // identical here; keeping it in one shared helper is what stops a future edit
+  // from closing one branch and leaving the other open.
+  assertTerminalClosure({
+    lifecycle: input.lifecycle,
+    publishingIndex,
+    terminalRoles: FINALIZER_PRODUCED_ROLES,
+    permittedTrailingEventTypes: [],
+  });
 
   const expected = claimedByRole(record);
   const ordered: { role: string; ordered_hashes: readonly Hash[] }[] = [];
@@ -346,7 +356,7 @@ export function deriveEnvironmentClosure(
       continue;
     }
     for (const hash of derived) {
-      input.index.get(hash);
+      input.index.admit(hash);
       required.add(hash);
     }
     ordered.push({ role, ordered_hashes: derived });
@@ -370,7 +380,7 @@ export function deriveEnvironmentClosure(
     const derived = roles.get(role) ?? [];
     if (derived.length === 0) continue;
     for (const hash of derived) {
-      input.index.get(hash);
+      input.index.admit(hash);
       required.add(hash);
     }
     ordered.push({ role, ordered_hashes: derived });
@@ -469,13 +479,13 @@ export function deriveEnvironmentClosureProgress(
       continue;
     }
     for (const hash of derived) {
-      input.index.get(hash);
+      input.index.admit(hash);
       required.add(hash);
     }
   }
   for (const role of ENVIRONMENT_OPTIONAL_ROLES) {
     for (const hash of roles.get(role) ?? []) {
-      input.index.get(hash);
+      input.index.admit(hash);
       required.add(hash);
     }
   }
@@ -550,7 +560,7 @@ export function deriveEnvironmentPreFinalizationClosure(
       continue;
     }
     for (const hash of derived) {
-      input.index.get(hash);
+      input.index.admit(hash);
       required.add(hash);
     }
     const claim = claimed[role];
@@ -570,7 +580,7 @@ export function deriveEnvironmentPreFinalizationClosure(
 
   for (const role of ENVIRONMENT_OPTIONAL_ROLES) {
     for (const hash of roles.get(role) ?? []) {
-      input.index.get(hash);
+      input.index.admit(hash);
       required.add(hash);
     }
   }

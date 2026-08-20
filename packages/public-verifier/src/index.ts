@@ -69,6 +69,10 @@ export {
   type SubstrateBindingReport,
 } from "./library/environmentDerivation.js";
 export {
+  derivePreEnvironmentValidity,
+  type PreEnvironmentValidityDerivation,
+} from "./library/preEnvironmentDerivation.js";
+export {
   deriveAttributableTelemetry,
   type AttributableTelemetryReport,
 } from "./library/telemetryDerivation.js";
