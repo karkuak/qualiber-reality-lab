@@ -1,0 +1,10 @@
+{
+  "schema_version": "reality-lab-claim-ceiling-history/v1",
+  "append_only_base": "d08d4582ef6f7c3fb562ec4b41f3a49176dbf87b",
+  "entries": [
+    {
+      "claim_ceiling_id": "reality-lab-claim-ceiling-1",
+      "semantic_projection_digest": "af783569d9186b1504d1488c6f0d2bc29d8ca43baa74fbf9a71ebe96811a298c"
+    }
+  ]
+}

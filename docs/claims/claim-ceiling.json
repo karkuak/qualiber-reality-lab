@@ -1,0 +1,44 @@
+{
+  "schema_version": "reality-lab-claim-ceiling/v1",
+  "claim_ceiling_id": "reality-lab-claim-ceiling-1",
+  "status": "active",
+  "source": "docs/claims/permitted-claims.md",
+  "clauses": [
+    {
+      "clause_id": "t1-ceiling-derived",
+      "statement": "Every terminal this build can produce derives T1, and the claim scope is derived from the run's own retained evidence and re-derived independently by the offline verifier rather than asserted."
+    },
+    {
+      "clause_id": "no-t2-no-t3",
+      "statement": "No T2 and no T3 may be claimed. The ceiling is the weakest applicable component, development tier and non-blind selection still cap at T1 on every run this repository can produce, and T3 is structurally non-emittable because the historical-reproduction evidence it requires does not exist."
+    },
+    {
+      "clause_id": "development-tier-non-blind-selection",
+      "statement": "No held-out or blind claim. ERL2-OQ-007 is unresolved and no external beacon is qualified, so selection runs non-blind at development tier only."
+    },
+    {
+      "clause_id": "four-part-environment-bound",
+      "statement": "No claim beyond the four-part bound: the environment terminal is development tier, fake driver, trusted reference subject and non-blind selection. It is evidence that the mechanism closes, not that any environment, subject or ecosystem was measured."
+    },
+    {
+      "clause_id": "no-subject-quality-claim",
+      "statement": "No subject-quality claim of any kind. The only subjects are the two reference adapters, which exist to exercise the platform, and no real product has been run."
+    },
+    {
+      "clause_id": "sandbox-profile-boundary",
+      "statement": "No OS-level or container isolation claim for any subject the Lab did not author. A container profile exists but is available to trusted, repository-owned reference subjects only; for every other subject, and on every host without a derived qualification, the only usable profile is local-process."
+    },
+    {
+      "clause_id": "no-strong-isolation-for-opaque-subjects",
+      "statement": "No strong-isolation claim for opaque subjects. ERL2-OQ-008 is unresolved, the qualification licensing the container profile is development-signed and therefore self-reported, and nothing here is evidence that an opaque or third-party subject has been contained."
+    },
+    {
+      "clause_id": "compose-substrate-self-qualified",
+      "statement": "No independent-qualification claim from the Compose substrate. Its substrate lock is signed by the repository's own development governor key, so the qualification is self-reported rather than authenticated."
+    },
+    {
+      "clause_id": "no-production-certification",
+      "statement": "Not a production certification. There have been zero calibration runs, and at least ten stable clean or constrained runs are required before any release authority."
+    }
+  ]
+}
