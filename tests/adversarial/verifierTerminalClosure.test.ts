@@ -43,7 +43,7 @@
 
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { chmodSync, cpSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { coreHash } from "@erl2/integrity";
@@ -817,6 +817,103 @@ for (const name of INVALID_GOLDENS) {
     // The permitted-tail clause is `permitted type AND produces nothing`, so the
     // structural code is the tail boundary: the event is admissible by type and
     // is refused precisely because it carries a product.
+    assert.equal(outcome.code, "GRAPH_CLOSURE_LIFECYCLE_TAIL_AFTER_TERMINAL", outcome.message);
+  });
+}
+
+/**
+ * The invalid branch's *live* RL-D-027 shape, pinned permanently.
+ *
+ * The three cases above (`D027-INV-A1/A2/A3`) plant a new file and then cite it.
+ * On the unmodified base that plant is already refused — `deriveInvalidClosure`
+ * accounts the artifact root against the invalid record's own
+ * `available_evidence`, so a file the record does not cite is a rejected extra
+ * (`GRAPH_CLOSURE_EXTRA_ARTIFACT`) before any terminal clause is reached. They
+ * are therefore compatibility and coverage cases on this branch: they prove the
+ * terminal clause answers, not that the branch was open.
+ *
+ * The branch *was* open, through a different door, and this is it. Nothing in
+ * the invalid closure's accounting is derived from a trailing event's
+ * `produced[]`: the required set comes from the record. So a trailing event that
+ * introduces **no new file** — one that re-cites an artifact the record already
+ * accounts for — clears the extra-artifact accounting entirely. On the base it
+ * is accepted outright: an event of a structurally permitted type, appended past
+ * the signed terminal, carrying a `produced` entry that enters
+ * `derivedRolesFromLifecycle` with nothing to refuse it. That is an unbound
+ * lifecycle surface past the signed freeze point, which is exactly what RL-D-027
+ * names.
+ *
+ * The invariant this pins is the one `assertTerminalClosure` states: the only
+ * thing permitted past the invalid terminal is a non-producing transition, so a
+ * permitted *type* carrying any product at all is refused — whether the product
+ * is new bytes or a re-citation of bytes already accounted for. Re-citation is
+ * the case the extra-artifact accounting cannot see, and it is the reason the
+ * clause is `permitted type AND produces nothing` rather than `permitted type`.
+ */
+for (const name of INVALID_GOLDENS) {
+  test(`D027-INV-A4: a permitted trailing transition in ${name} re-citing an already-accounted artifact is refused`, () => {
+    const c = copyInvalidGolden(name);
+    const events = readLifecycle(c);
+    const record = JSON.parse(readFileSync(c.record, "utf8")) as {
+      available_evidence: { artifact_role: string; artifact_hash: string }[];
+    };
+
+    // An artifact the invalid record already accounts for, so the closure's
+    // artifact-root accounting has nothing to reject.
+    const accounted = record.available_evidence[0];
+    assert.ok(accounted, "the golden's record must account for at least one artifact");
+    const produced = events
+      .flatMap((e) => e.produced)
+      .find((entry) => entry.artifact_core_hash === accounted.artifact_hash);
+    assert.ok(produced, "the accounted artifact must already be produced by a lifecycle event");
+
+    // The artifact root is left exactly as the golden staged it. Asserted rather
+    // than assumed: the whole point of this case is that no new bytes appear.
+    const before = readdirSync(c.artifacts, { recursive: true }).map(String).sort();
+
+    const last = events[events.length - 1] as Event;
+    assert.equal(last["event_type"], "invalidated", "the golden tail must be the permitted transition");
+
+    // A second transition of the *permitted* type. Its shape is admissible on
+    // this branch — a non-producing one is accepted today and is recorded as
+    // RL-D-032 — so the refusal below can only come from what it carries.
+    const appended = rechain([
+      ...events,
+      tailEvent(last, {
+        event_id: "evt-000098",
+        event_type: "invalidated",
+        occurred_at: "2026-07-01T00:00:47Z",
+        operation_id: "op-recite",
+        state_from: last.state_to,
+        state_to: "invalidated",
+        produced: [
+          {
+            artifact_role: produced.artifact_role,
+            artifact_core_hash: produced.artifact_core_hash,
+            artifact_schema_version: produced.artifact_schema_version,
+          },
+        ],
+      }),
+    ]);
+    writeLifecycle(c, appended);
+    for (const [i, e] of appended.entries()) {
+      const { core_hash: declared, ...body } = e;
+      assert.equal(coreHash(body), declared, `appended event ${String(i)} must be self-consistent`);
+    }
+    assert.deepEqual(
+      readdirSync(c.artifacts, { recursive: true }).map(String).sort(),
+      before,
+      "this case must introduce no new artifact; the citation is the whole attack",
+    );
+
+    const outcome = verifyRecordOffline(c);
+    assert.notEqual(
+      outcome.exitCode,
+      0,
+      `a re-citing trailing transition must be refused; verdict ${outcome.verdict}`,
+    );
+    // The terminal-tail clause, not the extra-artifact accounting: the artifact
+    // is accounted, so `GRAPH_CLOSURE_EXTRA_ARTIFACT` cannot be what answers.
     assert.equal(outcome.code, "GRAPH_CLOSURE_LIFECYCLE_TAIL_AFTER_TERMINAL", outcome.message);
   });
 }

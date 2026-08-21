@@ -415,6 +415,22 @@ test("D028-PARITY: the environment branch refuses the analogous contradiction, a
   // The pre-environment fix exists to reach parity with this. Asserting the
   // environment behaviour in the same file means a future edit cannot quietly
   // close one branch and reopen the other.
+  //
+  // The fixture is built so that exactly one control can answer. The failed gate
+  // is **corroborated** by a retained invalidity finding that names it, so the
+  // "a failed gate no finding explains" clause -- which raises the same
+  // `EVALUATOR_VALIDITY_GATE_FAILED` code -- cannot fire and stand in for the
+  // status/gate comparison under test. What is left is the declared/derived
+  // contradiction alone: the result declares `valid` while its own corroborated
+  // rows derive `invalid`.
+  //
+  // The distinction is load-bearing and is measured, not assumed. Disabling the
+  // declared-versus-derived comparison in `deriveValidityOutcome` does not leave
+  // this test green: the derivation runs on to the public-bundle clause and
+  // refuses with `BUNDLE_VARIANT_MISMATCH` instead, which this assertion does not
+  // accept. The corroborating finding is what makes that true.
+  const failedGateId = "cleanup-verified";
+  const findingHash = `sha256:${"11".repeat(32)}`;
   const validity = {
     schema_version: "environment-validity-result/v1",
     status: "valid",
@@ -425,15 +441,25 @@ test("D028-PARITY: the environment branch refuses the analogous contradiction, a
       // not between a status and fixture scaffolding. Two rows are not the
       // required set and are not claimed to be: completeness is RL-D-031.
       { gate_id: "trust-policy-resolved", passed: true, evidence_refs: [] },
-      { gate_id: "cleanup-verified", passed: false, evidence_refs: [] },
+      { gate_id: failedGateId, passed: false, evidence_refs: [] },
     ],
-    invalidity_finding_hashes: [],
+    invalidity_finding_hashes: [findingHash],
   } as unknown as Parameters<typeof deriveValidityOutcome>[0]["validity"];
+
+  // The retained finding the failed gate is corroborated by. Resolved through the
+  // same `index.get` the derivation uses, so the corroboration clause sees a real
+  // answer rather than an empty stub.
+  const index = {
+    get: (hash: string) => {
+      assert.equal(hash, findingHash, "the derivation must resolve the cited finding");
+      return { value: { failed_gate_ids: [failedGateId] } };
+    },
+  } as unknown as Parameters<typeof deriveValidityOutcome>[0]["index"];
 
   assert.throws(
     () =>
       deriveValidityOutcome({
-        index: { get: () => ({ value: {} }) } as unknown as Parameters<typeof deriveValidityOutcome>[0]["index"],
+        index,
         validity,
         requireValid: true,
         outcomes: [],

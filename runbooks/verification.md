@@ -133,7 +133,7 @@ What the verifier does, in order:
    windows are permissible is the cutoff policy's bounds, not this arithmetic. See
    ADR-ERL2-031 §3.4.
 
-   Step 8 was bounds-exact until this landed — a window moved *within* the
+   Step 9 was bounds-exact until this landed — a window moved *within* the
    committed bounds, with its milestone moved to match, verified. It no longer
    does.
 11. Accounts the **subject-output payload root** in both directions
