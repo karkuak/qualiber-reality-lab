@@ -173,6 +173,37 @@ export const CODES = {
   GRAPH_CLOSURE_EXTRA_ARTIFACT: "GRAPH_CLOSURE_EXTRA_ARTIFACT",
   GRAPH_CLOSURE_UNREACHABLE_ARTIFACT: "GRAPH_CLOSURE_UNREACHABLE_ARTIFACT",
   GRAPH_CLOSURE_TERMINAL_MISMATCH: "GRAPH_CLOSURE_TERMINAL_MISMATCH",
+  /**
+   * A lifecycle event follows the event that published the terminal run record.
+   *
+   * `run_record.lifecycle_head_hash` is signed, and every event's `core_hash`
+   * covers its own `prior_event_hash`, so events up to the freeze point are
+   * pinned. Nothing signed bounds the stream's *length*, so an appended event
+   * could introduce a `produced` entry that entered graph closure on existence
+   * alone. The publishing event is identified by the signed `run_record_hash`,
+   * so requiring it to be terminal closes that tail without a new signed field
+   * (RL-D-027).
+   */
+  GRAPH_CLOSURE_LIFECYCLE_TAIL_AFTER_TERMINAL: "GRAPH_CLOSURE_LIFECYCLE_TAIL_AFTER_TERMINAL",
+  /**
+   * The event that published the terminal run record produced something beyond
+   * the exact role set that terminal variant publishes.
+   *
+   * The other half of RL-D-027, and load-bearing on its own: the publishing
+   * event lies *after* the signed freeze point, so an entry injected into it
+   * breaks no signed binding and appends no event for a tail rule to see.
+   */
+  GRAPH_CLOSURE_TERMINAL_EVENT_EXTRA_PRODUCT: "GRAPH_CLOSURE_TERMINAL_EVENT_EXTRA_PRODUCT",
+  /**
+   * A retained artifact declares a `schema_version` the Lab's contract registry
+   * defines, and does not satisfy any contract registered under it.
+   *
+   * Refused at index admission, before graph closure, so attacker-authored
+   * content cannot be admitted as accounted evidence merely by wearing a Lab
+   * contract's name. A `schema_version` the registry does not define stays
+   * opaque product output and is not parsed as a Lab artifact (RL-D-027).
+   */
+  GRAPH_CLOSURE_RETAINED_CONTRACT_INVALID: "GRAPH_CLOSURE_RETAINED_CONTRACT_INVALID",
   VERSION_CLOSURE_MEMBER_CROSSOVER: "VERSION_CLOSURE_MEMBER_CROSSOVER",
   ARTIFACT_ALREADY_FROZEN: "ARTIFACT_ALREADY_FROZEN",
   ARTIFACT_HASH_MISMATCH: "ARTIFACT_HASH_MISMATCH",

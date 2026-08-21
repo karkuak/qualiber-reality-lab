@@ -34,6 +34,7 @@ import {
 import { ArtifactIndex } from "./artifactIndex.js";
 import { assertClaimScopeWithinCeiling, deriveClaimCeiling } from "./claimScope.js";
 import { derivePreEnvironmentClosure, deriveInvalidClosure } from "./closure.js";
+import { derivePreEnvironmentValidity } from "./preEnvironmentDerivation.js";
 import { assertCutoffOrderingFromLifecycle, deriveEvidenceCutoff } from "./cutoffDerivation.js";
 import { deriveExactEvidenceWindow } from "./windowDerivation.js";
 import { deriveEnvironmentClosure, deriveTerminalVariant } from "./environmentClosure.js";
@@ -349,6 +350,24 @@ function verifyPreEnvironmentBundle(options: VerifyBundleOptions): BundleVerific
   // dangling binding is a missing-artifact refusal.
   index.get(attestation.adapter_hash);
   index.get(attestation.generic_run_policy_hash);
+
+  // -- RL-D-028: the semantic derivation this branch did not own -------------
+  //
+  // Ordered exactly where the environment branch orders its own: after every
+  // hash, closure, contract and signature check above -- so a doctored or
+  // unsigned bundle keeps its own, more fundamental cause -- and before the
+  // claim ceiling below, so no claim is ever derived over a run whose validity
+  // has not been recomputed.
+  //
+  // Until now this branch read `attestation.lab_validity`, a signed constant,
+  // and never opened the retained validity result at all. `lab_validity` is
+  // still checked above and is still necessary; what it is not is *sufficient*,
+  // because a producer holding the finalizer key sets both sides of it.
+  derivePreEnvironmentValidity({
+    index,
+    validityResultHash: requiredHash(closure, "validity-result"),
+    requireValid: true,
+  });
 
   // -- ADR-ERL2-025: how strongly this run may be spoken about ---------------
   //

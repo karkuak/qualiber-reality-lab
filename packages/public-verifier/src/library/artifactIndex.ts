@@ -34,7 +34,14 @@
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
-import { CODES, Erl2Error, parseStrictJson, type Hash } from "@erl2/contracts";
+import {
+  CODES,
+  CONTRACTS,
+  Erl2Error,
+  parseStrictJson,
+  validateContract,
+  type Hash,
+} from "@erl2/contracts";
 import { coreHash, hashBytes } from "@erl2/integrity";
 
 export interface IndexedArtifact {
@@ -50,6 +57,77 @@ const RETAINED_PREFIX = "retained/";
 
 function isRetained(logicalPath: string): boolean {
   return logicalPath.startsWith(RETAINED_PREFIX);
+}
+
+/**
+ * Every `schema_version` the Lab's contract registry defines, mapped to the
+ * contracts registered under it.
+ *
+ * **A schema version names a family, not a single contract.** `finding/v1` has
+ * six registered variants; `signer-inventory/v2`, `subject-output-manifest/v1`
+ * and `public-verification-bundle/v2` each have a pre-environment and an
+ * environment one. An artifact is a valid member of the family when it
+ * satisfies *any* of them -- validating against one arbitrarily chosen variant
+ * would refuse the shipped goldens, which is how this was caught.
+ *
+ * The lookup is an exact string match against the registry, deliberately. No
+ * normalisation, no prefix matching, no similarity: a `schema_version` the
+ * registry does not define is opaque product output, and staying opaque is what
+ * keeps a Unicode-confusable or aliased name from being treated as a Lab
+ * contract, in either direction.
+ */
+const CONTRACTS_BY_SCHEMA_VERSION: ReadonlyMap<string, readonly string[]> = (() => {
+  const map = new Map<string, string[]>();
+  for (const contract of CONTRACTS) {
+    if (contract.schemaVersion === undefined) continue;
+    const bucket = map.get(contract.schemaVersion) ?? [];
+    bucket.push(contract.name);
+    map.set(contract.schemaVersion, bucket);
+  }
+  return map;
+})();
+
+/**
+ * Refuses a retained artifact that wears a Lab contract's name without being one
+ * (RL-D-027, option C).
+ *
+ * Closure admitted a lifecycle-`produced` artifact on `index.get(hash)` -- pure
+ * existence, no contract check -- so a contract-invalid document declaring a
+ * known schema entered a bundle reported `valid` and was listed under a real
+ * role in the verifier's own closure output.
+ *
+ * ## Where this runs, and why not earlier
+ *
+ * At **closure admission**, via {@link ArtifactIndex.admit} -- the moment an
+ * artifact stops being a file on disk and becomes accounted evidence. Not during
+ * the index walk: the walk is a general-purpose scan that several derivations
+ * and unit fixtures drive over partial trees, and refusing there would make the
+ * index refuse artifacts nothing ever admits. Admission is the boundary the
+ * property is actually about, and refusing at it is still strictly before graph
+ * closure and before anything semantic reads the artifact.
+ *
+ * Scope is the retained subtree, matching `RETAINED_PREFIX`'s existing meaning:
+ * subject-visible and product bytes are not Lab artifacts and are not parsed as
+ * any. The artifact has already been read, parsed under the strict JSON rules
+ * and hash-checked during the walk, so this adds validation but no second read.
+ */
+function assertRetainedContract(artifact: IndexedArtifact): void {
+  if (!isRetained(artifact.logicalPath)) return;
+  const candidates = CONTRACTS_BY_SCHEMA_VERSION.get(artifact.schemaVersion);
+  if (candidates === undefined) return;
+
+  let firstProblem: string | undefined;
+  for (const contract of candidates) {
+    const result = validateContract(contract, artifact.value);
+    if (result.valid) return;
+    firstProblem ??= `${contract}: ${result.problems[0]?.message ?? "unknown"}`;
+  }
+  throw new Erl2Error(
+    CODES.GRAPH_CLOSURE_RETAINED_CONTRACT_INVALID,
+    `retained artifact ${artifact.logicalPath} declares ${artifact.schemaVersion}, which this ` +
+      `verifier defines, and satisfies none of its ${String(candidates.length)} registered contract(s)`,
+    { detail: firstProblem ?? "no registered contract" },
+  );
 }
 
 export class ArtifactIndex {
@@ -130,6 +208,22 @@ export class ArtifactIndex {
       );
     }
     return found;
+  }
+
+  /**
+   * Resolves an artifact **and** admits it to graph closure.
+   *
+   * `get` answers "does this hash resolve"; `admit` answers "may this become
+   * accounted evidence", which is a stronger question and the one every closure
+   * role must ask. A retained artifact declaring a `schema_version` this
+   * verifier's registry defines must satisfy one of the contracts registered
+   * under it, or it is refused here -- before the closure records it under a
+   * role and before anything downstream interprets it (RL-D-027).
+   */
+  admit(hash: Hash): IndexedArtifact {
+    const artifact = this.get(hash);
+    assertRetainedContract(artifact);
+    return artifact;
   }
 
   tryGet(hash: Hash): IndexedArtifact | undefined {

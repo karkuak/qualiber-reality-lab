@@ -127,6 +127,100 @@ const FINALIZER_PRODUCED_ROLES: readonly string[] = [
   "signer-inventory",
 ];
 
+/**
+ * Requires the terminal publishing event to be the last thing the run did, and
+ * to have published exactly what its variant publishes.
+ *
+ * ## Why this is sufficient without a new signed field
+ *
+ * `run_record.lifecycle_head_hash` is signed (transitively, through the
+ * attestation's `run_record_hash`), and `verifyLifecycleChain` makes every
+ * event's `core_hash` cover its own `prior_event_hash`. Events `0..freeze` are
+ * therefore a hash chain terminating in a signed value: editing any one of them
+ * moves the head and the terminal refuses. Two surfaces are left over, and they
+ * are the whole of RL-D-027:
+ *
+ *   - the **publishing event itself**, which sits after the freeze point, so
+ *     nothing signed covers its `produced[]`; and
+ *   - **anything appended after it**, because no signed value bounds the
+ *     stream's length.
+ *
+ * A `produced` entry on either surface enters `derivedRolesFromLifecycle` and is
+ * admitted by the closure on `index.get(hash)` alone. Pinning both against the
+ * publishing event closes them, and the publishing event is safe to pin against
+ * because it is located by the **signed** `run_record_hash` -- never by an event
+ * label an attacker controls.
+ *
+ * Clause (b) is not redundant with clause (a): an entry injected into the
+ * existing publishing event appends no event at all, so (a) alone would not see
+ * it. Clause (a) is not redundant with (b) either: a trailing event can carry a
+ * role the terminal set does not mention.
+ *
+ * ## Why the invalid variant is expressed differently
+ *
+ * A valid terminal's publishing event *is* the last event. An invalid terminal's
+ * is not: the producer freezes the record and then appends the state transition
+ * to `invalidated`, which publishes nothing. Requiring "publishing event is
+ * last" there would refuse every honest invalid run. The equivalent invariant --
+ * and the one that carries the same security property -- is that the only thing
+ * permitted to follow is that non-producing terminal transition. Both forms say
+ * the same thing: **no artifact may enter the closure past the signed
+ * terminal.**
+ */
+export function assertTerminalClosure(options: {
+  readonly lifecycle: readonly LabLifecycleEventV1[];
+  readonly publishingIndex: number;
+  readonly terminalRoles: readonly string[];
+  /** Events permitted to follow, each of which must produce nothing. */
+  readonly permittedTrailingEventTypes: readonly string[];
+}): void {
+  const { lifecycle, publishingIndex, terminalRoles } = options;
+  const publishing = lifecycle[publishingIndex] as LabLifecycleEventV1 | undefined;
+  if (publishing === undefined) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
+      "no lifecycle event publishes the derived terminal run record",
+    );
+  }
+
+  // (b) exactly the terminal role set: no missing role, no extra role, and no
+  // duplicate -- compared as a multiset, so a repeated role is an extra.
+  const produced = publishing.produced.map((p) => p.artifact_role);
+  const expected = [...terminalRoles].sort();
+  const actual = [...produced].sort();
+  if (actual.length !== expected.length || actual.some((role, i) => role !== expected[i])) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_TERMINAL_EVENT_EXTRA_PRODUCT,
+      `the terminal publishing event produces [${actual.join(", ")}]; this terminal variant ` +
+        `publishes exactly [${expected.join(", ")}]`,
+    );
+  }
+
+  // (a) nothing may enter the closure after it.
+  for (const [offset, event] of lifecycle.slice(publishingIndex + 1).entries()) {
+    const at = publishingIndex + 1 + offset;
+    if (!options.permittedTrailingEventTypes.includes(event.event_type) || event.produced.length > 0) {
+      throw new Erl2Error(
+        CODES.GRAPH_CLOSURE_LIFECYCLE_TAIL_AFTER_TERMINAL,
+        `lifecycle event ${String(at)} (${event.event_type}) follows the terminal publishing event ` +
+          `at ${String(publishingIndex)}; nothing may follow it that the terminal does not account for`,
+      );
+    }
+  }
+}
+
+/**
+ * Roles the invalid terminal publishes, and the one transition permitted after
+ * it.
+ *
+ * An invalid run reaches no attestation -- `deriveInvalidClosure` refuses every
+ * attestation and bundle schema outright -- so its terminal publishes exactly
+ * the record. The `invalidated` transition that follows carries no `produced`
+ * entries; it is the run declaring itself over.
+ */
+const INVALID_TERMINAL_PRODUCED_ROLES: readonly string[] = ["invalid-run-record"];
+const INVALID_TERMINAL_TRAILING_EVENT_TYPES: readonly string[] = ["invalidated"];
+
 export interface DerivedRole {
   readonly role: string;
   readonly ordered_hashes: readonly Hash[];
@@ -216,6 +310,15 @@ export function derivePreEnvironmentClosure(
       "run record does not reference the lifecycle head derived at its freeze point",
     );
   }
+  // RL-D-027. Ordered here -- after the freeze-head binding, before any artifact
+  // is admitted below -- so a tail is refused structurally rather than being
+  // resolved, admitted and then interpreted.
+  assertTerminalClosure({
+    lifecycle: input.lifecycle,
+    publishingIndex,
+    terminalRoles: FINALIZER_PRODUCED_ROLES,
+    permittedTrailingEventTypes: [],
+  });
 
   const expected: Record<string, Hash | undefined> = {
     "acquisition-preregistration": record.acquisition_preregistration_hash,
@@ -252,7 +355,7 @@ export function derivePreEnvironmentClosure(
       continue;
     }
     for (const hash of derived) {
-      input.index.get(hash);
+      input.index.admit(hash);
       required.add(hash);
     }
     ordered.push({ role, ordered_hashes: derived });
@@ -277,7 +380,7 @@ export function derivePreEnvironmentClosure(
     const derived = roles.get(role) ?? [];
     if (derived.length === 0) continue;
     for (const hash of derived) {
-      input.index.get(hash);
+      input.index.admit(hash);
       required.add(hash);
     }
     ordered.push({ role, ordered_hashes: derived });
@@ -416,7 +519,7 @@ export function derivePreFinalizationClosure(
       continue;
     }
     for (const hash of derived) {
-      input.index.get(hash);
+      input.index.admit(hash);
       required.add(hash);
     }
     const claim = claimed[role];
@@ -436,7 +539,7 @@ export function derivePreFinalizationClosure(
 
   for (const role of PRE_ENVIRONMENT_OPTIONAL_ROLES) {
     for (const hash of roles.get(role) ?? []) {
-      input.index.get(hash);
+      input.index.admit(hash);
       required.add(hash);
     }
   }
@@ -496,6 +599,15 @@ export function deriveInvalidClosure(input: ClosureInput): MandatoryGraphClosure
       "invalid record does not reference the lifecycle head derived at its freeze point",
     );
   }
+  // RL-D-027, in the form this variant takes: the invalid terminal publishes the
+  // record and then transitions to `invalidated`, which produces nothing. That
+  // one non-producing transition is the whole permitted tail.
+  assertTerminalClosure({
+    lifecycle: input.lifecycle,
+    publishingIndex,
+    terminalRoles: INVALID_TERMINAL_PRODUCED_ROLES,
+    permittedTrailingEventTypes: INVALID_TERMINAL_TRAILING_EVENT_TYPES,
+  });
 
   // The failure phase and reason must match lifecycle evidence.
   const failureEvent = input.lifecycle.find(
@@ -527,7 +639,7 @@ export function deriveInvalidClosure(input: ClosureInput): MandatoryGraphClosure
         "classified failure paired with a cancellation phase",
       );
     }
-    input.index.get(record.terminal_reason.primary_finding_hash);
+    input.index.admit(record.terminal_reason.primary_finding_hash);
   }
 
   // Restoration or teardown failure must terminate through emergency cleanup.
@@ -546,7 +658,7 @@ export function deriveInvalidClosure(input: ClosureInput): MandatoryGraphClosure
 
   const reachedHashes = new Set<Hash>(record.available_evidence.map((e) => e.artifact_hash));
   for (const evidence of record.available_evidence) {
-    input.index.get(evidence.artifact_hash);
+    input.index.admit(evidence.artifact_hash);
     if (!input.lifecycle.some((e) => e.core_hash === evidence.reached_event_hash)) {
       throw new Erl2Error(
         CODES.GRAPH_CLOSURE_UNREACHABLE_ARTIFACT,
@@ -556,7 +668,7 @@ export function deriveInvalidClosure(input: ClosureInput): MandatoryGraphClosure
   }
   reachedHashes.add(recordHash);
   if (record.cleanup.result_hash !== undefined) {
-    input.index.get(record.cleanup.result_hash);
+    input.index.admit(record.cleanup.result_hash);
     reachedHashes.add(record.cleanup.result_hash);
   }
   for (const attempt of record.cleanup.attempt_hashes) reachedHashes.add(attempt);
