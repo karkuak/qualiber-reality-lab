@@ -48,7 +48,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { coreHash } from "@erl2/integrity";
 import { ArtifactIndex } from "@erl2/public-verifier";
-import { erl2 } from "../support/cliRun.js";
+import {
+  erl2,
+  runToEnvironmentTerminal,
+  writeLifecycle as writeDerivedLifecycle,
+  writeTrustConfig,
+} from "../support/cliRun.js";
 import { ownedTempDir } from "../support/tempDirs.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -608,5 +613,475 @@ test("D027-C8: a contract-valid artifact of a recognized Lab schema passes admis
     outcome.code,
     "GRAPH_CLOSURE_EXTRA_ARTIFACT",
     `a valid recognized contract must clear admission and be refused only as an extra: ${outcome.message}`,
+  );
+});
+
+// -- invalid terminals -------------------------------------------------------
+
+/**
+ * The same boundary on the **invalid** branch, where it takes its other form.
+ *
+ * A valid terminal's publishing event is the last event outright. An invalid
+ * terminal's is not: the producer freezes the record and then appends the
+ * non-producing transition to `invalidated`. `assertTerminalClosure` therefore
+ * permits exactly that one suffix, and the cases below pin both halves — the
+ * suffix is accepted (`D027-INV-P1`, so a later simplification cannot tighten
+ * "publishing event is last" onto this branch and break every honest invalid
+ * run), and nothing else may follow or be injected.
+ *
+ * These goldens carry no attestation and no public bundle — `deriveInvalidClosure`
+ * refuses both outright — so they are driven through `erl2 verify-record`, which
+ * is the surface an external reader actually has for an invalid terminal.
+ *
+ * ## Recorded debt, deliberately not asserted here
+ *
+ * Three shape mutations past the terminal were measured on this head and are
+ * **accepted**: a second `invalidated` transition, an `invalidated` transition
+ * whose `state_to` is not `invalidated`, and an invalid terminal with the
+ * transition removed altogether. All three produce nothing, so no artifact
+ * enters the closure through them and the RL-D-027 invariant — *no artifact may
+ * enter the closure past the signed terminal* — is intact; what is unpinned is
+ * the shape of the non-producing tail, not the evidence set. They are recorded
+ * as RL-D-032 rather than asserted, because asserting today's acceptance would
+ * turn a gap into a fixture.
+ */
+
+const INVALID_GOLDENS = [
+  "invalid-run-cancellation",
+  "invalid-run-classified-lab-failure",
+  "invalid-run-emergency-cleanup",
+] as const;
+
+interface InvalidCopy extends Copy {
+  readonly record: string;
+}
+
+function copyInvalidGolden(name: string): InvalidCopy {
+  const dir = ownedTempDir("erl2-d027-inv-");
+  cpSync(path.join(GOLDEN_ROOT, name), dir, { recursive: true });
+  const record = path.join(dir, "invalid-record.json");
+  return {
+    dir,
+    record,
+    // `verify-record` takes the record, not a bundle; the field is carried only
+    // so the shared lifecycle helpers above apply unchanged.
+    bundle: record,
+    artifacts: path.join(dir, "artifacts"),
+    lifecycle: path.join(dir, "lifecycle.json"),
+    rootConfig: path.join(dir, "root-config.json"),
+  };
+}
+
+function verifyRecordOffline(c: InvalidCopy): Outcome {
+  const result = erl2([
+    "verify-record",
+    "--record", c.record,
+    "--lifecycle", c.lifecycle,
+    "--artifact-root", c.artifacts,
+    "--root-config", c.rootConfig,
+    "--offline",
+  ]);
+  const body = result.body as { data?: { verdict?: string }; errors: { code: string; message: string }[] };
+  return {
+    exitCode: result.exitCode,
+    code: body.errors[0]?.code ?? "-",
+    message: body.errors[0]?.message ?? "",
+    verdict: body.data?.verdict ?? "-",
+  };
+}
+
+/** The index of the event publishing the terminal **invalid** run record. */
+function invalidPublishingIndexOf(events: readonly Event[]): number {
+  return events.findIndex((e) => e.produced.some((p) => p.artifact_role === "invalid-run-record"));
+}
+
+for (const name of INVALID_GOLDENS) {
+  test(`D027-INV-P1: ${name} publishes its record and is followed only by a non-producing invalidated transition`, () => {
+    const c = copyInvalidGolden(name);
+    const events = readLifecycle(c);
+    const at = invalidPublishingIndexOf(events);
+    assert.ok(at >= 0, "the golden must publish an invalid run record");
+
+    // The permitted suffix, asserted positively and structurally. If a later
+    // change required the publishing event to be last on every branch, this is
+    // the test that fails first rather than every honest invalid run silently
+    // becoming unverifiable.
+    const suffix = events.slice(at + 1);
+    assert.equal(suffix.length, 1, "exactly one event may follow the invalid publishing event");
+    const transition = suffix[0] as Event;
+    assert.equal(transition["event_type"], "invalidated");
+    assert.deepEqual(transition.produced, [], "the permitted suffix must produce nothing");
+    assert.deepEqual(
+      (events[at] as Event).produced.map((p) => p.artifact_role),
+      ["invalid-run-record"],
+      "the invalid terminal publishes exactly its record",
+    );
+
+    const outcome = verifyRecordOffline(c);
+    assert.equal(outcome.exitCode, 0, `the permitted suffix must be accepted: ${outcome.code}: ${outcome.message}`);
+  });
+}
+
+for (const name of INVALID_GOLDENS) {
+  test(`D027-INV-A1: an event trailing the invalidated transition in ${name} is refused`, () => {
+    const c = copyInvalidGolden(name);
+    const events = readLifecycle(c);
+    const last = events[events.length - 1] as Event;
+    const planted = freezeArtifact(c, path.join("retained", "planted-note.json"), {
+      schema_version: "vendor-note/v1",
+      note: "appended past the invalid terminal",
+    });
+    const appended = rechain([
+      ...events,
+      tailEvent(last, {
+        state_from: last.state_to,
+        state_to: "post_terminal_note",
+        produced: [
+          { artifact_role: "finding", artifact_core_hash: planted, artifact_schema_version: "vendor-note/v1" },
+        ],
+      }),
+    ]);
+    writeLifecycle(c, appended);
+    for (const [i, e] of appended.entries()) {
+      const { core_hash: declared, ...body } = e;
+      assert.equal(coreHash(body), declared, `appended event ${String(i)} must be self-consistent`);
+    }
+
+    const outcome = verifyRecordOffline(c);
+    assert.notEqual(outcome.exitCode, 0, `a trailing event must be refused; verdict ${outcome.verdict}`);
+    assert.equal(outcome.code, "GRAPH_CLOSURE_LIFECYCLE_TAIL_AFTER_TERMINAL", outcome.message);
+  });
+}
+
+for (const name of INVALID_GOLDENS) {
+  test(`D027-INV-A2: a produced entry injected into ${name}'s publishing event is refused`, () => {
+    const c = copyInvalidGolden(name);
+    const events = readLifecycle(c);
+    const at = invalidPublishingIndexOf(events);
+    const planted = freezeArtifact(c, path.join("retained", "planted-note.json"), {
+      schema_version: "vendor-note/v1",
+      note: "injected into the invalid publishing event itself",
+    });
+    // Nothing is appended: clause (b) is the only thing that can see this.
+    writeLifecycle(
+      c,
+      rechain(
+        events.map((e, i) =>
+          i === at
+            ? ({
+                ...e,
+                produced: [
+                  ...e.produced,
+                  { artifact_role: "finding", artifact_core_hash: planted, artifact_schema_version: "vendor-note/v1" },
+                ],
+              } as Event)
+            : e,
+        ),
+      ),
+    );
+
+    const outcome = verifyRecordOffline(c);
+    assert.notEqual(outcome.exitCode, 0, `an injected product must be refused; verdict ${outcome.verdict}`);
+    assert.equal(outcome.code, "GRAPH_CLOSURE_TERMINAL_EVENT_EXTRA_PRODUCT", outcome.message);
+  });
+}
+
+for (const name of INVALID_GOLDENS) {
+  test(`D027-INV-A3: ${name}'s invalidated transition carrying a produced artifact is refused`, () => {
+    const c = copyInvalidGolden(name);
+    const events = readLifecycle(c);
+    const at = events.length - 1;
+    assert.equal((events[at] as Event)["event_type"], "invalidated");
+    const planted = freezeArtifact(c, path.join("retained", "planted-note.json"), {
+      schema_version: "vendor-note/v1",
+      note: "smuggled in on the one event permitted to follow",
+    });
+    writeLifecycle(
+      c,
+      rechain(
+        events.map((e, i) =>
+          i === at
+            ? ({
+                ...e,
+                produced: [
+                  { artifact_role: "finding", artifact_core_hash: planted, artifact_schema_version: "vendor-note/v1" },
+                ],
+              } as Event)
+            : e,
+        ),
+      ),
+    );
+
+    const outcome = verifyRecordOffline(c);
+    assert.notEqual(outcome.exitCode, 0, `a producing suffix must be refused; verdict ${outcome.verdict}`);
+    // The permitted-tail clause is `permitted type AND produces nothing`, so the
+    // structural code is the tail boundary: the event is admissible by type and
+    // is refused precisely because it carries a product.
+    assert.equal(outcome.code, "GRAPH_CLOSURE_LIFECYCLE_TAIL_AFTER_TERMINAL", outcome.message);
+  });
+}
+
+test("D027-INV-C1: an invalidated transition with the wrong predecessor state is refused", () => {
+  const c = copyInvalidGolden("invalid-run-cancellation");
+  const events = readLifecycle(c);
+  const at = events.length - 1;
+  writeLifecycle(
+    c,
+    rechain(events.map((e, i) => (i === at ? ({ ...e, state_from: "invalid_failure_detected" } as Event) : e))),
+  );
+  const outcome = verifyRecordOffline(c);
+  assert.notEqual(outcome.exitCode, 0, "a discontinuous transition must be refused");
+  assert.equal(outcome.code, "VERIFY_RECORD_LIFECYCLE_GAP", outcome.message);
+});
+
+test("D027-INV-C2: an invalidated transition with a broken prior-event hash is refused", () => {
+  const c = copyInvalidGolden("invalid-run-cancellation");
+  const events = readLifecycle(c);
+  const at = events.length - 1;
+  // Left un-rechained on purpose: the earlier structural control must answer,
+  // not the terminal clause.
+  writeLifecycle(
+    c,
+    events.map((e, i) => (i === at ? ({ ...e, prior_event_hash: `sha256:${"0".repeat(64)}` } as Event) : e)),
+  );
+  const outcome = verifyRecordOffline(c);
+  assert.notEqual(outcome.exitCode, 0, "a forked chain must be refused");
+  assert.equal(outcome.code, "VERIFY_RECORD_LIFECYCLE_GAP", outcome.message);
+});
+
+test("D027-INV-C3: an invalidated transition with a stale core hash is refused", () => {
+  const c = copyInvalidGolden("invalid-run-cancellation");
+  const events = readLifecycle(c);
+  const at = events.length - 1;
+  writeLifecycle(
+    c,
+    events.map((e, i) => (i === at ? ({ ...e, occurred_at: "2026-07-01T00:00:59Z" } as Event) : e)),
+  );
+  const outcome = verifyRecordOffline(c);
+  assert.notEqual(outcome.exitCode, 0, "a mutated event must be refused");
+  assert.equal(outcome.code, "ARTIFACT_HASH_MISMATCH", outcome.message);
+});
+
+// -- environment terminals ---------------------------------------------------
+
+/**
+ * The same boundary on the **environment** branch.
+ *
+ * `deriveEnvironmentClosure` took the same `assertTerminalClosure` call and the
+ * same `admit` gate, and the repository ships **no committed environment
+ * bundle**: `fixtures/golden/environment-run/` holds a `closure-summary.json`
+ * only, because an environment run's bytes cannot be pinned (every
+ * eligibility-pool entry is a threshold envelope drawn from the CSPRNG). Leaving
+ * the branch untested was not acceptable and committing a new evidence bundle
+ * for it was out of scope, so the terminal is **built at test runtime** by
+ * `runToEnvironmentTerminal()` — the repository's own CLI driver, development
+ * keyring and governor registry, no Docker and no external harness — and driven
+ * through the real `erl2 verify` surface. Nothing generated here is committed.
+ *
+ * One terminal is built and copied per case: the build is ~20s and the property
+ * under test is about the lifecycle tail, which each copy mutates independently.
+ */
+
+const ENVIRONMENT_TERMINAL_ROLES = ["final-attestation", "run-record", "signer-inventory"] as const;
+
+let environmentTerminal: { runRoot: string } | undefined;
+
+/** The one environment terminal every case below copies, built on first use. */
+function environmentTerminalRoot(): string {
+  if (environmentTerminal === undefined) {
+    const run = runToEnvironmentTerminal();
+    writeDerivedLifecycle(run.runRoot);
+    writeTrustConfig(run.runRoot, "trust-config.json", {
+      sourceTrustPolicyHash: run.registry.sourceTrustPolicyHash,
+    });
+    environmentTerminal = { runRoot: run.runRoot };
+  }
+  return environmentTerminal.runRoot;
+}
+
+function copyEnvironmentTerminal(): Copy {
+  const dir = ownedTempDir("erl2-d027-env-");
+  cpSync(environmentTerminalRoot(), dir, { recursive: true });
+  return {
+    dir,
+    bundle: path.join(dir, "retained", "public-bundle.json"),
+    artifacts: dir,
+    lifecycle: path.join(dir, "lifecycle.json"),
+    rootConfig: path.join(dir, "trust-config.json"),
+  };
+}
+
+test("D027-ENV-BASELINE: a runtime-built environment terminal verifies offline", () => {
+  const c = copyEnvironmentTerminal();
+  const events = readLifecycle(c);
+  const at = publishingIndexOf(events);
+  assert.equal(at, events.length - 1, "a valid environment terminal's publishing event is last outright");
+  assert.deepEqual(
+    [...(events[at] as Event).produced.map((p) => p.artifact_role)].sort(),
+    [...ENVIRONMENT_TERMINAL_ROLES],
+    "the environment terminal publishes exactly its three roles",
+  );
+
+  const outcome = verifyOffline(c);
+  assert.equal(outcome.exitCode, 0, `${outcome.code}: ${outcome.message}`);
+  assert.equal(outcome.verdict, "valid");
+});
+
+test("D027-ENV-A1: an event trailing the environment terminal is refused", () => {
+  const c = copyEnvironmentTerminal();
+  const events = readLifecycle(c);
+  const last = events[events.length - 1] as Event;
+  const planted = freezeArtifact(c, path.join("retained", "planted-note.json"), {
+    schema_version: "vendor-note/v1",
+    note: "appended past the environment terminal",
+  });
+  writeLifecycle(
+    c,
+    rechain([
+      ...events,
+      tailEvent(last, {
+        state_from: last.state_to,
+        state_to: "post_terminal_note",
+        produced: [
+          { artifact_role: "finding", artifact_core_hash: planted, artifact_schema_version: "vendor-note/v1" },
+        ],
+      }),
+    ]),
+  );
+
+  const outcome = verifyOffline(c);
+  assert.notEqual(outcome.exitCode, 0, `a trailing event must be refused; verdict ${outcome.verdict}`);
+  assert.equal(outcome.code, "GRAPH_CLOSURE_LIFECYCLE_TAIL_AFTER_TERMINAL", outcome.message);
+});
+
+test("D027-ENV-A2: a produced entry injected into the environment publishing event is refused", () => {
+  const c = copyEnvironmentTerminal();
+  const events = readLifecycle(c);
+  const at = publishingIndexOf(events);
+  const planted = freezeArtifact(c, path.join("retained", "planted-note.json"), {
+    schema_version: "vendor-note/v1",
+    note: "injected into the environment publishing event itself",
+  });
+  writeLifecycle(
+    c,
+    rechain(
+      events.map((e, i) =>
+        i === at
+          ? ({
+              ...e,
+              produced: [
+                ...e.produced,
+                { artifact_role: "finding", artifact_core_hash: planted, artifact_schema_version: "vendor-note/v1" },
+              ],
+            } as Event)
+          : e,
+      ),
+    ),
+  );
+
+  const outcome = verifyOffline(c);
+  assert.notEqual(outcome.exitCode, 0, `an injected product must be refused; verdict ${outcome.verdict}`);
+  assert.equal(outcome.code, "GRAPH_CLOSURE_TERMINAL_EVENT_EXTRA_PRODUCT", outcome.message);
+});
+
+test("D027-ENV-A3: an environment terminal missing one of its published roles is refused", () => {
+  const c = copyEnvironmentTerminal();
+  const events = readLifecycle(c);
+  const at = publishingIndexOf(events);
+  // The multiset comparison is exact in both directions: a terminal that
+  // publishes *less* than its variant publishes is as refusable as one that
+  // publishes more.
+  writeLifecycle(
+    c,
+    rechain(
+      events.map((e, i) =>
+        i === at ? ({ ...e, produced: e.produced.slice(0, e.produced.length - 1) } as Event) : e,
+      ),
+    ),
+  );
+
+  const outcome = verifyOffline(c);
+  assert.notEqual(outcome.exitCode, 0, `a missing terminal role must be refused; verdict ${outcome.verdict}`);
+  assert.equal(outcome.code, "GRAPH_CLOSURE_TERMINAL_EVENT_EXTRA_PRODUCT", outcome.message);
+});
+
+test("D027-ENV-A4: a duplicated environment terminal product is refused", () => {
+  const c = copyEnvironmentTerminal();
+  const events = readLifecycle(c);
+  const at = publishingIndexOf(events);
+  writeLifecycle(
+    c,
+    rechain(
+      events.map((e, i) =>
+        i === at ? ({ ...e, produced: [...e.produced, e.produced[0]] } as Event) : e,
+      ),
+    ),
+  );
+
+  const outcome = verifyOffline(c);
+  assert.notEqual(outcome.exitCode, 0, `a duplicated terminal role must be refused; verdict ${outcome.verdict}`);
+  // Answered by the closure's role-multiplicity control, which runs ahead of the
+  // terminal clause. Pinned as measured rather than assumed: a duplicate is
+  // refused, and this records *which* control refuses it.
+  assert.equal(outcome.code, "GRAPH_CLOSURE_EXTRA_ARTIFACT", outcome.message);
+});
+
+test("D027-ENV-A5: admitting a contract-invalid known-schema artifact from an environment run is refused", () => {
+  const c = copyEnvironmentTerminal();
+  // The admission gate at its own boundary on this branch. `deriveEnvironmentClosure`
+  // calls `index.admit` in six places, and this is the question those calls ask.
+  const planted = freezeArtifact(c, path.join("retained", "planted-finding.json"), {
+    schema_version: "finding/v1",
+    kind: "subject_finding",
+    safe_summary: "declares a Lab contract and satisfies none of it",
+  });
+  const index = ArtifactIndex.scan(c.artifacts);
+  assert.equal(index.get(planted as `sha256:${string}`).coreHash, planted, "resolving is not admitting");
+  assert.throws(
+    () => index.admit(planted as `sha256:${string}`),
+    (error: unknown) => (error as { code?: string }).code === "GRAPH_CLOSURE_RETAINED_CONTRACT_INVALID",
+    "a contract-invalid known-schema artifact must not be admitted",
+  );
+});
+
+test("D027-ENV-C1: the environment terminal's own published contracts clear admission", () => {
+  const c = copyEnvironmentTerminal();
+  const events = readLifecycle(c);
+  const at = publishingIndexOf(events);
+  const index = ArtifactIndex.scan(c.artifacts);
+  // The upper bracket on this branch: every artifact the terminal actually
+  // publishes must pass the gate. If admission refused any of these, it would be
+  // refusing legitimate environment evidence.
+  for (const entry of (events[at] as Event).produced) {
+    assert.equal(
+      index.admit(entry.artifact_core_hash as `sha256:${string}`).coreHash,
+      entry.artifact_core_hash,
+      `${entry.artifact_role} must clear admission`,
+    );
+  }
+});
+
+test("D027-ENV-C2: an unknown-schema artifact in an environment run stays opaque", () => {
+  const c = copyEnvironmentTerminal();
+  // A schema the registry does not define is product output, not a Lab artifact.
+  // It must be refused as an unaccounted extra -- the ordinary closure rule --
+  // and never parsed or refused as a contract violation.
+  const planted = freezeArtifact(c, path.join("retained", "opaque-note.json"), {
+    schema_version: "vendor-note/v1",
+    note: "opaque product bytes, not a Lab contract",
+  });
+  const index = ArtifactIndex.scan(c.artifacts);
+  assert.equal(
+    index.admit(planted as `sha256:${string}`).coreHash,
+    planted,
+    "an unknown schema must clear admission untouched",
+  );
+
+  const outcome = verifyOffline(c);
+  assert.notEqual(outcome.exitCode, 0, "an uncited retained artifact must still be refused");
+  assert.equal(
+    outcome.code,
+    "GRAPH_CLOSURE_EXTRA_ARTIFACT",
+    `an unknown schema must be refused only as an extra: ${outcome.message}`,
   );
 });

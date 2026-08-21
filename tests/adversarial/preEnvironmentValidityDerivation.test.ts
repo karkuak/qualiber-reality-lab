@@ -419,7 +419,12 @@ test("D028-PARITY: the environment branch refuses the analogous contradiction, a
     schema_version: "environment-validity-result/v1",
     status: "valid",
     gate_results: [
-      { gate_id: "acquisition-controls-passed", passed: true, evidence_refs: [] },
+      // Both are real `ENVIRONMENT_GATE_IDS` members the shipped environment
+      // producer emits (`environmentRun.ts`), so the contradiction under test is
+      // between a declared status and rows this branch actually evaluates --
+      // not between a status and fixture scaffolding. Two rows are not the
+      // required set and are not claimed to be: completeness is RL-D-031.
+      { gate_id: "trust-policy-resolved", passed: true, evidence_refs: [] },
       { gate_id: "cleanup-verified", passed: false, evidence_refs: [] },
     ],
     invalidity_finding_hashes: [],

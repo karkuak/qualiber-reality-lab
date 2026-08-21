@@ -44,12 +44,7 @@ What the verifier does, in order:
 1. Validates the bundle against the closed `public-verification-bundle/v2`
    schema and refuses any execution body.
 2. Scans the artifact root itself, recomputing every `core_hash`. A file whose
-   declared hash disagrees with its canonical bytes is rejected on sight. A
-   retained file declaring a `schema_version` this verifier's contract registry
-   defines must also *satisfy* one of the contracts registered under it, or it is
-   refused with `GRAPH_CLOSURE_RETAINED_CONTRACT_INVALID` before anything can
-   resolve it. A `schema_version` the registry does not define stays opaque
-   product output and is not parsed as a Lab artifact.
+   declared hash disagrees with its canonical bytes is rejected on sight.
 3. Loads the presented trust policy and refuses it unless your local
    configuration already pins its head and root key.
 4. Verifies the timestamp checkpoint chain: contiguous sequences, correct
@@ -78,6 +73,13 @@ What the verifier does, in order:
 7. Runs `erl2-mandatory-closure/v1`, deriving the required artifact set from the
    **lifecycle chain**, not from any producer array, and reporting missing roles
    and rejected extras.
+
+   Admitting a retained artifact to closure requires more than hash resolution:
+   an artifact declaring a `schema_version` this verifier's contract registry
+   defines must satisfy one of the contracts registered under it, or admission is
+   refused with `GRAPH_CLOSURE_RETAINED_CONTRACT_INVALID` before the closure
+   records it under a role. A `schema_version` the registry does not define stays
+   opaque product output and is not parsed as a Lab artifact.
 
    The terminal is closed structurally. The event that published the run record
    is located by the *signed* `run_record_hash`, and it must publish exactly the
