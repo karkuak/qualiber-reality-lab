@@ -36,6 +36,27 @@ export interface FreezeInput {
   readonly classification: Classification;
 }
 
+/**
+ * The producer-owned freeze-completion record written beside a frozen file.
+ *
+ * A **cache**, not evidence. `ArtifactStore.freeze` writes it and reads it back
+ * to make re-freezing the same bytes idempotent and to detect a crash between
+ * the content write and the marker write. That is the whole of its purpose, and
+ * it is entirely producer-side.
+ *
+ * The offline verifier **accounts its filename and never opens it**: a `.frozen`
+ * sidecar has no evidence schema, no contract and no contract-registry entry,
+ * and no verifier code path reads its contents. Nothing inside one is therefore
+ * trustworthy — not `file_sha256`, not `byte_length`, not `logical_path`, not
+ * `media_type`, not `classification` — because nothing ever checks any of it. A
+ * marker whose *content file* does not exist is an unaccounted retained
+ * byte-stream and is refused as one, which is filename accounting rather than
+ * content authority.
+ *
+ * Do not cite a value from a `.frozen` marker as evidence of anything, and do
+ * not add a verifier reader for one without first giving it a contract
+ * (ADR-ERL2-043).
+ */
 export interface FreezeMarker {
   readonly logical_path: string;
   readonly file_sha256: Hash;

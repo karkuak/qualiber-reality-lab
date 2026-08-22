@@ -232,6 +232,13 @@ export const CODES = {
    * A bundle presents a member the attestation it carries does not attest —
    * for instance an environment bundle whose `selection_verification_receipt`
    * is not the receipt named by `EnvironmentFinalLabAttestationV1`.
+   *
+   * Also covers a member whose declared `ArtifactRef` disagrees with the
+   * retained artifact it names: a supplied bundle declaring a member at some
+   * path other than the one the artifact index found that artifact at
+   * (ADR-ERL2-043 B1). The authority in both directions is a retained fact —
+   * the attestation's signed bytes, or the filesystem — never another
+   * declaration inside the same caller-supplied document.
    */
   BUNDLE_MEMBER_MISMATCH: "BUNDLE_MEMBER_MISMATCH",
   BUNDLE_VARIANT_MISMATCH: "BUNDLE_VARIANT_MISMATCH",

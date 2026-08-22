@@ -221,6 +221,18 @@ Verify a public bundle offline, exactly as an external consumer would:
 node packages/cli/dist/src/bin.js verify --public-bundle fixtures/golden/valid-pre-environment-run/public-bundle.json --root-config fixtures/golden/valid-pre-environment-run/root-config.json --artifact-root fixtures/golden/valid-pre-environment-run/artifacts --lifecycle fixtures/golden/valid-pre-environment-run/lifecycle.json --offline
 ```
 
+The document passed to `--public-bundle` must be the **same canonical bundle the
+run retained**, and the verifier checks that rather than assuming it. The
+serialization may differ — the exported copy above is pretty-printed where the
+retained one beneath `--artifact-root` is not — because the canonical projection
+is what is compared, not the bytes. So an exported, canonically identical copy is
+accepted and the literal retained pathname is not required; a re-authored
+envelope, and a detached copy of a run that retained no bundle of its own, are
+not. The bundle remains unsigned and nothing treats it as signed: the binding
+ties the supplied document to authority the run already retained. See
+[ADR-ERL2-043](docs/adr/ADR-ERL2-043.md) and
+[docs/claims/permitted-claims.md](docs/claims/permitted-claims.md).
+
 Verify a retained invalid run record offline — no attestation and no bundle are
 required or accepted:
 
