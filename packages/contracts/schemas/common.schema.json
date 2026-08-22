@@ -177,6 +177,7 @@
           "$ref": "erl2:common#/$defs/LogicalPath"
         },
         "media_type": {
+          "$comment": "Producer-declared label. Non-authoritative at the trusted-local tier: no verifier check and no semantic derivation consumes it, and no retained byte contradicts it. Not evidence of the referenced bytes' type. See ADR-ERL2-043.",
           "$ref": "erl2:common#/$defs/MediaType"
         },
         "byte_length": {
@@ -188,6 +189,7 @@
           "$ref": "erl2:common#/$defs/Hash"
         },
         "classification": {
+          "$comment": "Producer-declared handling label. Non-authoritative at the trusted-local tier: nothing enforces it and no semantic derivation consumes it. Not a confinement, custody or access-control property. See ADR-ERL2-043.",
           "$ref": "erl2:common#/$defs/Classification"
         }
       }

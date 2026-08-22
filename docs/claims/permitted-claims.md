@@ -704,6 +704,71 @@ The one claim this slice earns, stated at exactly its width:
   refused; a relaxed threshold is a different artifact with a different digest,
   not a mutation.
 
+## Public-bundle envelope authority
+
+Bounded, and additive to the ceiling above rather than a change to it: nothing
+here widens what may be claimed, and no clause in `claim-ceiling.json` projects
+any sentence in this section.
+
+### Non-authoritative envelope fields
+
+The public verification bundle is an unsigned container citing artifacts that are
+themselves signed and hash-closed. The offline verifier now requires the supplied
+document to be the same canonical document the run retained, but four things
+inside it remain **non-authoritative at the trusted-local tier** — no retained
+byte contradicts them, and no semantic verdict consumes them:
+
+- `bundle_id`;
+- member `media_type`;
+- member `classification`;
+- the **post-dating** direction of `created_at` — a stamp later than signed
+  finalization is not refusable, because an honest producer creates the bundle
+  after finalizing. Back-dating *is* refused, because `finalized_at` is signed.
+
+A producer that changes one of these consistently across the retained and the
+supplied document is still accepted. That is a stated boundary, not an oversight.
+
+### `.frozen` markers are not evidence
+
+A `.frozen` sidecar beside a retained file is a **derived, producer-side
+cache and freeze-completion record**. It:
+
+- has no evidence schema and no contract;
+- has no entry in the contract registry;
+- is never opened by the offline verifier, which accounts its **filename** and
+  nothing else;
+- therefore contains no trustworthy digest, length, logical path, media type or
+  classification;
+- **is not evidence**, and nothing may be cited from one.
+
+Falsifying, corrupting, emptying, filling with non-JSON bytes, deleting or
+swapping a sidecar's contents changes no verdict, and permanent adversarial tests
+record exactly that. The single exception is an **orphan** marker — one whose
+content file does not exist — which is refused as an unaccounted retained
+byte-stream by the file-accounting rule that already covered every other
+unaccounted file.
+
+### What the verifier binding does establish
+
+For a bundle the offline verifier reports `valid`:
+
+- the supplied canonical public-bundle document matches a public bundle
+  **retained and indexed by that run**, allowing for a different serialization of
+  the same canonical document;
+- every declared member path agrees with the **retained artifact index**;
+- the supplied `core_hash` identifies the supplied canonical document;
+- the bundle is **not back-dated** before signed finalization;
+- a run retaining **no** public bundle cannot be verified using only a detached
+  copy, and neither can one whose only indexed bundle lives outside `retained/`.
+
+### What it does not establish
+
+The bundle is still unsigned and is not treated as signed. This binding is a
+consistency property over retained bytes at the trusted-local tier. It is **not**
+a signature over the envelope, **not** authentication of any party, **not** a
+custody or confinement property, **not** an independent signing authority, and
+**not** production assurance. See ADR-ERL2-043.
+
 ## Calibration status
 
 Zero calibration runs. Design v2 §25 requires at least ten stable clean or
