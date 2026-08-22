@@ -9,6 +9,7 @@
 
 import {
   assertContract,
+  type BundleMember,
   CODES,
   Erl2Error,
   type EnvironmentFinalLabAttestationV1,
@@ -21,6 +22,7 @@ import {
   type PreEnvironmentFinalLabAttestationV1,
   type PreEnvironmentPublicVerificationBundleV2,
   type PreEnvironmentSignerInventoryV2,
+  type PublicVerificationBundleV2,
   type TrustedTimestampCheckpointV1,
   type TrustPolicyManifestV2,
 } from "@erl2/contracts";
@@ -61,6 +63,162 @@ function assertBinding(declared: Hash, derived: Hash | undefined, label: string)
     throw new Erl2Error(
       CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
       `attestation ${label} binding does not match the retained artifact the closure derived`,
+    );
+  }
+}
+
+/**
+ * Refuses a public bundle that declares it was created *before* the attestation
+ * it carries was signed (ADR-ERL2-043, B4).
+ *
+ * `created_at` is an unsigned scalar in an unsigned envelope: a reader can write
+ * any instant into it and recompute `core_hash`, and the document stays
+ * self-consistent.  Almost nothing about the field is checkable — but one thing
+ * is, because `finalized_at` lives inside the attestation's *signed* bytes: a
+ * bundle cannot honestly claim to predate the finalization it publishes.
+ *
+ * Only the back-dating direction is refused.  An honest producer creates the
+ * bundle after finalizing, so equality is not required, and a post-dated stamp
+ * stays non-authoritative residue rather than becoming a refusal this tier
+ * cannot justify — no retained byte contradicts a later instant.
+ */
+function assertBundleNotBackDated(bundleCreatedAt: string, attestationFinalizedAt: string): void {
+  const created = Date.parse(bundleCreatedAt);
+  const finalized = Date.parse(attestationFinalizedAt);
+  if (Number.isNaN(created) || Number.isNaN(finalized)) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
+      `the bundle's created_at (${bundleCreatedAt}) and the attestation's finalized_at ` +
+        `(${attestationFinalizedAt}) must both be parseable instants`,
+    );
+  }
+  if (created < finalized) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
+      `the bundle declares it was created at ${bundleCreatedAt}, before the attestation it ` +
+        `carries was finalized at ${attestationFinalizedAt}`,
+    );
+  }
+}
+
+/**
+ * Every `BundleMember` the supplied envelope declares, collected by shape.
+ *
+ * By shape rather than per variant, for the same reason `referencedBytes.ts`
+ * collects `ArtifactRef`s by shape: the property is that a declared reference
+ * must agree with the artifact it names, which holds of every member on both
+ * terminal variants, and a list enumerated per variant is a list a later member
+ * can be added to without anyone noticing.  `BundleMember` and `ArtifactRef` are
+ * both closed objects in the schema and the bundle has already been validated
+ * against it, so nothing admitted for another reason can wear this shape.
+ */
+function collectBundleMembers(value: unknown, out: BundleMember[] = []): readonly BundleMember[] {
+  if (value === null || typeof value !== "object") return out;
+  if (Array.isArray(value)) {
+    for (const item of value) collectBundleMembers(item, out);
+    return out;
+  }
+  const record = value as Record<string, unknown>;
+  const artifact = record["artifact"];
+  if (
+    typeof record["artifact_core_hash"] === "string" &&
+    artifact !== null &&
+    typeof artifact === "object" &&
+    typeof (artifact as Record<string, unknown>)["path"] === "string"
+  ) {
+    out.push(record as unknown as BundleMember);
+  }
+  for (const nested of Object.values(record)) collectBundleMembers(nested, out);
+  return out;
+}
+
+/**
+ * Binds the caller-supplied public-bundle document to the public bundle the run
+ * itself retained (ADR-ERL2-043, B1-B3).
+ *
+ * ## What was missing
+ *
+ * `erl2 verify --public-bundle PATH` reads a document the *caller* supplies, and
+ * nothing tied that document to the run.  Every derivation here takes its facts
+ * from the artifact index, the lifecycle and the signed attestation, so no
+ * accepted envelope mutation changed a semantic verdict — but the envelope is
+ * the document a reader files, cites and re-publishes, and it could be
+ * re-authored freely: `bundle_id`, `created_at`, every member `path`,
+ * `file_sha256`, `byte_length`, `media_type` and `classification`, with
+ * `core_hash` refreshed so the result stayed self-consistent.
+ *
+ * The sharpest statement of it is an asymmetry.  Falsifying a *retained*
+ * member's `file_sha256` is refused with `ARTIFACT_HASH_MISMATCH`, because
+ * `verifyReferencedBytes` rehashes the named file; the identical mutation in the
+ * *supplied* copy was accepted, because nothing read the supplied copy that way.
+ * Two structural cases were worse: a run retaining **no** public bundle still
+ * verified from a detached copy, and so did one whose only indexed bundle had
+ * been moved out of `retained/` — the authority removed, the claim intact.
+ *
+ * ## What is checked, and where the authority comes from
+ *
+ * Three checks, none of which compares one caller-supplied declaration with
+ * another:
+ *
+ *   - **B1** every declared member `path` must be the `logicalPath` the artifact
+ *     index found that artifact at.  The authority is the filesystem.
+ *   - **B2** the supplied `core_hash` must be the one the supplied canonical
+ *     bytes produce — the rule `ArtifactIndex.walk` applies to every retained
+ *     document, applied to the one document that was exempt from it.
+ *   - **B3** the *recomputed* identity, never the declaration, must equal the
+ *     independently indexed core hash of a public bundle retained beneath
+ *     `retained/`.
+ *
+ * Serialization may differ: B3 compares the canonical projection, not the bytes,
+ * so an exported pretty-printed copy binds to the retained one — which is what
+ * the shipped pre-environment golden already ships.
+ *
+ * The retained subtree is filtered explicitly rather than resolved through a
+ * bare whole-root lookup.  A bundle indexed *outside* `retained/` is not
+ * retained evidence, and admitting one would let the very relocation this closes
+ * stand in for the authority it removes.  Any path *beneath* `retained/` is
+ * admissible, so a correctly accounted bundle nested deeper stays valid.
+ *
+ * This mints no authority.  The bundle is still unsigned and nothing here treats
+ * it as signed; the binding ties the supplied document to authority the run had
+ * already retained.
+ */
+function assertSuppliedBundleIsRetained(
+  bundle: PublicVerificationBundleV2,
+  index: ArtifactIndex,
+): void {
+  // B1 — a declared member path, against the path the index actually found.
+  for (const member of collectBundleMembers(bundle)) {
+    const indexed = index.get(member.artifact_core_hash);
+    if (member.artifact.path !== indexed.logicalPath) {
+      throw new Erl2Error(
+        CODES.BUNDLE_MEMBER_MISMATCH,
+        `the supplied bundle declares member ${member.artifact_core_hash} at ` +
+          `${member.artifact.path}, but the run retained that artifact at ${indexed.logicalPath}`,
+      );
+    }
+  }
+
+  // B2 — the supplied identity, recomputed from the supplied canonical bytes.
+  const recomputed = coreHash(bundle);
+  if (recomputed !== bundle.core_hash) {
+    throw new Erl2Error(
+      CODES.ARTIFACT_HASH_MISMATCH,
+      `the supplied bundle declares core_hash ${bundle.core_hash}, which its own canonical ` +
+        `bytes do not produce`,
+    );
+  }
+
+  // B3 — that recomputed identity, against the run's own retained bundle.
+  const retainedBundles = index
+    .ofSchema("public-verification-bundle/v2")
+    .filter((artifact) => artifact.logicalPath.startsWith("retained/"));
+  if (!retainedBundles.some((artifact) => artifact.coreHash === recomputed)) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_UNREACHABLE_ARTIFACT,
+      `the supplied public bundle has canonical identity ${recomputed}, which is not the ` +
+        `identity of any public bundle this run retained beneath retained/ ` +
+        `(${String(retainedBundles.length)} retained candidate(s))`,
     );
   }
 }
@@ -179,6 +337,11 @@ function verifyPreEnvironmentBundle(options: VerifyBundleOptions): BundleVerific
   if (!["T1", "T2", "T3"].includes(attestation.claim_scope)) {
     throw new Erl2Error(CODES.BUNDLE_VARIANT_MISMATCH, "base attestations may only claim T1-T3");
   }
+  // ADR-ERL2-043 B4, ordered with the envelope-to-signed-attestation cross-checks
+  // that follow because it is the same kind of statement: an unsigned scalar in
+  // the envelope, required to agree with the signed side. Back-dating only — see
+  // `assertBundleNotBackDated`.
+  assertBundleNotBackDated(bundle.created_at, attestation.finalized_at);
   // The binding the environment branch has always had, and this one did not.
   //
   // `bundle.run_id` is an unsigned scalar in an unsigned envelope: a reader can
@@ -385,6 +548,18 @@ function verifyPreEnvironmentBundle(options: VerifyBundleOptions): BundleVerific
     who: "this attestation",
   });
 
+  // -- ADR-ERL2-043 B1-B3: the supplied document, bound to retained authority --
+  //
+  // Last, and the placement is load-bearing rather than stylistic. The supplied
+  // envelope disagrees with the retained tree in *every* case where the retained
+  // tree is itself broken, so a check placed near `ArtifactIndex.scan` answers
+  // first and masks seven existing cases across `ARTIFACT_HASH_MISMATCH`,
+  // `GRAPH_CLOSURE_TERMINAL_MISMATCH` and `GRAPH_CLOSURE_EXTRA_ARTIFACT` — and a
+  // reader would be told the envelope did not match when the fault was in the
+  // evidence. Here every one of those keeps its own, more fundamental cause, and
+  // this adds the one nothing else was making.
+  assertSuppliedBundleIsRetained(bundle, index);
+
   return {
     verdict: "valid",
     closure,
@@ -476,6 +651,11 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
   if (!["T1", "T2", "T3"].includes(attestation.claim_scope)) {
     throw new Erl2Error(CODES.BUNDLE_VARIANT_MISMATCH, "base attestations may only claim T1-T3");
   }
+  // ADR-ERL2-043 B4, ordered with the envelope-to-signed-attestation cross-checks
+  // that follow because it is the same kind of statement: an unsigned scalar in
+  // the envelope, required to agree with the signed side. Back-dating only — see
+  // `assertBundleNotBackDated`.
+  assertBundleNotBackDated(bundle.created_at, attestation.finalized_at);
   if (attestation.run_id !== bundle.run_id) {
     throw new Erl2Error(
       CODES.GRAPH_CLOSURE_TERMINAL_MISMATCH,
@@ -791,6 +971,18 @@ function verifyEnvironmentBundle(options: VerifyBundleOptions): BundleVerificati
       "the verified selection receipt is not the one the attestation attests",
     );
   }
+
+  // -- ADR-ERL2-043 B1-B3: the supplied document, bound to retained authority --
+  //
+  // Last, and the placement is load-bearing rather than stylistic. The supplied
+  // envelope disagrees with the retained tree in *every* case where the retained
+  // tree is itself broken, so a check placed near `ArtifactIndex.scan` answers
+  // first and masks seven existing cases across `ARTIFACT_HASH_MISMATCH`,
+  // `GRAPH_CLOSURE_TERMINAL_MISMATCH` and `GRAPH_CLOSURE_EXTRA_ARTIFACT` — and a
+  // reader would be told the envelope did not match when the fault was in the
+  // evidence. Here every one of those keeps its own, more fundamental cause, and
+  // this adds the one nothing else was making.
+  assertSuppliedBundleIsRetained(bundle, index);
 
   return {
     verdict: "valid",
