@@ -11,7 +11,7 @@
  * `2026-12-31T23:59:60Z` all satisfied it, and none of them is an instant.
  *
  * That is not a cosmetic gap, because roughly thirty-five production sites
- * across five packages turn an `Instant` into a number with `Date.parse` —
+ * across four packages turn an `Instant` into a number with `Date.parse` —
  * trust-key validity windows, revocation effective times, checkpoint chain
  * ordering, selection round ordering, lease expiry, adapter deadlines, evidence
  * window arithmetic, and the public bundle's back-dating check. `Date.parse`

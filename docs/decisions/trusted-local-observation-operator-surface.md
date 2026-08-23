@@ -1,7 +1,10 @@
 # Running an external `subject-adapter/v2` adapter under trusted-local observation
 
 This is the complete public workflow for one bounded, unscored, owner-operated
-local run. Read the first section before the commands.
+local run. Read the first section before the commands. It is linked from the
+[README's trusted-local observation section](../../README.md#trusted-local-observation-the-supported-external-path),
+which is the shorter front-door version of this same path. If a run refuses,
+see [the troubleshooting and refusal reference](trusted-local-observation-troubleshooting.md).
 
 ## What this is, and what it is not
 

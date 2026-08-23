@@ -157,32 +157,85 @@ threshold VRF. Run
 
 ## Quick start
 
+Bootstrap the workspace (**external supported command**, and a **repository-development command** — it also runs the internal build and test suite a contributor needs):
+
 ```bash
 npm install
 npm run build
 npm test
 ```
 
-Generate the CLI and verifier evidence. Routine generation writes to a fresh
-temporary directory and **never** mutates the approved goldens under
-`fixtures/golden/`; only the explicit `evidence:update` rewrites them:
+Generate the CLI and verifier evidence (**repository-development command**).
+Routine generation writes to a fresh temporary directory and **never**
+mutates the approved goldens under `fixtures/golden/`; only the explicit
+`evidence:update` rewrites them:
 
 ```bash
 npm run evidence
 ```
 
 Byte-compare a deterministic generation against the pinned goldens without
-touching them (838 files pinned; 7 are excluded with a printed reason — the
-adapter `request.frames` bake an absolute workspace path, `grandchild.pid` is a
-real OS pid, and `cli-transcript.json` records absolute CLI paths):
+touching them (**repository-development command**; 838 files pinned, 7
+excluded with a printed reason — the adapter `request.frames` bake an
+absolute workspace path, `grandchild.pid` is a real OS pid, and
+`cli-transcript.json` records absolute CLI paths):
 
 ```bash
 npm run evidence:verify
 ```
 
-Run the generic journey from acquisition to frozen subject output. The registry
-is a governor-prepared directory of admitted artifacts; `fixtures/golden`
-contains a worked example produced by `npm run evidence:update`:
+## Trusted-local observation: the supported external path
+
+This is the supported external, development-tier path for running your own
+`subject-adapter/v2` adapter against the Lab. It works with any externally
+authored, product-neutral adapter — the Lab core does not know your subject's
+vocabulary or scoring rules. Read the complete procedure at
+[`docs/decisions/trusted-local-observation-operator-surface.md`](docs/decisions/trusted-local-observation-operator-surface.md)
+before running anything; if a run refuses, or you want to know what a refusal
+means before you hit one, see
+[`docs/decisions/trusted-local-observation-troubleshooting.md`](docs/decisions/trusted-local-observation-troubleshooting.md).
+
+In two commands (`erl2 declare-trusted-local-adapter` then
+`erl2 run-trusted-local-observation`) the run produces a retained
+`trusted-local-observation-record.json` and performs its own offline
+verification before it returns — rebuilding the run from the plan bytes and
+the retained admission rather than trusting the record's own verdict.
+
+**What you have to bring.** An adapter that speaks `subject-adapter/v2` (built
+against `@erl2/adapter-sdk`), its adapter manifest, and a hand-authored
+observation-plan draft naming the operations, resource limits, egress policy,
+and — for every file you want the adapter to read — its exact SHA-256 and
+byte length. There is no CLI command yet that derives those two fields for
+you from a file; computing them today means calling `@erl2/integrity`
+directly (`hashBytes`) — the CLI's `--seal-plan-draft` only stamps the
+declaration- and policy-level hashes onto the draft you supply. A complete,
+ready-to-run starter plan and manifest are not committed to this repository
+today; producing one without hand-authoring the draft is tracked as future
+work, not something this release ships.
+
+**What the run can claim, and what it cannot.** The retained record is a
+`development`-tier, `trusted_local_code` observation: unscored, unauthenticated,
+and without independent certification. It is **not** certification, **not**
+independent assurance, **not** confinement — the adapter runs as a child
+process under your own user's permissions, sharing your filesystem and
+network authority — and **not** a verdict on your subject's quality. See
+[`docs/claims/permitted-claims.md`](docs/claims/permitted-claims.md) for the
+claim boundary in full.
+
+## Governed journey (internal, repository-owner-only)
+
+The generic journey from acquisition to frozen subject output —
+`preregister-acquisition`, `acquire`, `admit-adapter` — is part of this
+repository's internal architecture, and it stays that way for this release:
+it is **not** offered to external consumers in the minimum trusted-local
+release. Every `HASH` value below is produced by a governor-prepared
+registry (acquisition sources, actor scripts and schemas, policies, trust
+policy, limits), and **that registry is not externally provisionable from
+the current committed public operator surface** — the only registry builder
+in this repository lives under test support, and no tracked production CLI
+or operator script assembles one. This is an internal-only limitation for
+the current release, not a deprecation, and it carries no promised release
+date.
 
 ```bash
 node packages/cli/dist/src/bin.js preregister-acquisition --run-root ./run --registry ./registry --tier development --acquisition-source HASH --adapter HASH --acquisition-actor-script HASH --acquisition-actor-schema HASH --acquisition-step HASH --package-verification-step HASH --generic-policy HASH --trust-policy HASH --limits HASH --expires 2026-12-31T00:00:00Z
@@ -211,9 +264,19 @@ node packages/cli/dist/src/bin.js preregister-acquisition --run-root ./run --reg
 
 At `--tier development` an unsigned receipt is admitted and labelled
 `locally_observed_unauthenticated`; a scored tier requires one signed by a
-pinned certification authority. The remaining `HASH` values still come from a
-governor-prepared registry, which is prepared out of band — admission removes
-one blocker, not the whole setup.
+pinned certification authority. The remaining `HASH` values still come from
+the governor-prepared registry described above, prepared out of band by the
+repository owner — admission removes one blocker, not the whole setup. The
+four commands in this section are shown as **internal-only commands**: each
+is real and will run for a repository owner who has that registry, but none
+of them is a supported external Quick Start, and none is completable from a
+clean external clone alone.
+
+## Verifying committed evidence offline
+
+These two commands are **external supported commands**: both run verbatim
+from a clean clone against fixtures this repository already ships, with no
+registry and no adapter of your own required.
 
 Verify a public bundle offline, exactly as an external consumer would:
 
