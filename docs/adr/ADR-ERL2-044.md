@@ -41,7 +41,7 @@ computed the ordering it was asked for; the document said something other than
 what it was compared as. That is the same defect ADR-ERL2-043 exists to close —
 a document that cannot be read as what it is verified as — one layer down.
 
-**B4 is not the only site.** Roughly thirty-five places across five packages
+**B4 is not the only site.** Roughly thirty-five places across four packages
 turn an `Instant` into a number with `Date.parse`: trust-key validity windows
 and revocation effective times, timestamp-checkpoint chain ordering, selection
 round ordering against the pool anchor, environment lease expiry, adapter
