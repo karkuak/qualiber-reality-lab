@@ -528,6 +528,30 @@ export function runCommand(argv: readonly string[]): CommandResult {
     });
   }
   const rest = argv.slice(1);
+  // A global, pre-dispatch short-circuit rather than 36 separate command-level
+  // fixes: every implemented command previously refused `--help` with
+  // `CFG_UNKNOWN_FLAG`, because `--help` is not a flag any command's own
+  // `parseFlags` call declares. Checked here, before the command ever runs, so
+  // `--help` performs no filesystem write, starts no adapter, makes no network
+  // call, and needs none of the command's other flags (required or not). An
+  // unrecognised command is not granted this shortcut — it still falls through
+  // to the ordinary "unknown command" refusal below, so `--help` cannot be used
+  // to probe whether a made-up command name is real.
+  if (IMPLEMENTED_COMMANDS.has(command) && rest.includes("--help")) {
+    return ok("help", {
+      data: {
+        command,
+        usage:
+          (COMMAND_USAGE as Readonly<Record<string, unknown>>)[command] ??
+          {
+            summary:
+              `${command} has no additional documented usage here. See the ` +
+              "runbooks under runbooks/ for its flags, ordering and refusals, " +
+              "or run `erl2 --help` for the full command list.",
+          },
+      },
+    });
+  }
   try {
     switch (command) {
       case "doctor":
