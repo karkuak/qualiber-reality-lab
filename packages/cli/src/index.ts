@@ -11,6 +11,7 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   ADAPTER_PROTOCOL_VERSION,
   CODES,
@@ -520,15 +521,138 @@ function withRunLease<T>(command: string, argv: readonly string[], fn: () => T):
   }
 }
 
+/**
+ * Builds the exact per-command help object: an authored {@link COMMAND_USAGE}
+ * entry when one exists, or the generic runbooks pointer otherwise. This is
+ * the single call site both `<command> --help` and `help <command>` (M2 §C)
+ * use, so the two forms return the *same* object — not two independently
+ * built objects that merely happen to look the same today.
+ */
+function commandHelp(command: string): CommandResult {
+  return ok("help", {
+    data: {
+      command,
+      usage:
+        (COMMAND_USAGE as Readonly<Record<string, unknown>>)[command] ??
+        {
+          summary:
+            `${command} has no additional documented usage here. See the ` +
+            "runbooks under runbooks/ for its flags, ordering and refusals, " +
+            "or run `erl2 --help` for the full command list.",
+        },
+    },
+  });
+}
+
+/**
+ * The CLI's own committed version (M2 §B), read from `packages/cli/package.json`
+ * — the single authoritative source; every workspace manifest is pinned to the
+ * same value today, but this package's own manifest is the correct source for
+ * what *this* binary reports, and the literal is never duplicated elsewhere.
+ * Read lazily, only when `--version` is actually invoked, so no other
+ * command's module-load or dispatch behaviour changes because this function
+ * exists.
+ */
+function cliVersion(): string {
+  const packageJsonPath = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "..",
+    "package.json",
+  );
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+  } catch (error) {
+    throw new Erl2Error(
+      CODES.LAB_UNEXPECTED_FAILURE,
+      "could not read the CLI's own package.json to answer --version",
+      { owner: "lab", cause: error },
+    );
+  }
+  const version = (parsed as { version?: unknown }).version;
+  if (typeof version !== "string" || version.length === 0) {
+    throw new Erl2Error(CODES.LAB_UNEXPECTED_FAILURE, "the CLI's package.json has no version field");
+  }
+  return version;
+}
+
 export function runCommand(argv: readonly string[]): CommandResult {
   const command = argv[0];
-  if (command === undefined || command === "--help" || command === "help") {
+  if (command === undefined) {
     return ok("help", {
       data: { commands: [...IMPLEMENTED_COMMANDS].sort(), usage: COMMAND_USAGE },
     });
   }
-  const rest = argv.slice(1);
   try {
+    // Top-level `--version` (M2 §B): a documentation surface, exactly like
+    // top-level `--help` — exit 0, no operational prerequisite, no filesystem
+    // write, no run lease, no dispatch. Recognised only as the very first
+    // token, so `erl2 <command> --version` is unaffected by this branch and
+    // reaches that command's own flag parser unchanged (no command in this
+    // CLI declares its own `--version` flag today; if one ever does, this
+    // top-level check does not shadow it, because it only fires when
+    // `--version` is argv[0]). Any additional argument or flag alongside
+    // `--version` refuses rather than being silently discarded — the same
+    // fail-closed precedence chosen for `help <command> extra` below.
+    // `--version=1.0.0` is a different literal string, does not match this
+    // exact check, and falls through to the ordinary unknown-command refusal,
+    // consistent with this parser's pre-existing, unrelated lack of
+    // `--flag=value` support anywhere else in the CLI.
+    if (command === "--version") {
+      if (argv.length !== 1) {
+        throw new Erl2Error(
+          CODES.CFG_UNKNOWN_FLAG,
+          `--version accepts no additional arguments or flags: unexpected ${String(argv[1])}`,
+        );
+      }
+      return ok("version", { data: { version: cliVersion() } });
+    }
+    if (command === "--help" || command === "help") {
+      // `help <command>` (M2 §C): narrows to that command's own help — the
+      // exact object `<command> --help` returns — instead of discarding the
+      // argument and always returning the top-level listing, which was the
+      // pre-existing, unaddressed defect this milestone item closes. Bare
+      // `erl2 help` is unchanged. A second positional argument after the
+      // command name refuses rather than being silently ignored (the same
+      // precedence as `--version extra` above). An unrecognised command name
+      // refuses through the same `CFG_UNKNOWN_FLAG` "unknown command" path
+      // used everywhere else in this file — matching `IMPLEMENTED_COMMANDS`'s
+      // existing case-sensitive lookup, so `help` is exactly as case-sensitive
+      // as every other command-name comparison already was. This is not a
+      // confidentiality boundary: top-level help already publishes the
+      // complete 36-command inventory unconditionally, so distinguishing a
+      // real command name from a fake one here discloses nothing new.
+      if (command === "help" && argv.length > 1) {
+        if (argv.length > 2) {
+          throw new Erl2Error(
+            CODES.CFG_UNKNOWN_FLAG,
+            `help accepts at most one command name argument, got ${String(argv.length - 1)}`,
+          );
+        }
+        const target = argv[1];
+        if (target === undefined || !IMPLEMENTED_COMMANDS.has(target)) {
+          throw new Erl2Error(CODES.CFG_UNKNOWN_FLAG, `unknown command ${String(target)}`);
+        }
+        return commandHelp(target);
+      }
+      return ok("help", {
+        data: { commands: [...IMPLEMENTED_COMMANDS].sort(), usage: COMMAND_USAGE },
+      });
+    }
+    const rest = argv.slice(1);
+    // A global, pre-dispatch short-circuit rather than 36 separate command-level
+    // fixes: every implemented command previously refused `--help` with
+    // `CFG_UNKNOWN_FLAG`, because `--help` is not a flag any command's own
+    // `parseFlags` call declares. Checked here, before the command ever runs, so
+    // `--help` performs no filesystem write, starts no adapter, makes no network
+    // call, and needs none of the command's other flags (required or not). An
+    // unrecognised command is not granted this shortcut — it still falls through
+    // to the ordinary "unknown command" refusal below, so `--help` cannot be used
+    // to probe whether a made-up command name is real.
+    if (IMPLEMENTED_COMMANDS.has(command) && rest.includes("--help")) {
+      return commandHelp(command);
+    }
     switch (command) {
       case "doctor":
         return doctor(rest);

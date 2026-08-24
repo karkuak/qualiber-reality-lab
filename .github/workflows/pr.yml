@@ -13,6 +13,11 @@ permissions:
 jobs:
   pr:
     runs-on: ubuntu-latest
+    # M2 CI-timeout rider (roadmap MP-20): observed duration across the 8 most
+    # recent successful runs was 36m19s-40m06s; 60 minutes gives ~1.5x headroom
+    # for normal variance while still bounding a genuinely hung job to well
+    # under GitHub's own 360-minute default.
+    timeout-minutes: 60
     # The claim-ceiling append-only check compares the identifier history with the
     # same file at the pull request's own base commit, so the lane needs the base
     # object present and the base sha named explicitly. It fails closed rather than
@@ -79,6 +84,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    # M2 CI-timeout rider (roadmap MP-20): observed duration across the 8 most
+    # recent successful runs was 1m14s-1m46s on both legs; 10 minutes gives
+    # ~5-8x headroom for normal variance while still cutting a genuine hang
+    # from hours to minutes.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
