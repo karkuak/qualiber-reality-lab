@@ -6,6 +6,12 @@ local run. Read the first section before the commands. It is linked from the
 which is the shorter front-door version of this same path. If a run refuses,
 see [the troubleshooting and refusal reference](trusted-local-observation-troubleshooting.md).
 
+For a concrete instance of everything below — a committed, runnable, product-neutral
+adapter, manifest draft, plan draft and input, exercised by CI on every change —
+see [the neutral trusted-local worked example](../../examples/trusted-local-neutral/README.md).
+Reading it alongside this document is usually faster than reading either alone:
+this document says what each step means, and the example shows one that runs.
+
 ## What this is, and what it is not
 
 You own the adapter. You have read its source. You accept that its exact bytes
