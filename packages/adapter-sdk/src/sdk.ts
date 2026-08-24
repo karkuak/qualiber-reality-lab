@@ -400,25 +400,37 @@ export async function runAdapter(
         maxResponseBytes = message.max_response_bytes;
         if ("offered_protocol_versions" in message) {
           const optsIn = definition.supportedProtocolVersions?.includes(ADAPTER_PROTOCOL_VERSION_V2) === true;
-          if (!optsIn || message.required_execution_mode !== ADAPTER_LOCAL_EXECUTION_MODE) {
-            negotiatedProtocol = undefined;
-            write({
-              kind: "negotiation",
-              schema_version: "adapter-negotiation-response/v2",
-              selected_protocol_version: ADAPTER_PROTOCOL_VERSION,
-              execution_mode: "governed",
-              adapter_id: definition.adapterId,
-              adapter_version: definition.version,
-              supported_operations: Object.keys(definition.handlers).filter(isAdapterOperation),
-              supported_package_kinds: definition.supportedPackageKinds,
-            });
-          } else {
+          if (optsIn && message.required_execution_mode === ADAPTER_LOCAL_EXECUTION_MODE) {
             negotiatedProtocol = ADAPTER_PROTOCOL_VERSION_V2;
             write({
               kind: "negotiation",
               schema_version: "adapter-negotiation-response/v2",
               selected_protocol_version: ADAPTER_PROTOCOL_VERSION_V2,
               execution_mode: ADAPTER_LOCAL_EXECUTION_MODE,
+              adapter_id: definition.adapterId,
+              adapter_version: definition.version,
+              supported_operations: Object.keys(definition.handlers).filter(isAdapterOperation),
+              supported_package_kinds: definition.supportedPackageKinds,
+            });
+          } else if (message.required_execution_mode === ADAPTER_LOCAL_EXECUTION_MODE) {
+            // A local-execution offer carries v2 only (subject-adapter-v2-protocol.md
+            // §2: "the offer contains v2 only ... No host silently retries another
+            // major"), so v1 was never a valid answer here. Writing one anyway would
+            // just hand the host a downgrade it has to detect and refuse *after* the
+            // operation frame that follows this negotiation is already gone — refuse
+            // here instead, before that frame is read, rather than fabricate a
+            // response this adapter was never asked to give.
+            throw new Erl2Error(
+              CODES.ADAPTER_PROTOCOL_DOWNGRADE_REFUSED,
+              `adapter "${definition.adapterId}" does not declare supportedProtocolVersions: ["${ADAPTER_PROTOCOL_VERSION_V2}"], but the host requires ${ADAPTER_PROTOCOL_VERSION_V2} for local execution`,
+            );
+          } else {
+            negotiatedProtocol = undefined;
+            write({
+              kind: "negotiation",
+              schema_version: "adapter-negotiation-response/v2",
+              selected_protocol_version: ADAPTER_PROTOCOL_VERSION,
+              execution_mode: "governed",
               adapter_id: definition.adapterId,
               adapter_version: definition.version,
               supported_operations: Object.keys(definition.handlers).filter(isAdapterOperation),
@@ -441,9 +453,59 @@ export async function runAdapter(
       if ("execution_id" in message) {
         if (negotiatedProtocol === ADAPTER_PROTOCOL_VERSION_V2) {
           write(await dispatchV2(definition, message));
+        } else {
+          // A V2-shaped operation frame arrived without a matching V2
+          // negotiation in force. Refusing here, by name, is the only thing
+          // standing between this and a silently dropped request: nothing
+          // downstream is waiting to catch a frame nobody responded to.
+          write({
+            kind: "response",
+            schema_version: "adapter-response-message/v2",
+            protocol_version: ADAPTER_PROTOCOL_VERSION_V2,
+            execution_mode: ADAPTER_LOCAL_EXECUTION_MODE,
+            execution_id: message.execution_id,
+            operation: message.operation,
+            operation_id: message.operation_id,
+            status: "failed",
+            mutations: [],
+            compensations: [],
+            credential_requests: [],
+            credential_uses: [],
+            egress_attempts: [],
+            unsupported_inputs: [],
+            active_operator_ms: 0,
+            error: {
+              code: CODES.ADAPTER_PROTOCOL_VERSION_MISMATCH,
+              owner: "adapter",
+              safe_message: "the operation frame does not match the negotiated protocol version",
+            },
+          });
         }
       } else if (negotiatedProtocol === ADAPTER_PROTOCOL_VERSION) {
         write(await dispatch(definition, message));
+      } else {
+        // Symmetric refusal for a V1-shaped operation frame with no matching
+        // V1 negotiation in force.
+        write({
+          kind: "response",
+          protocol_version: ADAPTER_PROTOCOL_VERSION,
+          run_id: message.run_id,
+          operation: message.operation,
+          operation_id: message.operation_id,
+          status: "failed",
+          mutations: [],
+          compensations: [],
+          credential_requests: [],
+          credential_uses: [],
+          egress_attempts: [],
+          unsupported_inputs: [],
+          error: {
+            code: CODES.ADAPTER_PROTOCOL_VERSION_MISMATCH,
+            owner: "adapter",
+            safe_message: "the operation frame does not match the negotiated protocol version",
+          },
+          active_operator_ms: 0,
+        });
       }
     }
   }
