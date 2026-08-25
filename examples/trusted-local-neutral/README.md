@@ -229,9 +229,29 @@ local offer has nothing to negotiate with. Declare it, and implement it.
 `@erl2/adapter-sdk` reports the operations your adapter supports as **the key
 order of your `handlers` object**, and `AdapterHost` compares that list against
 your manifest's `protocol_support[].operations` **positionally, not as a set**.
-The right operations in a different order are refused — and refused as *"the
-adapter process ended without a valid response"*, which names the symptom rather
-than the cause.
+The right operations in a different order are refused. The underlying cause is
+always the same one: your manifest's declared operation order differs from the
+handler-key order the SDK negotiates on your adapter's behalf.
+
+What you *see* is layered, and the layer you land on depends on your plan, so
+read both:
+
+- **In the retained record, the load-bearing refusal is
+  `ADAPTER_CERTIFICATION_SCOPE_MISMATCH`** — the host's negotiation check
+  reporting that the operation list your adapter negotiated does not exactly
+  match the selected certified profile. That is the refusal that carries the
+  cause.
+- **On the console you may instead see `ADAPTER_LOCAL_OPERATION_ORDER_INVALID`**,
+  with prerequisite wording such as `operation stop requires completed start`.
+  That is a downstream consequence, not a second cause: once the mismatch has
+  failed an operation, the run moves to its frozen cleanup suffix, and a cleanup
+  operation whose prerequisite never completed is what the command finally
+  reports. With this example's twelve-operation plan, that is exactly the message
+  the console prints.
+
+Neither message names the ordering directly, so the mapping above is the part
+worth remembering. This example documents that layered result; it does not change
+it, and no wording improvement is claimed here.
 
 Derive the list from your handler keys, in source order. Do **not** derive it
 from `declaredEntrypoints`: in the very fixture this example reuses, the two

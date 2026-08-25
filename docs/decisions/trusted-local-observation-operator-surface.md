@@ -304,11 +304,21 @@ either way, and the command exits nonzero.
 
 `AdapterHost` compares the operation list your adapter negotiates against your
 manifest's **positionally**, not as a set. A manifest with the right operations
-in a different order is refused — and refused as *"the adapter process ended
-without a valid response"*, which names the symptom rather than the cause.
+in a different order is refused. The cause is a manifest operation order that
+differs from the handler-key order the adapter SDK negotiates.
 
-If you see that message and your adapter runs fine on its own, compare the two
-orderings first.
+The refusal you see is layered:
+
+- the **retained record** carries the load-bearing certification refusal,
+  `ADAPTER_CERTIFICATION_SCOPE_MISMATCH` — the negotiated operation list does not
+  exactly match the selected certified profile;
+- the **console** may instead surface `ADAPTER_LOCAL_OPERATION_ORDER_INVALID`,
+  with prerequisite wording such as `operation stop requires completed start`.
+  That is a downstream consequence of the failed operation moving the run to its
+  frozen cleanup suffix, not a separate cause.
+
+If you see either and your adapter runs fine on its own, compare the two
+orderings first. Neither message names the ordering directly.
 
 ## Cleanup
 

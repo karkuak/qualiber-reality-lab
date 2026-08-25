@@ -50,6 +50,12 @@ const OPERATOR_SURFACE_PATH = path.join(
   "decisions",
   "trusted-local-observation-operator-surface.md",
 );
+const TROUBLESHOOTING_PATH = path.join(
+  repoRoot,
+  "docs",
+  "decisions",
+  "trusted-local-observation-troubleshooting.md",
+);
 const NEUTRAL_FIXTURE = path.join(
   repoRoot,
   "fixtures",
@@ -498,4 +504,57 @@ test("cleanup-example.sh refuses unsafe targets by name", () => {
   for (const guard of [/-L /u, /-d /u, /\/private\/tmp/u]) {
     assert.match(script, guard, "cleanup-example.sh must validate its target before removing it");
   }
+});
+
+test("all three operator surfaces describe the operation-order refusal the same, measured way", () => {
+  // Measured on this tree: a manifest whose operation order differs from the
+  // handler-key order the SDK negotiates fails the host's positional
+  // negotiation check, and the retained record carries
+  // `ADAPTER_CERTIFICATION_SCOPE_MISMATCH`. What the console prints depends on
+  // the plan: with this example's twelve-operation plan it is
+  // `ADAPTER_LOCAL_OPERATION_ORDER_INVALID: operation stop requires completed
+  // start`, a consequence of the failed operation moving the run to its frozen
+  // cleanup suffix.
+  //
+  // Three documents describe that one failure, and they used to disagree — the
+  // example README and the operator-surface note both promised a phrase that
+  // appears nowhere in stdout, stderr or the retained tree, and the
+  // troubleshooting table attributed the failure to a third, unrelated code.
+  // Three surfaces that can drift apart will, so the agreement is pinned here.
+  const surfaces = [
+    ["the example README", read(EXAMPLE_README)],
+    ["the operator-surface note", read(OPERATOR_SURFACE_PATH)],
+    ["the troubleshooting table", read(TROUBLESHOOTING_PATH)],
+  ] as const;
+
+  for (const [label, text] of surfaces) {
+    assert.doesNotMatch(
+      text,
+      /adapter process ended without a valid response/u,
+      `${label} must not promise a phrase this failure does not produce`,
+    );
+    assert.match(
+      text,
+      /ADAPTER_CERTIFICATION_SCOPE_MISMATCH/u,
+      `${label} must name the refusal the retained record actually carries`,
+    );
+    assert.match(
+      text,
+      /ADAPTER_LOCAL_OPERATION_ORDER_INVALID/u,
+      `${label} must name the refusal the console actually surfaces`,
+    );
+    assert.match(
+      text,
+      /stop requires completed start/u,
+      `${label} must show the prerequisite wording an operator will actually read`,
+    );
+  }
+
+  // The troubleshooting table must not reintroduce a third, contradictory code
+  // for this same failure.
+  assert.doesNotMatch(
+    read(TROUBLESHOOTING_PATH),
+    /ADAPTER_PROTOCOL_RESPONSE_MISMATCH[^|]*ordered/u,
+    "the troubleshooting table must not attribute an operation-order mismatch to the response-shape refusal",
+  );
 });
