@@ -44,7 +44,9 @@ import {
   type Hash,
   type PreEnvironmentValidityResultV1,
 } from "@erl2/contracts";
+import type { SubjectExecutionMode } from "@erl2/contracts";
 import type { ArtifactIndex } from "./artifactIndex.js";
+import { assertRetainedGateSetComplete } from "./gateSetAuthority.js";
 
 /** The two fields this module reads off a retained gate row. */
 interface GateLike {
@@ -90,6 +92,18 @@ export function derivePreEnvironmentValidity(options: {
   readonly validityResultHash: Hash | undefined;
   /** True when the caller is verifying a bundle presented as a valid terminal. */
   readonly requireValid: boolean;
+  /**
+   * The run's committed subject seam, read by the caller from the
+   * closure-bound, preregistrar-signed `acquisition-preregistration/v1`
+   * (RL-D-031).
+   *
+   * Required rather than optional, and typed as the enum rather than as a
+   * string, for the reason `buildEnvironmentValidity` gives one layer up: the
+   * whole point of an applicability bit is that a reader can tell "not
+   * applicable" from "passed", and a defaulted or stringly-typed flag would let
+   * a caller reach the *looser* required set by silence or by typo.
+   */
+  readonly subjectExecutionMode: SubjectExecutionMode;
 }): PreEnvironmentValidityDerivation {
   if (options.validityResultHash === undefined) {
     throw new Erl2Error(
@@ -109,18 +123,19 @@ export function derivePreEnvironmentValidity(options: {
 
   const gates = validity.gate_results as readonly GateLike[];
 
-  // A gate evaluated twice is not a gate: one row would have to lose, and which
-  // one lost would be decided by array order the producer chose.
-  const seen = new Set<string>();
-  for (const gate of gates) {
-    if (seen.has(gate.gate_id)) {
-      throw new Erl2Error(
-        CODES.EVALUATOR_VALIDITY_GATE_FAILED,
-        `the retained validity result evaluates gate ${gate.gate_id} more than once`,
-      );
-    }
-    seen.add(gate.gate_id);
-  }
+  // RL-D-031: the set, before the verdict.
+  //
+  // Until this, the derivation recomputed `status` from whatever rows the
+  // producer chose to retain -- so deleting the row that failed was cheaper than
+  // retaining it, and an empty array derived `valid` because `every` over
+  // nothing is `true`. The duplicate refusal that used to stand here alone is
+  // now one of five checks that module makes, against a catalogue the verifier
+  // ships and an applicability bit a different key signs.
+  assertRetainedGateSetComplete({
+    gates,
+    branch: "pre_environment",
+    subjectExecutionMode: options.subjectExecutionMode,
+  });
 
   const failed = gates.filter((g) => !g.passed).map((g) => g.gate_id);
   const derived = statusOf(gates);

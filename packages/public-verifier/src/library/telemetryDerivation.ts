@@ -89,11 +89,24 @@ export interface AttributableTelemetryReport {
  * hold, a retained observation is still checked for internal consistency —
  * a smuggled artifact must not become less checkable by being unnecessary.
  */
-export function deriveAttributableTelemetry(options: {
+/**
+ * The ADR-ERL2-033 declaration predicate, recomputed from retained bytes.
+ *
+ * Exported and shared because two callers need the same answer and must not
+ * reach it two ways (RL-D-031). `deriveAttributableTelemetry` uses it to decide
+ * whether an observation was owed; `deriveEnvironmentSemantics` uses it to
+ * decide whether the *gate* over that observation may exist at all. A second
+ * copy of these three conjuncts would drift, and the direction it would drift is
+ * the one that lets a boolean answer a question about applicability.
+ *
+ * This is a shared **derivation**, not a duplicated guard: each caller makes a
+ * different refusal from it, so each stays independently measurable.
+ */
+export function deriveTelemetryDeclaration(options: {
   readonly index: ArtifactIndex;
   readonly lifecycle: readonly LabLifecycleEventV1[];
   readonly runId: string;
-}): AttributableTelemetryReport {
+}): boolean {
   const roles = rolesOf(options.lifecycle);
 
   const manifestHashes = roles.get("environment-driver-manifest") ?? [];
@@ -121,17 +134,29 @@ export function deriveAttributableTelemetry(options: {
   );
 
   const outcomes = (roles.get("journey-step-outcome") ?? [])
-    .map((hash) =>
-      options.index.typed<JourneyStepOutcomeV1>(hash, "journey-step-outcome/v1"),
-    )
+    .map((hash) => options.index.typed<JourneyStepOutcomeV1>(hash, "journey-step-outcome/v1"))
     .filter((outcome) => outcome.run_id === options.runId);
 
-  // The declaration predicate, recomputed — the same three conjuncts the
-  // producer's gate binds to, each answered from retained bytes alone.
-  const declared =
+  // The three conjuncts the producer's gate binds to, each answered from
+  // retained bytes alone.
+  return (
     manifest.driver_kind === "compose" &&
     archetype.evidence_sources.some((source) => source.kind === "metric") &&
-    outcomes.some((outcome) => outcome.intent === "exercise" && outcome.status === "succeeded");
+    outcomes.some((outcome) => outcome.intent === "exercise" && outcome.status === "succeeded")
+  );
+}
+
+export function deriveAttributableTelemetry(options: {
+  readonly index: ArtifactIndex;
+  readonly lifecycle: readonly LabLifecycleEventV1[];
+  readonly runId: string;
+}): AttributableTelemetryReport {
+  const roles = rolesOf(options.lifecycle);
+  const declared = deriveTelemetryDeclaration(options);
+  // Resolved again here rather than threaded out of the predicate: R4 below
+  // needs the archetype's identity, not the declaration answer, and the
+  // predicate has already refused any count but one.
+  const archetypeHashes = roles.get("environment-archetype") ?? [];
 
   const observationHashes = roles.get(OBSERVATION_ROLE) ?? [];
   if (observationHashes.length === 0) {

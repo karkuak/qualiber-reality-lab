@@ -8,6 +8,7 @@
  */
 
 import {
+  type AcquisitionPreregistrationV1,
   assertContract,
   type BundleMember,
   CODES,
@@ -526,10 +527,30 @@ function verifyPreEnvironmentBundle(options: VerifyBundleOptions): BundleVerific
   // and never opened the retained validity result at all. `lab_validity` is
   // still checked above and is still necessary; what it is not is *sufficient*,
   // because a producer holding the finalizer key sets both sides of it.
+  //
+  // RL-D-031 adds the half RL-D-028 left open: the verdict is now recomputed
+  // from a gate set the verifier requires, not from whatever rows the producer
+  // chose to retain. The applicability input comes from the closure-bound
+  // `acquisition-preregistration/v1` -- a mandatory role, signed by the
+  // preregistrar under a key the finalizer does not hold, and already refused
+  // above if it belongs to another run.
+  const preregistrationHash = requiredHash(closure, "acquisition-preregistration");
+  if (preregistrationHash === undefined) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_MISSING_ROLE,
+      "the derived closure carries no acquisition preregistration; without it the verifier cannot " +
+        "decide which validity gates this run owed",
+    );
+  }
+  const preregistration = index.typed<AcquisitionPreregistrationV1>(
+    preregistrationHash,
+    "acquisition-preregistration/v1",
+  );
   derivePreEnvironmentValidity({
     index,
     validityResultHash: requiredHash(closure, "validity-result"),
     requireValid: true,
+    subjectExecutionMode: preregistration.subject_execution_mode,
   });
 
   // -- ADR-ERL2-025: how strongly this run may be spoken about ---------------

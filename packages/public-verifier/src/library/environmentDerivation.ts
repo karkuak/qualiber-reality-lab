@@ -33,6 +33,7 @@
 import {
   CODES,
   Erl2Error,
+  type AcquisitionPreregistrationV1,
   type CleanupResidueProbeV1,
   type EmergencyCleanupVerificationV1,
   type EnvironmentOperationReceiptV1,
@@ -44,6 +45,7 @@ import {
   type JourneyStepOutcomeV1,
   type LabLifecycleEventV1,
   type RestorationProbeV1,
+  type SubjectExecutionMode,
   type SubstrateBindingV1,
   type TeardownVerificationV1,
 } from "@erl2/contracts";
@@ -64,6 +66,8 @@ import {
 } from "@erl2/core";
 import { coreHash } from "@erl2/integrity";
 import type { ArtifactIndex } from "./artifactIndex.js";
+import { assertRetainedGateSetComplete } from "./gateSetAuthority.js";
+import { deriveTelemetryDeclaration } from "./telemetryDerivation.js";
 
 /** Roles a lifecycle produced, by role name. */
 function rolesOf(events: readonly LabLifecycleEventV1[]): Map<string, Hash[]> {
@@ -1053,8 +1057,46 @@ export function deriveValidityOutcome(options: {
    */
   readonly outcomes: readonly JourneyStepOutcomeV1[];
   readonly telemetryObservationRetained: boolean;
+  /**
+   * Whether this run declared an attributable-telemetry observation obtainable
+   * (ADR-ERL2-033 / ADR-ERL2-038 R8), recomputed by the caller from the retained
+   * driver manifest, archetype and step outcomes.
+   *
+   * Supplied rather than read off the gate, because the gate is the thing under
+   * test. Required rather than optional: a defaulted flag would let a caller
+   * reach the lenient answer by silence, which is the shape this file exists to
+   * refuse.
+   */
+  readonly attributableTelemetryApplicable: boolean;
+  /**
+   * The run's committed subject seam, read by the caller from the closure-bound,
+   * preregistrar-signed `acquisition-preregistration/v1` (RL-D-031).
+   *
+   * The environment branch takes it from exactly the same signed artifact the
+   * pre-environment branch does, because "both branches use equivalent authority
+   * rules" is the property this correction exists to establish -- closing one
+   * terminal while leaving the other open would leave the class open.
+   */
+  readonly subjectExecutionMode: SubjectExecutionMode;
 }): { readonly status: "valid" | "invalid"; readonly failedGateIds: readonly string[] } {
   const { validity } = options;
+
+  // -- RL-D-031: the set, before anything derived from it -------------------
+  //
+  // First, and deliberately: every comparison below asks whether a retained row
+  // agrees with retained evidence, and a set that is not this run's set makes
+  // each of those a question about the wrong run. The empty set is the clearest
+  // case -- `every` over nothing is `true`, so before this an environment
+  // terminal retaining no gates at all derived `valid`.
+  //
+  // The two applicability-governed gates are excluded from the required set
+  // here and enforced by the ADR-ERL2-039/038 rules immediately below; see
+  // `gateSetAuthority.ts` for why one property gets one guard.
+  assertRetainedGateSetComplete({
+    gates: validity.gate_results,
+    branch: "environment",
+    subjectExecutionMode: options.subjectExecutionMode,
+  });
 
   // -- ADR-ERL2-039: the exercise obligation, recomputed --------------------
   //
@@ -1099,11 +1141,29 @@ export function deriveValidityOutcome(options: {
   const telemetryGates = validity.gate_results.filter(
     (g) => g.gate_id === "attributable-telemetry-retained",
   );
-  if (telemetryGates.length > 0 && !succeeded) {
+  // RL-D-031. This used to refuse only `!succeeded`, which is one conjunct of
+  // three: a run with no compose driver, or an archetype declaring no metric
+  // evidence source, could publish `attributable-telemetry-retained: true` over
+  // an observation it could never have obtained, and the offline verifier
+  // accepted it. Reproduced on a real fake-driver environment terminal.
+  //
+  // The narrower check is subsumed rather than dropped -- a failed exercise
+  // makes the predicate false -- so this stays one guard over one property, and
+  // the message still names the conjunct that is most often the reason.
+  if (!options.attributableTelemetryApplicable && telemetryGates.length > 0) {
     throw new Erl2Error(
       CODES.EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED,
-      "this run evaluates an attributable-telemetry gate while its exercising step did not " +
-        "succeed; telemetry applicability requires a succeeded exercise",
+      "this run evaluates an attributable-telemetry gate while it never declared the observation " +
+        "obtainable -- a compose driver, an archetype declaring a metric evidence source and a " +
+        `succeeded exercising step (exercise succeeded: ${String(succeeded)}); a boolean cannot ` +
+        "answer a question about applicability",
+    );
+  }
+  if (options.attributableTelemetryApplicable && telemetryGates.length !== 1) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_MISSING_ROLE,
+      "this run declared an obtainable attributable-telemetry observation and its validity result " +
+        `evaluates ${String(telemetryGates.length)} attributable-telemetry-retained gates; exactly one must be present`,
     );
   }
   if (options.telemetryObservationRetained && telemetryGates.length === 0) {
@@ -1263,6 +1323,24 @@ export function deriveEnvironmentSemantics(options: {
       "an environment terminal must produce exactly one validity result",
     );
   }
+  // RL-D-031. The one applicability input the required gate set depends on,
+  // resolved from the lifecycle role map exactly as the validity result itself
+  // is -- and signed by the preregistrar, a key the finalizer under test does
+  // not hold. `acquisition-preregistration` is a mandatory role of this branch's
+  // closure, so an absent one is a closure defect and is refused as one.
+  const preregistrationHash = single(roles, "acquisition-preregistration");
+  if (preregistrationHash === undefined) {
+    throw new Erl2Error(
+      CODES.GRAPH_CLOSURE_MISSING_ROLE,
+      "an environment terminal must retain exactly one acquisition preregistration; without it the " +
+        "verifier cannot decide which validity gates this run owed",
+    );
+  }
+  const preregistration = options.index.typed<AcquisitionPreregistrationV1>(
+    preregistrationHash,
+    "acquisition-preregistration/v1",
+  );
+
   const validity = deriveValidityOutcome({
     index: options.index,
     validity: options.index.typed<EnvironmentValidityResultV1>(
@@ -1270,6 +1348,14 @@ export function deriveEnvironmentSemantics(options: {
       "environment-validity-result/v1",
     ),
     requireValid: true,
+    subjectExecutionMode: preregistration.subject_execution_mode,
+    // RL-D-031. Recomputed from retained bytes through the shared ADR-ERL2-033
+    // predicate, never read from the gate whose existence it governs.
+    attributableTelemetryApplicable: deriveTelemetryDeclaration({
+      index: options.index,
+      lifecycle: options.lifecycle,
+      runId: options.runId,
+    }),
     // ADR-ERL2-039. Resolved from the lifecycle's own role map, so the exercise
     // obligation is recomputed from retained bytes rather than read off the
     // producer's verdict.
