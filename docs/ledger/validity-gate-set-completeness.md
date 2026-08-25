@@ -82,6 +82,23 @@ different role. A producer that could re-sign the preregistration would already
 hold the preregistrar key, and holding *that* key is a different compromise than
 the one this correction defends against.
 
+**What the key separation is, and is not, in this tier.** Every pinned key in
+this repository's development configuration is derived deterministically from
+its own public label: `developmentKey("preregistrar")` and
+`developmentKey("finalizer")` are one line each, and anyone holding the
+repository can recreate the entire keyring. They are nonetheless distinct
+keypairs — distinct by label, and separated by role in the pinned trust policy —
+and that distinction is what the argument above rests on: a party holding only
+the finalizer key cannot produce a preregistration this verifier will read, and
+so cannot choose the gate set its own terminal is measured against. What the
+distinction is **not** is a secrecy boundary. It establishes nothing against a
+party who can derive every development key, which in this tier is anyone with a
+checkout, and it supplies no production secrecy or custody. What this correction
+proves is therefore role-separated, run-bound authority under development
+assumptions — not independent authority, and not production authority. No
+certification, no production key custody and no new trust tier is claimed here
+or in §7.
+
 ## 3. What was implemented
 
 One new verifier-owned module,

@@ -45,12 +45,14 @@
 
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { readFileSync } from "node:fs";
+import { cpSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { coreHash, hashBytes, sealSigned, type SigningKey } from "@erl2/integrity";
 import {
   ArtifactIndex,
   derivePreEnvironmentValidity,
+  deriveEnvironmentSemantics,
   deriveTelemetryDeclaration,
   deriveValidityOutcome,
   verifierRequiredGateIds,
@@ -68,9 +70,12 @@ import {
   readJson,
   resignCascade,
   verifyOffline,
+  writeJson,
   type GateRow,
   type Json,
 } from "../support/preEnvironmentCascade.js";
+import { developmentKeyring } from "../support/keys.js";
+import { ownedTempDir } from "../support/tempDirs.js";
 import { writeLifecycle, verifyBundle } from "../support/cliRun.js";
 import { drive, selectedRun, type EnvironmentRun } from "../support/environmentCli.js";
 
@@ -656,4 +661,478 @@ test("RLD031-E: the environment branch refuses the same completeness class", () 
     "EVALUATOR_VALIDITY_GATE_FAILED",
     "declared valid over a complete set containing a failure must be refused",
   );
+});
+
+// -- the environment call site's authority, measured -------------------------
+//
+// Everything above proves the *rule* is symmetric: `assertRetainedGateSetComplete`
+// refuses the same class on both branches, and `RLD031-P16`/`RLD031-P17` prove
+// the pre-environment call site really reads the signed preregistration rather
+// than assuming a mode.
+//
+// The environment call site had no equivalent. `RLD031-E` supplies
+// `subjectExecutionMode` to `deriveValidityOutcome` itself, so it measures the
+// rule while stepping over the one line that connects the rule to the
+// preregistrar's signature -- and a mutant replacing
+//
+//     subjectExecutionMode: preregistration.subject_execution_mode
+//
+// with a hardcoded `"development_fake_port"` at that call site survived the
+// whole suite. A guard nothing measures is a guard nothing holds.
+//
+// So this case drives `deriveEnvironmentSemantics` -- the public entry point
+// that resolves the preregistration from the lifecycle's own role map and reads
+// the mode off it -- over two bundles that differ in exactly one signed field.
+
+/**
+ * The environment required set, written out rather than computed.
+ *
+ * The same discipline as `EXPECTED_PRE_ENVIRONMENT_REQUIRED` and for the same
+ * reason: building this from `verifierRequiredGateIds` would let the function
+ * under test supply its own expected answer. These are the twenty-seven
+ * environment catalogue identifiers minus the three the applicability rules own
+ * (`adapter-certified`, `subject-exercise-succeeded`,
+ * `attributable-telemetry-retained`), which is what a `development_fake_port`
+ * environment terminal owes.
+ */
+const EXPECTED_ENVIRONMENT_REQUIRED: readonly string[] = [
+  "contract-schema-closure",
+  "contract-version-closure",
+  "lifecycle-chain-verified",
+  "lifecycle-state-machine-respected",
+  "acquisition-preregistered-before-access",
+  "acquired-bytes-frozen",
+  "package-integrity-policy-applied",
+  "evidence-sources-accounted",
+  "adapter-authority-respected",
+  "subject-output-frozen-before-reveal",
+  "no-execution-after-output-freeze",
+  "precleanup-result-join-closed",
+  "cleanup-verified",
+  "trust-policy-resolved",
+  "timestamp-checkpoints-acyclic",
+  "selection-chain-closed",
+  "selection-reveal-order-respected",
+  "environment-baseline-clean",
+  "environment-not-contaminated",
+  "evidence-cutoff-realized",
+  "restoration-verified",
+  "teardown-verified",
+  "exposure-state-recorded",
+  "mandatory-graph-closed",
+];
+
+/** The one gate an `external_adapter` environment terminal additionally owes. */
+const EXTERNAL_ADAPTER_ONLY_GATE = "adapter-certified";
+
+type Event = Json & {
+  produced: { artifact_role: string; artifact_core_hash: string }[];
+  core_hash: string;
+  sequence: number;
+  prior_event_hash?: string;
+};
+
+/**
+ * A retained file's `.frozen` byte descriptor, re-stated after a rewrite.
+ *
+ * Without this the descriptor still names the byte length and SHA-256 of the
+ * artifact as it was, and the rebuild would be refused for an accounting defect
+ * before any semantic rule ran -- which is the failure mode that makes a
+ * negative case worthless.
+ */
+function refreshFrozen(file: string): void {
+  const descriptorPath = `${file}.frozen`;
+  let descriptor: Json;
+  try {
+    descriptor = readJson(descriptorPath);
+  } catch {
+    return; /* not a frozen retained file */
+  }
+  writeJson(descriptorPath, {
+    ...descriptor,
+    byte_length: statSync(file).size,
+    file_sha256: hashBytes(readFileSync(file)),
+  });
+}
+
+/** Recomputes `core_hash`, writes the artifact back, and re-states its descriptor. */
+function resealAt(file: string, body: Json): string {
+  const { core_hash: _hash, signature: _signature, ...rest } = body;
+  const hash = coreHash(rest);
+  writeJson(file, { ...rest, core_hash: hash });
+  refreshFrozen(file);
+  return hash;
+}
+
+/** The same, re-signed under a role key rather than left bare. */
+function resealSignedAt(file: string, body: Json, key: SigningKey): string {
+  const { core_hash: _hash, signature: _signature, ...rest } = body;
+  const sealed = sealSigned(rest, key) as Json;
+  writeJson(file, sealed);
+  refreshFrozen(file);
+  return sealed["core_hash"] as string;
+}
+
+interface RebuiltRun {
+  readonly dir: string;
+  readonly lifecycle: readonly LabLifecycleEventV1[];
+  readonly preregistrationHash: string;
+}
+
+/**
+ * A whole environment run rebuilt around a doctored preregistration, re-signed
+ * by the **preregistrar** and rebound everywhere the environment entry point
+ * reads.
+ *
+ * The attacker modelled here is stronger than the one the rest of this file
+ * models. Every other case doctors an artifact the finalizer already controls;
+ * this one hands the attacker the preregistrar key as well and *still* expects a
+ * refusal, because the refusal does not come from the signature -- it comes from
+ * the gate set the signed mode obliges the run to have retained.
+ *
+ * A doctored preregistration changes its own core hash, which unbinds the
+ * lifecycle event that published it, which moves every event hash after it,
+ * which moves the signed freeze head, which unbinds the run record, which
+ * unbinds the attestation's `run_record_hash`, which is signed. Each step below
+ * restores one of those links, and the events are written back to
+ * `events/NNNNNN.json` so the bundle on disk is the bundle the derivation reads.
+ *
+ * The identity control below proves the rebuild is faithful: run this with a
+ * doctor that changes nothing and the **shipped offline CLI** verifies the
+ * result end to end, `exit 0` / `valid`.
+ *
+ * What is deliberately not rebound: `selection-request/v2`, its own signed
+ * selection chain, the preregistration verification receipt and the signer
+ * inventory also name the preregistration hash. They belong to verifier stages
+ * this entry point does not traverse, and re-deriving the selection chain to
+ * reach a rule two stages earlier would measure the rebuild rather than the
+ * rule. The mode-flipped bundle is therefore coherent through every path
+ * `deriveEnvironmentSemantics` follows, and is not offered to the full CLI.
+ */
+function rebuildAroundPreregistration(
+  run: EnvironmentRun,
+  honestLifecycle: readonly LabLifecycleEventV1[],
+  doctor: (preregistration: Json) => Json,
+): RebuiltRun {
+  const keyring = developmentKeyring();
+  const dir = ownedTempDir("erl2-d031-env-");
+  cpSync(run.runRoot, dir, { recursive: true });
+  const retained = path.join(dir, "retained");
+
+  const rechain = (events: readonly Event[]): Event[] => {
+    const out: Event[] = [];
+    let prior: string | undefined;
+    for (const event of events) {
+      const next = { ...event };
+      if (prior === undefined) delete next.prior_event_hash;
+      else next.prior_event_hash = prior;
+      const { core_hash: _drop, ...body } = next;
+      const sealed = { ...body, core_hash: coreHash(body) } as Event;
+      out.push(sealed);
+      prior = sealed.core_hash;
+    }
+    return out;
+  };
+  const remapProduced = (events: readonly Event[], role: string, hash: string): Event[] =>
+    events.map((event) =>
+      event.produced.some((p) => p.artifact_role === role)
+        ? ({
+            ...event,
+            produced: event.produced.map((p) =>
+              p.artifact_role === role ? { ...p, artifact_core_hash: hash } : p,
+            ),
+          } as Event)
+        : event,
+    );
+
+  // 1. the doctored preregistration, re-signed by the preregistrar itself
+  const preregistrationPath = path.join(retained, "acquisition-preregistration.json");
+  const preregistrationHash = resealSignedAt(
+    preregistrationPath,
+    doctor(readJson(preregistrationPath)),
+    keyring.preregistrar,
+  );
+
+  // 2. the event that published it lies before the signed freeze point, so
+  //    re-pointing it moves the freeze head. Settle the chain once to find the
+  //    head, exactly as the pre-environment cascade does and for the same reason.
+  const settled = rechain(
+    remapProduced(honestLifecycle as unknown as Event[], "acquisition-preregistration", preregistrationHash),
+  );
+  const at = settled.findIndex((event) => event.produced.some((p) => p.artifact_role === "run-record"));
+  const freezeHead = (settled[at - 1] as Event).core_hash;
+
+  // 3. the run record rebinds to both the preregistration and the new head
+  const recordPath = path.join(retained, "run-record.json");
+  const recordHash = resealAt(recordPath, {
+    ...readJson(recordPath),
+    acquisition_preregistration_hash: preregistrationHash,
+    lifecycle_head_hash: freezeHead,
+  });
+
+  // 4. the terminal attestation is re-signed over the new record
+  const attestationPath = path.join(retained, "final-attestation.json");
+  const attestationHash = resealSignedAt(
+    attestationPath,
+    { ...readJson(attestationPath), run_record_hash: recordHash },
+    keyring.finalizer,
+  );
+
+  const republished = rechain(
+    remapProduced(remapProduced(settled, "run-record", recordHash), "final-attestation", attestationHash),
+  );
+  assert.equal(
+    (republished[at - 1] as Event).core_hash,
+    freezeHead,
+    "republishing the terminal must not move the signed freeze head",
+  );
+
+  // 5. the retained bundle re-points at the re-signed attestation
+  const attestationBytes = readFileSync(attestationPath);
+  const bundlePath = path.join(retained, "public-bundle.json");
+  const bundle = readJson(bundlePath);
+  const member = bundle["final_attestation"] as Json;
+  const artifact = member["artifact"] as Json;
+  const { core_hash: _bundleHash, ...bundleRest } = bundle;
+  const bundleBody: Json = {
+    ...bundleRest,
+    final_attestation: {
+      ...member,
+      artifact: {
+        ...artifact,
+        byte_length: statSync(attestationPath).size,
+        file_sha256: hashBytes(attestationBytes),
+      },
+      artifact_core_hash: attestationHash,
+    },
+  };
+  writeJson(bundlePath, { ...bundleBody, core_hash: coreHash(bundleBody) });
+  refreshFrozen(bundlePath);
+
+  // 6. the events on disk, so the index and any CLI reading this tree see the
+  //    same chain the derivation is handed rather than the pre-cascade one.
+  const bySequence = new Map(republished.map((event) => [event.sequence, event]));
+  const eventsDir = path.join(dir, "events");
+  for (const name of readdirSync(eventsDir).sort()) {
+    if (!name.endsWith(".json") || name.endsWith(".frozen")) continue;
+    const file = path.join(eventsDir, name);
+    const replacement = bySequence.get((readJson(file) as unknown as Event).sequence);
+    if (replacement === undefined) continue;
+    writeJson(file, replacement);
+    refreshFrozen(file);
+  }
+
+  return { dir, lifecycle: republished as unknown as LabLifecycleEventV1[], preregistrationHash };
+}
+
+/** The real public environment entry point, over a rebuilt run. */
+function environmentRefusal(rebuilt: RebuiltRun, runId: string): string | undefined {
+  try {
+    const report = deriveEnvironmentSemantics({
+      index: ArtifactIndex.scan(rebuilt.dir),
+      lifecycle: rebuilt.lifecycle,
+      runId,
+    });
+    assert.equal(report.validity.status, "valid", "an accepted rebuild must derive the honest verdict");
+    return undefined;
+  } catch (error) {
+    return (error as { code?: string }).code;
+  }
+}
+
+function environmentMessage(rebuilt: RebuiltRun, runId: string): string {
+  try {
+    deriveEnvironmentSemantics({
+      index: ArtifactIndex.scan(rebuilt.dir),
+      lifecycle: rebuilt.lifecycle,
+      runId,
+    });
+    return "";
+  } catch (error) {
+    return (error as { message?: string }).message ?? "";
+  }
+}
+
+test("RLD031-E2: the environment call site derives the required set from the signed preregistration", () => {
+  const run = selectedRun();
+  assert.equal(drive(run), "generic_finalized");
+  const honestLifecycle = JSON.parse(
+    readFileSync(writeLifecycle(run.runRoot), "utf8"),
+  ) as LabLifecycleEventV1[];
+
+  // -- the catalogue, pinned independently ---------------------------------
+  //
+  // Asserted against the shipped catalogue rather than derived from it, so a
+  // catalogue change that widens or narrows what an environment terminal owes
+  // has to be made here too, deliberately.
+  assert.deepEqual(
+    sorted(verifierRequiredGateIds("environment", "development_fake_port")),
+    sorted(EXPECTED_ENVIRONMENT_REQUIRED),
+    "the environment required set must be the gates this file names",
+  );
+  assert.deepEqual(
+    sorted(verifierRequiredGateIds("environment", "external_adapter")),
+    sorted([...EXPECTED_ENVIRONMENT_REQUIRED, EXTERNAL_ADAPTER_ONLY_GATE]),
+    "an external-adapter environment run must additionally owe adapter-certified",
+  );
+
+  // -- the identity control -------------------------------------------------
+  //
+  // The same rebuild, with a doctor that changes nothing. It must land on a
+  // bundle the *shipped offline CLI* accepts end to end -- not merely one the
+  // entry point tolerates. Without this every refusal below could be the
+  // rebuild failing rather than the rule refusing.
+  const control = rebuildAroundPreregistration(run, honestLifecycle, (prereg) => prereg);
+  const controlCli = verifyBundle(control.dir, {
+    sourceTrustPolicyHash: run.registry.sourceTrustPolicyHash,
+  });
+  assert.equal(controlCli.exitCode, 0, JSON.stringify(controlCli.body.errors));
+  assert.equal(
+    (controlCli.body.data as { verdict: string }).verdict,
+    "valid",
+    "the identity rebuild must reproduce a bundle the shipped verifier calls valid",
+  );
+  assert.equal(
+    environmentRefusal(control, run.runId),
+    undefined,
+    "the honest signed preregistration must be accepted by the entry point",
+  );
+
+  // The honest run really is a fake-port run, and really does not carry the
+  // adapter gate. Both halves matter: the case below is only a case because the
+  // mode-specific gate is genuinely absent from these retained bytes.
+  const honestPrereg = readJson(
+    path.join(control.dir, "retained", "acquisition-preregistration.json"),
+  );
+  assert.equal(honestPrereg["subject_execution_mode"], "development_fake_port");
+  const retainedGates = gatesOf(
+    readJson(path.join(control.dir, "retained", "validity-result.json")),
+  ).map((gate) => gate.gate_id);
+  assert.equal(
+    retainedGates.includes(EXTERNAL_ADAPTER_ONLY_GATE),
+    false,
+    "a fake-port run must retain no adapter-certified gate",
+  );
+
+  // -- the case: one signed field, flipped ----------------------------------
+  //
+  // Fully re-signed by the preregistrar, rebound through the lifecycle, the run
+  // record and the attestation. The retained gate set is byte-identical to the
+  // control's. The only difference in the whole bundle is the mode the
+  // preregistrar signed.
+  const adapter = rebuildAroundPreregistration(run, honestLifecycle, (prereg) => ({
+    ...prereg,
+    subject_execution_mode: "external_adapter",
+  }));
+  assert.equal(
+    readJson(path.join(adapter.dir, "retained", "acquisition-preregistration.json"))[
+      "subject_execution_mode"
+    ],
+    "external_adapter",
+  );
+  assert.notEqual(
+    adapter.preregistrationHash,
+    control.preregistrationHash,
+    "flipping a signed field must move the preregistration's own hash",
+  );
+  assert.deepEqual(
+    gatesOf(readJson(path.join(adapter.dir, "retained", "validity-result.json"))),
+    gatesOf(readJson(path.join(control.dir, "retained", "validity-result.json"))),
+    "the two rebuilds must present the identical retained gate set",
+  );
+
+  // The whole point. The same gate set that is complete under the signed
+  // fake-port mode is incomplete under the signed external-adapter mode, and the
+  // entry point must say so -- naming the gate the signed mode obliged.
+  assert.equal(
+    environmentRefusal(adapter, run.runId),
+    "GRAPH_CLOSURE_MISSING_ROLE",
+    "an external-adapter environment terminal that retains no adapter-certified gate must be refused",
+  );
+  assert.match(
+    environmentMessage(adapter, run.runId),
+    /omits required gate\(s\): adapter-certified/,
+    "the refusal must name the gate the signed mode required",
+  );
+
+  // -- the authority source must be present, intact and signed --------------
+  //
+  // Absent: the mandatory closure role is gone, so there is no signed mode to
+  // read and the terminal is refused as the closure defect it is.
+  assert.equal(
+    environmentRefusal(
+      {
+        ...control,
+        lifecycle: control.lifecycle.map((event) => ({
+          ...event,
+          produced: event.produced.filter(
+            (produced) => produced.artifact_role !== "acquisition-preregistration",
+          ),
+        })) as unknown as LabLifecycleEventV1[],
+      },
+      run.runId,
+    ),
+    "GRAPH_CLOSURE_MISSING_ROLE",
+    "a terminal retaining no preregistration cannot be told which gates it owed",
+  );
+
+  // Malformed, left unbound: the bytes no longer produce the hash the lifecycle
+  // names, and the index refuses before any semantic rule reads a mode.
+  {
+    const tampered = rebuildAroundPreregistration(run, honestLifecycle, (prereg) => prereg);
+    const file = path.join(tampered.dir, "retained", "acquisition-preregistration.json");
+    writeJson(file, { ...readJson(file), subject_execution_mode: "not-a-mode" });
+    refreshFrozen(file);
+    assert.equal(
+      environmentRefusal(tampered, run.runId),
+      "ARTIFACT_HASH_MISMATCH",
+      "a doctored preregistration that was not rebound must be refused as tampered bytes",
+    );
+  }
+
+  // Malformed, fully rebound: the hash resolves, so the defect is no longer an
+  // integrity one -- and closure admission, the boundary that owns it, refuses a
+  // preregistration that satisfies none of its declared contracts. A mode the
+  // contract does not define never reaches the required-set rule to be read as
+  // "not external_adapter".
+  for (const malformed of [
+    (prereg: Json): Json => ({ ...prereg, subject_execution_mode: "not-a-mode" }),
+    (prereg: Json): Json => {
+      const { subject_execution_mode: _absent, ...rest } = prereg;
+      return rest;
+    },
+  ]) {
+    const rebuilt = rebuildAroundPreregistration(run, honestLifecycle, malformed);
+    assert.throws(
+      () => ArtifactIndex.scan(rebuilt.dir).admit(rebuilt.preregistrationHash as never),
+      (error: { code?: string }) => error.code === "GRAPH_CLOSURE_RETAINED_CONTRACT_INVALID",
+      "a preregistration whose mode the contract does not define must not be admitted as evidence",
+    );
+  }
+
+  // Unsigned: stripping the signature leaves the core hash untouched -- it is
+  // computed over the body -- so the mode still resolves and the entry point
+  // still reads it. The refusal has to come from the stage that owns signatures,
+  // and it does: the shipped offline CLI refuses the bundle outright.
+  {
+    const unsigned = rebuildAroundPreregistration(run, honestLifecycle, (prereg) => prereg);
+    const file = path.join(unsigned.dir, "retained", "acquisition-preregistration.json");
+    const { signature: _stripped, ...bare } = readJson(file);
+    writeJson(file, bare);
+    refreshFrozen(file);
+    assert.equal(
+      readJson(file)["core_hash"],
+      unsigned.preregistrationHash,
+      "stripping a signature must not move the core hash; that is why this case needs the CLI",
+    );
+    const cli = verifyBundle(unsigned.dir, {
+      sourceTrustPolicyHash: run.registry.sourceTrustPolicyHash,
+    });
+    assert.notEqual(cli.exitCode, 0, "an unsigned preregistration must not verify");
+    assert.equal(
+      (cli.body.errors as { code: string }[])[0]?.code,
+      "GRAPH_CLOSURE_RETAINED_CONTRACT_INVALID",
+      "an unsigned preregistration is not a preregistration this verifier will read",
+    );
+  }
 });
