@@ -22,7 +22,7 @@ import {
   sandboxControlReport,
   verifyLocalAdapterCertificationV2,
 } from "@erl2/core";
-import { REFERENCE_CORRECT_MANIFEST, referenceAdapterEntry } from "../support/adapterFixtures.js";
+import { REFERENCE_CORRECT_MANIFEST, referenceAdapterEntry, sabotageAdapterEntry } from "../support/adapterFixtures.js";
 import {
   ARCHIVE_SHAPE,
   BUNDLE_SHAPE,
@@ -90,7 +90,56 @@ test("LOCAL-V2: V1 remains the default and cannot be selected for local mode", (
   assert.equal(error.code, CODES.ADAPTER_EXECUTION_MODE_UNSUPPORTED);
 });
 
-test("LOCAL-V2: a V1 SDK response to the V2-only offer is a downgrade refusal", () => {
+test("LOCAL-V2: a raw-protocol adapter answering V1 to the V2-only offer is a downgrade refusal", () => {
+  // The shipped SDK refuses this itself before it can ever write such a
+  // frame (see the adapter-sdk negotiation test below), so this exercises
+  // the host's own independent defense against an adapter that skips the
+  // SDK entirely and sends the downgrade on the wire directly.
+  const shape: LocalFixtureShape = {
+    ...ARCHIVE_SHAPE,
+    adapterId: "sabotage-v2-local-downgrade",
+    operation: "acquire",
+    payload: {
+      schema_version: "acquire-payload/v1",
+      provenance_mode: "acquired",
+      source_descriptor_input_id: "package-input",
+      output_input_id: "package-output",
+      expected_package_kind: "archive",
+      credential_handle_ids: [],
+    },
+    entryName: "unused",
+  };
+  const entryPath = sabotageAdapterEntry("v2-local-downgrade");
+  const manifest = localManifestForEntry(shape, entryPath);
+  const receipt = localReceipt(manifest, shape);
+  const plan = localPlan(manifest, receipt, shape);
+  const request = localRequest(manifest, plan, shape);
+  const host = new AdapterHost({
+    runId: LOCAL_RUN_ID,
+    adapterManifest: manifest,
+    localAuthorityV2: { mode: "certified_external", receipt },
+    localObservationPlan: plan,
+    adapterEntryPath: entryPath,
+    workspaceRoot: mkdtempSync(path.join(tmpdir(), "erl2-v2-downgrade-")),
+    store: new ArtifactStore(mkdtempSync(path.join(tmpdir(), "erl2-v2-downgrade-store-"))),
+    clock: new SteppingClock(LOCAL_NOW, 1000),
+    wallClockMs: 10_000,
+  });
+  const error = refusal(() =>
+    host.run({ operation: "acquire", operationId: request.operation_id, request, executionMode: "local_observation" }),
+  );
+  assert.equal(error.code, CODES.ADAPTER_PROTOCOL_DOWNGRADE_REFUSED);
+});
+
+test("LOCAL-V2: an SDK-built adapter that never declares supportedProtocolVersions refuses at negotiation, not by dropping the request", () => {
+  // `reference-correct` is built with `@erl2/adapter-sdk` and never declares
+  // `supportedProtocolVersions: ["subject-adapter/v2"]`. Against a V2-only
+  // local offer the SDK must now refuse immediately inside the adapter
+  // process (packages/adapter-sdk/src/sdk.ts) rather than answer with a
+  // fabricated V1 negotiation and silently drop the operation frame that
+  // follows it. The host sees no negotiation frame at all as a result — a
+  // distinct symptom from the raw-protocol downgrade case above, which does
+  // negotiate (dishonestly) and is caught by assertNegotiation instead.
   const shape: LocalFixtureShape = {
     ...ARCHIVE_SHAPE,
     adapterId: "reference-correct",
@@ -116,15 +165,15 @@ test("LOCAL-V2: a V1 SDK response to the V2-only offer is a downgrade refusal", 
     localAuthorityV2: { mode: "certified_external", receipt },
     localObservationPlan: plan,
     adapterEntryPath: entryPath,
-    workspaceRoot: mkdtempSync(path.join(tmpdir(), "erl2-v2-downgrade-")),
-    store: new ArtifactStore(mkdtempSync(path.join(tmpdir(), "erl2-v2-downgrade-store-"))),
+    workspaceRoot: mkdtempSync(path.join(tmpdir(), "erl2-v2-undeclared-")),
+    store: new ArtifactStore(mkdtempSync(path.join(tmpdir(), "erl2-v2-undeclared-store-"))),
     clock: new SteppingClock(LOCAL_NOW, 1000),
     wallClockMs: 10_000,
   });
   const error = refusal(() =>
     host.run({ operation: "acquire", operationId: request.operation_id, request, executionMode: "local_observation" }),
   );
-  assert.equal(error.code, CODES.ADAPTER_PROTOCOL_DOWNGRADE_REFUSED);
+  assert.equal(error.code, CODES.ADAPTER_PROTOCOL_VERSION_MISMATCH);
 });
 
 test("LOCAL-V2: governed V2 is rejected before executable dispatch", () => {
