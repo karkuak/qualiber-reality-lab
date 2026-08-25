@@ -37,14 +37,17 @@ import {
   assertSubstrateBindingConsistent,
   deriveRestorationOutcome,
   deriveTeardownOutcome,
+  deriveTelemetryDeclaration,
   deriveValidityOutcome,
 } from "@erl2/public-verifier";
 import type {
+  AcquisitionPreregistrationV1,
   EnvironmentRestorationVerificationV1,
   EnvironmentValidityResultV1,
   InvalidLabRunRecordV1,
   JourneyStepOutcomeV1,
   LabLifecycleEventV1,
+  SubjectExecutionMode,
   TeardownVerificationV1,
 } from "@erl2/contracts";
 import { erl2, verifyBundle, writeLifecycle } from "../support/cliRun.js";
@@ -72,6 +75,8 @@ function retained<T>(run: EnvironmentRun, relative: string): T {
 function exerciseContext(run: EnvironmentRun): {
   readonly outcomes: readonly JourneyStepOutcomeV1[];
   readonly telemetryObservationRetained: boolean;
+  readonly subjectExecutionMode: SubjectExecutionMode;
+  readonly attributableTelemetryApplicable: boolean;
 } {
   const index = ArtifactIndex.scan(run.runRoot);
   const roles = new Map<string, string[]>();
@@ -88,6 +93,21 @@ function exerciseContext(run: EnvironmentRun): {
     ),
     telemetryObservationRetained:
       (roles.get("attributable-telemetry-observation") ?? []).length > 0,
+    // RL-D-031, and resolved the same way for the same reason: read from this
+    // run's own preregistrar-signed preregistration rather than stated, so these
+    // cases keep measuring the rule instead of a convenient constant.
+    subjectExecutionMode: (
+      index.get((roles.get("acquisition-preregistration") ?? [])[0] as never)
+        .value as AcquisitionPreregistrationV1
+    ).subject_execution_mode,
+    // RL-D-031, recomputed through the same shared predicate the production
+    // caller uses rather than stated: a fake-driver run declares nothing, and if
+    // that ever stops being true these cases should notice.
+    attributableTelemetryApplicable: deriveTelemetryDeclaration({
+      index,
+      lifecycle: lifecycle(run),
+      runId: run.runId,
+    }),
   };
 }
 
@@ -216,6 +236,8 @@ test("VERIFIER-DERIVE: the exercise obligation is recomputed, not read from the 
         requireValid: true,
         outcomes: context.outcomes.filter((o) => o.intent !== "exercise"),
         telemetryObservationRetained: context.telemetryObservationRetained,
+        subjectExecutionMode: context.subjectExecutionMode,
+        attributableTelemetryApplicable: context.attributableTelemetryApplicable,
       }),
     ),
     "EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED",
@@ -234,6 +256,8 @@ test("VERIFIER-DERIVE: the exercise obligation is recomputed, not read from the 
           o.intent === "exercise" ? ({ ...o, status: "failed" } as JourneyStepOutcomeV1) : o,
         ),
         telemetryObservationRetained: context.telemetryObservationRetained,
+        subjectExecutionMode: context.subjectExecutionMode,
+        attributableTelemetryApplicable: context.attributableTelemetryApplicable,
       }),
     ),
     "EVALUATOR_VALIDITY_GATE_FAILED",
@@ -250,6 +274,8 @@ test("VERIFIER-DERIVE: the exercise obligation is recomputed, not read from the 
         requireValid: true,
         outcomes: context.outcomes,
         telemetryObservationRetained: true,
+        subjectExecutionMode: context.subjectExecutionMode,
+        attributableTelemetryApplicable: context.attributableTelemetryApplicable,
       }),
     ),
     "EVALUATOR_VALIDITY_GATE_NOT_LAB_OWNED",
