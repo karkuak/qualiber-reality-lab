@@ -31,11 +31,27 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { erl2 } from "../support/cliRun.js";
 import { ownedTempDir } from "../support/tempDirs.js";
+import { COMMAND_REGISTRY } from "@erl2/cli";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
 const bareHelp = erl2(["--help"]);
 const COMMANDS = ((bareHelp.body.data as { commands?: unknown } | undefined)?.commands ?? []) as string[];
+
+/**
+ * The production dispatch authority, imported directly from the CLI module — the
+ * single object `runCommand` dispatches through — NOT derived from `--help`.
+ *
+ * This is the whole point of the M2 F-1 hardening: the discoverability contract
+ * must compare TWO independent surfaces — what the CLI can actually dispatch
+ * (this registry) versus what the top-level `--help` renders (`COMMANDS`, above)
+ * — so a command that is dispatchable but unlisted (or listed but not
+ * dispatchable) is a hard failure rather than an invisible gap. The original
+ * suite derived both its actual and its expected set from `--help` alone; a
+ * hidden dispatchable command therefore stayed green (reproduced by mutation
+ * M03 / M-F1). `REGISTRY_NAMES` and `COMMANDS` never share a source.
+ */
+const REGISTRY_NAMES = Object.keys(COMMAND_REGISTRY);
 
 interface FsEntrySnapshot {
   readonly type: "file" | "directory";
@@ -386,4 +402,93 @@ test("both required CI jobs declare a bounded timeout-minutes, and required chec
     /os:\s*\[ubuntu-latest,\s*macos-latest\]/u,
     "the cross-platform-golden matrix legs must be unchanged",
   );
+});
+
+// -- M2 F-1: command-inventory authority ---------------------------------------
+//
+// The hardening below is what closes M2 F-1. Every assertion in this section
+// draws the "expected" set from the imported production registry (REGISTRY_NAMES)
+// and the "actual" set from the rendered top-level `--help` (COMMANDS): two
+// independently produced surfaces. A command that is dispatchable but not
+// rendered — or rendered but not dispatchable — breaks set equality here, which
+// the original `--help`-only derivation could never detect.
+
+test("F-1: the rendered top-level inventory equals the production dispatch registry, exactly", () => {
+  // Two independent surfaces: REGISTRY_NAMES is imported from the CLI module
+  // (the object runCommand dispatches through); COMMANDS is parsed out of a
+  // spawned `erl2 --help`. Exact set equality in BOTH directions is the core
+  // anti-F-1 invariant: no dispatchable-but-hidden command, and no
+  // listed-but-undispatchable command, can survive it.
+  const rendered = new Set(COMMANDS);
+  const registry = new Set(REGISTRY_NAMES);
+  const dispatchableButHidden = REGISTRY_NAMES.filter((name) => !rendered.has(name));
+  const listedButUndispatchable = COMMANDS.filter((name) => !registry.has(name));
+  assert.deepEqual(
+    dispatchableButHidden,
+    [],
+    `every dispatchable command must appear in top-level --help; hidden: ${JSON.stringify(dispatchableButHidden)}`,
+  );
+  assert.deepEqual(
+    listedButUndispatchable,
+    [],
+    `every listed command must be backed by a dispatch registry entry; unbacked: ${JSON.stringify(listedButUndispatchable)}`,
+  );
+  // The set-equality statement itself, so a future reader sees the whole claim
+  // in one line rather than only its two decompositions.
+  assert.deepEqual([...registry].sort(), [...rendered].sort(), "registry and rendered inventory must be the same set");
+});
+
+test("F-1: neither the registry nor the rendered inventory contains a duplicate command", () => {
+  assert.equal(REGISTRY_NAMES.length, new Set(REGISTRY_NAMES).size, "the dispatch registry must have no duplicate name");
+  assert.equal(COMMANDS.length, new Set(COMMANDS).size, "the rendered inventory must have no duplicate name");
+});
+
+test("F-1: the rendered public inventory is in a deterministic, sorted order", () => {
+  // The listing is intentionally public and stable (`[...IMPLEMENTED_COMMANDS].sort()`);
+  // an unexpected reorder — e.g. reverting to insertion order — is a contract break.
+  assert.deepEqual(COMMANDS, [...COMMANDS].sort(), "top-level --help must list commands in sorted order");
+});
+
+test("F-1: every registry command is dispatchable — recognised, never refused as an unknown command", () => {
+  // Independent of --help: iterate the REGISTRY and prove each name reaches its
+  // handler. A registered command may still refuse (missing required flags, an
+  // unshipped slice), but it must NOT be rejected by the terminal
+  // unknown-command path — that would mean a registry entry with no dispatch.
+  for (const command of REGISTRY_NAMES) {
+    const result = erl2([command]);
+    const first = result.body.errors[0];
+    const isUnknownCommand =
+      first?.code === "CFG_UNKNOWN_FLAG" && /unknown command/.test(first?.message ?? "");
+    assert.equal(isUnknownCommand, false, `${command} is in the registry but was refused as an unknown command`);
+  }
+});
+
+test("F-1: every registry command answers its own --help, independently of the rendered listing", () => {
+  // The same clean-help guarantee the suite already checks for COMMANDS, but
+  // driven from REGISTRY_NAMES. If a command were ever dispatchable yet dropped
+  // from the rendered listing, the --help-derived loop above would skip it;
+  // this loop would not.
+  for (const command of REGISTRY_NAMES) {
+    const result = erl2([command, "--help"]);
+    assert.equal(result.exitCode, 0, `${command} --help: ${JSON.stringify(result.body.errors)}`);
+    assert.equal(result.body.ok, true, `${command} --help should succeed`);
+    assert.equal(result.body.run_id, undefined, `${command} --help must not dispatch (run_id present)`);
+    assert.equal(result.body.state, undefined, `${command} --help must not dispatch (state present)`);
+    const data = result.body.data as { command?: unknown; usage?: unknown } | undefined;
+    assert.equal(data?.command, command, `${command} --help should name the command it is for`);
+    assert.ok(data?.usage !== undefined, `${command} --help should carry a usage object`);
+  }
+});
+
+test("F-1: every command carrying authored usage is in the dispatch registry", () => {
+  // The authored-usage set is a subset of the inventory, so it must also be a
+  // subset of the registry; a command documented but not dispatchable would be
+  // a dead entry.
+  const usageBlob = (bareHelp.body.data as { usage?: Record<string, unknown> }).usage ?? {};
+  for (const command of Object.keys(usageBlob)) {
+    assert.ok(
+      REGISTRY_NAMES.includes(command),
+      `authored-usage command ${command} must be backed by a dispatch registry entry`,
+    );
+  }
 });
