@@ -1,0 +1,42 @@
+{
+  "schema_version": "subject-adapter-manifest/v2",
+  "adapter_id": "neutral-full-lifecycle-observer",
+  "version": "1.0.0",
+  "adapter_artifact_hash": "sha256:5664f27e617a96bbf6753085dfde71618834473b337d313916eec36bb0ccdcab",
+  "protocol_support": [
+    {
+      "protocol_version": "subject-adapter/v2",
+      "execution_modes": ["local_observation"],
+      "operations": [
+        "acquire",
+        "validate-package",
+        "install",
+        "configure",
+        "start",
+        "interact",
+        "translate-evidence",
+        "collect-outputs",
+        "project",
+        "stop",
+        "uninstall",
+        "compensate",
+        "report-residue"
+      ],
+      "supported_package_kinds": ["archive"],
+      "required_controls": [
+        "separate-process",
+        "process-tree-termination",
+        "wall-clock-deadline",
+        "bounded-request-bytes",
+        "bounded-response-bytes",
+        "writable-output-only",
+        "environment-variable-allowlist",
+        "bounded-diagnostics"
+      ]
+    }
+  ],
+  "required_broker_capabilities": [],
+  "network_allowlist_ids": [],
+  "certification_receipt_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "owner": "neutral trusted-local example owner"
+}

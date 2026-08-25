@@ -6,6 +6,12 @@ local run. Read the first section before the commands. It is linked from the
 which is the shorter front-door version of this same path. If a run refuses,
 see [the troubleshooting and refusal reference](trusted-local-observation-troubleshooting.md).
 
+For a concrete instance of everything below — a committed, runnable, product-neutral
+adapter, manifest draft, plan draft and input, exercised by CI on every change —
+see [the neutral trusted-local worked example](../../examples/trusted-local-neutral/README.md).
+Reading it alongside this document is usually faster than reading either alone:
+this document says what each step means, and the example shows one that runs.
+
 ## What this is, and what it is not
 
 You own the adapter. You have read its source. You accept that its exact bytes
@@ -298,11 +304,21 @@ either way, and the command exits nonzero.
 
 `AdapterHost` compares the operation list your adapter negotiates against your
 manifest's **positionally**, not as a set. A manifest with the right operations
-in a different order is refused — and refused as *"the adapter process ended
-without a valid response"*, which names the symptom rather than the cause.
+in a different order is refused. The cause is a manifest operation order that
+differs from the handler-key order the adapter SDK negotiates.
 
-If you see that message and your adapter runs fine on its own, compare the two
-orderings first.
+The refusal you see is layered:
+
+- the **retained record** carries the load-bearing certification refusal,
+  `ADAPTER_CERTIFICATION_SCOPE_MISMATCH` — the negotiated operation list does not
+  exactly match the selected certified profile;
+- the **console** may instead surface `ADAPTER_LOCAL_OPERATION_ORDER_INVALID`,
+  with prerequisite wording such as `operation stop requires completed start`.
+  That is a downstream consequence of the failed operation moving the run to its
+  frozen cleanup suffix, not a separate cause.
+
+If you see either and your adapter runs fine on its own, compare the two
+orderings first. Neither message names the ordering directly.
 
 ## Cleanup
 
