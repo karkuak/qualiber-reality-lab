@@ -30,6 +30,8 @@ import {
   FakeEnvironmentDriver,
   freezeResourceFrontier,
   LifecycleLog,
+  PRE_ENVIRONMENT_GATE_IDS,
+  requiredGateIds,
   reservationNamespaceHash,
   safeActions,
   SteppingClock,
@@ -279,6 +281,72 @@ function preregister(ctx: Ctx) {
  * join before cleanup, cleanup verifies, validity is valid, and the finalizer
  * produces an attestation and a closed public bundle.
  */
+/**
+ * The pre-environment gate rows this hand-built fixture retains (RL-D-031).
+ *
+ * Driven from the shipped catalogue rather than hand-listed, and that is the
+ * whole point. This fixture carried two rows for its entire life -- one of them
+ * \`acquisition-controls-passed\`, an identifier no Lab catalogue has ever
+ * defined -- and nothing noticed, because the offline verifier derived its
+ * verdict from whatever rows it found. Re-listing fifteen identifiers by hand
+ * here would reproduce the same defect one catalogue revision later: a gate
+ * added to \`LAB_VALIDITY_GATES\` would silently stop being retained, and a
+ * fixture that is quietly short is exactly the artifact the verifier must
+ * refuse.
+ *
+ * So the rows are generated from \`requiredGateIds\` and every identifier must
+ * have an evidence mapping. A catalogue addition with no mapping throws here,
+ * at fixture-generation time, where it is cheap and loud -- rather than
+ * producing a fixture whose incompleteness is discovered by a verifier refusal
+ * in someone else's branch.
+ *
+ * The evidence each gate cites mirrors what the real producer cites in
+ * \`workspace.ts\`: the same kind of artifact answers the same question, so the
+ * fixture is a faithful small run rather than a shape with plausible hashes.
+ */
+function preEnvironmentGateRows(evidence: {
+  readonly lifecycleHead: Hash;
+  readonly preregHash: Hash;
+  readonly acquisitionHash: Hash;
+  readonly verificationHash: Hash;
+  readonly outputHash: Hash;
+  readonly adapterHash: Hash;
+  readonly joinHash: Hash;
+  readonly cleanupHash: Hash;
+  readonly trustPolicyHash: Hash;
+}): readonly { gate_id: string; passed: boolean; evidence_refs: Hash[] }[] {
+  const refs: Readonly<Record<string, Hash>> = {
+    "contract-schema-closure": evidence.lifecycleHead,
+    "contract-version-closure": evidence.lifecycleHead,
+    "lifecycle-chain-verified": evidence.lifecycleHead,
+    "lifecycle-state-machine-respected": evidence.lifecycleHead,
+    "acquisition-preregistered-before-access": evidence.preregHash,
+    "acquired-bytes-frozen": evidence.acquisitionHash,
+    "package-integrity-policy-applied": evidence.verificationHash,
+    "evidence-sources-accounted": evidence.outputHash,
+    "adapter-authority-respected": evidence.adapterHash,
+    "subject-output-frozen-before-reveal": evidence.outputHash,
+    "no-execution-after-output-freeze": evidence.outputHash,
+    "precleanup-result-join-closed": evidence.joinHash,
+    "cleanup-verified": evidence.cleanupHash,
+    "trust-policy-resolved": evidence.trustPolicyHash,
+    "timestamp-checkpoints-acyclic": evidence.lifecycleHead,
+  };
+  // This run preregisters the development fake port, so \`adapter-certified\` is
+  // omitted rather than passed -- the applicability shape ADR-ERL2-036 requires
+  // and the one the shipped CLI goldens already have.
+  return requiredGateIds(PRE_ENVIRONMENT_GATE_IDS, { externalAdapter: false }).map((gateId) => {
+    const ref = refs[gateId];
+    if (ref === undefined) {
+      throw new Error(
+        `fakeRun retains no evidence for required pre-environment gate ${gateId}; ` +
+          "the Lab catalogue grew and this fixture did not",
+      );
+    }
+    return { gate_id: gateId, passed: true, evidence_refs: [ref] };
+  });
+}
+
 export function runFakeValidPreEnvironmentRun(): FakeRunResult {
   const root = newWorkspace("valid");
   const runId = fakeRunId(0x11);
@@ -642,10 +710,17 @@ export function runFakeValidPreEnvironmentRun(): FakeRunResult {
     run_id: runId,
     terminal_stage: "verify_package" as const,
     generic_run_policy_hash: scaffold.policy.hash,
-    gate_results: [
-      { gate_id: "acquisition-controls-passed", passed: true, evidence_refs: [acquisition.hash] },
-      { gate_id: "cleanup-verified", passed: true, evidence_refs: [cleanup.hash] },
-    ],
+    gate_results: preEnvironmentGateRows({
+      lifecycleHead: ctx.lifecycle.head as Hash,
+      preregHash: scaffold.prereg.hash,
+      acquisitionHash: acquisition.hash,
+      verificationHash: verification.hash,
+      outputHash: output.hash,
+      adapterHash: scaffold.adapter.hash,
+      joinHash: join.hash,
+      cleanupHash: cleanup.hash,
+      trustPolicyHash: scaffold.trustPolicyPublished.hash,
+    }),
     pre_environment_cleanup_hash: cleanup.hash,
     status: "valid" as const,
     invalidity_finding_hashes: [],

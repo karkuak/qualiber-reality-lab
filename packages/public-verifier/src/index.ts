@@ -73,7 +73,14 @@ export {
   type PreEnvironmentValidityDerivation,
 } from "./library/preEnvironmentDerivation.js";
 export {
+  assertRetainedGateSetComplete,
+  verifierRequiredGateIds,
+  type GateIdentity,
+  type TerminalBranch,
+} from "./library/gateSetAuthority.js";
+export {
   deriveAttributableTelemetry,
+  deriveTelemetryDeclaration,
   type AttributableTelemetryReport,
 } from "./library/telemetryDerivation.js";
 export {
