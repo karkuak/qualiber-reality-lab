@@ -1,0 +1,232 @@
+{
+  "schema_version": "local-observation-plan/v1",
+  "observation_id": "018f0000-0000-7000-8000-00000000e103",
+  "mode": "local_observation",
+  "protocol_version": "subject-adapter/v2",
+  "operations": [
+    {
+      "sequence": 0,
+      "operation_id": "op-acquire",
+      "operation": "acquire",
+      "payload": {
+        "schema_version": "acquire-payload/v1",
+        "provenance_mode": "acquired",
+        "source_descriptor_input_id": "package-input",
+        "output_input_id": "package-output",
+        "expected_package_kind": "archive",
+        "credential_handle_ids": []
+      },
+      "timeout_ms": 15000,
+      "cleanup": false
+    },
+    {
+      "sequence": 1,
+      "operation_id": "op-validate-package",
+      "operation": "validate-package",
+      "payload": {
+        "schema_version": "validate-package-payload/v1",
+        "package_input_id": "package-input",
+        "package_kind": "archive"
+      },
+      "timeout_ms": 15000,
+      "cleanup": false
+    },
+    {
+      "sequence": 2,
+      "operation_id": "op-install",
+      "operation": "install",
+      "payload": {
+        "schema_version": "install-payload/v1",
+        "package_input_id": "package-input"
+      },
+      "timeout_ms": 15000,
+      "cleanup": false
+    },
+    {
+      "sequence": 3,
+      "operation_id": "op-configure",
+      "operation": "configure",
+      "payload": {
+        "schema_version": "configure-payload/v1",
+        "configuration_input_ids": []
+      },
+      "timeout_ms": 15000,
+      "cleanup": false
+    },
+    {
+      "sequence": 4,
+      "operation_id": "op-start",
+      "operation": "start",
+      "payload": {
+        "schema_version": "start-payload/v1",
+        "input_ids": []
+      },
+      "timeout_ms": 15000,
+      "cleanup": false
+    },
+    {
+      "sequence": 5,
+      "operation_id": "op-interact",
+      "operation": "interact",
+      "payload": {
+        "schema_version": "interact-payload/v1",
+        "interaction_input_ids": []
+      },
+      "timeout_ms": 15000,
+      "cleanup": false
+    },
+    {
+      "sequence": 6,
+      "operation_id": "op-translate-evidence",
+      "operation": "translate-evidence",
+      "payload": {
+        "schema_version": "translate-evidence-payload/v1",
+        "evidence_input_ids": [],
+        "evidence_mount_handle_id": "evidence-mount"
+      },
+      "timeout_ms": 15000,
+      "cleanup": false
+    },
+    {
+      "sequence": 7,
+      "operation_id": "op-collect-outputs",
+      "operation": "collect-outputs",
+      "payload": {
+        "schema_version": "collect-outputs-payload/v1",
+        "requested_output_role_ids": []
+      },
+      "timeout_ms": 15000,
+      "cleanup": false
+    },
+    {
+      "sequence": 8,
+      "operation_id": "op-project",
+      "operation": "project",
+      "payload": {
+        "schema_version": "project-payload/v1",
+        "evidence_input_ids": [],
+        "projection_schema": "local-draft-v1"
+      },
+      "timeout_ms": 15000,
+      "cleanup": false
+    },
+    {
+      "sequence": 9,
+      "operation_id": "op-stop",
+      "operation": "stop",
+      "payload": {
+        "schema_version": "stop-payload/v1",
+        "start_operation_id": "op-start"
+      },
+      "timeout_ms": 15000,
+      "cleanup": true
+    },
+    {
+      "sequence": 10,
+      "operation_id": "op-uninstall",
+      "operation": "uninstall",
+      "payload": {
+        "schema_version": "uninstall-payload/v1",
+        "install_operation_id": "op-install"
+      },
+      "timeout_ms": 15000,
+      "cleanup": true
+    },
+    {
+      "sequence": 11,
+      "operation_id": "op-report-residue",
+      "operation": "report-residue",
+      "payload": {
+        "schema_version": "report-residue-payload/v1",
+        "checkpoint": "final"
+      },
+      "timeout_ms": 15000,
+      "cleanup": true
+    }
+  ],
+  "inputs": [
+    {
+      "input_id": "package-input",
+      "role": "package-input",
+      "provenance_mode": "host_provisioned",
+      "artifact": {
+        "path": "observation-inputs/package-mount/package.bin",
+        "media_type": "application/octet-stream",
+        "byte_length": 91,
+        "file_sha256": "sha256:b2a7cd2fbaff170a3dda5b401ec5e651a68d3b33e110b39a299c8f51defc29f7",
+        "classification": "INTERNAL"
+      }
+    }
+  ],
+  "resource_limits": {
+    "schema_version": "local-observation-limits/v1",
+    "wall_clock_ms": 20000,
+    "max_request_bytes": 262144,
+    "max_response_bytes": 262144,
+    "max_output_files": 32,
+    "max_output_bytes": 65536,
+    "max_output_path_depth": 4,
+    "max_diagnostic_bytes": 8192,
+    "max_diagnostic_line_bytes": 512,
+    "environment_variable_names": [
+      "ERL2_ADAPTER_PROTOCOL_VERSION",
+      "ERL2_EXECUTION_ID",
+      "ERL2_EXECUTION_MODE",
+      "ERL2_OPERATION_ID"
+    ],
+    "input_root": "observation-inputs",
+    "workspace_root": "observation-workspace",
+    "output_root": "local-observation-output",
+    "control_expectations": [
+      {
+        "control_id": "separate-process",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "process-tree-termination",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "wall-clock-deadline",
+        "required_state": "enforced"
+      },
+      {
+        "control_id": "deny-by-default-egress",
+        "required_state": "unsupported_permitted"
+      }
+    ]
+  },
+  "egress_policy": {
+    "schema_version": "egress-allowlist-policy/v1",
+    "policy_id": "local-default-deny",
+    "default_action": "deny",
+    "allowed_schemes": [
+      "https"
+    ],
+    "allowed_hosts": [],
+    "allowed_ports": [
+      443
+    ],
+    "max_redirects": 0,
+    "revalidate_redirect_targets": true,
+    "allow_loopback_hosts": [],
+    "deny_link_local": true,
+    "deny_metadata_service": true,
+    "deny_proxy_bypass": true
+  },
+  "allowed_capability_ids": [],
+  "allowed_credential_handle_ids": [],
+  "created_at": "2026-08-24T00:00:00Z",
+  "expires_at": "2026-08-24T01:00:00Z",
+  "not_scored": true,
+  "not_governor_authorized": true,
+  "unsupported_claims": [
+    "score",
+    "qualification",
+    "governor_authorization",
+    "reveal",
+    "judge_evaluation",
+    "governed_finalization"
+  ],
+  "evidence_authenticity": "unauthenticated_local_record"
+}

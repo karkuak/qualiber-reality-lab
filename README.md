@@ -201,6 +201,14 @@ In two commands (`erl2 declare-trusted-local-adapter` then
 verification before it returns — rebuilding the run from the plan bytes and
 the retained admission rather than trusting the record's own verdict.
 
+**A committed worked example.** [`examples/trusted-local-neutral/README.md`](examples/trusted-local-neutral/README.md)
+runs this whole path end to end from committed files, against a product-neutral
+adapter already in this repository, and CI exercises it on every change. Start
+there if you would rather read a working instance than assemble one — it also
+names the authoring traps (protocol declaration, operation ordering, resource
+limits, input binding) that are easiest to hit when you later swap in your own
+adapter.
+
 **What you have to bring.** An adapter that speaks `subject-adapter/v2` (built
 against `@erl2/adapter-sdk`), its adapter manifest, and a hand-authored
 observation-plan draft naming the operations, resource limits, egress policy,
@@ -208,10 +216,9 @@ and — for every file you want the adapter to read — its exact SHA-256 and
 byte length. There is no CLI command yet that derives those two fields for
 you from a file; computing them today means calling `@erl2/integrity`
 directly (`hashBytes`) — the CLI's `--seal-plan-draft` only stamps the
-declaration- and policy-level hashes onto the draft you supply. A complete,
-ready-to-run starter plan and manifest are not committed to this repository
-today; producing one without hand-authoring the draft is tracked as future
-work, not something this release ships.
+declaration- and policy-level hashes onto the draft you supply, and no command
+authors or signs the manifest itself. The worked example above shows both steps
+as committed, runnable scripts.
 
 **What the run can claim, and what it cannot.** The retained record is a
 `development`-tier, `trusted_local_code` observation: unscored, unauthenticated,

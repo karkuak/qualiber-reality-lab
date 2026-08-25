@@ -77,6 +77,36 @@ jobs:
             --artifact-root fixtures/golden/invalid-run-cancellation/artifacts \
             --root-config fixtures/golden/invalid-run-cancellation/root-config.json \
             --offline
+      # M3: the committed neutral trusted-local worked example is executed here,
+      # from its committed drafts, on every change. Nothing it produces is
+      # compared against a stored copy and nothing it produces is committed, so
+      # this is a proof that the documented operator path still works rather
+      # than a byte-diff against a golden that could itself go stale.
+      - name: Neutral trusted-local worked example runs end to end
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          ./examples/trusted-local-neutral/run-example.sh | tee "$RUNNER_TEMP/example.log"
+      - name: The worked example's independent verifier reported success
+        run: |
+          set -euo pipefail
+          grep -q '"ok": true' "$RUNNER_TEMP/example.log"
+          grep -q '"terminal_status": "observed_complete"' "$RUNNER_TEMP/example.log"
+          grep -q '"cleanup_status": "cleanup_complete"' "$RUNNER_TEMP/example.log"
+      - name: The worked example's scratch root is removed by its own guarded cleanup
+        run: |
+          set -euo pipefail
+          scratch="$(sed -n 's/^== scratch root (remove it explicitly): //p' "$RUNNER_TEMP/example.log" | tail -1)"
+          test -n "$scratch"
+          ./examples/trusted-local-neutral/cleanup-example.sh "$scratch"
+          test ! -e "$scratch"
+      - name: The worked example left no residue in the working tree
+        run: |
+          set -euo pipefail
+          git status --porcelain > "$RUNNER_TEMP/residue.txt"
+          if [ -s "$RUNNER_TEMP/residue.txt" ]; then
+            echo "the example wrote into the working tree:"; cat "$RUNNER_TEMP/residue.txt"; exit 1
+          fi
 
   cross-platform-golden:
     # ERL2-NFR-001: JCS, hash and signature goldens must match on both platforms.
