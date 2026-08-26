@@ -391,6 +391,29 @@ export const CODES = {
    * probe suite that ran is not the one the lock pins (ERL2-OQ-008).
    */
   ENV_ISOLATION_SUBSTRATE_DRIFT: "ENV_ISOLATION_SUBSTRATE_DRIFT",
+  /**
+   * The isolation substrate lock presented to the pre-execution gate is not
+   * authentic: its Ed25519 signature does not verify under a pinned
+   * qualification authority or the development governor key (a corrupted or
+   * absent signature, a `signed_hash` that is not the lock's own core hash, or a
+   * signer whose key the verifier does not hold). Distinct from
+   * `ENV_ISOLATION_SUBSTRATE_DRIFT`, which is a content/observed-vs-lock failure:
+   * this is the authenticity check the gate runs *after* content re-derivation so
+   * a structurally-forged activation cannot substitute caller-supplied equality
+   * for a verified signature (EQ-L-010). On this checkout the accepted signer is
+   * the repo-derivable development governor key, so passing is
+   * `locally_observed_unauthenticated`, never `authenticated` (ERL2-OQ-008 open).
+   */
+  ENV_ISOLATION_LOCK_UNAUTHENTIC: "ENV_ISOLATION_LOCK_UNAUTHENTIC",
+  /**
+   * The covering probe-signing manifest the pre-execution gate requires is
+   * absent, or present but does not authenticate exactly the evaluated probe
+   * results (a bad manifest signature, a manifest bound to a different lock or
+   * suite, or a probe-hash set that does not cover the recomputed probe hashes —
+   * a substitution/tamper attempt). The gate fails closed on both `absent` and
+   * `invalid`, so an activation carrying no manifest cannot execute (EQ-L-010).
+   */
+  ENV_ISOLATION_PROBE_MANIFEST_UNAUTHENTIC: "ENV_ISOLATION_PROBE_MANIFEST_UNAUTHENTIC",
   ENV_SUBSTRATE_DIGEST_MISMATCH: "ENV_SUBSTRATE_DIGEST_MISMATCH",
   ENV_SUBSTRATE_PLATFORM_MISSING: "ENV_SUBSTRATE_PLATFORM_MISSING",
   /**

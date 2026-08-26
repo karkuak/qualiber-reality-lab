@@ -2190,6 +2190,108 @@ export const CONTROLS = [
     expect: "fail",
   },
   {
+    id: "container-lock-signature-verified",
+    what: "the pre-execution gate verifies the substrate lock's Ed25519 signature, so a structurally forged or tampered lock is refused (EQ-L-010)",
+    file: "packages/core/src/adapter/isolationQualificationReport.ts",
+    // Neutralise the lock-signature guard. Without it the gate is back to
+    // comparing caller fields against caller fields plus two recomputable
+    // constants, and a garbage- or corrupted-signature lock qualifies again.
+    find: "  if (!lockSignature.signatureValid) {",
+    replace: '  if (!lockSignature.signatureValid && String(1) === "2") {',
+    tests: ["tests/dist/adversarial/containerActivationAuthenticity.test.js"],
+    mustFail: ["tests/dist/adversarial/containerActivationAuthenticity.test.js"],
+    mustFailCases: [
+      "ISOLATION-AUTHENTIC: an unsigned/garbage-signed lock is refused at the execution gate",
+      "ISOLATION-AUTHENTIC: a corrupted lock signature is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "container-probe-manifest-verified",
+    what: "the pre-execution gate requires a covering signed probe manifest, so an absent or substituted manifest is refused (EQ-L-010)",
+    file: "packages/core/src/adapter/isolationQualificationReport.ts",
+    // Neutralise the probe-manifest guard entirely. Without it the probe results
+    // are unauthenticated: an absent manifest, a substituted probe, or a probe
+    // lying about its own body all qualify.
+    find: '  if (probeManifest.status === "absent" || probeManifest.status === "invalid") {',
+    replace:
+      '  if ((probeManifest.status === "absent" || probeManifest.status === "invalid") && String(1) === "2") {',
+    tests: ["tests/dist/adversarial/containerActivationAuthenticity.test.js"],
+    mustFail: ["tests/dist/adversarial/containerActivationAuthenticity.test.js"],
+    mustFailCases: [
+      "ISOLATION-AUTHENTIC: an activation with no probe manifest is refused",
+      "ISOLATION-AUTHENTIC: a manifest that does not cover a substituted probe is refused",
+      "ISOLATION-AUTHENTIC: a probe lying about its own core_hash cannot be covered",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "container-manifest-absent-fails-closed",
+    what: "an absent probe manifest fails closed, not open — a subject cannot execute on evidence nothing signed (EQ-L-010)",
+    file: "packages/core/src/adapter/isolationQualificationReport.ts",
+    // Accept an absent manifest while still rejecting an invalid one. This is the
+    // subtle fail-open: a real lock and probes but no manifest at all would run.
+    find: '  if (probeManifest.status === "absent" || probeManifest.status === "invalid") {',
+    replace: '  if (probeManifest.status === "invalid") {',
+    tests: ["tests/dist/adversarial/containerActivationAuthenticity.test.js"],
+    mustFail: ["tests/dist/adversarial/containerActivationAuthenticity.test.js"],
+    mustFailCases: [
+      "ISOLATION-AUTHENTIC: an activation with no probe manifest is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "container-trusted-key-enforced",
+    what: "a lock signed by a key the verifier does not hold is not authority — an unknown signer is refused (EQ-L-010)",
+    file: "packages/core/src/adapter/isolationAuthenticity.ts",
+    // Make the unknown-signer branch report the signature as valid. A validly
+    // formed signature by a key nobody pinned would then license execution.
+    find: [
+      "  return {",
+      "    signatureValid: false,",
+      "    signerKeyId,",
+      "    signerIsPinnedAuthority: false,",
+      "    signerIsDevelopmentKey: false,",
+      '    reason: "SUBSTRATE_LOCK_SIGNER_NOT_PINNED",',
+      "  };",
+    ].join("\n"),
+    replace: [
+      "  return {",
+      "    signatureValid: true,",
+      "    signerKeyId,",
+      "    signerIsPinnedAuthority: false,",
+      "    signerIsDevelopmentKey: false,",
+      '    reason: "SUBSTRATE_LOCK_SIGNER_NOT_PINNED",',
+      "  };",
+    ].join("\n"),
+    tests: ["tests/dist/adversarial/containerActivationAuthenticity.test.js"],
+    mustFail: ["tests/dist/adversarial/containerActivationAuthenticity.test.js"],
+    mustFailCases: [
+      "ISOLATION-AUTHENTIC: an untrusted (non-pinned, non-dev) signer key is refused",
+    ],
+    expect: "fail",
+  },
+  {
+    id: "container-caller-equality-not-authority",
+    what: "the probe manifest must cover exactly the recomputed probe hashes, so caller-supplied equality cannot substitute for authenticity (EQ-L-010)",
+    file: "packages/core/src/adapter/isolationAuthenticity.ts",
+    // Assert coverage instead of computing it. The manifest would then 'cover'
+    // any probe set, so a substituted or lying probe passes on the manifest's
+    // signature alone.
+    find: [
+      "  const covers =",
+      "    evaluated.size === manifested.size && [...evaluated].every((h) => manifested.has(h));",
+    ].join("\n"),
+    replace: "  const covers = true;",
+    tests: ["tests/dist/adversarial/containerActivationAuthenticity.test.js"],
+    mustFail: ["tests/dist/adversarial/containerActivationAuthenticity.test.js"],
+    mustFailCases: [
+      "ISOLATION-AUTHENTIC: a manifest that does not cover a substituted probe is refused",
+      "ISOLATION-AUTHENTIC: a probe lying about its own core_hash cannot be covered",
+    ],
+    expect: "fail",
+  },
+  {
     id: "container-deadline-kills-the-container",
     what: "the deadline SIGKILLs the container, not the runtime CLI — the exact defect ADR-ERL2-017 §Evidence recorded (ADR-ERL2-034 §2)",
     file: "packages/core/src/adapter/containerSupervisor.ts",
