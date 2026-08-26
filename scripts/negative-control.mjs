@@ -2088,6 +2088,8 @@ export const CONTROLS = [
       "    lock: input.lock,",
       "    observed: input.observed,",
       "    probeResults: input.probeResults,",
+      "    probeManifest: input.probeSigningManifest,",
+      "    ...(input.pinnedAuthorities === undefined ? {} : { pinnedAuthorities: input.pinnedAuthorities }),",
       "  });",
     ].join("\n"),
     replace: "  void assertQualifiedForExecution;",
@@ -2155,8 +2157,8 @@ export const CONTROLS = [
     // is a structural type, so without this line the profile opens to any object
     // literal — which is how the type looked before the evidence-carrying
     // rewrite, and why it was rewritten.
-    find: "  assertQualified(activation);\n}",
-    replace: "  void assertQualified;\n}",
+    find: "  assertQualified({ ...activation, pinnedAuthorities });\n}",
+    replace: "  void assertQualified;\n  void pinnedAuthorities;\n}",
     tests: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
     mustFail: ["tests/dist/adversarial/containerSandboxProfile.test.js"],
     mustFailCases: [
