@@ -833,9 +833,12 @@ export const CONTROLS = [
     id: "branch-specific-cancellation",
     what: "cancel is routed by the run's own evidence, not to the pre-environment terminal (review P1-2)",
     file: "packages/cli/src/index.ts",
-    find: "  cancel: (argv) => (hasSubstrate(argv) ? cancelEnvironment(argv) : cancel(argv)),",
-    replace:
-      '  cancel: (argv) => (hasSubstrate(argv) && String(1) === "2" ? cancelEnvironment(argv) : cancel(argv)),',
+    // Anchored on the branch expression itself — the invariant this control owns —
+    // rather than the whole `cancel:` registry line, so it survives an unrelated
+    // change to the entry's parameter signature (the M2 F-1 command-registry pass
+    // annotated the branch-dispatch arrows). The substring is unique in index.ts.
+    find: "hasSubstrate(argv) ? cancelEnvironment(argv) : cancel(argv)",
+    replace: 'hasSubstrate(argv) && String(1) === "2" ? cancelEnvironment(argv) : cancel(argv)',
     tests: ["tests/dist/e2e/environmentCancellation.test.js"],
     expect: "fail",
   },

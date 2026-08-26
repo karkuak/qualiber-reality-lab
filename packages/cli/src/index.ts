@@ -176,47 +176,10 @@ function loadLifecycle(streamPath: string): readonly LabLifecycleEventV1[] {
   return value as LabLifecycleEventV1[];
 }
 
-const IMPLEMENTED_COMMANDS = new Set([
-  "doctor",
-  "status",
-  "resume",
-  "verify",
-  "verify-record",
-  "admit-adapter",
-  // Owner-operated development path (ADR-ERL2-042). Neither command
-  // certifies anything, and neither produces a receipt.
-  "declare-trusted-local-adapter",
-  "run-trusted-local-observation",
-  "preregister-acquisition",
-  "preregister-challenge",
-  "select",
-  "acquire",
-  "freeze-package",
-  "verify-package",
-  "freeze-output",
-  "reveal",
-  "evaluate",
-  "finalize-generic",
-  "cancel",
-  // Slice 6.5-B: the environment and journey path.
-  "provision",
-  "baseline",
-  "plan",
-  "install",
-  "configure",
-  "authenticate",
-  "connect",
-  "activate",
-  "journey",
-  "observe",
-  "freeze-observation",
-  "execute-subject",
-  "recover",
-  "rollback",
-  "remove",
-  "restore",
-  "destroy",
-]);
+// The set of implemented command names is no longer hand-maintained here: it is
+// DERIVED from the single dispatch authority `COMMAND_REGISTRY` (see below), so
+// the top-level `--help` listing, command recognition, `help <command>` routing
+// and dispatch can never fall out of sync. See {@link IMPLEMENTED_COMMANDS}.
 
 /**
  * Per-command usage, for the commands whose inputs a reader cannot guess.
@@ -438,8 +401,15 @@ function hasSubstrate(argv: readonly string[]): boolean {
   return classifyCancellationBranch({ runRoot }) === "environment";
 }
 
-/** Journey, evaluation and finalization commands, keyed by their CLI name. */
-const JOURNEY_COMMANDS: Readonly<Record<string, (argv: readonly string[]) => JourneyCommandOutput>> = {
+/**
+ * Journey, evaluation and finalization commands, keyed by their CLI name.
+ *
+ * `satisfies` (rather than a `: Readonly<Record<string, …>>` annotation) so the
+ * literal key names survive into the type system: {@link CommandName} is derived
+ * from `keyof typeof JOURNEY_COMMANDS`, and {@link COMMAND_REGISTRY}'s journey
+ * half is derived from `Object.keys(JOURNEY_COMMANDS)` — never re-listed.
+ */
+const JOURNEY_COMMANDS = {
   "preregister-acquisition": preregisterAcquisition,
   "preregister-challenge": preregisterChallenge,
   select,
@@ -448,13 +418,15 @@ const JOURNEY_COMMANDS: Readonly<Record<string, (argv: readonly string[]) => Jou
   "verify-package": verifyPackage,
   // Branch-dispatched: the two terminals close over disjoint member sets, so the
   // run's own evidence decides which variant runs (never a flag).
-  "freeze-output": (argv) => (isEnvironmentRun(argv) ? freezeEnvironmentOutput(argv) : freezeOutput(argv)),
-  reveal: (argv) => (isEnvironmentRun(argv) ? revealEnvironment(argv) : reveal(argv)),
-  evaluate: (argv) => (isEnvironmentRun(argv) ? evaluateEnvironment(argv) : evaluate(argv)),
-  "finalize-generic": (argv) => (isEnvironmentRun(argv) ? finalizeEnvironment(argv) : finalizeGeneric(argv)),
+  "freeze-output": (argv: readonly string[]) =>
+    isEnvironmentRun(argv) ? freezeEnvironmentOutput(argv) : freezeOutput(argv),
+  reveal: (argv: readonly string[]) => (isEnvironmentRun(argv) ? revealEnvironment(argv) : reveal(argv)),
+  evaluate: (argv: readonly string[]) => (isEnvironmentRun(argv) ? evaluateEnvironment(argv) : evaluate(argv)),
+  "finalize-generic": (argv: readonly string[]) =>
+    isEnvironmentRun(argv) ? finalizeEnvironment(argv) : finalizeGeneric(argv),
   // Branch-dispatched on the *substrate binding*, not the execution plan: a run
   // that provisioned and stopped has resources to clean up and no plan.
-  cancel: (argv) => (hasSubstrate(argv) ? cancelEnvironment(argv) : cancel(argv)),
+  cancel: (argv: readonly string[]) => (hasSubstrate(argv) ? cancelEnvironment(argv) : cancel(argv)),
   provision,
   baseline,
   plan,
@@ -485,6 +457,95 @@ const PLANNED_COMMANDS = new Set([
   "finalize-deep",
   "verify-customer",
 ]);
+
+/**
+ * A dispatched command's handler: it receives the argv *after* the command name
+ * (`rest`) and returns the finished {@link CommandResult}. Every implemented
+ * command — the read-only vertical slice, the trusted-local path, and every
+ * journey/environment command — is one of these, held in {@link COMMAND_REGISTRY}.
+ */
+type DirectHandler = (rest: readonly string[]) => CommandResult;
+
+/**
+ * Wraps one journey command in the run-lease + terminal-error envelope handling
+ * every journey command shares, producing a uniform {@link DirectHandler}. It
+ * looks its target up in {@link JOURNEY_COMMANDS} by the same name the registry
+ * keys it under, so the branch-dispatched entries (`freeze-output`, `reveal`,
+ * `evaluate`, `finalize-generic`, `cancel`) keep their run-evidence routing
+ * unchanged. This is exactly the logic that used to live in `runCommand`'s
+ * `default:` arm — moved here so a single registry lookup can replace the switch.
+ */
+function journeyHandler(command: keyof typeof JOURNEY_COMMANDS): DirectHandler {
+  return (rest) => {
+    const output = withRunLease(command, rest, () => JOURNEY_COMMANDS[command](rest));
+    if (output.terminalError !== undefined) {
+      // The run reached a terminal, so its record hashes are returned; the exit
+      // code still names the failure that caused it.
+      return {
+        ...fail(command, output.terminalError),
+        run_id: output.runId,
+        state: output.state,
+        data: output.data,
+      };
+    }
+    return ok(command, { run_id: output.runId, state: output.state, data: output.data });
+  };
+}
+
+/**
+ * The commands dispatched directly, with no run lease: the read-only vertical
+ * slice (§8.5) and the owner-operated trusted-local path (ADR-ERL2-042). Each
+ * arm is byte-for-byte the body the `runCommand` switch used to hold. `satisfies`
+ * keeps the literal names in the type system for {@link CommandName}.
+ */
+const DIRECT_COMMANDS = {
+  doctor: (rest) => doctor(rest),
+  status: (rest) => status(rest),
+  resume: (rest) => resume(rest),
+  verify: (rest) => verify(rest),
+  "verify-record": (rest) => verifyRecord(rest),
+  "admit-adapter": (rest) => ok("admit-adapter", { data: admitAdapter(rest) }),
+  "declare-trusted-local-adapter": (rest) =>
+    ok("declare-trusted-local-adapter", { data: declareTrustedLocalAdapter(rest) }),
+  "run-trusted-local-observation": (rest) =>
+    ok("run-trusted-local-observation", { data: runTrustedLocalObservation(rest) }),
+} satisfies Record<string, DirectHandler>;
+
+/** Every command name the CLI can dispatch — type-safe, exact union of 36 names. */
+type CommandName = keyof typeof DIRECT_COMMANDS | keyof typeof JOURNEY_COMMANDS;
+
+/**
+ * THE single authoritative command inventory. Every dispatchable command — and
+ * only a dispatchable command — has exactly one entry here, and this one object
+ * feeds every surface that used to be maintained by hand and could drift apart:
+ *
+ *   - the top-level `erl2 --help` listing (via {@link IMPLEMENTED_COMMANDS});
+ *   - command recognition (the pre-dispatch `--help` short-circuit and
+ *     `help <command>` routing, both via {@link IMPLEMENTED_COMMANDS});
+ *   - dispatch itself ({@link runCommand}).
+ *
+ * The journey half is DERIVED from {@link JOURNEY_COMMANDS} rather than re-listed,
+ * so there is no second hand-maintained list to keep in sync — the defect M2 F-1
+ * closed. The `satisfies Record<CommandName, DirectHandler>` is load-bearing: it
+ * fails the build unless {@link DIRECT_COMMANDS} and {@link JOURNEY_COMMANDS}
+ * together cover every {@link CommandName}, exactly once each.
+ */
+export const COMMAND_REGISTRY = {
+  ...DIRECT_COMMANDS,
+  ...(Object.fromEntries(
+    (Object.keys(JOURNEY_COMMANDS) as (keyof typeof JOURNEY_COMMANDS)[]).map(
+      (name) => [name, journeyHandler(name)] as const,
+    ),
+  ) as Record<keyof typeof JOURNEY_COMMANDS, DirectHandler>),
+} satisfies Record<CommandName, DirectHandler>;
+
+/**
+ * The implemented command names, DERIVED from {@link COMMAND_REGISTRY} — the one
+ * object that decides what is dispatchable. Command recognition and the
+ * top-level listing both read this set, so a command can never be dispatchable
+ * yet unlisted, or listed yet undispatchable.
+ */
+const IMPLEMENTED_COMMANDS: ReadonlySet<string> = new Set(Object.keys(COMMAND_REGISTRY));
 
 /** Bare flag lookup used only to key the run lease; full parsing happens in the command. */
 function flagValue(argv: readonly string[], name: string): string | undefined {
@@ -653,48 +714,41 @@ export function runCommand(argv: readonly string[]): CommandResult {
     if (IMPLEMENTED_COMMANDS.has(command) && rest.includes("--help")) {
       return commandHelp(command);
     }
-    switch (command) {
-      case "doctor":
-        return doctor(rest);
-      case "status":
-        return status(rest);
-      case "resume":
-        return resume(rest);
-      case "verify":
-        return verify(rest);
-      case "verify-record":
-        return verifyRecord(rest);
-      case "admit-adapter":
-        return ok("admit-adapter", { data: admitAdapter(rest) });
-      case "declare-trusted-local-adapter":
-        return ok("declare-trusted-local-adapter", { data: declareTrustedLocalAdapter(rest) });
-      case "run-trusted-local-observation":
-        return ok("run-trusted-local-observation", { data: runTrustedLocalObservation(rest) });
-      default: {
-        const journey = JOURNEY_COMMANDS[command];
-        if (journey) {
-          const output = withRunLease(command, rest, () => journey(rest));
-          if (output.terminalError !== undefined) {
-            // The run reached a terminal, so its record hashes are returned;
-            // the exit code still names the failure that caused it.
-            return {
-              ...fail(command, output.terminalError),
-              run_id: output.runId,
-              state: output.state,
-              data: output.data,
-            };
-          }
-          return ok(command, { run_id: output.runId, state: output.state, data: output.data });
-        }
-        if (PLANNED_COMMANDS.has(command)) {
-          throw new Erl2Error(
-            "POLICY_COMMAND_NOT_IMPLEMENTED",
-            `command ${command} belongs to a slice that has not shipped; it is not silently skipped`,
-          );
-        }
-        throw new Erl2Error(CODES.CFG_UNKNOWN_FLAG, `unknown command ${command}`);
-      }
+    // One registry lookup replaces the former switch + `default:` journey arm.
+    // The registry is the *only* place a command becomes dispatchable, so it is
+    // also the only place a command becomes listable and recognisable — the
+    // three can no longer disagree (M2 F-1). A registered command runs its
+    // handler (which already carries its own run-lease/envelope handling for
+    // journey commands); anything else stays fail-closed exactly as before.
+    //
+    // The lookup is gated on `IMPLEMENTED_COMMANDS.has(command)` — the same
+    // own-key authority (`Object.keys(COMMAND_REGISTRY)`, a Set immune to the
+    // prototype chain) that command recognition and the top-level listing
+    // already read, and that `--help`/`help <command>` above already gate on —
+    // BEFORE the bracket read. `COMMAND_REGISTRY` is an ordinary object literal,
+    // so a bare `COMMAND_REGISTRY[command]` walks its prototype: an inherited
+    // `Object.prototype` name (`constructor`, `toString`, `__proto__`,
+    // `valueOf`, `hasOwnProperty`, …) resolved to a prototype member that is not
+    // a registered handler, and then either ran — `constructor`/`toString`
+    // emitting a raw value OUTSIDE the erl2-cli-response/v1 envelope, exit 0 —
+    // or threw an untyped "not a function" the backstop reported as
+    // LAB_UNEXPECTED_FAILURE. Both diverge from the ordinary unknown-command
+    // refusal these names already take through every other surface. Gating on
+    // own membership routes every non-registered name, inherited or otherwise,
+    // through that same fail-closed refusal below.
+    const handler = IMPLEMENTED_COMMANDS.has(command)
+      ? (COMMAND_REGISTRY as Readonly<Record<string, DirectHandler>>)[command]
+      : undefined;
+    if (handler) {
+      return handler(rest);
     }
+    if (PLANNED_COMMANDS.has(command)) {
+      throw new Erl2Error(
+        "POLICY_COMMAND_NOT_IMPLEMENTED",
+        `command ${command} belongs to a slice that has not shipped; it is not silently skipped`,
+      );
+    }
+    throw new Erl2Error(CODES.CFG_UNKNOWN_FLAG, `unknown command ${command}`);
   } catch (error) {
     if (error instanceof Erl2Error) return fail(command, error);
     // Backstop: no command may terminate with an untyped exception.  An escaped

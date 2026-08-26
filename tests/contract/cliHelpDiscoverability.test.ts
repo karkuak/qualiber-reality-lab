@@ -31,11 +31,27 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { erl2 } from "../support/cliRun.js";
 import { ownedTempDir } from "../support/tempDirs.js";
+import { COMMAND_REGISTRY } from "@erl2/cli";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
 const bareHelp = erl2(["--help"]);
 const COMMANDS = ((bareHelp.body.data as { commands?: unknown } | undefined)?.commands ?? []) as string[];
+
+/**
+ * The production dispatch authority, imported directly from the CLI module — the
+ * single object `runCommand` dispatches through — NOT derived from `--help`.
+ *
+ * This is the whole point of the M2 F-1 hardening: the discoverability contract
+ * must compare TWO independent surfaces — what the CLI can actually dispatch
+ * (this registry) versus what the top-level `--help` renders (`COMMANDS`, above)
+ * — so a command that is dispatchable but unlisted (or listed but not
+ * dispatchable) is a hard failure rather than an invisible gap. The original
+ * suite derived both its actual and its expected set from `--help` alone; a
+ * hidden dispatchable command therefore stayed green (reproduced by mutation
+ * M03 / M-F1). `REGISTRY_NAMES` and `COMMANDS` never share a source.
+ */
+const REGISTRY_NAMES = Object.keys(COMMAND_REGISTRY);
 
 interface FsEntrySnapshot {
   readonly type: "file" | "directory";
@@ -386,4 +402,216 @@ test("both required CI jobs declare a bounded timeout-minutes, and required chec
     /os:\s*\[ubuntu-latest,\s*macos-latest\]/u,
     "the cross-platform-golden matrix legs must be unchanged",
   );
+});
+
+// -- M2 F-1: command-inventory authority ---------------------------------------
+//
+// The hardening below is what closes M2 F-1. Every assertion in this section
+// draws the "expected" set from the imported production registry (REGISTRY_NAMES)
+// and the "actual" set from the rendered top-level `--help` (COMMANDS): two
+// independently produced surfaces. A command that is dispatchable but not
+// rendered — or rendered but not dispatchable — breaks set equality here, which
+// the original `--help`-only derivation could never detect.
+
+test("F-1: the rendered top-level inventory equals the production dispatch registry, exactly", () => {
+  // Two independent surfaces: REGISTRY_NAMES is imported from the CLI module
+  // (the object runCommand dispatches through); COMMANDS is parsed out of a
+  // spawned `erl2 --help`. Exact set equality in BOTH directions is the core
+  // anti-F-1 invariant: no dispatchable-but-hidden command, and no
+  // listed-but-undispatchable command, can survive it.
+  const rendered = new Set(COMMANDS);
+  const registry = new Set(REGISTRY_NAMES);
+  const dispatchableButHidden = REGISTRY_NAMES.filter((name) => !rendered.has(name));
+  const listedButUndispatchable = COMMANDS.filter((name) => !registry.has(name));
+  assert.deepEqual(
+    dispatchableButHidden,
+    [],
+    `every dispatchable command must appear in top-level --help; hidden: ${JSON.stringify(dispatchableButHidden)}`,
+  );
+  assert.deepEqual(
+    listedButUndispatchable,
+    [],
+    `every listed command must be backed by a dispatch registry entry; unbacked: ${JSON.stringify(listedButUndispatchable)}`,
+  );
+  // The set-equality statement itself, so a future reader sees the whole claim
+  // in one line rather than only its two decompositions.
+  assert.deepEqual([...registry].sort(), [...rendered].sort(), "registry and rendered inventory must be the same set");
+});
+
+test("F-1: neither the registry nor the rendered inventory contains a duplicate command", () => {
+  assert.equal(REGISTRY_NAMES.length, new Set(REGISTRY_NAMES).size, "the dispatch registry must have no duplicate name");
+  assert.equal(COMMANDS.length, new Set(COMMANDS).size, "the rendered inventory must have no duplicate name");
+});
+
+test("F-1: the rendered public inventory is in a deterministic, sorted order", () => {
+  // The listing is intentionally public and stable (`[...IMPLEMENTED_COMMANDS].sort()`);
+  // an unexpected reorder — e.g. reverting to insertion order — is a contract break.
+  assert.deepEqual(COMMANDS, [...COMMANDS].sort(), "top-level --help must list commands in sorted order");
+});
+
+test("F-1: every registry command is dispatchable — recognised, never refused as an unknown command", () => {
+  // Independent of --help: iterate the REGISTRY and prove each name reaches its
+  // handler. A registered command may still refuse (missing required flags, an
+  // unshipped slice), but it must NOT be rejected by the terminal
+  // unknown-command path — that would mean a registry entry with no dispatch.
+  for (const command of REGISTRY_NAMES) {
+    const result = erl2([command]);
+    const first = result.body.errors[0];
+    const isUnknownCommand =
+      first?.code === "CFG_UNKNOWN_FLAG" && /unknown command/.test(first?.message ?? "");
+    assert.equal(isUnknownCommand, false, `${command} is in the registry but was refused as an unknown command`);
+  }
+});
+
+test("F-1: every registry command answers its own --help, independently of the rendered listing", () => {
+  // The same clean-help guarantee the suite already checks for COMMANDS, but
+  // driven from REGISTRY_NAMES. If a command were ever dispatchable yet dropped
+  // from the rendered listing, the --help-derived loop above would skip it;
+  // this loop would not.
+  for (const command of REGISTRY_NAMES) {
+    const result = erl2([command, "--help"]);
+    assert.equal(result.exitCode, 0, `${command} --help: ${JSON.stringify(result.body.errors)}`);
+    assert.equal(result.body.ok, true, `${command} --help should succeed`);
+    assert.equal(result.body.run_id, undefined, `${command} --help must not dispatch (run_id present)`);
+    assert.equal(result.body.state, undefined, `${command} --help must not dispatch (state present)`);
+    const data = result.body.data as { command?: unknown; usage?: unknown } | undefined;
+    assert.equal(data?.command, command, `${command} --help should name the command it is for`);
+    assert.ok(data?.usage !== undefined, `${command} --help should carry a usage object`);
+  }
+});
+
+test("F-1: every command carrying authored usage is in the dispatch registry", () => {
+  // The authored-usage set is a subset of the inventory, so it must also be a
+  // subset of the registry; a command documented but not dispatchable would be
+  // a dead entry.
+  const usageBlob = (bareHelp.body.data as { usage?: Record<string, unknown> }).usage ?? {};
+  for (const command of Object.keys(usageBlob)) {
+    assert.ok(
+      REGISTRY_NAMES.includes(command),
+      `authored-usage command ${command} must be backed by a dispatch registry entry`,
+    );
+  }
+});
+
+// -- F-1 (prototype-chain): dispatch reads own membership, never the prototype --
+//
+// `COMMAND_REGISTRY` is an ordinary object literal, so a bare
+// `COMMAND_REGISTRY[command]` bracket read walks its prototype. Every own
+// property name of `Object.prototype` (`constructor`, `toString`, `__proto__`,
+// `valueOf`, `hasOwnProperty`, …) therefore resolved to an inherited member and
+// acted as a pseudo-handler: `constructor`/`toString` RAN and printed a raw
+// value OUTSIDE the erl2-cli-response/v1 envelope (exit 0), while the callable
+// prototype methods and `__proto__` threw an untyped "not a function" the
+// backstop reported as LAB_UNEXPECTED_FAILURE — all divergent from the ordinary
+// unknown-command refusal these names take on every other surface. The
+// correction gates the lookup on `IMPLEMENTED_COMMANDS.has(command)`, the same
+// own-key authority (`Object.keys(COMMAND_REGISTRY)`, a prototype-immune Set)
+// that recognition, the top-level listing, the pre-dispatch `--help`
+// short-circuit, and `help <command>` already use.
+//
+// The name set is derived from the runtime (`Object.getOwnPropertyNames(
+// Object.prototype)`), never a hand-written list, so it cannot rot against the
+// prototype it is meant to cover and introduces no second literal command list.
+const PROTOTYPE_CHAIN_NAMES = Object.getOwnPropertyNames(Object.prototype);
+
+interface RawEnvelope {
+  readonly schema_version?: unknown;
+  readonly command?: unknown;
+  readonly ok?: unknown;
+  readonly exit_code?: unknown;
+  readonly errors?: readonly { readonly code?: unknown; readonly message?: unknown }[];
+}
+
+/** The full parsed stdout object, including the `schema_version` the CLI contract requires. */
+function rawEnvelope(result: ReturnType<typeof erl2>): RawEnvelope {
+  return result.body as unknown as RawEnvelope;
+}
+
+/** Assert a result is a well-formed unknown-command refusal envelope. */
+function assertUnknownCommandRefusal(result: ReturnType<typeof erl2>, label: string): void {
+  const env = rawEnvelope(result);
+  assert.equal(
+    env.schema_version,
+    "erl2-cli-response/v1",
+    `${label}: response must stay inside the erl2-cli-response/v1 envelope, got ${JSON.stringify(env).slice(0, 120)}`,
+  );
+  assert.equal(result.exitCode, 2, `${label}: unknown command must exit 2`);
+  assert.equal(env.ok, false, `${label}: unknown command must not report ok:true`);
+  const first = env.errors?.[0];
+  assert.equal(first?.code, "CFG_UNKNOWN_FLAG", `${label}: unknown command must refuse with CFG_UNKNOWN_FLAG`);
+  assert.match(String(first?.message ?? ""), /unknown command/, `${label}: refusal message must name the unknown command`);
+}
+
+test("F-1: the sampled prototype-chain names are genuinely inherited, not registered commands", () => {
+  // Guards the meaningfulness of the refusal tests below: if any of these names
+  // were ever a real own key of the registry, treating it as unknown would be
+  // wrong. `Object.keys` is own-enumerable only, so a prototype name appearing
+  // here would be a genuine collision to surface, not silently tolerate.
+  assert.ok(PROTOTYPE_CHAIN_NAMES.length > 0, "Object.prototype must expose own property names to test");
+  for (const name of PROTOTYPE_CHAIN_NAMES) {
+    assert.equal(
+      REGISTRY_NAMES.includes(name),
+      false,
+      `${name} is an inherited Object.prototype name and must not be an own registry key`,
+    );
+  }
+  // The specific names the independent review reproduced must be in the sample.
+  for (const flagged of ["constructor", "toString", "__proto__"]) {
+    assert.ok(PROTOTYPE_CHAIN_NAMES.includes(flagged), `${flagged} must be among the sampled prototype names`);
+  }
+});
+
+test("F-1: every prototype-chain name refuses as unknown through direct dispatch, <name> --help, and help <name>", () => {
+  for (const name of PROTOTYPE_CHAIN_NAMES) {
+    // Direct dispatch: the site the correction hardens. Without the own-key
+    // gate, `constructor`/`toString` return a raw non-envelope value at exit 0
+    // and the callable prototype methods / `__proto__` surface as
+    // LAB_UNEXPECTED_FAILURE — every one of these assertions then fails.
+    assertUnknownCommandRefusal(erl2([name]), `direct ${name}`);
+    // `<name> --help`: the pre-dispatch short-circuit must not grant an
+    // inherited name the help path either.
+    assertUnknownCommandRefusal(erl2([name, "--help"]), `${name} --help`);
+    // `help <name>`: already gated on IMPLEMENTED_COMMANDS; pinned so a
+    // regression there is caught by the same contract.
+    assertUnknownCommandRefusal(erl2(["help", name]), `help ${name}`);
+  }
+});
+
+test("F-1: dispatching a prototype-chain name performs no filesystem write or run lease beneath a named run root", () => {
+  // Passes `--run` + `--run-root` naming a scratch root, so a name mis-dispatched
+  // through a journey handler WOULD reach `withRunLease` and drop a lease file
+  // here. A before/after manifest diff over the whole scratch root catches a
+  // lease, an adapter workspace, or any other write; the refusal happens before
+  // any of that. Scoped to the scratch root this test creates, never a broader
+  // scan. (No network, child process, or listener can outlive the CLI: `erl2`
+  // is a single synchronous spawn that has exited by the time `erl2()` returns,
+  // and a lease/adapter/network step would have left a trace under this root.)
+  const scratchParent = ownedTempDir("erl2-proto-fs-");
+  const runRoot = path.join(scratchParent, "run-root");
+  const before = snapshotTree(scratchParent);
+  for (const name of PROTOTYPE_CHAIN_NAMES) {
+    const result = erl2([name, "--run", "proto-run", "--run-root", runRoot]);
+    assertUnknownCommandRefusal(result, `${name} with --run/--run-root`);
+  }
+  const after = snapshotTree(scratchParent);
+  assert.equal(existsSync(runRoot), false, "a refused prototype-chain name must not bring its run root into being");
+  assert.deepEqual(
+    after,
+    before,
+    "dispatching a prototype-chain name must not create, modify, or change the mode of anything beneath the scratch root",
+  );
+});
+
+test("F-1: the correction leaves all 36 real commands listed and dispatchable", () => {
+  // The other half of the invariant: hardening the unknown path must not have
+  // narrowed the recognised set. Exactly the reviewed 36, each dispatchable
+  // (never refused as unknown) and each still rendered in the public inventory.
+  assert.equal(REGISTRY_NAMES.length, 36, "the dispatch registry must still hold exactly 36 commands");
+  assert.equal(COMMANDS.length, 36, "the top-level inventory must still list exactly 36 commands");
+  for (const command of REGISTRY_NAMES) {
+    const first = erl2([command]).body.errors[0];
+    const refusedAsUnknown = first?.code === "CFG_UNKNOWN_FLAG" && /unknown command/.test(first?.message ?? "");
+    assert.equal(refusedAsUnknown, false, `${command} is a real command and must not be refused as unknown`);
+    assert.ok(COMMANDS.includes(command), `${command} must remain in the rendered inventory`);
+  }
 });
