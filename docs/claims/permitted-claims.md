@@ -659,9 +659,18 @@ The one claim this slice earns, stated at exactly its width:
   present-but-broken manifest forces `not_qualified`; on this checkout the
   manifest is dev-signed (`valid_development`), so the outcome stays
   self-reported. It is a claim about one runtime, one image digest and one
-  security profile, checked before every run by `assertQualifiedForExecution`;
-  on any other host, or after any drift, or if the lock or probe-manifest
-  signature does not verify, the derivation returns `not_qualified`.
+  security profile. Before every run, `assertQualifiedForExecution` re-derives
+  the content verdict **and** verifies the substrate lock's Ed25519 signature and
+  a covering `isolation-probe-signing-manifest/v1` over the ordered probe-result
+  hashes; on any other host, after any drift, or if the lock signature or the
+  probe manifest is absent, unverifiable, or does not cover the evaluated probes,
+  the derivation returns `not_qualified`. The accepted signer on this checkout is
+  the repo-derivable development governor key, so a passing gate is
+  `locally_observed_unauthenticated`, not `authenticated`: an unsigned or
+  unmanifested activation is refused, but a dev-key holder is not excluded, so
+  this is not confinement or certification, and only a pinned qualification
+  authority (whose private key is not in this repository) reaches `authenticated`
+  (ERL2-OQ-008 stays open).
 
   *What is newly earned, and only this:* a container-backed launcher exists, and
   `ADAPTER-CERT-V1` has passed under the `container` profile against the correct
