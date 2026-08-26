@@ -158,6 +158,7 @@ test("ADAPTER-CERT-V1 §5.5: an opaque or third-party subject is refused the pro
             policyInputHashes: [...profile.lock.policy_input_hashes],
           },
           probeResults: profile.probeResults,
+          probeSigningManifest: profile.probeSigningManifest,
           launcher: {
             available: true,
             runtimeId: profile.lock.runtime_id,

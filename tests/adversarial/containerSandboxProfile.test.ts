@@ -30,6 +30,7 @@ import {
   SteppingClock,
   assertControlReportMatchesProfile,
   assertSandboxProfileEnabled,
+  buildIsolationProbeSigningManifest,
   buildIsolationSubstrateLock,
   containerObservedControls,
   containerRuntimeConfigurationInput,
@@ -123,6 +124,25 @@ function fullyObserved(lockHash: Hash): IsolationEnforcementProbeResultV1[] {
   return REQUIRED_ISOLATION_CONTROLS.map((c) => probeResult(c, lockHash));
 }
 
+/**
+ * A real dev-signed manifest covering exactly these probe results, bound to this
+ * lock and suite. The container activation now carries one, and the execution
+ * gate re-verifies it, so every derivation below must supply a covering manifest
+ * — a fabrication without one fails closed.
+ */
+function manifestFor(
+  lock: ReturnType<typeof lockFor>,
+  probeResults: readonly IsolationEnforcementProbeResultV1[],
+) {
+  return buildIsolationProbeSigningManifest({
+    manifestId: "erl2-container-probe-signing-manifest",
+    lock,
+    probeResults,
+    signedAt: AT,
+    signingKey: developmentKey("environment-governor"),
+  });
+}
+
 function availableLauncher(): ContainerLauncherAvailability {
   return {
     available: true,
@@ -199,6 +219,7 @@ test("CONTAINER-PROFILE: a drifted substrate is refused before anything executes
           lock,
           observed: observedState(drift),
           probeResults,
+          probeSigningManifest: manifestFor(lock, probeResults),
           launcher: availableLauncher(),
           subjectTrust: "trusted_reference",
         }),
@@ -236,6 +257,7 @@ test("CONTAINER-PROFILE: mocked probes qualify nothing, launcher or no launcher"
         lock,
         observed: observedState(),
         probeResults: mocked,
+        probeSigningManifest: manifestFor(lock, mocked),
         launcher: availableLauncher(),
         subjectTrust: "trusted_reference",
       }),
@@ -254,6 +276,7 @@ test("CONTAINER-PROFILE: mocked probes qualify nothing, launcher or no launcher"
         lock,
         observed: observedState(),
         probeResults: almost,
+        probeSigningManifest: manifestFor(lock, almost),
         launcher: availableLauncher(),
         subjectTrust: "trusted_reference",
       }),
@@ -274,6 +297,7 @@ test("CONTAINER-PROFILE: a qualified substrate with no launcher is still refused
           lock,
           observed: observedState(),
           probeResults: fullyObserved(coreHash(lock)),
+          probeSigningManifest: manifestFor(lock, fullyObserved(coreHash(lock))),
           launcher,
           subjectTrust: "trusted_reference",
         }),
@@ -292,6 +316,7 @@ test("CONTAINER-PROFILE: an opaque or third-party subject is refused a fully wor
           lock,
           observed: observedState(),
           probeResults: fullyObserved(coreHash(lock)),
+          probeSigningManifest: manifestFor(lock, fullyObserved(coreHash(lock))),
           launcher: availableLauncher(),
           subjectTrust,
         }),
@@ -304,6 +329,7 @@ test("CONTAINER-PROFILE: an opaque or third-party subject is refused a fully wor
     lock,
     observed: observedState(),
     probeResults: fullyObserved(coreHash(lock)),
+    probeSigningManifest: manifestFor(lock, fullyObserved(coreHash(lock))),
     launcher: availableLauncher(),
     subjectTrust: "trusted_reference",
   });
@@ -320,6 +346,7 @@ test("CONTAINER-PROFILE: probe evidence frozen against another lock licenses not
         lock,
         observed: observedState(),
         probeResults: fullyObserved(coreHash(otherLock)),
+        probeSigningManifest: manifestFor(lock, fullyObserved(coreHash(otherLock))),
         launcher: availableLauncher(),
         subjectTrust: "trusted_reference",
       }),
@@ -336,6 +363,7 @@ test("CONTAINER-PROFILE: the control report is derived per control, from the pro
     lock,
     observed: observedState(),
     probeResults: fullyObserved(coreHash(lock)),
+    probeSigningManifest: manifestFor(lock, fullyObserved(coreHash(lock))),
     launcher: availableLauncher(),
     subjectTrust: "trusted_reference",
   });
@@ -376,6 +404,7 @@ test("CONTAINER-PROFILE: an activation is re-derived from its evidence on every 
     lock,
     observed: observedState(),
     probeResults: fullyObserved(coreHash(lock)),
+    probeSigningManifest: manifestFor(lock, fullyObserved(coreHash(lock))),
     launcher: availableLauncher(),
     subjectTrust: "trusted_reference",
   });
@@ -418,6 +447,7 @@ test("CONTAINER-PROFILE: a container manifest that names no substrate lock is re
     lock,
     observed: observedState(),
     probeResults: fullyObserved(coreHash(lock)),
+    probeSigningManifest: manifestFor(lock, fullyObserved(coreHash(lock))),
     launcher: availableLauncher(),
     subjectTrust: "trusted_reference",
   });
@@ -499,6 +529,7 @@ test("CONTAINER-PROFILE: a host cannot be built on the container profile without
     lock,
     observed: observedState(),
     probeResults: fullyObserved(coreHash(lock)),
+    probeSigningManifest: manifestFor(lock, fullyObserved(coreHash(lock))),
     launcher: availableLauncher(),
     subjectTrust: "trusted_reference",
   });

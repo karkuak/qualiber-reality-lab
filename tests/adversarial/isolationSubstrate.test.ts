@@ -28,6 +28,7 @@ import {
   assertQualificationGrantsNoNewAuthority,
   assertQualifiedForExecution,
   assertSuiteCoversEveryControl,
+  buildIsolationProbeSigningManifest,
   buildIsolationQualificationReport,
   buildIsolationSubstrateLock,
   diffObservedAgainstIsolationLock,
@@ -66,6 +67,20 @@ function lockFor(observed = observedState()) {
     probeSuiteId: PROBE_SUITE_ID,
     probeSuiteDigest: probeSuiteDigest(),
     recordedAt: AT,
+    signingKey: developmentKey("environment-governor"),
+  });
+}
+
+/** A dev-signed manifest covering exactly these probe results, bound to this lock. */
+function manifestFor(
+  lock: ReturnType<typeof lockFor>,
+  probeResults: readonly IsolationEnforcementProbeResultV1[],
+) {
+  return buildIsolationProbeSigningManifest({
+    manifestId: "erl2-container-probe-signing-manifest",
+    lock,
+    probeResults,
+    signedAt: AT,
     signingKey: developmentKey("environment-governor"),
   });
 }
@@ -304,8 +319,10 @@ test("ISOLATION-EXECUTION: the pre-execution gate re-derives rather than reading
   const lock = lockFor(observed);
   const probeResults = fullyObserved(coreHash(lock));
 
+  const probeManifest = manifestFor(lock, probeResults);
+
   // The honest path passes.
-  assertQualifiedForExecution({ profile: "container", lock, observed, probeResults });
+  assertQualifiedForExecution({ profile: "container", lock, observed, probeResults, probeManifest });
 
   // Drift refuses even though the evidence itself is untouched.
   throwsCode(
@@ -315,6 +332,7 @@ test("ISOLATION-EXECUTION: the pre-execution gate re-derives rather than reading
         lock,
         observed: observedState({ imageDigest: `sha256:${"e".repeat(64)}` as Hash }),
         probeResults,
+        probeManifest,
       }),
     "ENV_ISOLATION_SUBSTRATE_DRIFT",
     "drifted image digest",
@@ -326,7 +344,13 @@ test("ISOLATION-EXECUTION: the pre-execution gate re-derives rather than reading
   );
   throwsCode(
     () =>
-      assertQualifiedForExecution({ profile: "container", lock, observed, probeResults: weakened }),
+      assertQualifiedForExecution({
+        profile: "container",
+        lock,
+        observed,
+        probeResults: weakened,
+        probeManifest,
+      }),
     "ADAPTER_SANDBOX_CONTROL_UNSUPPORTED",
     "one mocked control",
   );

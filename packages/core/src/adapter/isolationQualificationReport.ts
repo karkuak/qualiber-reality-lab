@@ -16,10 +16,12 @@ import {
   type Hash,
   type Instant,
   type IsolationEnforcementProbeResultV1,
+  type IsolationProbeSigningManifestV1,
   type IsolationQualificationReportV1,
   type IsolationSubstrateLockV1,
 } from "@erl2/contracts";
 import { coreHash } from "@erl2/integrity";
+import type { PinnedQualificationAuthority } from "./isolationAuthenticity.js";
 import {
   NOT_QUALIFIED_STATE,
   REQUIRED_ISOLATION_CONTROLS,
@@ -147,6 +149,10 @@ export function assertQualifiedForExecution(input: {
   readonly lock: IsolationSubstrateLockV1;
   readonly observed: ObservedSubstrateState;
   readonly probeResults: readonly IsolationEnforcementProbeResultV1[];
+  /** The signed manifest that must authenticate exactly these probe results. */
+  readonly probeManifest: IsolationProbeSigningManifestV1 | undefined;
+  /** Verifier-held authorities; empty on this checkout (ERL2-OQ-008 open). */
+  readonly pinnedAuthorities?: readonly PinnedQualificationAuthority[];
 }): void {
   assertObservedMatchesIsolationLock(input.lock, input.observed);
   assertProbeSuiteMatchesLock(input.lock, PROBE_SUITE_ID, probeSuiteDigest());

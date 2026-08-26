@@ -34,6 +34,7 @@ import {
   Erl2Error,
   type Hash,
   type IsolationEnforcementProbeResultV1,
+  type IsolationProbeSigningManifestV1,
   type IsolationSubstrateLockV1,
   type SandboxControlId,
   type SandboxInvocationManifestV1,
@@ -41,6 +42,7 @@ import {
 } from "@erl2/contracts";
 import { coreHash } from "@erl2/integrity";
 import type { ContainerLauncherAvailability } from "./containerLauncher.js";
+import type { PinnedQualificationAuthority } from "./isolationAuthenticity.js";
 import { REQUIRED_ISOLATION_CONTROLS } from "./isolationQualification.js";
 import { assertQualifiedForExecution } from "./isolationQualificationReport.js";
 import type { ObservedSubstrateState } from "./isolationSubstrateLock.js";
@@ -163,6 +165,14 @@ export interface ContainerProfileActivation {
   readonly lock: IsolationSubstrateLockV1;
   readonly observed: ObservedSubstrateState;
   readonly probeResults: readonly IsolationEnforcementProbeResultV1[];
+  /**
+   * The signed manifest that authenticates the probe results this activation
+   * carries. Required, and re-verified on every use by `assertQualified` below:
+   * the manifest travels with the evidence it authenticates so the gate can fail
+   * closed when it is absent, rather than accepting an activation whose probe
+   * results nothing signed (EQ-L-010).
+   */
+  readonly probeSigningManifest: IsolationProbeSigningManifestV1;
   readonly launcher: ContainerLauncherAvailability;
   readonly subjectTrust: SubjectTrust;
 }
@@ -212,14 +222,18 @@ function assertQualified(input: {
   readonly lock: IsolationSubstrateLockV1;
   readonly observed: ObservedSubstrateState;
   readonly probeResults: readonly IsolationEnforcementProbeResultV1[];
+  readonly probeSigningManifest: IsolationProbeSigningManifestV1;
   readonly launcher: ContainerLauncherAvailability;
   readonly subjectTrust: SubjectTrust;
+  readonly pinnedAuthorities?: readonly PinnedQualificationAuthority[];
 }): void {
   assertQualifiedForExecution({
     profile: "container",
     lock: input.lock,
     observed: input.observed,
     probeResults: input.probeResults,
+    probeManifest: input.probeSigningManifest,
+    ...(input.pinnedAuthorities === undefined ? {} : { pinnedAuthorities: input.pinnedAuthorities }),
   });
 
   if (!input.launcher.available) {
@@ -244,8 +258,10 @@ export function deriveContainerProfileActivation(input: {
   readonly lock: IsolationSubstrateLockV1;
   readonly observed: ObservedSubstrateState;
   readonly probeResults: readonly IsolationEnforcementProbeResultV1[];
+  readonly probeSigningManifest: IsolationProbeSigningManifestV1;
   readonly launcher: ContainerLauncherAvailability;
   readonly subjectTrust: SubjectTrust;
+  readonly pinnedAuthorities?: readonly PinnedQualificationAuthority[];
 }): ContainerProfileActivation {
   assertQualified(input);
   return {
@@ -253,6 +269,7 @@ export function deriveContainerProfileActivation(input: {
     lock: input.lock,
     observed: input.observed,
     probeResults: [...input.probeResults],
+    probeSigningManifest: input.probeSigningManifest,
     launcher: input.launcher,
     subjectTrust: input.subjectTrust,
   };
@@ -261,6 +278,7 @@ export function deriveContainerProfileActivation(input: {
 export function assertSandboxProfileEnabled(
   profile: SandboxProfileId,
   activation?: ContainerProfileActivation,
+  pinnedAuthorities: readonly PinnedQualificationAuthority[] = [],
 ): void {
   if (profile === "local-process") return;
   if (activation === undefined || activation.state !== CONTAINER_PROFILE_ENABLED_STATE) {
@@ -274,7 +292,7 @@ export function assertSandboxProfileEnabled(
   // structural: a fabricated activation must carry a signed lock, a matching
   // observed substrate and twenty probe results bound to that lock, and if it
   // does, it is not fabricated.
-  assertQualified(activation);
+  assertQualified({ ...activation, pinnedAuthorities });
 }
 
 /**

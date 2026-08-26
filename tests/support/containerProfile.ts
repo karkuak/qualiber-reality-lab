@@ -34,6 +34,7 @@ import {
   assertContract,
   parseStrictJson,
   type IsolationEnforcementProbeResultV1,
+  type IsolationProbeSigningManifestV1,
   type IsolationSubstrateLockV1,
 } from "@erl2/contracts";
 import { repoRoot } from "./adapterFixtures.js";
@@ -47,6 +48,7 @@ export type ContainerProfileFixture =
       readonly activation: ContainerProfileActivation;
       readonly lock: IsolationSubstrateLockV1;
       readonly probeResults: readonly IsolationEnforcementProbeResultV1[];
+      readonly probeSigningManifest: IsolationProbeSigningManifestV1;
       readonly runtimeBinary: string;
     }
   | { readonly available: false; readonly reason: string };
@@ -79,6 +81,20 @@ export function retainedProbeResults(): readonly IsolationEnforcementProbeResult
 }
 
 /**
+ * The retained probe-signing manifest, or `undefined` on a host that never
+ * qualified. Doctor loads it the same way (`isolationStatus`), and the container
+ * activation now carries it so the execution gate can re-verify it.
+ */
+export function retainedProbeSigningManifest(): IsolationProbeSigningManifestV1 | undefined {
+  const manifestPath = path.join(isolationEvidenceDir, "probe-signing-manifest.json");
+  if (!existsSync(manifestPath)) return undefined;
+  return assertContract<IsolationProbeSigningManifestV1>(
+    "IsolationProbeSigningManifestV1",
+    parseStrictJson(readFileSync(manifestPath, "utf8")),
+  );
+}
+
+/**
  * Derives the container profile for this host, exactly as production does.
  *
  * Cached because the derivation starts a container to observe the launcher, and
@@ -96,6 +112,13 @@ function derive(): ContainerProfileFixture {
     return { available: false, reason: "no retained substrate lock (SUBSTRATE_LOCK_NOT_PINNED)" };
   }
   const probeResults = retainedProbeResults();
+  const probeSigningManifest = retainedProbeSigningManifest();
+  if (probeSigningManifest === undefined) {
+    return {
+      available: false,
+      reason: "no retained probe-signing manifest (PROBE_SIGNING_MANIFEST_NOT_PINNED)",
+    };
+  }
   const runtimeBinary = process.env["ERL2_ISOLATION_RUNTIME"] ?? "docker";
   const runtime = new CliContainerRuntime({ binary: runtimeBinary, runtimeId: lock.runtime_id });
   try {
@@ -114,10 +137,11 @@ function derive(): ContainerProfileFixture {
       lock,
       observed,
       probeResults,
+      probeSigningManifest,
       launcher,
       subjectTrust: "trusted_reference",
     });
-    return { available: true, activation, lock, probeResults, runtimeBinary };
+    return { available: true, activation, lock, probeResults, probeSigningManifest, runtimeBinary };
   } catch (cause) {
     return {
       available: false,
