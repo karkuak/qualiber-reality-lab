@@ -720,7 +720,25 @@ export function runCommand(argv: readonly string[]): CommandResult {
     // three can no longer disagree (M2 F-1). A registered command runs its
     // handler (which already carries its own run-lease/envelope handling for
     // journey commands); anything else stays fail-closed exactly as before.
-    const handler = (COMMAND_REGISTRY as Readonly<Record<string, DirectHandler>>)[command];
+    //
+    // The lookup is gated on `IMPLEMENTED_COMMANDS.has(command)` — the same
+    // own-key authority (`Object.keys(COMMAND_REGISTRY)`, a Set immune to the
+    // prototype chain) that command recognition and the top-level listing
+    // already read, and that `--help`/`help <command>` above already gate on —
+    // BEFORE the bracket read. `COMMAND_REGISTRY` is an ordinary object literal,
+    // so a bare `COMMAND_REGISTRY[command]` walks its prototype: an inherited
+    // `Object.prototype` name (`constructor`, `toString`, `__proto__`,
+    // `valueOf`, `hasOwnProperty`, …) resolved to a prototype member that is not
+    // a registered handler, and then either ran — `constructor`/`toString`
+    // emitting a raw value OUTSIDE the erl2-cli-response/v1 envelope, exit 0 —
+    // or threw an untyped "not a function" the backstop reported as
+    // LAB_UNEXPECTED_FAILURE. Both diverge from the ordinary unknown-command
+    // refusal these names already take through every other surface. Gating on
+    // own membership routes every non-registered name, inherited or otherwise,
+    // through that same fail-closed refusal below.
+    const handler = IMPLEMENTED_COMMANDS.has(command)
+      ? (COMMAND_REGISTRY as Readonly<Record<string, DirectHandler>>)[command]
+      : undefined;
     if (handler) {
       return handler(rest);
     }

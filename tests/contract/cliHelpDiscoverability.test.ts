@@ -492,3 +492,126 @@ test("F-1: every command carrying authored usage is in the dispatch registry", (
     );
   }
 });
+
+// -- F-1 (prototype-chain): dispatch reads own membership, never the prototype --
+//
+// `COMMAND_REGISTRY` is an ordinary object literal, so a bare
+// `COMMAND_REGISTRY[command]` bracket read walks its prototype. Every own
+// property name of `Object.prototype` (`constructor`, `toString`, `__proto__`,
+// `valueOf`, `hasOwnProperty`, …) therefore resolved to an inherited member and
+// acted as a pseudo-handler: `constructor`/`toString` RAN and printed a raw
+// value OUTSIDE the erl2-cli-response/v1 envelope (exit 0), while the callable
+// prototype methods and `__proto__` threw an untyped "not a function" the
+// backstop reported as LAB_UNEXPECTED_FAILURE — all divergent from the ordinary
+// unknown-command refusal these names take on every other surface. The
+// correction gates the lookup on `IMPLEMENTED_COMMANDS.has(command)`, the same
+// own-key authority (`Object.keys(COMMAND_REGISTRY)`, a prototype-immune Set)
+// that recognition, the top-level listing, the pre-dispatch `--help`
+// short-circuit, and `help <command>` already use.
+//
+// The name set is derived from the runtime (`Object.getOwnPropertyNames(
+// Object.prototype)`), never a hand-written list, so it cannot rot against the
+// prototype it is meant to cover and introduces no second literal command list.
+const PROTOTYPE_CHAIN_NAMES = Object.getOwnPropertyNames(Object.prototype);
+
+interface RawEnvelope {
+  readonly schema_version?: unknown;
+  readonly command?: unknown;
+  readonly ok?: unknown;
+  readonly exit_code?: unknown;
+  readonly errors?: readonly { readonly code?: unknown; readonly message?: unknown }[];
+}
+
+/** The full parsed stdout object, including the `schema_version` the CLI contract requires. */
+function rawEnvelope(result: ReturnType<typeof erl2>): RawEnvelope {
+  return result.body as unknown as RawEnvelope;
+}
+
+/** Assert a result is a well-formed unknown-command refusal envelope. */
+function assertUnknownCommandRefusal(result: ReturnType<typeof erl2>, label: string): void {
+  const env = rawEnvelope(result);
+  assert.equal(
+    env.schema_version,
+    "erl2-cli-response/v1",
+    `${label}: response must stay inside the erl2-cli-response/v1 envelope, got ${JSON.stringify(env).slice(0, 120)}`,
+  );
+  assert.equal(result.exitCode, 2, `${label}: unknown command must exit 2`);
+  assert.equal(env.ok, false, `${label}: unknown command must not report ok:true`);
+  const first = env.errors?.[0];
+  assert.equal(first?.code, "CFG_UNKNOWN_FLAG", `${label}: unknown command must refuse with CFG_UNKNOWN_FLAG`);
+  assert.match(String(first?.message ?? ""), /unknown command/, `${label}: refusal message must name the unknown command`);
+}
+
+test("F-1: the sampled prototype-chain names are genuinely inherited, not registered commands", () => {
+  // Guards the meaningfulness of the refusal tests below: if any of these names
+  // were ever a real own key of the registry, treating it as unknown would be
+  // wrong. `Object.keys` is own-enumerable only, so a prototype name appearing
+  // here would be a genuine collision to surface, not silently tolerate.
+  assert.ok(PROTOTYPE_CHAIN_NAMES.length > 0, "Object.prototype must expose own property names to test");
+  for (const name of PROTOTYPE_CHAIN_NAMES) {
+    assert.equal(
+      REGISTRY_NAMES.includes(name),
+      false,
+      `${name} is an inherited Object.prototype name and must not be an own registry key`,
+    );
+  }
+  // The specific names the independent review reproduced must be in the sample.
+  for (const flagged of ["constructor", "toString", "__proto__"]) {
+    assert.ok(PROTOTYPE_CHAIN_NAMES.includes(flagged), `${flagged} must be among the sampled prototype names`);
+  }
+});
+
+test("F-1: every prototype-chain name refuses as unknown through direct dispatch, <name> --help, and help <name>", () => {
+  for (const name of PROTOTYPE_CHAIN_NAMES) {
+    // Direct dispatch: the site the correction hardens. Without the own-key
+    // gate, `constructor`/`toString` return a raw non-envelope value at exit 0
+    // and the callable prototype methods / `__proto__` surface as
+    // LAB_UNEXPECTED_FAILURE — every one of these assertions then fails.
+    assertUnknownCommandRefusal(erl2([name]), `direct ${name}`);
+    // `<name> --help`: the pre-dispatch short-circuit must not grant an
+    // inherited name the help path either.
+    assertUnknownCommandRefusal(erl2([name, "--help"]), `${name} --help`);
+    // `help <name>`: already gated on IMPLEMENTED_COMMANDS; pinned so a
+    // regression there is caught by the same contract.
+    assertUnknownCommandRefusal(erl2(["help", name]), `help ${name}`);
+  }
+});
+
+test("F-1: dispatching a prototype-chain name performs no filesystem write or run lease beneath a named run root", () => {
+  // Passes `--run` + `--run-root` naming a scratch root, so a name mis-dispatched
+  // through a journey handler WOULD reach `withRunLease` and drop a lease file
+  // here. A before/after manifest diff over the whole scratch root catches a
+  // lease, an adapter workspace, or any other write; the refusal happens before
+  // any of that. Scoped to the scratch root this test creates, never a broader
+  // scan. (No network, child process, or listener can outlive the CLI: `erl2`
+  // is a single synchronous spawn that has exited by the time `erl2()` returns,
+  // and a lease/adapter/network step would have left a trace under this root.)
+  const scratchParent = ownedTempDir("erl2-proto-fs-");
+  const runRoot = path.join(scratchParent, "run-root");
+  const before = snapshotTree(scratchParent);
+  for (const name of PROTOTYPE_CHAIN_NAMES) {
+    const result = erl2([name, "--run", "proto-run", "--run-root", runRoot]);
+    assertUnknownCommandRefusal(result, `${name} with --run/--run-root`);
+  }
+  const after = snapshotTree(scratchParent);
+  assert.equal(existsSync(runRoot), false, "a refused prototype-chain name must not bring its run root into being");
+  assert.deepEqual(
+    after,
+    before,
+    "dispatching a prototype-chain name must not create, modify, or change the mode of anything beneath the scratch root",
+  );
+});
+
+test("F-1: the correction leaves all 36 real commands listed and dispatchable", () => {
+  // The other half of the invariant: hardening the unknown path must not have
+  // narrowed the recognised set. Exactly the reviewed 36, each dispatchable
+  // (never refused as unknown) and each still rendered in the public inventory.
+  assert.equal(REGISTRY_NAMES.length, 36, "the dispatch registry must still hold exactly 36 commands");
+  assert.equal(COMMANDS.length, 36, "the top-level inventory must still list exactly 36 commands");
+  for (const command of REGISTRY_NAMES) {
+    const first = erl2([command]).body.errors[0];
+    const refusedAsUnknown = first?.code === "CFG_UNKNOWN_FLAG" && /unknown command/.test(first?.message ?? "");
+    assert.equal(refusedAsUnknown, false, `${command} is a real command and must not be refused as unknown`);
+    assert.ok(COMMANDS.includes(command), `${command} must remain in the rendered inventory`);
+  }
+});
