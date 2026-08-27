@@ -1,0 +1,12 @@
+{
+  "control": "NC-2",
+  "mutations": [
+    {
+      "target": "product-out/run-result.json",
+      "beforeDigest": "43b4b2cb26cfa5c51b1c738439b407e2a784872b7f5315c78b92da726cde6f4c",
+      "deleted": true,
+      "mutationApplied": true
+    }
+  ],
+  "applied": true
+}

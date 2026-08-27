@@ -1,0 +1,22 @@
+{
+  "control_id": "NC-11",
+  "evidence_root": "/private/tmp/qualiber-wave3-execution-1787753088/evidence",
+  "scratch_dir": "/private/tmp/claude-502/-private-tmp/498da042-1ff5-401b-a553-86502f23c5c9/scratchpad/nc-scratch/NC-11",
+  "started_at": "2026-08-26T15:21:54.157Z",
+  "mutations": [],
+  "legs": [
+    {
+      "name": "nc11-counterfactual",
+      "exit_code": 0
+    }
+  ],
+  "verdict": "HELD",
+  "classification": "product_disagreement",
+  "sub_reasons": [
+    "run_status_mismatch"
+  ],
+  "precommitted_outcome": "disagree/product_disagreement; forbidden_run_status_observed takes precedence when observed matches forbidden; run_status_mismatch otherwise",
+  "source_evidence_intact": null,
+  "note": "observed run_status is clean (not inconclusive), so forbidden_run_status check does not fire; run_status_mismatch fires instead, which still proves disagree/product_disagreement",
+  "completed_at": "2026-08-26T15:21:54.247Z"
+}

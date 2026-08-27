@@ -1,0 +1,63 @@
+{
+  "schema": "qualiber-reality-lab/independent-review/v1",
+  "reviewed_at": "2026-08-26T16:05:00Z",
+  "reviewer": "independent-agent",
+  "checks": {
+    "attempt1_preservation": {
+      "status": "PASS",
+      "details": "Manifest SHA-256 recomputed as 4ce7898780b6f8742cdc3f9bbbd20b1a78b91eb548efeb1d9882e5091aed0dad, matching the declared value. Manifest contains 315 lines, matching the actual file count in the first attempt evidence root (315 files). Spot-checked 12 files from the manifest against actual files: all 12 SHA-256 digests matched exactly. Files checked: SHA256SUMS.txt, campaign-index.json, execution-lock.json, expectations/QLB-EXT-009.expected.json, expectations/QLB-EXT-010.expected.json, oracle-precommit.json, scenarios/QLB-EXT-009/comparison/comparison.json, scenarios/QLB-EXT-011/input/stimulus.json, scenarios/QLB-EXT-012/plan/plan-sealed.json, scenarios/QLB-EXT-010/run-output/trusted-local-observation-record.json, wave3-campaign-report.md, oracle-absence-scan-result.json."
+    },
+    "oracle_precommit_integrity": {
+      "status": "PASS_WITH_CAVEAT",
+      "details": "All four scenario expectation_sha256 fields verified against actual expectation files in the first attempt evidence: QLB-EXT-009 (7bb957fe...), QLB-EXT-010 (20a1b564...), QLB-EXT-011 (d8631a32...), QLB-EXT-012 (a5933758...) -- all matched. Three counterfactual files (NC-1: eff58589..., NC-10: 518a21d4..., NC-11: af219dae...) all matched their counterfactual_expectation_sha256 digests. Three comparator tooling digests (compare-scenario.mjs, compare-scenario.test.mjs, oracle-absence-scan.mjs) all matched actual files. Five of six completion tooling digests matched. CAVEAT: run_negative_control_mjs in completion_tooling_digests records SHA-256 a8f0d1b690a73299d5c639ea04f558150235b04efa0c531088f81ee78d735cb5, but the actual file on disk is 951326f76e438d7c7e4abea10d11ec147d9af660cc1ebe2a7f2aa259d074215c. No amendment was recorded in the precommit. The script was modified after the precommit was frozen."
+    },
+    "execution_lock_integrity": {
+      "status": "PASS",
+      "details": "oracle_precommit_sha256 in the lock (171d2ad6...) matches the computed SHA-256 of oracle-precommit.json. first_attempt_lock_sha256 (fb96c200...) matches the computed SHA-256 of the first attempt's execution-lock.json. All three tooling digests in the lock match the actual comparator files. Adapter manifest SHA-256 (91e830d2...) matches the actual manifest file in the first-attempt registry. Adapter core hash (504ab99b...) appears in the registry directory path, confirming identity linkage. Comparator dependency entries (@erl2/contracts da45bec0..., @erl2/integrity c927d02c...) are consistent across lock and precommit."
+    },
+    "scenario_comparisons": {
+      "status": "PASS",
+      "details": "All four scenarios (QLB-EXT-009 through 012) have verdict=agree and classification=product_agreement. All four have binding.bound=true with all binding sub-checks passing: dependency_triples_matched=true, expectation_digest_matched=true, adapter_artifact_hashes_matched=true, frozen_sidecars_matched=true, oracle_precommit_digests_matched=true, execution_lock_digests_matched=true, campaign_index_observation_id_matched=true. Zero mismatched retained_output_refs in all four scenarios. All input_digest_checks and adapter_artifact_hashes_witnessed entries show agreed=true. QLB-EXT-009: clean/0 findings/healthy. QLB-EXT-010: rule_violation_detected/1 duplicate_event/healthy. QLB-EXT-011: clean/1 forbidden_event_observed(info)/healthy. QLB-EXT-012: clean/0 findings/partial."
+    },
+    "determinism": {
+      "status": "PASS",
+      "details": "All four scenarios report semantic_determinism=CONFIRMED with zero semantic_differences. The only nondeterministic fields are oracle_precommit_sha256 and execution_lock_sha256, which are expected to differ between the first attempt and completion run (different precommit and lock documents). Observation IDs, timestamps, and plan hashes are explicitly excluded from semantic comparison per the schema."
+    },
+    "negative_controls": {
+      "status": "PASS_WITH_NOTED_FAILURE",
+      "details": "14 of 15 negative controls HELD as expected. 1 FAILED (NC-12). NC-12 (planted residue in product-out/) failed because the comparator checks only declared retained_output_refs and does not detect undeclared extra files. This is a documented scope limitation of the comparator-only check, not a product defect. NC-11 sub-reason note: the precommit predicted forbidden_run_status_observed but the actual sub-reason was run_status_mismatch. This is because the observed run_status was clean (not inconclusive), so the forbidden_run_status check did not fire; run_status_mismatch fired instead because the counterfactual expected inconclusive but observed clean. The control still HELD -- the disagree/product_disagreement outcome was correct, only the sub-reason path differed. Additional caveat: the run-negative-control.mjs script used to execute these controls has a SHA-256 (951326f7...) that differs from the oracle precommit's committed digest (a8f0d1b6...), meaning negative controls were run with tooling not bound by the precommit. This weakens the negative control evidence chain, though the tooling-test-result honestly records the actual digest."
+    },
+    "evidence_index": {
+      "status": "PASS",
+      "details": "evidence-index.sha256 sidecar contains 810bd36f5a54ba60558912fd40818651eee467da532008cd6373da6db0403520, which matches the computed SHA-256 of evidence-index.json. The index lists 33 entries; all 33 files exist on disk. Spot-checked 12 entries against actual SHA-256: candidate-defect-register.json, execution-lock.json, oracle-precommit.json, determinism/QLB-EXT-009-determinism.json, determinism/QLB-EXT-012-determinism.json, negative-controls/results/NC-1.json, negative-controls/results/NC-12.json, scenarios/QLB-EXT-010/comparison/comparison.json, tooling-test-result.json, wave3-completion-campaign-report.md, completion-declaration.json, scenarios/QLB-EXT-011/comparison/comparison.json -- all 12 matched."
+    },
+    "tooling_test_result": {
+      "status": "PASS",
+      "details": "All 6 script digests in tooling-test-result.json match the actual scripts in the tooling/ directory: build-evidence-index.mjs (25400160...), build-preservation-manifest.mjs (58391cb9...), build-tooling-test-result.mjs (985130c6...), command-logger.mjs (c5bd0b5b...), compare-determinism.mjs (30417701...), run-negative-control.mjs (951326f7...). Note: the tooling-test-result correctly records the actual file digest, which differs from the oracle precommit's committed digest for run-negative-control.mjs. The tooling-test-result is internally consistent."
+    },
+    "candidate_defect_register": {
+      "status": "PASS",
+      "details": "CDF-001 accurately describes the NC-12 finding: the comparator's retained_output_refs check verifies only declared files and does not detect undeclared extra files planted in the retained workspace tree. The defect is correctly marked severity=informational, affects_verdict=false, affects_claim_ceiling=false. The description is consistent with the NC-12 result file's note field. The resolution correctly characterizes this as a scope limitation of the comparator-only check vs the full offline verification pipeline."
+    }
+  },
+  "scenarios_admissible": true,
+  "determinism_confirmed": true,
+  "negative_controls_acceptable": true,
+  "digest_discrepancies": [
+    {
+      "file": "tooling/run-negative-control.mjs",
+      "oracle_precommit_claims": "a8f0d1b690a73299d5c639ea04f558150235b04efa0c531088f81ee78d735cb5",
+      "actual_on_disk": "951326f76e438d7c7e4abea10d11ec147d9af660cc1ebe2a7f2aa259d074215c",
+      "tooling_test_result_records": "951326f76e438d7c7e4abea10d11ec147d9af660cc1ebe2a7f2aa259d074215c",
+      "impact": "The negative control orchestration script was modified after the oracle precommit was frozen. No precommit amendment was recorded. The tooling-test-result honestly captures the actual digest. This affects the negative control evidence chain but does not affect scenario comparisons (which use the comparator, whose digest is verified). The 14/15 HELD outcome provides compensating evidence that the controls function correctly despite the unrecorded script change."
+    }
+  ],
+  "evidence_complete": true,
+  "overall_verdict": "ADMISSIBLE_WITH_CAVEATS",
+  "caveats": [
+    "run-negative-control.mjs SHA-256 mismatch: the oracle precommit committed to digest a8f0d1b6... but the script on disk (and recorded in tooling-test-result.json) is 951326f7.... The precommit's amendments array is empty, so this change was not formally recorded. This weakens the pre-registration of the negative control tooling, though the controls themselves produced the expected outcomes (14 HELD, 1 documented FAILED).",
+    "NC-11 sub-reason path: the precommit predicted forbidden_run_status_observed but the actual mechanism was run_status_mismatch. The control HELD correctly (disagree/product_disagreement) but via a different code path than the precommit anticipated. The NC-11 result note explains this is because the observed status was clean, not inconclusive, so the forbidden_run_status check did not trigger. This is a precommit prediction inaccuracy, not a control failure.",
+    "NC-12 FAILED is a known and documented scope limitation of the comparator-only check. CDF-001 in the candidate defect register describes it accurately. The comparator does not guarantee tree-level integrity against extra planted files; the full offline verifier (product code) provides that check."
+  ],
+  "notes": "The four scenario comparisons form the core evidence and are fully verified: all four show agree/product_agreement with complete binding, all expectation digests chain correctly from precommit through comparator, and determinism is confirmed across the first attempt and completion run. The execution lock and oracle precommit form an intact digest chain for the comparator tooling, adapter artifact, and dependency pins. The single digest discrepancy (run-negative-control.mjs) affects the negative control evidence chain only, not the scenario comparisons. The completion declaration correctly characterizes the run as confirmatory (not blind). Overall, the evidence supports admissibility of all four scenarios with the noted caveats."
+}

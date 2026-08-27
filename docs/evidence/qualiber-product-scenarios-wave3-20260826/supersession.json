@@ -1,0 +1,51 @@
+{
+  "schema": "qualiber-wave3/supersession/v1",
+  "campaign": "qualiber-product-scenarios-wave3-20260826",
+  "as_of": "2026-08-26",
+  "controls": {
+    "NC-11": {
+      "superseded_by": "NC-11R",
+      "original_verdict": "HELD",
+      "counts_as_passing_control": false,
+      "reason": "Observed run_status was clean (not inconclusive); forbidden_run_status_observed never fired; run_status_mismatch exercised a different property than forbidden-status precedence (rule 6).",
+      "replacement_property": "forbidden-status precedence proven: positive fixture agrees; forbidden fixture disagrees via forbidden_run_status_observed with run_status_mismatch provably excluded (expected==observed==inconclusive); disabling rule 6 turns the property red.",
+      "authoritative_replacement": "control-closure/results/NC-11R.json + control-closure/nc11r/ (fixture-record, binding-coverage, 3 comparison outputs)"
+    },
+    "NC-12": {
+      "superseded_by": "NC-12R",
+      "original_verdict": "FAILED",
+      "counts_as_passing_control": false,
+      "reason": "Only the comparator's declared-ref check was exercised; the offline verifier and residue scanner were not executed. The planted residue was invisible to retained_output_refs checks. Recorded as CDF-001 and reclassified as an orchestration/method-execution defect.",
+      "replacement_property": "NC-12R HELD (lab_harness_failure): clean scan passes; planted residue refused and named (undeclared_file_in_retained_tree); residue-scanner suite 33/33 exercises symlink/traversal/duplicate/missing/non-regular protections.",
+      "authoritative_replacement": "control-closure/results/NC-12R.json + control-closure/nc12r/"
+    }
+  },
+  "runner_tooling_history": {
+    "post_freeze_runner_digest_mismatch": {
+      "file": "tooling/run-negative-control.mjs (completion attempt)",
+      "oracle_precommit_committed": "a8f0d1b690a73299d5c639ea04f558150235b04efa0c531088f81ee78d735cb5",
+      "on_disk_and_tooling_test_result": "951326f76e438d7c7e4abea10d11ec147d9af660cc1ebe2a7f2aa259d074215c",
+      "defect": "Runner modified after the completion oracle-precommit was frozen; no amendment recorded. Weakened the pre-registration of negative-control tooling in the completion attempt.",
+      "surfaced_by": "history/completion-attempt/independent-review-result.json (UNINDEXED in the completion attempt's own index)",
+      "resolution": "control-set-v2 closure froze the on-disk v1 runner (951326f7...) in control-precommit.json / control-execution-lock.json and re-executed all controls; FINAL review verified digest and mode 644."
+    }
+  },
+  "active_control_set_v2": [
+    "NC-1",
+    "NC-1b",
+    "NC-2",
+    "NC-3",
+    "NC-4a",
+    "NC-4b",
+    "NC-5",
+    "NC-6",
+    "NC-7",
+    "NC-8",
+    "NC-9",
+    "NC-10",
+    "NC-13",
+    "NC-11R",
+    "NC-12R"
+  ],
+  "note": "Originals NC-11 and NC-12 are superseded, not active; they do not count as passing controls."
+}

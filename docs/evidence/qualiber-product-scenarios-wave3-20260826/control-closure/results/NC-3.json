@@ -1,0 +1,30 @@
+{
+  "control_id": "NC-3",
+  "evidence_root": "/private/tmp/qualiber-wave3-control-closure-1787765436-98932/work/evidence-copy",
+  "scratch_dir": "/private/tmp/qualiber-wave3-control-closure-1787765436-98932/work/scratch/NC-3",
+  "started_at": "2026-08-26T17:35:43.113Z",
+  "mutations": [],
+  "legs": [
+    {
+      "name": "nc3-exit-code-check",
+      "checks": {
+        "recorded_exit_code_zero": true,
+        "recorded_ci_exit_code_zero": true,
+        "run_status_rule_violation": true,
+        "verdict_agree": true
+      }
+    }
+  ],
+  "verdict": "HELD",
+  "classification": null,
+  "sub_reasons": [],
+  "precommitted_outcome": "both exit codes 0, run_status rule_violation_detected, verdict agree",
+  "source_evidence_intact": null,
+  "checks": {
+    "recorded_exit_code_zero": true,
+    "recorded_ci_exit_code_zero": true,
+    "run_status_rule_violation": true,
+    "verdict_agree": true
+  },
+  "completed_at": "2026-08-26T17:35:43.114Z"
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": "subject-adapter-manifest/v2",
+  "adapter_id": "qualiber-erl2-validation-subject",
+  "version": "0.1.0",
+  "adapter_artifact_hash": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+  "protocol_support": [
+    {
+      "protocol_version": "subject-adapter/v2",
+      "execution_modes": [
+        "local_observation"
+      ],
+      "operations": [
+        "interact",
+        "report-residue"
+      ],
+      "supported_package_kinds": [
+        "archive"
+      ],
+      "required_controls": [
+        "separate-process",
+        "process-tree-termination",
+        "wall-clock-deadline",
+        "bounded-request-bytes",
+        "bounded-response-bytes",
+        "writable-output-only",
+        "environment-variable-allowlist",
+        "bounded-diagnostics",
+        "input-mount-tamper-detection",
+        "egress-policy-adjudication",
+        "docker-socket-capability-denied",
+        "privileged-capability-denied"
+      ]
+    }
+  ],
+  "required_broker_capabilities": [
+    "write-run-output",
+    "write-adapter-workspace",
+    "read-subject-visible-input"
+  ],
+  "network_allowlist_ids": [],
+  "certification_receipt_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "owner": "qualiber",
+  "core_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "erl2-dev-qualiber-erl2-validation-subject-owner-ed25519-1",
+    "signed_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393",
+    "signature_base64": "06dtDhZyi5xjmuWb5OtraugeGpXDxXvm8h+mzSvNE2hHgcsnq3nifu22wNiKc2xHK7XxOhOLBQl9aILhZo6WDw=="
+  }
+}

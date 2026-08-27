@@ -1,0 +1,22 @@
+{
+  "schema": "supersession-history/v1",
+  "supersession": {
+    "NC-11": {
+      "superseded_by": "NC-11R",
+      "reason": "Observed run_status was clean (not inconclusive); forbidden_run_status_observed never fired; run_status_mismatch exercised a different property than forbidden-status precedence",
+      "original_verdict": "HELD",
+      "original_sub_reasons": [
+        "run_status_mismatch"
+      ],
+      "original_assessment": "The control proved expected!=observed disagree but did NOT prove forbidden-status precedence (rule 6)"
+    },
+    "NC-12": {
+      "superseded_by": "NC-12R",
+      "reason": "Only comparator (declared-ref check) was exercised; offline verifier and residue scanner were not executed; CDF-001 reclassified as orchestration/method-execution defect",
+      "original_verdict": "FAILED",
+      "original_sub_reasons": [],
+      "original_assessment": "The comparator correctly checked only declared references; the planted file was invisible to retained_output_refs checks; the control's precommitted method required surfaces that were not exercised"
+    }
+  },
+  "note": "NC-11->NC-11R, NC-12->NC-12R; originals not active"
+}

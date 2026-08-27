@@ -1,0 +1,204 @@
+{
+  "run": {
+    "runStatus": "clean",
+    "collectorHealth": "healthy",
+    "findingCount": 1,
+    "ciExitCode": 0,
+    "blocking": false,
+    "advisoryCommentEligible": false,
+    "evidencePackGenerated": true,
+    "customerVisibleMessage": "1 informational telemetry finding recorded; no rule violation reported (advisory; CI not affected)."
+  },
+  "result": {
+    "schemaVersion": "validation_result_v0.1",
+    "ruleId": "erl2_ext_journey",
+    "journeyId": "erl2_ext_journey",
+    "testId": "adapters/erl2-subject::erl2_ext_journey",
+    "mode": "observe",
+    "validationStatus": "pass",
+    "ciBlocking": false,
+    "findings": [
+      {
+        "type": "forbidden_event_observed",
+        "severity": "info",
+        "severitySource": "contract",
+        "ruleId": "erl2_ext_journey",
+        "detail": {
+          "event": "quote_requested_cancel",
+          "obligationKey": "quote_requested_cancel",
+          "note": "forbidden event observed",
+          "occurrenceCount": 1,
+          "decidingEventIds": [
+            "8d21d711-9f43-4af0-be04-ea84e6b72c09"
+          ],
+          "firstOccurrenceEventId": "8d21d711-9f43-4af0-be04-ea84e6b72c09",
+          "lastOccurrenceEventId": "8d21d711-9f43-4af0-be04-ea84e6b72c09"
+        },
+        "associationConfidence": "high",
+        "associationBlockingEligible": true,
+        "policyBlockingAllowed": false
+      }
+    ],
+    "observed": {
+      "modeled": [
+        "quote_requested_one",
+        "quote_requested_three",
+        "quote_requested_zero",
+        "quote_requested_cancel"
+      ],
+      "knownUnknown": [],
+      "unmodeled": []
+    },
+    "excluded": {
+      "background": [],
+      "orphaned": [],
+      "late": [],
+      "unknown": []
+    },
+    "declaredConstructs": [
+      {
+        "key": "expected_path:quote_requested_one"
+      },
+      {
+        "key": "expected_path:quote_requested_three"
+      },
+      {
+        "key": "expected_path:quote_requested_zero"
+      },
+      {
+        "key": "forbidden:quote_requested_cancel"
+      },
+      {
+        "key": "occurrence_bounds:quote_requested_one"
+      },
+      {
+        "key": "occurrence_bounds:quote_requested_three"
+      },
+      {
+        "key": "occurrence_bounds:quote_requested_zero"
+      },
+      {
+        "key": "ordering:quote_requested_three.after_any"
+      },
+      {
+        "key": "ordering:quote_requested_zero.after_any"
+      },
+      {
+        "key": "required_properties:quote_requested_one"
+      },
+      {
+        "key": "required_properties:quote_requested_three"
+      },
+      {
+        "key": "required_properties:quote_requested_zero"
+      }
+    ],
+    "collectorHealth": "healthy"
+  },
+  "pack": {
+    "evidence_pack_schema_version": "1.0",
+    "product_context": {
+      "product": "TelemetryTest AI",
+      "phase": "Phase 1",
+      "mode": "observe",
+      "environment": "ci"
+    },
+    "rule_context": {
+      "rule_id": "erl2_ext_journey",
+      "rule_source": "reality_lab_external_campaign",
+      "rule_contract_version": "erl2_ext_journey_v1",
+      "severity": "medium",
+      "policy": "non_blocking",
+      "owner": "reality_lab_external_campaign"
+    },
+    "journey_context": {
+      "journey_id": "erl2_ext_journey",
+      "display_name": null,
+      "known_unknowns": []
+    },
+    "test_context": {
+      "test_id": "adapters/erl2-subject::erl2_ext_journey",
+      "test_file": "adapters/erl2-subject",
+      "test_title": "erl2_ext_journey",
+      "test_run_id": "01a03e72-ee8e-70de-a019-6f09ae4faa9f",
+      "ci_run_id": "01a03e72-ee8e-70de-a019-6f09ae4faa9f",
+      "pull_request_id": null,
+      "framework": "Playwright",
+      "browser": "chromium"
+    },
+    "collector_context": {
+      "collector_version": "erl2_validation_subject_collector_0.1",
+      "collector_health": "healthy",
+      "capture_coverage": 1,
+      "drop_rate": 0,
+      "background_event_ratio": 0
+    },
+    "association_context": {
+      "distribution": {
+        "high": 4,
+        "medium": 0,
+        "low": 0,
+        "unknown": 0
+      },
+      "late_event_count": 0,
+      "orphan_event_count": 0,
+      "unknown_event_count": 0
+    },
+    "validation_context": {
+      "validator_version": "validator_0.2",
+      "validation_status": "pass",
+      "failure_type": "forbidden_event_observed",
+      "expected_sequence": [
+        "quote_requested_one",
+        "quote_requested_three",
+        "quote_requested_zero",
+        "quote_requested_cancel"
+      ],
+      "actual_sequence": [
+        "quote_requested_one",
+        "quote_requested_three",
+        "quote_requested_zero",
+        "quote_requested_cancel"
+      ],
+      "missing_event": null,
+      "validator_quality_score": 90,
+      "validator_quality_band": "Strong",
+      "vqs_cold_start": true
+    },
+    "payload_summary": {
+      "included_fields": [
+        "numberOfItems"
+      ],
+      "redacted_fields": [],
+      "raw_payload_included": false
+    },
+    "ai_context": {
+      "ai_explanation_used": false,
+      "prompt_version": null,
+      "model_decision_authority": "none"
+    },
+    "human_feedback": {
+      "status": "pending",
+      "feedback_ids": []
+    },
+    "content_hash": "sha256:7e480e6a8e1f536009173971ae6855ed8de14f5e4aac71335c1c7fa6ecb1ef27",
+    "evidence_pack_id": "evp_7e480e6a8e1f",
+    "created_at": "2026-08-26T14:21:56.267Z"
+  },
+  "eligibility": {
+    "eligible": false,
+    "consecutiveObserveRuns": 1,
+    "minVqsBand": "Strong",
+    "avgCaptureCoverage": 1,
+    "avgHighMediumRatio": 1,
+    "fpRate": 0,
+    "aiOverclaimCount": 0,
+    "humanApprovalsComplete": false,
+    "failedCriteria": [
+      "insufficient_observe_runs",
+      "missing_human_approvals"
+    ],
+    "rollbackRecommended": false,
+    "rollbackReasons": []
+  }
+}

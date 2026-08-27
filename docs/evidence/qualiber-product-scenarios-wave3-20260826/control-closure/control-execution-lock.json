@@ -1,0 +1,18 @@
+{
+  "schema": "qualiber-reality-lab/control-execution-lock/v1",
+  "note": "CONTROL-ONLY execution lock. Binds the frozen control precommit + frozen tooling. After this point: no tooling edits, no chmod, no expectation edits; any required edit aborts the run.",
+  "control_precommit_sha256": "529f7cdd3cfbd754aa3e7c414f8567a3f7ae59e5bd0f03708628d3ab714c06e1",
+  "comparator_sha256": "83223022f1522f4c22607f02123e02a0c5ff9cf92363aba0ec1e8a256010bcc4",
+  "v1_runner_sha256": "951326f76e438d7c7e4abea10d11ec147d9af660cc1ebe2a7f2aa259d074215c",
+  "v2_runner_sha256": "f59f31271e108a2312ca2b46adc1a9567d1081dbb5b5e918a3b7e533d360773f",
+  "nc11r_fixture_builder_sha256": "b74e65712f97e1cc409de50a3f3ee2178c20289eae73d064fba4df055ba72f9b",
+  "residue_scanner_sha256": "53b8c3f5a482c10bfdfa810c7bb0695d6e2236412a146d96550c4a91cfecaa99",
+  "dependency_anchor": {
+    "contracts_entry": "da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c",
+    "integrity_entry": "c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13",
+    "reality_lab_pin": "69ace16fb7ee021dddbcf3fa70e4295c2e5a400b"
+  },
+  "oracle_precommit_used": "completion oracle-precommit (superset of attempt-1 with negative_controls); scenario bindings byte-consistent with attempt-1 scenarios",
+  "campaign_index_used": "attempt-1 campaign-index (scenario->observation_id + sealed_plan_core_hash)",
+  "scenario_source": "attempt-1 evidence scenarios (full trees); completion scenarios are comparison-stubs only"
+}

@@ -1,0 +1,266 @@
+{
+  "schema": "qualiber-reality-lab/control-closure-precommit/v1",
+  "campaign": "wave3-control-set-v2-closure",
+  "note": "CONTROL-ONLY closure precommit. Frozen before any control execution. No Qualiber scenario re-run, no comparator semantic change.",
+  "frozen_at_marker": "control-closure freeze (pre-execution)",
+  "active_controls": [
+    "NC-1",
+    "NC-1b",
+    "NC-2",
+    "NC-3",
+    "NC-4a",
+    "NC-4b",
+    "NC-5",
+    "NC-6",
+    "NC-7",
+    "NC-8",
+    "NC-9",
+    "NC-10",
+    "NC-13",
+    "NC-11R",
+    "NC-12R"
+  ],
+  "total_active_controls": 15,
+  "superseded_not_active": [
+    "NC-11 (-> NC-11R)",
+    "NC-12 (-> NC-12R)"
+  ],
+  "supersession_history": {
+    "NC-11": {
+      "superseded_by": "NC-11R",
+      "reason": "Observed run_status was clean (not inconclusive); forbidden_run_status_observed never fired; run_status_mismatch exercised a different property than forbidden-status precedence",
+      "original_verdict": "HELD",
+      "original_sub_reasons": [
+        "run_status_mismatch"
+      ],
+      "original_assessment": "The control proved expected!=observed disagree but did NOT prove forbidden-status precedence (rule 6)"
+    },
+    "NC-12": {
+      "superseded_by": "NC-12R",
+      "reason": "Only comparator (declared-ref check) was exercised; offline verifier and residue scanner were not executed; CDF-001 reclassified as orchestration/method-execution defect",
+      "original_verdict": "FAILED",
+      "original_sub_reasons": [],
+      "original_assessment": "The comparator correctly checked only declared references; the planted file was invisible to retained_output_refs checks; the control's precommitted method required surfaces that were not exercised"
+    }
+  },
+  "expected_outcomes": {
+    "NC-1": {
+      "verdict": "HELD",
+      "classification": "product_disagreement",
+      "gate": "disagree",
+      "sub_reasons": [
+        "run_status_mismatch",
+        "required_finding_type_absent:duplicate_event"
+      ],
+      "method": "run-negative-control.mjs",
+      "scenario": "QLB-EXT-009",
+      "kind": "counterfactual"
+    },
+    "NC-1b": {
+      "verdict": "HELD",
+      "classification": "lab_harness_failure",
+      "gate": "unavailable",
+      "sub_reasons": [
+        "expectation_digest_not_precommitted"
+      ],
+      "method": "run-negative-control.mjs",
+      "scenario": "QLB-EXT-011",
+      "kind": "post-precommit expectation tamper"
+    },
+    "NC-2": {
+      "verdict": "HELD",
+      "classification": "lab_harness_failure",
+      "gate": "unavailable",
+      "sub_reasons": [
+        "adapter_artifact_hashes_binding_failed"
+      ],
+      "method": "run-negative-control.mjs",
+      "scenario": "QLB-EXT-009",
+      "kind": "delete run-result"
+    },
+    "NC-3": {
+      "verdict": "HELD",
+      "classification": null,
+      "gate": "binding-mismatch",
+      "sub_reasons": [],
+      "method": "run-negative-control.mjs",
+      "scenario": "QLB-EXT-010",
+      "kind": "tamper report"
+    },
+    "NC-4a": {
+      "verdict": "HELD",
+      "classification": null,
+      "gate": "binding-mismatch",
+      "sub_reasons": [],
+      "method": "run-negative-control.mjs",
+      "scenario": "009<->012",
+      "kind": "product-out cross swap"
+    },
+    "NC-4b": {
+      "verdict": "HELD",
+      "classification": null,
+      "gate": "binding-mismatch",
+      "sub_reasons": [],
+      "method": "run-negative-control.mjs",
+      "scenario": "009<->012",
+      "kind": "qualiber subtree swap"
+    },
+    "NC-5": {
+      "verdict": "HELD",
+      "classification": "lab_harness_failure",
+      "gate": "unavailable",
+      "sub_reasons": [
+        "input_digest_binding_failed"
+      ],
+      "method": "run-negative-control.mjs",
+      "scenario": "QLB-EXT-010",
+      "kind": "retained-input mutation"
+    },
+    "NC-6": {
+      "verdict": "HELD",
+      "classification": "lab_harness_failure",
+      "gate": "unavailable",
+      "sub_reasons": [],
+      "method": "run-negative-control.mjs",
+      "scenario": "QLB-EXT-010",
+      "kind": "binding tamper"
+    },
+    "NC-7": {
+      "verdict": "HELD",
+      "classification": "lab_harness_failure",
+      "gate": "unavailable",
+      "sub_reasons": [],
+      "method": "run-negative-control.mjs",
+      "scenario": "varies",
+      "kind": "harness fault"
+    },
+    "NC-8": {
+      "verdict": "HELD",
+      "classification": "lab_harness_failure",
+      "gate": "unavailable",
+      "sub_reasons": [],
+      "method": "run-negative-control.mjs",
+      "scenario": "varies",
+      "kind": "harness fault"
+    },
+    "NC-9": {
+      "verdict": "HELD",
+      "classification": "lab_harness_failure",
+      "gate": "unavailable",
+      "sub_reasons": [],
+      "method": "run-negative-control.mjs",
+      "scenario": "varies",
+      "kind": "harness fault"
+    },
+    "NC-10": {
+      "verdict": "HELD",
+      "classification": "product_disagreement",
+      "gate": "disagree",
+      "sub_reasons": [
+        "run_status_mismatch"
+      ],
+      "method": "run-negative-control.mjs",
+      "scenario": "QLB-EXT-010",
+      "kind": "counterfactual"
+    },
+    "NC-13": {
+      "verdict": "HELD",
+      "classification": null,
+      "gate": "binding-mismatch",
+      "sub_reasons": [],
+      "method": "run-negative-control.mjs",
+      "scenario": "varies",
+      "kind": "integrity"
+    },
+    "NC-11R": {
+      "verdict": "disagree/product_disagreement",
+      "classification": "product_disagreement",
+      "gate": "forbidden_run_status precedence (rule 6)",
+      "sub_reasons": [
+        "forbidden_run_status_observed"
+      ],
+      "method": "run-negative-control-v2.mjs + nc11r-fixture-builder.mjs",
+      "scenario": "QLB-EXT-012 (fixture)",
+      "kind": "forbidden-status precedence"
+    },
+    "NC-12R": {
+      "verdict": "HELD",
+      "classification": "lab_harness_failure",
+      "gate": "residue enumeration integrity",
+      "sub_reasons": [
+        "undeclared_file_in_retained_tree"
+      ],
+      "method": "run-negative-control-v2.mjs + residue-scanner.mjs",
+      "scenario": "QLB-EXT-009 (residue)",
+      "kind": "planted-residue detection"
+    }
+  },
+  "tooling_digests": {
+    "run-negative-control.mjs (v1 retained runner)": {
+      "sha256": "951326f76e438d7c7e4abea10d11ec147d9af660cc1ebe2a7f2aa259d074215c",
+      "mode": "644",
+      "bytes": 30954
+    },
+    "run-negative-control-v2.mjs (v2 remediation runner)": {
+      "sha256": "f59f31271e108a2312ca2b46adc1a9567d1081dbb5b5e918a3b7e533d360773f",
+      "mode": "644",
+      "bytes": 18117
+    },
+    "nc11r-fixture-builder.mjs": {
+      "sha256": "b74e65712f97e1cc409de50a3f3ee2178c20289eae73d064fba4df055ba72f9b",
+      "mode": "644",
+      "bytes": 24834
+    },
+    "residue-scanner.mjs (NC-12R)": {
+      "sha256": "53b8c3f5a482c10bfdfa810c7bb0695d6e2236412a146d96550c4a91cfecaa99",
+      "mode": "644",
+      "bytes": 8473
+    },
+    "compare-scenario.mjs (comparator)": {
+      "sha256": "83223022f1522f4c22607f02123e02a0c5ff9cf92363aba0ec1e8a256010bcc4",
+      "mode": "644",
+      "bytes": 36999
+    },
+    "oracle-absence-scan.mjs": {
+      "sha256": "5a2f48445aee2aa76b7621c661cd24d8f343bc1f632478099cf85f8a5322d631",
+      "mode": "644",
+      "bytes": 8038
+    },
+    "test-nc11r-binding.mjs": {
+      "sha256": "06cf68989d58acc033ef6c22be79bc12533ff823de7310bd8750b47794a9aa85",
+      "mode": "644",
+      "bytes": 19546
+    },
+    "test-residue-scanner.mjs": {
+      "sha256": "89de30d80068398058b9e536aa2af1ff9b4339cc92df23574e69746eacac78a5",
+      "mode": "644",
+      "bytes": 13954
+    },
+    "tooling-test-result.json": {
+      "sha256": "16dbc15e3890d790add339d86715c2b35afaac981af81a7999a97d47fedf8e16",
+      "mode": "644",
+      "bytes": 1922
+    },
+    "control-set-v2.json": {
+      "sha256": "da41370bb8475b5dd15a538703261c28781e8b34d96ee6c8950716bed3c5243a",
+      "mode": "644",
+      "bytes": 14159
+    }
+  },
+  "comparator_pinned_digest": "83223022f1522f4c22607f02123e02a0c5ff9cf92363aba0ec1e8a256010bcc4",
+  "dependency_anchor": {
+    "note": "real @erl2 built from RL 69ace16",
+    "contracts_entry": "da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c",
+    "integrity_entry": "c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13"
+  },
+  "source_scenario_evidence_digests": {
+    "QLB-EXT-009": "49f5b0854908a7605b596cf757243932a5dcfcc15706d6e098ed9e9e50536c5f",
+    "QLB-EXT-010": "08b14e8a30c7ee6c1081205713ddcff5076f363e2db9a11d204906f733422603",
+    "QLB-EXT-011": "8bfb95d26424cf38cd4a14f45c2bf271fbf4c7ea7e2d0a0157bc0122e2a441f6",
+    "QLB-EXT-012": "a477bef65403b29cd041617c48ad3ea7aad4d87bcfe7e0a2944bb810d8fc6619"
+  },
+  "review": {
+    "verdict": "CONTROL REMEDIATION V2 READY TO FREEZE — NC-11R AND NC-12R CONFIRMED",
+    "review_document_sha256": "b0f33293aa35ae8810b3748ff4595402587dc95487917d9a115efa25ea8deb46"
+  }
+}

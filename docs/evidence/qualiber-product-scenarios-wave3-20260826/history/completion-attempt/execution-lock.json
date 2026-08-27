@@ -1,0 +1,93 @@
+{
+  "schema": "qualiber/execution-lock/v1",
+  "campaign": "wave-3",
+  "completion_run_id": "completion-1787755899",
+  "locked_at": "2026-08-26T15:15:00Z",
+  "authorization": "owner-authorized",
+
+  "oracle_precommit_sha256": "sha256:171d2ad61f91ce8379203438bff68ebf2255ab6abd20262556f2d14ee407477b",
+  "first_attempt_lock_sha256": "sha256:fb96c200f941712174f495394be3ce384165c2739170a287501c693bd0f3636f",
+
+  "coordinates": {
+    "qualiber": {
+      "commit": "236282a667fa161ee16fd363e33559cfe7871ba0",
+      "tree": "e40e5028ef172590ce482debf18e5d99f6099971"
+    },
+    "reality_lab": {
+      "commit": "02de870ef593c2cbd8c517792072769867f33e46",
+      "tree": "16e20fff5f09535ccb0014c4346258f34ec94ef6"
+    },
+    "adapter_dependency_pin": {
+      "commit": "69ace16fb7ee021dddbcf3fa70e4295c2e5a400b"
+    }
+  },
+
+  "adapter": {
+    "adapter_id": "qualiber-erl2-validation-subject",
+    "artifact_path": "adapters/erl2-subject/dist/qualiber-erl2-validation-subject.mjs",
+    "artifact_sha256": "sha256:c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+    "artifact_bytes": 41472,
+    "manifest_path": "adapters/erl2-subject/certification/validation-adapter-manifest.v2.json",
+    "manifest_sha256": "sha256:91e830d253e23194ecb9bbd0a206c20699b610333821c25074a6dc6345c9e85a",
+    "manifest_core_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393"
+  },
+
+  "comparator_dependencies": {
+    "anchor": "adapters/erl2-subject/package.json",
+    "resolved": [
+      {
+        "name": "@erl2/contracts",
+        "version": "0.1.0",
+        "entry_sha256": "sha256:da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c"
+      },
+      {
+        "name": "@erl2/integrity",
+        "version": "0.1.0",
+        "entry_sha256": "sha256:c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13"
+      }
+    ]
+  },
+
+  "product_artifact_identities": {
+    "live_quote_subject": {
+      "sha256": "d757168a6f1623d78a922434b5f05f45389891574105ebf1c2bf505591efec94",
+      "bytes": 43891
+    },
+    "validation_subject": {
+      "sha256": "c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+      "bytes": 41472
+    }
+  },
+
+  "tooling_digests": {
+    "compare_scenario_mjs": "83223022f1522f4c22607f02123e02a0c5ff9cf92363aba0ec1e8a256010bcc4",
+    "compare_scenario_test_mjs": "c92de1f3b37f39a3292903cd39084c23f59c592400197bb76778628514e562b4",
+    "oracle_absence_scan_mjs": "5a2f48445aee2aa76b7621c661cd24d8f343bc1f632478099cf85f8a5322d631"
+  },
+
+  "feature_scope": [
+    "QLB-EXT-009",
+    "QLB-EXT-010",
+    "QLB-EXT-011",
+    "QLB-EXT-012"
+  ],
+
+  "binding_rules": {
+    "branch_names_not_used_at_execution": true,
+    "detached_checkouts_at_exact_commits": true,
+    "later_remote_movement_informational_only": true,
+    "campaign_restarts_only_on_coordinate_mismatch": true
+  },
+
+  "precondition_verification": {
+    "origin_preprod_at_lock_time": "236282a667fa161ee16fd363e33559cfe7871ba0",
+    "origin_main_at_lock_time": "02de870ef593c2cbd8c517792072769867f33e46",
+    "all_coordinates_match": true,
+    "all_tooling_digests_match": true,
+    "all_artifact_identities_match": true,
+    "all_dependency_pins_match": true,
+    "detached_checkouts_clean": true
+  },
+
+  "completion_note": "Reuses attempt 1's coordinates, adapter, dependencies, and tooling byte-for-byte. Zero product-code change. Zero Reality Lab product-code change."
+}

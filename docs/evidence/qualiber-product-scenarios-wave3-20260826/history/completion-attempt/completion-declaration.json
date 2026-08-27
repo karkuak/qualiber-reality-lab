@@ -1,0 +1,102 @@
+{
+  "schema": "qualiber-reality-lab/completion-declaration/v1",
+  "campaign": "qualiber-product-scenarios-wave3-20260826",
+  "completion_run_id": "completion-1787755899",
+  "declared_at": "2026-08-26T10:51:00Z",
+
+  "first_attempt": {
+    "evidence_root": "/private/tmp/qualiber-wave3-execution-1787753088/evidence/",
+    "status": "scenario execution complete; campaign evidence incomplete",
+    "file_count": 315,
+    "total_bytes": 658964,
+
+    "preservation_manifest_digest": "4ce7898780b6f8742cdc3f9bbbd20b1a78b91eb548efeb1d9882e5091aed0dad",
+    "oracle_precommit_digest": "500dbc18c5be9f33834aad6b293bb4bd7d1a44ec2a8c22b0ba4ada199b460160",
+    "execution_lock_digest": "fb96c200f941712174f495394be3ce384165c2739170a287501c693bd0f3636f",
+    "campaign_report_digest": "3c0d066f2208be4cfd366344f38becc27a4d800827a32cf6dc90f3ae503294d7",
+    "campaign_index_digest": "55096ec3d23c068b07d576319734571cc4fd4ffed8c1f311ea4657f36ac2731d",
+    "sha256sums_digest": "ad5f6fc769c81fcc89d14f1bfe87ebd80794747c48ebed0f0cbafbe022a39748",
+
+    "scenario_observations": [
+      {
+        "scenario_id": "QLB-EXT-009",
+        "verdict": "agree",
+        "classification": "product_agreement",
+        "observed_run_status": "clean",
+        "observed_collector_health": "healthy",
+        "observed_finding_count": 0,
+        "observed_finding_types": []
+      },
+      {
+        "scenario_id": "QLB-EXT-010",
+        "verdict": "agree",
+        "classification": "product_agreement",
+        "observed_run_status": "rule_violation_detected",
+        "observed_collector_health": "healthy",
+        "observed_finding_count": 1,
+        "observed_finding_types": ["duplicate_event"]
+      },
+      {
+        "scenario_id": "QLB-EXT-011",
+        "verdict": "agree",
+        "classification": "product_agreement",
+        "observed_run_status": "clean",
+        "observed_collector_health": "healthy",
+        "observed_finding_count": 1,
+        "observed_finding_types": ["forbidden_event_observed"]
+      },
+      {
+        "scenario_id": "QLB-EXT-012",
+        "verdict": "agree",
+        "classification": "product_agreement",
+        "observed_run_status": "clean",
+        "observed_collector_health": "partial",
+        "observed_finding_count": 0,
+        "observed_finding_types": []
+      }
+    ],
+
+    "no_product_disagreement_observed": true
+  },
+
+  "reason_for_completion_run": "First attempt completed all four scenario executions with valid observations (4 agreements, 0 disagreements) but omitted mandatory campaign evidence artifacts required for independent review admissibility.",
+
+  "omitted_requirements": {
+    "negative_controls": "Fifteen negative controls (NC-1, NC-1b, NC-2, NC-3, NC-4a, NC-4b, NC-5, NC-6, NC-7, NC-8, NC-9, NC-10, NC-11, NC-12, NC-13) designed and approved in the campaign plan were not executed",
+    "determinism_rerun": "No second execution of any scenario was performed to confirm determinism",
+    "canonical_evidence_index": "No evidence-index.json or evidence-index.sha256 sidecar was produced",
+    "tooling_test_result": "No tooling-test-result.json binding orchestration script digests was produced",
+    "complete_command_log": "No complete command log spanning the full execution was produced",
+    "preservation_manifest": "No preservation manifest was produced at attempt 1 close",
+    "candidate_defect_register": "No candidate-defect-register.json was produced",
+    "independent_review_prompt": "No independent-review prompt was produced"
+  },
+
+  "reuse_unchanged": {
+    "scenario_expectations": "All four expectation files (QLB-EXT-009 through 012) are reused byte-for-byte with identical precommitted digests",
+    "stimuli": "All four capture stimulus files are reused byte-for-byte",
+    "contracts": "All contract stimulus files (C-BOUND2, C-VALID, C-FORBID-INFO) are reused byte-for-byte",
+    "comparator": "compare-scenario.mjs (83223022f1522f4c22607f02123e02a0c5ff9cf92363aba0ec1e8a256010bcc4) is reused byte-for-byte",
+    "scanner": "oracle-absence-scan.mjs (5a2f48445aee2aa76b7621c661cd24d8f343bc1f632478099cf85f8a5322d631) is reused byte-for-byte",
+    "adapter": "qualiber-erl2-validation-subject artifact (c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762, 41472 bytes) is reused byte-for-byte",
+    "dependencies": "@erl2/contracts and @erl2/integrity resolved at the same pins"
+  },
+
+  "confirmatory_status": {
+    "is_confirmatory": true,
+    "is_blind": false,
+    "explanation": "The completion run operator has observed the first attempt's scenario outcomes. All scenario expectations, stimuli, contracts, comparator bytes, and scanner bytes are reused unchanged. The completion run is confirmatory, not prospective."
+  },
+
+  "claim_ceiling_unchanged": true,
+
+  "stop_conditions": {
+    "stimulus_digest_difference": "Any scenario stimulus digest difference from attempt 1 is a stop condition",
+    "contract_digest_difference": "Any contract digest difference from attempt 1 is a stop condition",
+    "expectation_digest_difference": "Any expectation digest difference from attempt 1 is a stop condition",
+    "comparator_digest_difference": "Any comparator digest difference from attempt 1 is a stop condition",
+    "scanner_digest_difference": "Any scanner digest difference from attempt 1 is a stop condition",
+    "adapter_digest_difference": "Any adapter artifact digest difference from attempt 1 is a stop condition",
+    "dependency_digest_difference": "Any @erl2/contracts or @erl2/integrity entry digest difference from attempt 1 is a stop condition"
+  }
+}

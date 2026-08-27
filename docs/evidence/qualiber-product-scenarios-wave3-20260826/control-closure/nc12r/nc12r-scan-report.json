@@ -1,0 +1,40 @@
+{
+  "schema": "qualiber-reality-lab/negative-control-result/v2",
+  "control_set_version": 2,
+  "control_id": "NC-12R",
+  "method_digest": "f59f31271e108a2312ca2b46adc1a9567d1081dbb5b5e918a3b7e533d360773f",
+  "fixture_digests": {
+    "residue_scanner": "53b8c3f5a482c10bfdfa810c7bb0695d6e2236412a146d96550c4a91cfecaa99",
+    "planted_file": "a9c0f981c8b3620660177dbabe3ffa265613d0bdaab25684247dc6c2e9550300"
+  },
+  "evidence_digests": {},
+  "expected_gate": "residue scanner enumeration-based integrity check",
+  "observed_gate": "residue scanner rejected undeclared file",
+  "expected_classification": "lab_harness_failure",
+  "observed_classification": "lab_harness_failure",
+  "expected_sub_reasons": [
+    "undeclared_file_in_retained_tree"
+  ],
+  "observed_sub_reasons": [
+    "undeclared_file_in_retained_tree"
+  ],
+  "mutation_proofs": [
+    {
+      "label": "planted file presence verified",
+      "original_digest": "absent",
+      "current_digest": "a9c0f981c8b3620660177dbabe3ffa265613d0bdaab25684247dc6c2e9550300",
+      "mutation_applied": true,
+      "verified": true
+    }
+  ],
+  "verdict": "HELD",
+  "raw_command_refs": [
+    "node residue-scanner.mjs --tree /private/tmp/qualiber-wave3-control-closure-1787765436-98932/work/scratch/nc12r-out/nc12r-scratch-1787765765715/QLB-EXT-009/run-output --record /private/tmp/qualiber-wave3-control-closure-1787765436-98932/work/scratch/nc12r-out/nc12r-scratch-1787765765715/QLB-EXT-009/run-output/trusted-local-observation-record.json (clean)",
+    "echo planted > /private/tmp/qualiber-wave3-control-closure-1787765436-98932/work/scratch/nc12r-out/nc12r-scratch-1787765765715/QLB-EXT-009/run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/NC12R-planted-residue.txt",
+    "node residue-scanner.mjs --tree /private/tmp/qualiber-wave3-control-closure-1787765436-98932/work/scratch/nc12r-out/nc12r-scratch-1787765765715/QLB-EXT-009/run-output --record /private/tmp/qualiber-wave3-control-closure-1787765436-98932/work/scratch/nc12r-out/nc12r-scratch-1787765765715/QLB-EXT-009/run-output/trusted-local-observation-record.json (planted)"
+  ],
+  "started_at": "2026-08-26T17:36:05.713Z",
+  "completed_at": "2026-08-26T17:36:06.072Z",
+  "note": "Clean scan: PASS; Planted scan rejected: true; Planted file identified: true; Comparator check: NOT RUN (comparator expected to accept — it checks declared refs only)",
+  "non_campaign_rehearsal": true
+}

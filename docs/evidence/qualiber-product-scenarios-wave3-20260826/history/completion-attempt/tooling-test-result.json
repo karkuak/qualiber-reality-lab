@@ -1,0 +1,41 @@
+{
+  "schema_version": "qualiber-reality-lab/tooling-test-result/v1",
+  "campaign": "qualiber-product-scenarios-wave3-20260826-completion",
+  "generated_at": "2026-08-26T15:27:13.846Z",
+  "tooling_directory": "tooling",
+  "script_count": 6,
+  "scripts": [
+    {
+      "script": "build-evidence-index.mjs",
+      "sha256": "25400160014d4d5270b71d6ead8bfbe1d04f47c294dc67b32e6c7145fb4cdb82",
+      "bytes": 5663
+    },
+    {
+      "script": "build-preservation-manifest.mjs",
+      "sha256": "58391cb9978821466a3814576da01430a90aa4bc259f2d99584e916f3547073a",
+      "bytes": 3049
+    },
+    {
+      "script": "build-tooling-test-result.mjs",
+      "sha256": "985130c65ea55f43d7c616800faa4b37d255f9e00d8a1c68adeec6823593287c",
+      "bytes": 2350
+    },
+    {
+      "script": "command-logger.mjs",
+      "sha256": "c5bd0b5b2750627df600c673f0d78edc55c4a45f83e357d4d6c4e57ebb52ce44",
+      "bytes": 2409
+    },
+    {
+      "script": "compare-determinism.mjs",
+      "sha256": "30417701bd4b81ce5b512ecbd75e19b9094bde7080f008f7b01c681331836032",
+      "bytes": 6252
+    },
+    {
+      "script": "run-negative-control.mjs",
+      "sha256": "951326f76e438d7c7e4abea10d11ec147d9af660cc1ebe2a7f2aa259d074215c",
+      "bytes": 30954
+    }
+  ],
+  "test_exit_codes": {},
+  "binding_constraint": "The sha256 of each script at test time MUST equal the sha256 of the script used during the completion run. Any difference voids the completion."
+}

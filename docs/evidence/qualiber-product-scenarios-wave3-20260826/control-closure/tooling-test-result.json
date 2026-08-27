@@ -1,0 +1,63 @@
+{
+  "schema": "qualiber-reality-lab/tooling-test-result/v2",
+  "candidate": "control-remediation-candidate-v2",
+  "ran_through": "real pinned comparator (83223022…) + real @erl2 anchor (69ace16) + real QLB-EXT-012 fixture bytes",
+  "suites": [
+    {
+      "name": "test-nc11r-binding.mjs",
+      "digest": "06cf68989d58acc033ef6c22be79bc12533ff823de7310bd8750b47794a9aa85",
+      "assertions": 18,
+      "passed": 18,
+      "failed": 0,
+      "proves": [
+        "exact binding path",
+        "empty top-level cannot hide missing op-record binding",
+        "zero-match hard fail",
+        "multi-match hard fail",
+        "stale sidecar hard fail",
+        "stale/absent run-summary witness hard fail",
+        "every update reported",
+        "positive agrees",
+        "NC-11R forbidden_run_status_observed",
+        "run_status_mismatch cannot satisfy NC-11R",
+        "precedence-disable goes red",
+        "real comparator+bytes",
+        "path-neutral across two roots"
+      ]
+    },
+    {
+      "name": "test-residue-scanner.mjs",
+      "digest": "89de30d80068398058b9e536aa2af1ff9b4339cc92df23574e69746eacac78a5",
+      "assertions": 33,
+      "passed": 33,
+      "failed": 0,
+      "proves": [
+        "NC-12R enumeration",
+        "unexpected/missing rejection",
+        "symlink/traversal/duplicate/non-regular rejection",
+        "4 mutations killed",
+        "4 regressions",
+        "path-neutrality"
+      ]
+    }
+  ],
+  "runner_control_checks": [
+    {
+      "control": "NC-11R",
+      "verdict": "disagree/product_disagreement",
+      "exit": 0,
+      "property": "forbidden_run_status_observed with expected==observed==inconclusive; not run_status_mismatch"
+    },
+    {
+      "control": "NC-12R",
+      "verdict": "HELD",
+      "exit": 0,
+      "property": "clean scan passes; planted residue refused and named"
+    }
+  ],
+  "totals": {
+    "assertions": 51,
+    "passed": 51,
+    "failed": 0
+  }
+}

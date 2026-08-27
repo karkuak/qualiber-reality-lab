@@ -1,0 +1,12 @@
+{
+  "control": "NC-9",
+  "mutations": [
+    {
+      "target": "execution-lock.json (dep mutation)",
+      "beforeDigest": "fb96c200f941712174f495394be3ce384165c2739170a287501c693bd0f3636f",
+      "afterDigest": "6fd443c454870c7c84c4573fe73598d264d69c0c5e2f5d48eb32d1e13a684ff5",
+      "mutationApplied": true
+    }
+  ],
+  "applied": true
+}

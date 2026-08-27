@@ -1,0 +1,29 @@
+{
+  "eligibility_schema_version": "1.0",
+  "journey_id": "erl2_ext_journey",
+  "runs": [
+    {
+      "run_id": "01a03e73-6d25-7cfd-b259-75f8cc56f85a",
+      "ci_run_id": "01a03e73-6d25-7cfd-b259-75f8cc56f85a",
+      "timestamp": "2026-08-26T14:22:28.064Z",
+      "run_status": "clean",
+      "mode": "observe",
+      "vqs_score": 82.5,
+      "vqs_band": "Usable",
+      "collector_health": "partial",
+      "capture_coverage": 1,
+      "high_medium_ratio": 1,
+      "fp_rate": 0,
+      "ai_overclaim_count": 0,
+      "time_window_only": false,
+      "evidence_pack_id": "evp_7b85df22e3bc",
+      "findings_count": 0,
+      "vqs_cold_start": true
+    }
+  ],
+  "human_approvals": [],
+  "current_mode": "observe",
+  "advisory_eligible": false,
+  "rollback_recommended": false,
+  "last_evaluated_at": "2026-08-26T14:22:28.064Z"
+}

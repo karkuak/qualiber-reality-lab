@@ -1,0 +1,26 @@
+{
+  "control_id": "NC-12",
+  "evidence_root": "/private/tmp/qualiber-wave3-execution-1787753088/evidence",
+  "scratch_dir": "/private/tmp/claude-502/-private-tmp/498da042-1ff5-401b-a553-86502f23c5c9/scratchpad/nc-scratch/NC-12",
+  "started_at": "2026-08-26T15:21:54.323Z",
+  "mutations": [
+    {
+      "target": "product-out/NC12-planted-residue.txt",
+      "planted": true,
+      "mutationApplied": true
+    }
+  ],
+  "legs": [
+    {
+      "name": "nc12-planted-residue-in-product-out",
+      "exit_code": 0
+    }
+  ],
+  "verdict": "FAILED",
+  "classification": "product_agreement",
+  "sub_reasons": [],
+  "precommitted_outcome": "planted residue contradicts retained workspace tree; comparator catches via artifact hash witness or offline verifier catches via tree digest",
+  "source_evidence_intact": null,
+  "note": "comparator retained_output_refs checks only declared files; extra files in non-witnessed paths are not detected by the comparator alone",
+  "completed_at": "2026-08-26T15:21:54.452Z"
+}

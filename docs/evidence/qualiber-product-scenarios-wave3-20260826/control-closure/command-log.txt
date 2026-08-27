@@ -1,0 +1,13 @@
+Wave 3 control-set-v2 closure — command log (control-only; no Qualiber scenario re-run)
+Phase 2 freeze: control-precommit.json + control-execution-lock.json
+Phase 3 retained (v1 run-negative-control.mjs), evidenceRoot=attempt-1 scenarios copy,
+  precommit=completion oracle-precommit, campaign-index=attempt-1, anchor=real @erl2 69ace16:
+  NC-1  --counterfactual negative-controls/NC-1.counterfactual.expected.json
+  NC-1b NC-2 NC-3 NC-4a NC-4b NC-5 NC-6 NC-7 NC-8 NC-9
+  NC-10 --counterfactual negative-controls/NC-10.counterfactual.expected.json
+  NC-13
+Phase 3 remediation (v2 run-negative-control-v2.mjs):
+  NC-11R: nc11r-fixture-builder.mjs --scenario-root <disp QLB-EXT-012> --output-dir <fixture> --execution-lock <lock>
+          run-negative-control-v2.mjs --control NC-11R --fixture-dir <fixture> --evidence-root <disp> --comparator <cmp> --dependency-anchor <anchor>
+  NC-12R: run-negative-control-v2.mjs --control NC-12R --evidence-root <copy> --residue-scanner <scanner>
+All 15 verdicts recorded under results/. Source scenarios revalidated intact after each phase.

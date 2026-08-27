@@ -1,0 +1,22 @@
+{
+  "schema": "qualiber-reality-lab/preservation-record/v1",
+  "purpose": "Phase 1 close — verify both immutable evidence roots are unchanged after all remediation work",
+  "captured_at_phase": "close",
+  "completion_evidence_root": {
+    "path": "/private/tmp/qualiber-wave3-completion-1787755899/evidence/",
+    "regular_file_count": 36,
+    "symlink_count": 0,
+    "non_regular_count": 0,
+    "manifest_file": "completion-root-manifest-close.txt",
+    "diff_vs_open": "IDENTICAL — 0 byte/mode/path differences on all 36 hash lines"
+  },
+  "attempt1_evidence_root": {
+    "path": "/private/tmp/qualiber-wave3-execution-1787753088/evidence/",
+    "regular_file_count": 315,
+    "symlink_count": 0,
+    "non_regular_count": 0,
+    "manifest_file": "attempt1-root-manifest-close.txt",
+    "diff_vs_open": "IDENTICAL — 0 byte/mode/path differences on all 315 hash lines"
+  },
+  "preservation_verdict": "INTACT — neither evidence root was modified"
+}

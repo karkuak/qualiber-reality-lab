@@ -1,0 +1,12 @@
+{
+  "control": "NC-8",
+  "mutations": [
+    {
+      "target": "execution-lock.json (copy)",
+      "beforeDigest": "fb96c200f941712174f495394be3ce384165c2739170a287501c693bd0f3636f",
+      "afterDigest": "342f8034b51e46d14701b7b3046a760f31e178da70c76e390ea1c4f2ec840b28",
+      "mutationApplied": true
+    }
+  ],
+  "applied": true
+}

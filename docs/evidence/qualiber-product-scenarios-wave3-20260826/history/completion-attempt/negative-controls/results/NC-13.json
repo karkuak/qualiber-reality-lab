@@ -1,0 +1,38 @@
+{
+  "control_id": "NC-13",
+  "evidence_root": "/private/tmp/qualiber-wave3-execution-1787753088/evidence",
+  "scratch_dir": "/private/tmp/claude-502/-private-tmp/498da042-1ff5-401b-a553-86502f23c5c9/scratchpad/nc-scratch/NC-13",
+  "started_at": "2026-08-26T15:19:31.684Z",
+  "mutations": [],
+  "legs": [
+    {
+      "name": "nc13-positive-scenario-id",
+      "exit_code": 1,
+      "stdout": "scan nc13-positive-scenario-id: 1 HIT(S) over 1 file(s), 42 needle(s)\n",
+      "stderr": ""
+    },
+    {
+      "name": "nc13-positive-field-name",
+      "exit_code": 1,
+      "stdout": "scan nc13-positive-field-name: 1 HIT(S) over 1 file(s), 42 needle(s)\n",
+      "stderr": ""
+    },
+    {
+      "name": "nc13-negative-real-contract",
+      "exit_code": 0,
+      "stdout": "scan nc13-negative-real-contract: CLEAN over 1 file(s), 42 needle(s)\n",
+      "stderr": ""
+    }
+  ],
+  "verdict": "HELD",
+  "classification": null,
+  "sub_reasons": [],
+  "precommitted_outcome": "both planted leak needles detected; real C-FORBID-INFO bytes remain clean",
+  "source_evidence_intact": null,
+  "checks": {
+    "positive_scenario_id_hit": true,
+    "positive_field_name_hit": true,
+    "negative_real_contract_clean": true
+  },
+  "completed_at": "2026-08-26T15:19:31.824Z"
+}

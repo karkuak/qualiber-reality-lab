@@ -1,0 +1,36 @@
+{
+  "schema": "qualiber-reality-lab/tooling-digest-inventory/v2",
+  "candidate": "control-remediation-candidate-v2",
+  "files": [
+    {
+      "path": "tooling/nc11r-fixture-builder.mjs",
+      "sha256": "b74e65712f97e1cc409de50a3f3ee2178c20289eae73d064fba4df055ba72f9b",
+      "mode": "644",
+      "bytes": 24834
+    },
+    {
+      "path": "tooling/residue-scanner.mjs",
+      "sha256": "53b8c3f5a482c10bfdfa810c7bb0695d6e2236412a146d96550c4a91cfecaa99",
+      "mode": "644",
+      "bytes": 8473
+    },
+    {
+      "path": "tooling/run-negative-control-v2.mjs",
+      "sha256": "f59f31271e108a2312ca2b46adc1a9567d1081dbb5b5e918a3b7e533d360773f",
+      "mode": "644",
+      "bytes": 18117
+    },
+    {
+      "path": "tooling/tests/test-nc11r-binding.mjs",
+      "sha256": "06cf68989d58acc033ef6c22be79bc12533ff823de7310bd8750b47794a9aa85",
+      "mode": "644",
+      "bytes": 19546
+    },
+    {
+      "path": "tooling/tests/test-residue-scanner.mjs",
+      "sha256": "89de30d80068398058b9e536aa2af1ff9b4339cc92df23574e69746eacac78a5",
+      "mode": "644",
+      "bytes": 13954
+    }
+  ]
+}

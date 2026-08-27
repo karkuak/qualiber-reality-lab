@@ -1,0 +1,173 @@
+{
+  "schema_version": "qualiber-reality-lab/evidence-index/v1",
+  "campaign": "qualiber-product-scenarios-wave3-20260826-completion",
+  "generated_at": "2026-08-26T15:32:36.761Z",
+  "file_count": 33,
+  "entries": [
+    {
+      "path": "candidate-defect-register.json",
+      "sha256": "3794370e51b0291680fbf6a129657985da7ec64dff702d8c6eff4ce4d36fdf45",
+      "bytes": 1541
+    },
+    {
+      "path": "completion-declaration.json",
+      "sha256": "3e8aa71401de8344d6649dc41a7469c7551aa35f9a7719909bbb649559f7c627",
+      "bytes": 5555
+    },
+    {
+      "path": "determinism/QLB-EXT-009-determinism.json",
+      "sha256": "eea3e54830a72efd05f167f4345e63588dca4daf45abce744d0059ff5b6bd494",
+      "bytes": 898
+    },
+    {
+      "path": "determinism/QLB-EXT-010-determinism.json",
+      "sha256": "85c81d011331bbcaa0c1eb4bd56e73af1d2d4cdc7849ac17c8f68b368280bbdd",
+      "bytes": 898
+    },
+    {
+      "path": "determinism/QLB-EXT-011-determinism.json",
+      "sha256": "3828fefa8dfc9759dc9a9e69b99154814868b56f5e2bc699339eec75028c779f",
+      "bytes": 898
+    },
+    {
+      "path": "determinism/QLB-EXT-012-determinism.json",
+      "sha256": "0c68c57632f5995c5554bdad941d9dcb8a83424e1a95e3f1b510cf43c9df4351",
+      "bytes": 898
+    },
+    {
+      "path": "execution-lock.json",
+      "sha256": "bad6a340e9774e5b2e1e31c9ca642d7c449b21d6a91b48fa3c155a1bf8b1bbe4",
+      "bytes": 3407
+    },
+    {
+      "path": "independent-review-prompt.md",
+      "sha256": "dec1e6851363a94348ff47e1586151ad9f564e51b9be3f4e1a44d1d745aa7de6",
+      "bytes": 3743
+    },
+    {
+      "path": "negative-controls/NC-1.counterfactual.expected.json",
+      "sha256": "eff5858902ceff1d5ec5efd5cda7da22cf7ce300e42c965077c6bf53f5381077",
+      "bytes": 785
+    },
+    {
+      "path": "negative-controls/NC-10.counterfactual.expected.json",
+      "sha256": "518a21d44c0cd0c7e4731b42a43c614d128f616d4c77d5138f8a5c4b832362a7",
+      "bytes": 779
+    },
+    {
+      "path": "negative-controls/NC-11.counterfactual.expected.json",
+      "sha256": "af219dae327f1db2cc6e70ecfcd743104751edc570eaaee0202f43b0af6c84c5",
+      "bytes": 820
+    },
+    {
+      "path": "negative-controls/results/NC-1.json",
+      "sha256": "e91aa3f70b7050958de84b1ec1abed75007b10b1008dd5aa17bd83c87a715822",
+      "bytes": 757
+    },
+    {
+      "path": "negative-controls/results/NC-10.json",
+      "sha256": "b829ce5dbbbde5ac0c1ecf054fd244ce0909610997e2e343d9cfd49e2bc6d534",
+      "bytes": 10279
+    },
+    {
+      "path": "negative-controls/results/NC-11.json",
+      "sha256": "fd56639966220c19eefaab41281e27762227dd90555e209c3d33d55d98ec5c4b",
+      "bytes": 936
+    },
+    {
+      "path": "negative-controls/results/NC-12.json",
+      "sha256": "5ea9417601e10743e1b277e7d689906e2399b743095c2110f405e6062ef83218",
+      "bytes": 1005
+    },
+    {
+      "path": "negative-controls/results/NC-13.json",
+      "sha256": "8e051d993b19b9ef824a910e085f95d44bbd7c4c8c2dfa43aa894724b88d040d",
+      "bytes": 1258
+    },
+    {
+      "path": "negative-controls/results/NC-1b.json",
+      "sha256": "7e3cc0f58f4c86c5900f63549464dd211534dcad749b271de7a9919948fd63fc",
+      "bytes": 3774
+    },
+    {
+      "path": "negative-controls/results/NC-2.json",
+      "sha256": "aec86257ff26ff25798396856e37a3df9493e7e3ecdaba2557972d9ef3b0eda3",
+      "bytes": 8467
+    },
+    {
+      "path": "negative-controls/results/NC-3.json",
+      "sha256": "c083764ee3c188a729b5c8012dce06c8edebc2b7e9316d051ebb6b289ea269db",
+      "bytes": 948
+    },
+    {
+      "path": "negative-controls/results/NC-4a.json",
+      "sha256": "07506e767146bf0d3465a6f5a551498636542741db5550c0c6f7fa3c0f9d3189",
+      "bytes": 16510
+    },
+    {
+      "path": "negative-controls/results/NC-4b.json",
+      "sha256": "44921552c9d61636d75babcc109486343bb4caaf6f61a805864dd197bf8142d7",
+      "bytes": 16469
+    },
+    {
+      "path": "negative-controls/results/NC-5.json",
+      "sha256": "7ac4f8324a539fc66183f051b9ed51adf3de3f96bd28240467fc032400bae084",
+      "bytes": 8720
+    },
+    {
+      "path": "negative-controls/results/NC-6.json",
+      "sha256": "b1a23e952c598eaf0fdbcd15bf41fb202eda7068ae72850c7f4281ae25587f80",
+      "bytes": 8935
+    },
+    {
+      "path": "negative-controls/results/NC-7.json",
+      "sha256": "dd9f59520f064d2119d131e2fda42579be1298a04a5df52d82c2213cd2cfc256",
+      "bytes": 3846
+    },
+    {
+      "path": "negative-controls/results/NC-8.json",
+      "sha256": "45b2a72750eb476cf55255fc29dfb944c04ceb4ecaeaf1d615534963a113c29e",
+      "bytes": 8654
+    },
+    {
+      "path": "negative-controls/results/NC-9.json",
+      "sha256": "3fb9fe24ec0dcdbcbfe7013b8a4a247e132ca9e6693efb4aecffb0809301bd0c",
+      "bytes": 3735
+    },
+    {
+      "path": "oracle-precommit.json",
+      "sha256": "171d2ad61f91ce8379203438bff68ebf2255ab6abd20262556f2d14ee407477b",
+      "bytes": 12841
+    },
+    {
+      "path": "scenarios/QLB-EXT-009/comparison/comparison.json",
+      "sha256": "85b2d8f8347bb8fa1d19370b6c5f03fd7c689e98a9272d9f6cc90235590f5faf",
+      "bytes": 8415
+    },
+    {
+      "path": "scenarios/QLB-EXT-010/comparison/comparison.json",
+      "sha256": "4aca7d8d3ebd69aab4446ccde83cd989c019bff2ceed92f1b5eee72e882a7661",
+      "bytes": 8592
+    },
+    {
+      "path": "scenarios/QLB-EXT-011/comparison/comparison.json",
+      "sha256": "5c1ed3d9feaa10b8c074bdfa2b3be86d9615a62f07935d72149ee6baf7439365",
+      "bytes": 8600
+    },
+    {
+      "path": "scenarios/QLB-EXT-012/comparison/comparison.json",
+      "sha256": "8b8fbf9ebcbaa193b20f87a9d34ceac7925bd14ff52a35457a050308c305797b",
+      "bytes": 8441
+    },
+    {
+      "path": "tooling-test-result.json",
+      "sha256": "8f8e786c1bba92af2547d80af27eb19b929879c2d78ac83f482bb4cf21331220",
+      "bytes": 1428
+    },
+    {
+      "path": "wave3-completion-campaign-report.md",
+      "sha256": "2859aaf7ed63608d4638ed87a184bc434d0106abc719991649d0194495317b63",
+      "bytes": 6820
+    }
+  ]
+}

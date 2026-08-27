@@ -1,0 +1,252 @@
+{
+  "schema": "qualiber-reality-lab/independent-review/v2",
+  "review_type": "control-remediation-candidate",
+  "reviewer": "independent-session",
+  "reviewed_at": "2026-08-26",
+  "prompt": "/private/tmp/qualiber-wave3-control-remediation-independent-review-prompt.md",
+  "verdict": "APPROVED WITH CAVEATS",
+
+  "sections": {
+    "1_control_set_v2_design": {
+      "input": "/private/tmp/qualiber-wave3-control-remediation-design.md",
+      "result": "PASS",
+      "findings": [
+        "Source-first control audit (Phase 2) correctly derives each control's intended property and gate from the approved design",
+        "Three post-freeze runner edits correctly classified: NC-1 parsing (runner defect), chmod (packaging defect), NC-11 acceptance (incorrect expected result / code-path substitution)",
+        "Supersession mapping NC-11 → NC-11R and NC-12 → NC-12R is accurate; reasons match the evidence",
+        "Thirteen retained controls (NC-1, NC-1b, NC-2, NC-3, NC-4a, NC-4b, NC-5, NC-6, NC-7, NC-8, NC-9, NC-10, NC-13) correctly identified as method-valid",
+        "Reclassifications (Phase 7) are supported by evidence: runner edits classified as control-chronology/tooling-integrity; NC-11 as control-design defect; NC-12 as orchestration/method-execution; review placement as incomplete path-set validation. None filed against Qualiber. Lab audit queue assessments are correctly reasoned",
+        "No original control is described as having proved a property it did not exercise. NC-11 honestly recorded as proving expected!=observed disagree, NOT forbidden-status precedence. NC-12 honestly recorded as FAILED with correct explanation of surface limitation"
+      ]
+    },
+
+    "2_control_set_v2_json": {
+      "input": "/private/tmp/qualiber-wave3-control-set-v2.json",
+      "result": "PASS",
+      "findings": [
+        "15 active controls confirmed: 13 retained_from_v1 + 2 remediation (NC-11R, NC-12R)",
+        "total_active_controls=15, retained_from_v1=13, remediation_controls=2 — all consistent",
+        "Supersession records accurately describe original control outcomes: NC-11 original_sub_reasons=[run_status_mismatch], NC-12 original_verdict=FAILED",
+        "NC-11R specification matches design: property='Forbidden-status precedence beats a matching expectation using an actually observed forbidden status', fixture_construction details match Phase 3.4",
+        "NC-12R specification matches design: residue_scanner_requirements match Phase 3.5 §6, mutations match the four required cases",
+        "Runner digest discrepancy honestly recorded with precommit_digest, executed_digest, amendment_recorded=false, and all three edits classified",
+        "No 16th control present. active_controls array contains exactly 15 entries"
+      ]
+    },
+
+    "3_nc11r_fixture_builder": {
+      "input": "/private/tmp/qualiber-wave3-control-remediation-candidate/tooling/nc11r-fixture-builder.mjs",
+      "result": "PASS WITH CAVEAT",
+      "findings": [
+        "Fixture builder correctly modifies run-result.json to runStatus=inconclusive with synthetic inconclusiveReason",
+        "Digest change verified: builder asserts originalDigest !== modifiedDigest before proceeding (line 107-109)",
+        "Frozen sidecar binding update: correctly updates file_sha256 and byte_length fields",
+        "run-summary.json artifact_hashes binding update: correctly updates entries matching run-result key or original digest. Verified QLB-EXT-012 run-summary has artifact_hashes with qualiber/product-out/run-result.json entry — this binding layer will be updated",
+        "Counterfactual expectation correctly sets expected_run_status=inconclusive AND forbidden_run_status=[inconclusive] (forbidden-precedence.expected.json, line 247)",
+        "Positive bound control expectation has expected_run_status=inconclusive with NO forbidden_run_status field — would produce agree",
+        "Mutation expectation (no-forbidden) has expected_run_status=inconclusive with no forbidden list — would agree, proving forbidden check load-bearing",
+        "Builder does NOT mutate a Wave 3 result without binding verification: throws on digest equality (line 107-109)",
+        "No committed scenario has inconclusive observed status: confirmed independently (QLB-EXT-009=clean, 010=rule_violation_detected, 011=clean, 012=clean)"
+      ],
+      "caveats": [
+        {
+          "severity": "MEDIUM",
+          "finding": "Observation record retained_output_refs binding gap",
+          "detail": "QLB-EXT-012's observation record (trusted-local-observation-record.json) has result.retained_output_refs with 0 entries. The fixture builder checks both obs.retained_output_refs (not present at top level) and obs.result.retained_output_refs (empty array). Neither code path would find entries to update. The binding update for the observation record layer would be a silent no-op — no error is thrown, no binding proof is recorded for this layer.",
+          "impact": "Design §3.4 requires Gate 1 (retained_output_refs) to pass. If the comparator requires matching entries in this field for the fixture scenario, the fixture would fail Gate 1. If the comparator treats an empty retained_output_refs as vacuously satisfied, the fixture would pass but the binding proof would be incomplete.",
+          "recommendation": "During actual fixture construction: (a) verify whether the comparator's Gate 1 check requires non-empty retained_output_refs, or (b) if it does, investigate whether a different base scenario with populated retained_output_refs should be used, or (c) add a fixture builder warning when no refs are found to update"
+        }
+      ]
+    },
+
+    "4_nc12r_residue_scanner": {
+      "input": "/private/tmp/qualiber-wave3-control-remediation-candidate/tooling/residue-scanner.mjs",
+      "result": "PASS",
+      "findings": [
+        "Allowed path set derived from authoritative data: run-summary.json artifact_hashes (line 129-139) AND observation record retained_output_refs (line 160-176). NOT scenario-specific literals",
+        "Scanner enumerates every regular file via recursive walk (enumerateTree function, line 59-122)",
+        "Unexpected files (present but not allowed) are rejected: collected in unexpected array (line 236-239), causes clean=false",
+        "Missing declared files (allowed but not present) are rejected: checked in missing array (line 242-249), causes clean=false",
+        "Symlinks rejected with reason symlink_rejected (line 94-100)",
+        "Non-regular entries rejected with reason non_regular_rejected (line 111-115)",
+        "Path traversal (..) rejected with reason traversal_rejected (line 75-81)",
+        "Duplicate normalized paths rejected with reason duplicate_path_rejected (line 84-91)",
+        "Reports exact unexpected and missing path sets in structured output",
+        "Comparator's declared-ref limitation is documented in design §2.2, not hidden. NC-12R design §3.5 explicitly states comparator expected to accept because it checks only declared refs"
+      ]
+    },
+
+    "5_v2_runner": {
+      "input": "/private/tmp/qualiber-wave3-control-remediation-candidate/tooling/run-negative-control-v2.mjs",
+      "result": "PASS",
+      "findings": [
+        "Runner dispatches NC-11R and NC-12R via switch on controlId (line 394-404). Retained controls (NC-1 through NC-10, NC-13) explicitly directed to v1 runner",
+        "No acceptance rule treats run_status_mismatch as satisfying forbidden_run_status_observed: NC-11R validation requires forbidden_run_status including inconclusive (line 171) and expected_run_status=inconclusive (line 165), not run_status_mismatch",
+        "Every mutation proof requires original_digest !== current_digest: verifyMutationApplied function (line 75-90) throws on equality",
+        "Results include all required fields: schema (v2), control_set_version (2), method_digest (self-hash), fixture_digests, evidence_digests, expected/observed gates, classifications, sub_reasons, started_at, completed_at",
+        "Counterfactual mode is digest-gated: NC-11R validates fixture record existence, expectation digest, and fixture record modified_status before proceeding",
+        "No Qualiber import: verified — only imports are node:crypto, node:fs, node:path, node:child_process",
+        "No scenario-ID semantic branch: switch dispatches on controlId string, no branching on scenario identifiers"
+      ]
+    },
+
+    "6_mutation_coverage": {
+      "input": "/private/tmp/qualiber-wave3-control-remediation-candidate/tooling/tests/test-residue-scanner.mjs",
+      "result": "PASS",
+      "findings": [
+        "4 mutation tests present: M1 (skip-enumeration), M2 (inspect-only-declared), M3 (ignore-unexpected), M4 (follow-symlink)",
+        "M1 killed: scanner DOES enumerate and finds planted file (line 226-230)",
+        "M2 killed: scanner rejects when extra files present (line 241-248)",
+        "M3 killed: scanner exits non-zero AND marks not publishable when unexpected files present (line 258-268, 2 assertions)",
+        "M4 killed: scanner rejects symlinks with symlink_rejected reason (line 282-288)",
+        "Regression R1 (NC-1 parsing): v2 result format includes all 14 required fields — confirmed",
+        "Regression R2 (executable mode): scanner file mode awareness documented — confirmed",
+        "Regression R3 (NC-11 property-vs-outcome): NC-11R requires forbidden_run_status_observed, NOT run_status_mismatch — confirmed",
+        "Regression R4 (NC-12 comparator-vs-scanner): NC-12R uses residue-scanner.mjs, not comparator — confirmed",
+        "Path-neutrality test: two different absolute paths produce identical structural results — confirmed"
+      ],
+      "notes": [
+        "Test suite runs 33 assertions total (22 unit + 5 mutation + 4 regression + 2 path-neutrality). Test report summarizes 32 because M3's two assertions are counted as one mutation. Minor accounting discrepancy, not a defect"
+      ]
+    },
+
+    "7_digest_verification": {
+      "result": "PASS",
+      "findings": [
+        {
+          "file": "residue-scanner.mjs",
+          "report_digest": "53b8c3f5a482c10bfdfa810c7bb0695d6e2236412a146d96550c4a91cfecaa99",
+          "computed_digest": "53b8c3f5a482c10bfdfa810c7bb0695d6e2236412a146d96550c4a91cfecaa99",
+          "match": true,
+          "bytes": 8473,
+          "mode": "0644"
+        },
+        {
+          "file": "nc11r-fixture-builder.mjs",
+          "report_digest": "00e7abe80c208d95c9acfb33898be6bbf85d55028945b132344fab1cd125d81f",
+          "computed_digest": "00e7abe80c208d95c9acfb33898be6bbf85d55028945b132344fab1cd125d81f",
+          "match": true,
+          "bytes": 11217,
+          "mode": "0644"
+        },
+        {
+          "file": "run-negative-control-v2.mjs",
+          "report_digest": "9edf808b40f4e52c352a7cbc8461d427ceb411dfbad515e2f4410dfa4695b415",
+          "computed_digest": "9edf808b40f4e52c352a7cbc8461d427ceb411dfbad515e2f4410dfa4695b415",
+          "match": true,
+          "bytes": 14498,
+          "mode": "0644"
+        },
+        {
+          "file": "test-residue-scanner.mjs",
+          "report_digest": "89de30d80068398058b9e536aa2af1ff9b4339cc92df23574e69746eacac78a5",
+          "computed_digest": "89de30d80068398058b9e536aa2af1ff9b4339cc92df23574e69746eacac78a5",
+          "match": true,
+          "bytes": 13954,
+          "mode": "0644"
+        }
+      ],
+      "rehearsal_digest_match": {
+        "residue_scanner_rehearsal": "53b8c3f5a482c10bfdfa810c7bb0695d6e2236412a146d96550c4a91cfecaa99",
+        "runner_rehearsal": "9edf808b40f4e52c352a7cbc8461d427ceb411dfbad515e2f4410dfa4695b415",
+        "match": true
+      }
+    },
+
+    "8_evidence_layout": {
+      "input": "/private/tmp/qualiber-wave3-control-remediation-design.md (Phase 6)",
+      "result": "PASS",
+      "findings": [
+        "Evidence index excludes exactly 2 files: evidence-index.json and evidence-index.sha256 (§6.1 item 1)",
+        "Exact path-set equality is mandatory: §6.2 states 'No unlisted files. No missing indexed files.' — enforced",
+        "Full SHA-256 verification required: §6.1 item 3 states 'not spot-checked, not sampled' — enforced",
+        "Reviewer output placement: §6.2 states sibling of evidence directory, never inside — enforced",
+        "Failure conditions (§6.4) are exhaustive: 6 enumerated conditions cover control failure, tooling digest mismatch, property not exercised, unlisted file, missing/mismatched file, reviewer output inside root"
+      ],
+      "verification_of_existing_evidence_root": {
+        "completion_root_files_on_disk": 36,
+        "completion_root_indexed_files": 33,
+        "expected_on_disk": 35,
+        "actual_unlisted_files": 1,
+        "unlisted_file": "independent-review-result.json",
+        "unlisted_file_in_index": false,
+        "assessment": "Defect 4 confirmed: independent-review-result.json exists inside evidence root but is not in the evidence-index.json. Path-set equality fails: 36 on disk vs 35 expected (33 indexed + 2 exclusions)"
+      }
+    }
+  },
+
+  "independent_verifications": {
+    "test_suite_run": {
+      "command": "node tooling/tests/test-residue-scanner.mjs",
+      "result": "33/33 PASS, 0 FAIL",
+      "matches_report": true
+    },
+    "nc12r_rehearsal": {
+      "method": "node run-negative-control-v2.mjs --control NC-12R --evidence-root <attempt-1-evidence> --residue-scanner <scanner>",
+      "verdict": "HELD",
+      "clean_scan_passed": true,
+      "planted_file_rejected": true,
+      "planted_file_identified_by_name": true,
+      "matches_report": true
+    },
+    "nc11r_fixture_design_validation": {
+      "counterfactual_expectation_correct": true,
+      "no_committed_scenario_has_inconclusive": true,
+      "scenarios_checked": {
+        "QLB-EXT-009": "clean",
+        "QLB-EXT-010": "rule_violation_detected",
+        "QLB-EXT-011": "clean",
+        "QLB-EXT-012": "clean"
+      },
+      "fixture_approach_necessary": true,
+      "observation_record_binding_gap": "QLB-EXT-012 result.retained_output_refs has 0 entries; fixture builder would silently skip this binding layer"
+    },
+    "evidence_root_integrity": {
+      "completion_root_files_before": 36,
+      "completion_root_files_after": 36,
+      "attempt1_root_files_before": 315,
+      "attempt1_root_files_after": 315,
+      "modification_detected": false,
+      "all_33_indexed_files_digest_verified": true
+    },
+    "digest_verification": {
+      "all_4_candidate_digests_match": true,
+      "all_rehearsal_digests_match_candidate": true,
+      "no_discrepancy": true
+    }
+  },
+
+  "defects_found": [
+    {
+      "id": "IRD-001",
+      "severity": "MEDIUM",
+      "component": "nc11r-fixture-builder.mjs",
+      "finding": "Observation record retained_output_refs binding update is a silent no-op for QLB-EXT-012",
+      "detail": "The QLB-EXT-012 observation record (trusted-local-observation-record.json) has result.retained_output_refs with 0 entries. The fixture builder's updateRefs function iterates over this empty array, finds nothing to update, records no binding proof, and does not warn. Gate 1 (retained_output_refs) binding integrity is unverified for this layer.",
+      "impact": "If the comparator requires non-empty retained_output_refs entries with matching digests for the fixture scenario, the NC-11R fixture would fail Gate 1 at execution time. If the comparator treats empty retained_output_refs as vacuously satisfied, the impact is cosmetic (incomplete binding proof).",
+      "recommendation": "Before executing NC-11R: (a) trace the comparator's Gate 1 check to determine if empty retained_output_refs passes or fails, (b) if it fails, choose a base scenario with populated retained_output_refs or synthesize the required entries in the fixture, (c) add a warning or error in the fixture builder when retained_output_refs is empty",
+      "blocking": false,
+      "blocks_nc11r_execution": true,
+      "blocks_nc12r_execution": false,
+      "blocks_v2_precommit": false
+    }
+  ],
+
+  "coordinates_verified": {
+    "qualiber_commit": "236282a667fa161ee16fd363e33559cfe7871ba0",
+    "reality_lab_commit": "02de870ef593c2cbd8c517792072769867f33e46",
+    "adapter_pin": "69ace16fb7ee021dddbcf3fa70e4295c2e5a400b",
+    "comparator": "83223022f1522f4c22607f02123e02a0c5ff9cf92363aba0ec1e8a256010bcc4"
+  },
+
+  "prohibitions_respected": {
+    "no_official_controls_executed": true,
+    "no_candidate_frozen_into_precommit": true,
+    "no_evidence_root_modified": true,
+    "no_repository_modified": true,
+    "review_result_is_sibling_not_inside_evidence": true,
+    "no_aggregate_substituted_for_property_review": true
+  },
+
+  "verdict_rationale": "The remediation candidate is technically sound. The control-set v2 design correctly identifies four defects, classifies them accurately, and designs remediation controls that address the specific properties that were not exercised. The NC-12R residue scanner is well-implemented, independently testable, and passes all mutation tests. The v2 runner is clean: no Qualiber imports, no scenario-ID branching, no acceptance rule conflation. All digests are verified. One caveat applies: the NC-11R fixture builder would silently skip the observation record retained_output_refs binding update because QLB-EXT-012's record has 0 entries in this field. This must be resolved before NC-11R fixture construction but does not block v2 precommit, NC-12R execution, or the overall remediation design."
+}

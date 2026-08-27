@@ -1,0 +1,31 @@
+{
+  "schema": "qualiber-reality-lab/preservation-record/v1",
+  "purpose": "Phase 1 byte-level preservation snapshot of both immutable evidence roots, taken before any remediation work begins",
+  "captured_at_phase": "open",
+  "completion_evidence_root": {
+    "path": "/private/tmp/qualiber-wave3-completion-1787755899/evidence/",
+    "regular_file_count": 36,
+    "symlink_count": 0,
+    "non_regular_count": 0,
+    "indexed_file_count": 33,
+    "declared_exclusions": ["evidence-index.json", "evidence-index.sha256"],
+    "unlisted_files": ["independent-review-result.json"],
+    "unlisted_file_note": "independent-review-result.json was written inside the indexed evidence root by the independent review. It is NOT in evidence-index.json. This is a preservation defect documented in Phase 7.",
+    "manifest_file": "completion-root-manifest.txt"
+  },
+  "attempt1_evidence_root": {
+    "path": "/private/tmp/qualiber-wave3-execution-1787753088/evidence/",
+    "regular_file_count": 315,
+    "symlink_count": 0,
+    "non_regular_count": 0,
+    "manifest_file": "attempt1-root-manifest.txt"
+  },
+  "immutable_coordinates": {
+    "qualiber_commit": "236282a667fa161ee16fd363e33559cfe7871ba0",
+    "qualiber_tree": "e40e5028ef172590ce482debf18e5d99f6099971",
+    "reality_lab_commit": "02de870ef593c2cbd8c517792072769867f33e46",
+    "reality_lab_tree": "16e20fff5f09535ccb0014c4346258f34ec94ef6",
+    "adapter_dependency_pin": "69ace16fb7ee021dddbcf3fa70e4295c2e5a400b",
+    "comparator_sha256": "83223022f1522f4c22607f02123e02a0c5ff9cf92363aba0ec1e8a256010bcc4"
+  }
+}

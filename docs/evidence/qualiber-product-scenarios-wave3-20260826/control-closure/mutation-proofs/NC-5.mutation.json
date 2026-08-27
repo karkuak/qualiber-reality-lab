@@ -1,0 +1,12 @@
+{
+  "control": "NC-5",
+  "mutations": [
+    {
+      "target": "inputs/capture-stimulus/stimulus.json",
+      "beforeDigest": "3b59babc3b3776bb67b35107e2b4eff53dfa5010624e4962b6c2d24e2ef2efe1",
+      "afterDigest": "9dadd6ca58185abbf05c60624b99df771de7fffebc67c20dd5a4bb5232c59ebd",
+      "mutationApplied": true
+    }
+  ],
+  "applied": true
+}

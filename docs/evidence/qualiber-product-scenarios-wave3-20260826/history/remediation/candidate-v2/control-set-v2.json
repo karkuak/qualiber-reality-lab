@@ -1,0 +1,257 @@
+{
+  "schema_version": "qualiber-reality-lab/control-set/v2",
+  "campaign": "qualiber-product-scenarios-wave3-20260826",
+  "control_set_version": 2,
+  "status": "CANDIDATE — NOT FROZEN",
+  "generated_at": "2026-08-26T18:00:00Z",
+
+  "supersession": {
+    "NC-11": {
+      "superseded_by": "NC-11R",
+      "reason": "Observed run_status was clean (not inconclusive); forbidden_run_status_observed never fired; run_status_mismatch exercised a different property than forbidden-status precedence",
+      "original_verdict": "HELD",
+      "original_sub_reasons": ["run_status_mismatch"],
+      "original_assessment": "The control proved expected!=observed disagree but did NOT prove forbidden-status precedence (rule 6)"
+    },
+    "NC-12": {
+      "superseded_by": "NC-12R",
+      "reason": "Only comparator (declared-ref check) was exercised; offline verifier and residue scanner were not executed; CDF-001 reclassified as orchestration/method-execution defect",
+      "original_verdict": "FAILED",
+      "original_sub_reasons": [],
+      "original_assessment": "The comparator correctly checked only declared references; the planted file was invisible to retained_output_refs checks; the control's precommitted method required surfaces that were not exercised"
+    }
+  },
+
+  "runner_digest_discrepancy": {
+    "precommit_digest": "a8f0d1b690a73299d5c639ea04f558150235b04efa0c531088f81ee78d735cb5",
+    "executed_digest": "951326f76e438d7c7e4abea10d11ec147d9af660cc1ebe2a7f2aa259d074215c",
+    "amendment_recorded": false,
+    "classification": "control-chronology/tooling-integrity defect",
+    "edits": [
+      {"edit": "NC-1 output parsing", "classification": "runner defect", "content_change": true},
+      {"edit": "chmod executable mode", "classification": "packaging defect", "content_change": false},
+      {"edit": "NC-11 acceptance criteria", "classification": "incorrect expected result / code-path substitution", "content_change": true}
+    ]
+  },
+
+  "active_controls": [
+    {
+      "control_id": "NC-1",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Expected-outcome mutation must disagree",
+      "method": "Comparator NC-1 mode against precommitted counterfactual (009 expectation with expected_run_status=rule_violation_detected and required_finding_types=[duplicate_event])",
+      "targets_scenario": "QLB-EXT-009",
+      "counterfactual_sha256": "eff5858902ceff1d5ec5efd5cda7da22cf7ce300e42c965077c6bf53f5381077",
+      "expected_verdict": "disagree",
+      "expected_classification": "product_disagreement",
+      "expected_sub_reasons": ["run_status_mismatch", "required_finding_type_absent:duplicate_event"],
+      "gate": "run_status and finding-set equality"
+    },
+    {
+      "control_id": "NC-1b",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Expectation-digest binding precedes comparison",
+      "method": "Copy QLB-EXT-011; edit expected.json after precommit bound its digest; re-run comparator",
+      "targets_scenario": "QLB-EXT-011",
+      "expected_verdict": "unavailable",
+      "expected_classification": "lab_harness_failure",
+      "expected_sub_reasons": ["expectation_digest_binding_failed"],
+      "gate": "expectation-digest binding against oracle-precommit.json"
+    },
+    {
+      "control_id": "NC-2",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Missing retained artifact must never read as a status",
+      "method": "Copy QLB-EXT-009; delete product-out/run-result.json; re-run",
+      "targets_scenario": "QLB-EXT-009",
+      "expected_verdict": "unavailable",
+      "expected_classification": "lab_harness_failure",
+      "expected_sub_reasons": ["retained_output_refs_binding_failed"],
+      "gate": "adapter artifact_hashes witness and record retained_output_refs"
+    },
+    {
+      "control_id": "NC-3",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Exit code must not mask a violation and must not be consulted",
+      "method": "Read QLB-EXT-010 comparison.json; assert exit_code=0, ci_exit_code=0, run_status=rule_violation_detected, verdict=agree simultaneously",
+      "targets_scenario": "QLB-EXT-010",
+      "expected_verdict": "all four conditions true at once",
+      "expected_classification": "assertion_pass",
+      "expected_sub_reasons": [],
+      "gate": "§10.5 rule 3 — no branch reads exit code"
+    },
+    {
+      "control_id": "NC-4a",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Product-artifact swap between scenarios",
+      "method": "Copy QLB-EXT-009 and QLB-EXT-012; exchange product-out/ subtrees with sidecars; re-run both",
+      "targets_scenario": "QLB-EXT-009 and QLB-EXT-012",
+      "expected_verdict": "both unavailable",
+      "expected_classification": "lab_harness_failure",
+      "expected_sub_reasons": ["retained_output_refs_binding_failed"],
+      "gate": "record retained_output_refs and adapter artifact_hashes"
+    },
+    {
+      "control_id": "NC-4b",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Whole-subtree swap, internally consistent",
+      "method": "Copy QLB-EXT-009 and QLB-EXT-012; exchange complete qualiber/ subtrees; re-run both",
+      "targets_scenario": "QLB-EXT-009 and QLB-EXT-012",
+      "expected_verdict": "both unavailable",
+      "expected_classification": "lab_harness_failure",
+      "expected_sub_reasons": ["input_digest_binding_failed"],
+      "gate": "stimulus-identity against sealed plan and precommit input digests"
+    },
+    {
+      "control_id": "NC-5",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Retained-input mutation must be refused",
+      "method": "Copy QLB-EXT-010; flip one byte in retained stimulus; pre-verify digest changed; re-run",
+      "targets_scenario": "QLB-EXT-010",
+      "expected_verdict": "never agree",
+      "expected_classification": "lab_harness_failure",
+      "expected_sub_reasons": ["input_digest_binding_failed"],
+      "gate": "sealed-plan declared input digest and comparator four-way input-digest binding"
+    },
+    {
+      "control_id": "NC-6",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Product-artifact semantic mutation with refreshed sidecar (sidecar not load-bearing)",
+      "method": "Copy QLB-EXT-010; change finding type in report.json; refresh .frozen sidecar; re-run",
+      "targets_scenario": "QLB-EXT-010",
+      "expected_verdict": "unavailable",
+      "expected_classification": "lab_harness_failure",
+      "expected_sub_reasons": ["retained_output_refs_binding_failed"],
+      "gate": "record retained_output_refs file_sha256 and adapter artifact_hashes"
+    },
+    {
+      "control_id": "NC-7",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Envelope semantic mutation with refreshed file hash",
+      "method": "Copy QLB-EXT-009; change /error/safe_message in response-envelope.json; refresh .frozen sidecar; re-run four-step bind",
+      "targets_scenario": "QLB-EXT-009",
+      "expected_verdict": "unavailable",
+      "expected_classification": "lab_harness_failure",
+      "expected_sub_reasons": ["response_envelope_core_hash_binding_failed"],
+      "gate": "four-step bind step (iv) identity"
+    },
+    {
+      "control_id": "NC-8",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Execution-lock mutation",
+      "method": "Copy execution-lock.json; change adapter.artifact_sha256 by one hex digit; re-run",
+      "targets_scenario": "QLB-EXT-009",
+      "expected_verdict": "unavailable",
+      "expected_classification": "lab_harness_failure",
+      "expected_sub_reasons": ["execution_lock_binding_failed"],
+      "gate": "record adapter_artifact_hash vs execution-lock.json"
+    },
+    {
+      "control_id": "NC-9",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Comparator dependency drift",
+      "method": "Mutate @erl2/integrity entry_sha256 in execution-lock.json; re-run",
+      "targets_scenario": "QLB-EXT-009",
+      "expected_verdict": "unavailable",
+      "expected_classification": "lab_harness_failure",
+      "expected_sub_reasons": ["comparator_dependency_digest_mismatch"],
+      "gate": "comparator_dependencies.resolved[].entry_sha256 equality"
+    },
+    {
+      "control_id": "NC-10",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Finding-set discipline is reached and not vacuous",
+      "method": "Comparator NC-1 mode against precommitted counterfactual (010 expectation with required_finding_types=[duplicate_event,wrong_order] and max_finding_count=2)",
+      "targets_scenario": "QLB-EXT-010",
+      "counterfactual_sha256": "518a21d44c0cd0c7e4731b42a43c614d128f616d4c77d5138f8a5c4b832362a7",
+      "expected_verdict": "disagree",
+      "expected_classification": "product_disagreement",
+      "expected_sub_reasons": ["required_finding_type_absent:wrong_order"],
+      "gate": "required/permitted/count/target discipline"
+    },
+    {
+      "control_id": "NC-11R",
+      "control_set_version": 2,
+      "status": "remediation",
+      "supersedes": "NC-11",
+      "property": "Forbidden-status precedence beats a matching expectation using an actually observed forbidden status",
+      "method": "Construct a completely bound control fixture where observed run_status is genuinely inconclusive; counterfactual expectation has expected_run_status=inconclusive AND forbidden_run_status=[inconclusive]; the forbidden check fires because observed IS in the forbidden list, forcing disagree even though expected==observed",
+      "fixture_construction": {
+        "base_scenario": "QLB-EXT-012 (disposable copy)",
+        "modification": "run-result.json runStatus set to inconclusive with synthetic inconclusiveReason",
+        "binding_updates": "All binding layers (frozen sidecar, run-summary artifact_hashes, observation record retained_output_refs) updated to reflect modified run-result.json digest",
+        "positive_bound_control": "Same fixture with expected_run_status=inconclusive and NO forbidden_run_status → agree, proving fixture is admissible",
+        "mutation_test": "Remove inconclusive from forbidden_run_status → expected==observed → agree, proving forbidden check was load-bearing"
+      },
+      "expected_verdict": "disagree",
+      "expected_classification": "product_disagreement",
+      "expected_sub_reasons": ["forbidden_run_status_observed"],
+      "forbidden_must_not_be_masked_by": "run_status equality (expected==observed==inconclusive)",
+      "gate": "§10.5 rule 6 — forbidden_run_status, when matched, forces disagree regardless of any other comparison"
+    },
+    {
+      "control_id": "NC-12R",
+      "control_set_version": 2,
+      "status": "remediation",
+      "supersedes": "NC-12",
+      "property": "Undeclared planted residue file makes evidence unpublishable through the explicitly assigned residue-integrity surface",
+      "method": "Copy a valid completed scenario; run clean positive control first; plant one undeclared file; run the shipped offline verifier, a task-local independent residue scanner, and the comparator separately",
+      "targets_scenario": "QLB-EXT-009 (disposable copy)",
+      "residue_scanner_requirements": {
+        "allowed_path_derivation": "From observation record retained_output_refs declared paths (authoritative), NOT scenario-specific literals",
+        "enumeration": "Every regular file in the retained workspace tree",
+        "rejection_unexpected": "Files present but not in allowed set",
+        "rejection_missing": "Files in allowed set but not present",
+        "rejection_symlinks": "Symlinks and non-regular entries",
+        "rejection_traversal": "Paths containing .. and duplicate normalized paths",
+        "reporting": "Exact unexpected and missing path sets"
+      },
+      "expected_clean_result": "scanner passes, comparator passes → publishable",
+      "expected_planted_result": {
+        "scanner": "rejects (unexpected file detected, identifies planted path by name)",
+        "comparator": "accepts (checks only declared refs — expected and documented)",
+        "overall": "NOT publishable"
+      },
+      "expected_classification": "lab_harness_failure",
+      "expected_sub_reasons": ["undeclared_file_in_retained_tree"],
+      "mutations": [
+        {"id": "skip-enumeration", "description": "Scanner does not walk the tree, only checks declared files exist", "expected_result": "planted file invisible, test fails"},
+        {"id": "inspect-only-declared", "description": "Scanner checks only files in allowed set, does not reject extras", "expected_result": "planted file invisible, test fails"},
+        {"id": "ignore-unexpected", "description": "Scanner enumerates but does not reject unexpected files", "expected_result": "planted file found but not rejected, test fails"},
+        {"id": "follow-symlink", "description": "Scanner follows symlinks instead of rejecting them", "expected_result": "planted symlink could escape tree, test fails"}
+      ],
+      "gate": "residue scanner enumeration-based integrity check"
+    },
+    {
+      "control_id": "NC-13",
+      "control_set_version": 2,
+      "status": "retained_from_v1",
+      "property": "Oracle leakage detection",
+      "method": "Plant QLB-EXT-011 and required_finding_types in scratch stimulus; scan; also scan real C-FORBID-INFO for false positives",
+      "targets_scenario": "QLB-EXT-011",
+      "expected_verdict": "both planted needles hit; real contract clean",
+      "expected_classification": "lab_harness_failure (positive); clean (negative)",
+      "expected_sub_reasons": ["oracle_identifier_detected"],
+      "gate": "oracle-absence-scan.mjs needle matching"
+    }
+  ],
+
+  "total_active_controls": 15,
+  "retained_from_v1": 13,
+  "remediation_controls": 2,
+
+  "design_document": "/private/tmp/qualiber-wave3-control-remediation-design.md",
+  "candidate_tooling": "/private/tmp/qualiber-wave3-control-remediation-candidate/"
+}

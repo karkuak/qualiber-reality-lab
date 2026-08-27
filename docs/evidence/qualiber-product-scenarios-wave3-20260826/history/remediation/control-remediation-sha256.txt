@@ -1,0 +1,16 @@
+# SHA-256 manifest — Wave 3 control remediation candidate
+# Generated 2026-08-26
+
+3064162aa2b8ed0830e4b36f8baec8ebe56e28a82b2c8491796ad10228d62256  24566  qualiber-wave3-control-remediation-design.md
+da41370bb8475b5dd15a538703261c28781e8b34d96ee6c8950716bed3c5243a  14159  qualiber-wave3-control-set-v2.json
+6a80fddc029a9e377c27be369cdd73692f208cbcc108bb6433c438fa59997e53  7074  qualiber-wave3-control-remediation-test-report.md
+283e5a66637d09ad6a722e19c2dd31d12ebedb3ab873f34fb8d64003989dd308  7840  qualiber-wave3-control-remediation-independent-review-prompt.md
+53b8c3f5a482c10bfdfa810c7bb0695d6e2236412a146d96550c4a91cfecaa99  8473  qualiber-wave3-control-remediation-candidate/tooling/residue-scanner.mjs
+00e7abe80c208d95c9acfb33898be6bbf85d55028945b132344fab1cd125d81f  11217  qualiber-wave3-control-remediation-candidate/tooling/nc11r-fixture-builder.mjs
+9edf808b40f4e52c352a7cbc8461d427ceb411dfbad515e2f4410dfa4695b415  14498  qualiber-wave3-control-remediation-candidate/tooling/run-negative-control-v2.mjs
+89de30d80068398058b9e536aa2af1ff9b4339cc92df23574e69746eacac78a5  13954  qualiber-wave3-control-remediation-candidate/tooling/tests/test-residue-scanner.mjs
+8446861baa3e12bd7d34da02652857f079f03b37fbd433676525f8e5b793af25  1567  qualiber-wave3-control-remediation-preservation/preservation-record-open.json
+8018ad2066deaf02dc01ea32f7318bb32c542829ec6327af973e93063c3b9e1d  956  qualiber-wave3-control-remediation-preservation/preservation-record-close.json
+3b5c6a401d71415f65f38caa67cf54eaaec3ca6c08bf3e59058f6c8bbc6ff192  4297  qualiber-wave3-control-remediation-preservation/completion-root-manifest.txt
+86796ae38b9b076f40dfd8fae10734bbb5b038e1a506d3012e74c482acb84274  60494  qualiber-wave3-control-remediation-preservation/attempt1-root-manifest.txt
+d02784bd976d78b2cf6006756ada5e5552406f601b24e1226e5b04385dd982d8  3649  qualiber-wave3-control-remediation-candidate/REPRODUCTION.md

@@ -1,0 +1,25 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-oracle-scan/v1",
+  "label": "wave3-execution-precheck",
+  "targets": [
+    "/private/tmp/qualiber-wave3-execution-1787753088/qualiber-checkout/adapters/erl2-subject/contracts/erl2-quote-journey.contract.json",
+    "/private/tmp/qualiber-wave3-execution-1787753088/qualiber-checkout/adapters/erl2-subject/dist/qualiber-erl2-subject.mjs",
+    "/private/tmp/qualiber-wave3-execution-1787753088/qualiber-checkout/adapters/erl2-subject/dist/qualiber-erl2-validation-subject.mjs",
+    "/private/tmp/qualiber-wave3-execution-1787753088/qualiber-checkout/adapters/erl2-subject/src"
+  ],
+  "needle_count": 30,
+  "needle_kinds": [
+    "campaign_field_name",
+    "campaign_path_fragment",
+    "campaign_schema_id",
+    "digest_of:execution-lock.json",
+    "digest_of:oracle-precommit.json",
+    "prefixed_digest_of:execution-lock.json",
+    "prefixed_digest_of:oracle-precommit.json",
+    "scenario_id"
+  ],
+  "scanned_files": 13,
+  "scanned_bytes": 158452,
+  "clean": true,
+  "hits": []
+}

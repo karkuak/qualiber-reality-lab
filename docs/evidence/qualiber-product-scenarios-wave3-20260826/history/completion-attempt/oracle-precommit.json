@@ -1,0 +1,239 @@
+{
+  "schema_version": "qualiber-reality-lab/oracle-precommit/v1",
+  "campaign": "qualiber-product-scenarios-wave3-20260826",
+  "completion_run_id": "completion-1787755899",
+  "revision": 1,
+  "frozen_at": "2026-08-26T15:10:00Z",
+  "authorization": "owner-authorized",
+  "note": "Completion run precommit. Reuses attempt 1's scenario expectations, stimuli, contracts, comparator, scanner, and adapter byte-for-byte. Adds negative-control counterfactuals and completion tooling bindings omitted by attempt 1.",
+
+  "first_attempt_precommit_sha256": "500dbc18c5be9f33834aad6b293bb4bd7d1a44ec2a8c22b0ba4ada199b460160",
+
+  "scenarios": [
+    {
+      "scenario_id": "QLB-EXT-009",
+      "capture_stimulus_file": "stimulus-009.json",
+      "capture_stimulus_sha256": "sha256:fef741e0984dbd52b445386e6c6ef22a6493614c5c6e2cd9bf49ae7ffe2b2073",
+      "capture_stimulus_bytes": 994,
+      "contract_stimulus_file": "C-BOUND2.json",
+      "contract_stimulus_sha256": "sha256:2666c8539fc4c1e4eb40d35528e15e4e32bcdab932f629ab7ddea41b59ea776d",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:7bb957fe1d0eb9603da7c6731e81ec2847f17899896778b85f484857c3969b70",
+      "expectation_bytes": 464,
+      "expected_run_status": "clean",
+      "required_finding_types": [],
+      "target_event": null,
+      "expected_finding_count": 0,
+      "definition": "Wave 2 stimulus-006 bytes reused verbatim with C-BOUND2 (max=2 on quote_requested_one); 2 observed <= 2 max so no cardinality finding",
+      "derivation": "occurrence_bounds.quote_requested_one.max = 2; observed count is 2; 2 > 2 is false. All ordering, property and forbidden checks pass. Zero findings."
+    },
+    {
+      "scenario_id": "QLB-EXT-010",
+      "capture_stimulus_file": "stimulus-010.json",
+      "capture_stimulus_sha256": "sha256:3b59babc3b3776bb67b35107e2b4eff53dfa5010624e4962b6c2d24e2ef2efe1",
+      "capture_stimulus_bytes": 996,
+      "contract_stimulus_file": "C-VALID.json",
+      "contract_stimulus_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:20a1b5648108afb07d02c7f11ec5d173d9e0315bee01b2af8ca2c595902726b3",
+      "expectation_bytes": 518,
+      "expected_run_status": "rule_violation_detected",
+      "required_finding_types": ["duplicate_event"],
+      "target_event": "quote_requested_three",
+      "expected_finding_count": 1,
+      "permitted_additional_types": [],
+      "definition": "four POSTs: three, one, three, zero; C-VALID max=1 for three, 2 observed; ordering satisfied by existence semantics",
+      "derivation": "occurrence_bounds.quote_requested_three.max = 1; 2 > 1 is true. Ordering: three.must_occur_after_any=[one]; one at position 1, three at positions 0 and 2; some(p>1) holds at p=2. No wrong_order."
+    },
+    {
+      "scenario_id": "QLB-EXT-011",
+      "capture_stimulus_file": "stimulus-011.json",
+      "capture_stimulus_sha256": "sha256:842ece52378d161c0839c3806ddc1047d79f607d8cfd99650e8bb416af7ead30",
+      "capture_stimulus_bytes": 997,
+      "contract_stimulus_file": "C-FORBID-INFO.json",
+      "contract_stimulus_sha256": "sha256:61da9cbc5f487efdced5cde60301885d96d1fc704e6984d1a31972159db1bbc8",
+      "contract_stimulus_bytes": 1295,
+      "expectation_sha256": "sha256:d8631a32c74996305e15da3f26e755645abd1db5456d4558e038585ed352bb4e",
+      "expectation_bytes": 510,
+      "expected_run_status": "clean",
+      "required_finding_types": ["forbidden_event_observed"],
+      "target_event": "quote_requested_cancel",
+      "expected_finding_count": 1,
+      "permitted_additional_types": [],
+      "definition": "Wave 1 001 sequence plus quote_requested_cancel; C-FORBID-INFO declares cancel as forbidden with severity info",
+      "derivation": "forbidden_events[0].event = quote_requested_cancel, severity = info. Rollup over {info} yields pass, so runStatus is clean. One finding emitted."
+    },
+    {
+      "scenario_id": "QLB-EXT-012",
+      "capture_stimulus_file": "stimulus-012.json",
+      "capture_stimulus_sha256": "sha256:a49ec1f1c21a9a004659ac1435051bd765ab6d1ac5c1c65f7428a45577effb43",
+      "capture_stimulus_bytes": 960,
+      "contract_stimulus_file": "C-VALID.json",
+      "contract_stimulus_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:a59337580a2654246fd0f2f50241757308e6835d81dcab5d167dfa46104eb21b",
+      "expectation_bytes": 508,
+      "expected_run_status": "clean",
+      "required_finding_types": [],
+      "target_event": null,
+      "expected_finding_count": 0,
+      "forbidden_run_status": ["inconclusive"],
+      "definition": "Wave 1 001 sequence plus one event-less body; C-VALID reused. Fourth request has no event field, causing partial health",
+      "derivation": "Fourth request matches URL but has no event field; unsupported > 0 => health partial. partial not in UNHEALTHY, eligible.length = 3 != 0 => checks run. Three events satisfy C-VALID. Zero findings, clean, partial."
+    }
+  ],
+
+  "tooling_digests": {
+    "compare_scenario_mjs": {
+      "sha256": "83223022f1522f4c22607f02123e02a0c5ff9cf92363aba0ec1e8a256010bcc4",
+      "source": "/private/tmp/qualiber-wave3-comparator-candidate/compare-scenario.mjs"
+    },
+    "compare_scenario_test_mjs": {
+      "sha256": "c92de1f3b37f39a3292903cd39084c23f59c592400197bb76778628514e562b4",
+      "source": "/private/tmp/qualiber-wave3-comparator-candidate/compare-scenario.test.mjs"
+    },
+    "oracle_absence_scan_mjs": {
+      "sha256": "5a2f48445aee2aa76b7621c661cd24d8f343bc1f632478099cf85f8a5322d631",
+      "source": "/private/tmp/qualiber-wave3-comparator-candidate/oracle-absence-scan.mjs"
+    }
+  },
+
+  "completion_tooling_digests": {
+    "build_evidence_index_mjs": "25400160014d4d5270b71d6ead8bfbe1d04f47c294dc67b32e6c7145fb4cdb82",
+    "build_preservation_manifest_mjs": "58391cb9978821466a3814576da01430a90aa4bc259f2d99584e916f3547073a",
+    "build_tooling_test_result_mjs": "985130c65ea55f43d7c616800faa4b37d255f9e00d8a1c68adeec6823593287c",
+    "command_logger_mjs": "c5bd0b5b2750627df600c673f0d78edc55c4a45f83e357d4d6c4e57ebb52ce44",
+    "compare_determinism_mjs": "30417701bd4b81ce5b512ecbd75e19b9094bde7080f008f7b01c681331836032",
+    "run_negative_control_mjs": "a8f0d1b690a73299d5c639ea04f558150235b04efa0c531088f81ee78d735cb5"
+  },
+
+  "comparator_dependency_resolution": {
+    "erl2_contracts_entry_sha256": "da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c",
+    "erl2_integrity_entry_sha256": "c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13",
+    "resolved_at_commit": "02de870ef593c2cbd8c517792072769867f33e46"
+  },
+
+  "scanner_needle_count": 50,
+  "scanner_wave3_strict_superset_of_committed": true,
+
+  "approved_changes": {
+    "G1": "generic optional expected_collector_health assertion -- APPROVED 2026-08-25",
+    "G2": "removal of scenario-specific event-name literals; stable token target_event_mismatch -- APPROVED 2026-08-25"
+  },
+
+  "negative_controls": [
+    {
+      "control_id": "NC-1",
+      "property": "Expected-outcome mutation must disagree",
+      "targets_scenario": "QLB-EXT-009",
+      "method": "NC-1 mode against precommitted counterfactual",
+      "counterfactual_file": "negative-controls/NC-1.counterfactual.expected.json",
+      "counterfactual_expectation_sha256": "sha256:eff5858902ceff1d5ec5efd5cda7da22cf7ce300e42c965077c6bf53f5381077",
+      "precommitted_outcome": "disagree/product_disagreement with sub-reasons run_status_mismatch and required_finding_type_absent:duplicate_event"
+    },
+    {
+      "control_id": "NC-1b",
+      "property": "Expectation-digest binding precedes comparison",
+      "scenario": "QLB-EXT-011",
+      "method": "Copy scenario; edit expected.json after precommit bound its digest; re-run comparator",
+      "precommitted_outcome": "unavailable/lab_harness_failure from expectation-digest binding"
+    },
+    {
+      "control_id": "NC-2",
+      "property": "Missing retained artifact must never read as a status",
+      "scenario": "QLB-EXT-009",
+      "method": "Copy scenario; delete product-out/run-result.json; re-run",
+      "precommitted_outcome": "unavailable/lab_harness_failure; run_status null; clean never inferred"
+    },
+    {
+      "control_id": "NC-3",
+      "property": "Exit code must not mask a violation",
+      "scenario": "QLB-EXT-010",
+      "method": "Read 010's comparison.json; assert exit_code=0, ci_exit_code=0, run_status=rule_violation_detected, verdict=agree simultaneously",
+      "precommitted_outcome": "all four conditions true at once"
+    },
+    {
+      "control_id": "NC-4a",
+      "property": "Product-artifact swap between scenarios",
+      "scenario": "QLB-EXT-009 and QLB-EXT-012",
+      "method": "Copy both; exchange product-out/ subtrees with sidecars; re-run both",
+      "precommitted_outcome": "both unavailable/lab_harness_failure"
+    },
+    {
+      "control_id": "NC-4b",
+      "property": "Whole-subtree swap, internally consistent",
+      "scenario": "QLB-EXT-009 and QLB-EXT-012",
+      "method": "Copy both; exchange complete qualiber/ subtrees; re-run both",
+      "precommitted_outcome": "both unavailable/lab_harness_failure"
+    },
+    {
+      "control_id": "NC-5",
+      "property": "Retained-input mutation must be refused",
+      "scenario": "QLB-EXT-010",
+      "method": "Copy scenario; flip one byte in retained stimulus; pre-verify digest changed; re-run",
+      "precommitted_outcome": "comparison never agree; binding refuses"
+    },
+    {
+      "control_id": "NC-6",
+      "property": "Product-artifact semantic mutation with refreshed sidecar",
+      "scenario": "QLB-EXT-010",
+      "method": "Copy scenario; change finding type duplicate_event to wrong_order in report.json; refresh .frozen sidecar; re-run",
+      "precommitted_outcome": "unavailable/lab_harness_failure proving .frozen sidecars are not load-bearing"
+    },
+    {
+      "control_id": "NC-7",
+      "property": "Envelope semantic mutation with refreshed file hash",
+      "scenario": "QLB-EXT-009",
+      "method": "Copy scenario; change /error/safe_message in response-envelope.json; refresh .frozen sidecar; re-run four-step bind",
+      "precommitted_outcome": "lab_harness_failure at step (iv) identity — recomputed coreHash differs from declared"
+    },
+    {
+      "control_id": "NC-8",
+      "property": "Execution-lock mutation",
+      "scenario": "QLB-EXT-009",
+      "method": "Copy execution-lock.json; change adapter.artifact_sha256 by one hex digit; re-run",
+      "precommitted_outcome": "unavailable/lab_harness_failure proving lock is read and enforced"
+    },
+    {
+      "control_id": "NC-9",
+      "property": "Comparator dependency drift",
+      "scenario": "QLB-EXT-009",
+      "method": "Mutate @erl2/integrity entry_sha256 in lock; re-run",
+      "precommitted_outcome": "unavailable/lab_harness_failure with comparator_dependency_digest_mismatch"
+    },
+    {
+      "control_id": "NC-10",
+      "property": "Finding-set discipline is reached and not vacuous",
+      "targets_scenario": "QLB-EXT-010",
+      "method": "NC-1 mode against precommitted counterfactual requiring wrong_order",
+      "counterfactual_file": "negative-controls/NC-10.counterfactual.expected.json",
+      "counterfactual_expectation_sha256": "sha256:518a21d44c0cd0c7e4731b42a43c614d128f616d4c77d5138f8a5c4b832362a7",
+      "precommitted_outcome": "disagree/product_disagreement with sub-reason required_finding_type_absent:wrong_order"
+    },
+    {
+      "control_id": "NC-11",
+      "property": "Forbidden-status precedence beats matching expectation",
+      "targets_scenario": "QLB-EXT-012",
+      "method": "NC-1 mode against precommitted counterfactual with expected_run_status=inconclusive and forbidden_run_status=[inconclusive]",
+      "counterfactual_file": "negative-controls/NC-11.counterfactual.expected.json",
+      "counterfactual_expectation_sha256": "sha256:af219dae327f1db2cc6e70ecfcd743104751edc570eaaee0202f43b0af6c84c5",
+      "precommitted_outcome": "disagree/product_disagreement with sub-reason forbidden_run_status_observed"
+    },
+    {
+      "control_id": "NC-12",
+      "property": "Cleanup / residue contradiction",
+      "scenario": "QLB-EXT-009",
+      "method": "Copy scenario; plant residue file in retained workspace tree; re-run",
+      "precommitted_outcome": "lab_harness_failure from retained_output_refs_binding_failed"
+    },
+    {
+      "control_id": "NC-13",
+      "property": "Oracle leakage detection",
+      "scenario": "QLB-EXT-011",
+      "method": "Plant QLB-EXT-011 and required_finding_types in scratch stimulus; scan; also scan real C-FORBID-INFO for false positives",
+      "precommitted_outcome": "both planted needles hit; real contract clean"
+    }
+  ],
+
+  "amendments": []
+}

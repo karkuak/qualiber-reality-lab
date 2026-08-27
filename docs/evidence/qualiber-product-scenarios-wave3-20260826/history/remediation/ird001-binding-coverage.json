@@ -1,0 +1,186 @@
+{
+  "schema": "qualiber-reality-lab/ird001-binding-coverage/v1",
+  "produced_for": "IRD-001 resolution — NC-11R complete binding & forbidden-status precedence",
+  "comparator_digest": "83223022f1522f4c22607f02123e02a0c5ff9cf92363aba0ec1e8a256010bcc4",
+  "base_scenario": "QLB-EXT-012",
+  "ird_001_disposition": "CONFIRMED as a real builder defect, but the original diagnosis inspected the WRONG record layer",
+  "runtime_binding_trace": {
+    "comparator_primary_binding_source": "record.operation_records[] where operation===interact && state===completed -> retained_output_refs (findInteractCompletedRecord line 208; refs map line 469; bindArtifact line 473)",
+    "layer_the_review_inspected": "record.result.retained_output_refs (top-level)",
+    "layer_the_review_inspected_value": [],
+    "layer_the_review_inspected_is_read_by_comparator": false,
+    "selected_operation_record": {
+      "operation": "interact",
+      "state": "completed",
+      "operation_id": "interact-validate-stimulus",
+      "retained_output_refs_count": 11
+    },
+    "operation_record_refs": [
+      {
+        "path": "local-observation-output/interact-validate-stimulus/qualiber/capture.json",
+        "file_sha256": "sha256:c62875bda73f8b17188ff6f4b244e2ebd671f9f6a50074b8cf49495ae2ca3a0c",
+        "byte_length": 6845
+      },
+      {
+        "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/evidence-pack.json",
+        "file_sha256": "sha256:91abf4ac0d1ed661407bbd5c09ac0077239353c62ac40db4ac14dcc307313dea",
+        "byte_length": 1402
+      },
+      {
+        "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/report.json",
+        "file_sha256": "sha256:b6a3fe9d88e88f473bb01600a1963143333bafe4a921c419ae0e0663056c7140",
+        "byte_length": 4755
+      },
+      {
+        "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/report.junit.xml",
+        "file_sha256": "sha256:0623bccf2eec055d923c898962fa89f503c167555948922b3f80bf3895317b1e",
+        "byte_length": 268
+      },
+      {
+        "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/report.md",
+        "file_sha256": "sha256:35f5d6f2eef2769f5840913128c2354f4b2d421919af3e138ee23d2e5381b55d",
+        "byte_length": 342
+      },
+      {
+        "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/run-result.json",
+        "file_sha256": "sha256:3d496e9bb849f2574d738b5e70d6ae8300ec748d0445165ee868bdd3b4813ec2",
+        "byte_length": 286
+      },
+      {
+        "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.decision.local-1.0-mta6nt24-a5ac4ed1.8d64f4c4a967.snap.json",
+        "file_sha256": "sha256:95e75352408cb1ca8f657c707ac5c2286024b641eab46f17a34fbc98d389faf6",
+        "byte_length": 1675
+      },
+      {
+        "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/telemetrytest.eligibility.json",
+        "file_sha256": "sha256:1c9c5aee170cd21374c1bac6afcc788e2b84602c0d18fbce7c622f345c158319",
+        "byte_length": 826
+      },
+      {
+        "path": "local-observation-output/interact-validate-stimulus/qualiber/product-out/validation-evidence-pack.json",
+        "file_sha256": "sha256:e102544d931fc7382d7b77dc0aa3222051af849b738d5d7b19937661e2261f55",
+        "byte_length": 2381
+      },
+      {
+        "path": "local-observation-output/interact-validate-stimulus/qualiber/run-summary.json",
+        "file_sha256": "sha256:7d70a1db5baa8627de76cafe1fbc823d0bf315d42d4c3ad4f74932098884e0e6",
+        "byte_length": 2021
+      },
+      {
+        "path": "local-observation-output/interact-validate-stimulus/qualiber/stimulus-identity.json",
+        "file_sha256": "sha256:e103eddeea33bf0c589ef4f88492944c3ac5e79f04bd2a667bc63c14f4fc5335",
+        "byte_length": 586
+      }
+    ],
+    "run_result_ref_present": true,
+    "empty_primary_refs_would": "fail through bindArtifact -> mismatched>0 -> bound=false (rule 7 gate lines 609-619) -> unavailable; rule 6 (line 692) never reached"
+  },
+  "authoritative_witness_layers": {
+    "operation_record_retained_output_refs": "PRIMARY — gated in bound",
+    "run_summary_artifact_hashes": "SECONDARY — gated in bound",
+    "frozen_sidecars_product_out": "WEAK — recorded, not in bound gate",
+    "top_level_result_retained_output_refs": "NOT READ by comparator"
+  },
+  "builder_binding_coverage": [
+    {
+      "layer": "run_result_content",
+      "status": "updated",
+      "from": "3d496e9bb849f2574d738b5e70d6ae8300ec748d0445165ee868bdd3b4813ec2",
+      "to": "98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35"
+    },
+    {
+      "layer": "operation_record_ref_run_result",
+      "status": "updated",
+      "match_count": 1,
+      "to": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35"
+    },
+    {
+      "layer": "run_summary_artifact_hashes",
+      "status": "updated",
+      "match_count": 1,
+      "to": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35"
+    },
+    {
+      "layer": "operation_record_ref_run_summary",
+      "status": "updated",
+      "match_count": 1,
+      "to": "sha256:010c847aa28a2670f10063e8b604b9a8165b82d38288605ed347f1f8283afc49"
+    },
+    {
+      "layer": "frozen_sidecar_run_result",
+      "status": "updated",
+      "match_count": 1,
+      "to": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35"
+    },
+    {
+      "layer": "frozen_sidecar_run_summary",
+      "status": "inapplicable",
+      "reason": "run-summary.json.frozen exists but lives outside product-out/; the comparator's frozen check only walks product-out, so it is never read"
+    }
+  ],
+  "builder_binding_proofs": [
+    {
+      "layer": "operation_record_retained_output_refs[run-result]",
+      "file": "run-output/trusted-local-observation-record.json",
+      "json_pointer": "/operation_records/<interact-completed>/retained_output_refs[path=…/run-result.json]/file_sha256",
+      "updated_to": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35",
+      "byte_length": 358,
+      "match_count": 1
+    },
+    {
+      "layer": "run_summary_artifact_hashes[run-result]",
+      "file": "run-output/store/local-observation-output/interact-validate-stimulus/qualiber/run-summary.json",
+      "updated_field": "qualiber/product-out/run-result.json",
+      "updated_to": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35",
+      "match_count": 1
+    },
+    {
+      "layer": "operation_record_retained_output_refs[run-summary]",
+      "file": "run-output/trusted-local-observation-record.json",
+      "updated_to": "sha256:010c847aa28a2670f10063e8b604b9a8165b82d38288605ed347f1f8283afc49",
+      "byte_length": 2021,
+      "match_count": 1,
+      "reason": "run-summary bytes changed when its artifact_hashes was rebound; its own ref must track the new digest or the comparator would mismatch it"
+    },
+    {
+      "layer": "observation_record_file",
+      "file": "run-output/trusted-local-observation-record.json",
+      "original_digest": "9b9ce8a4b64453baa37ec953a3cbcb91ffbed9addf82b6e35daa51e44b31a0b9",
+      "modified_digest": "cfa7eb0d356eba860f80c601d468fae46f8b6d160c796f0a6ebd3e2cb591c1e1",
+      "note": "record core_hash is NOT recomputed: the comparator does not validate record.core_hash (coreHash is applied only to the response envelope), and the record file is not itself a bound artifact under run-output/store."
+    },
+    {
+      "layer": "frozen_sidecar[run-result]",
+      "file": "run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/run-result.json.frozen",
+      "original_digest": "1c367312199f23c2490bfeca8e6659bcd452e0f6416c6875d5c1d282498a7e08",
+      "modified_digest": "cd9d665885818bd4801a87860970c1bf13be0348e8ff4da7dfa978435e347a4a",
+      "updated_to": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35",
+      "match_count": 1
+    }
+  ],
+  "end_to_end_through_real_comparator": {
+    "positive_bound_control": {
+      "verdict": "agree",
+      "classification": "product_agreement",
+      "bound": true,
+      "observed_run_status": "inconclusive",
+      "sub_reasons": []
+    },
+    "nc11r_forbidden_precedence": {
+      "verdict": "disagree",
+      "classification": "product_disagreement",
+      "bound": true,
+      "observed_run_status": "inconclusive",
+      "sub_reasons": [
+        "forbidden_run_status_observed"
+      ]
+    },
+    "mutation_no_forbidden": {
+      "verdict": "agree",
+      "classification": "product_agreement",
+      "bound": true,
+      "observed_run_status": "inconclusive",
+      "sub_reasons": []
+    }
+  }
+}
