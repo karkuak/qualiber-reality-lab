@@ -1,0 +1,16 @@
+{
+  "control": "NC-7",
+  "mutations": [
+    {
+      "target": "response-envelope.json",
+      "beforeDigest": "b40915533694764931f56033b2edf4430d4eb183d42f259dd49f77896f1e50c0",
+      "afterDigest": "d049e2684508d50a82b5203f4feb63c6740011334291c8a2819e547703895f37",
+      "mutationApplied": true
+    },
+    {
+      "target": "response-envelope.json.frozen",
+      "refreshed": true
+    }
+  ],
+  "applied": true
+}

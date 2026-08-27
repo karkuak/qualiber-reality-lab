@@ -1,0 +1,134 @@
+{
+  "schema": "qualiber-reality-lab/nc11r-fixture/v2",
+  "fixture_type": "NON-CAMPAIGN REHEARSAL — NOT AN OFFICIAL CONTROL RESULT",
+  "ird_001": "corrected — operation_records[interact/completed].retained_output_refs is the real comparator binding and is now updated; top-level result.retained_output_refs (empty) is not read by the comparator and is intentionally NOT the binding target",
+  "base_scenario": "QLB-EXT-012 (disposable copy)",
+  "observation_id": "01a03e73-6d25-7cfd-b259-75f8cc56f85a",
+  "run_result_original_digest": "3d496e9bb849f2574d738b5e70d6ae8300ec748d0445165ee868bdd3b4813ec2",
+  "run_result_modified_digest": "98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35",
+  "run_result_modified_status": "inconclusive",
+  "binding_proofs": [
+    {
+      "layer": "operation_record_retained_output_refs[run-result]",
+      "file": "run-output/trusted-local-observation-record.json",
+      "json_pointer": "/operation_records/<interact-completed>/retained_output_refs[path=…/run-result.json]/file_sha256",
+      "updated_to": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35",
+      "byte_length": 358,
+      "match_count": 1
+    },
+    {
+      "layer": "run_summary_artifact_hashes[run-result]",
+      "file": "run-output/store/local-observation-output/interact-validate-stimulus/qualiber/run-summary.json",
+      "updated_field": "qualiber/product-out/run-result.json",
+      "updated_to": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35",
+      "match_count": 1
+    },
+    {
+      "layer": "operation_record_retained_output_refs[run-summary]",
+      "file": "run-output/trusted-local-observation-record.json",
+      "updated_to": "sha256:010c847aa28a2670f10063e8b604b9a8165b82d38288605ed347f1f8283afc49",
+      "byte_length": 2021,
+      "match_count": 1,
+      "reason": "run-summary bytes changed when its artifact_hashes was rebound; its own ref must track the new digest or the comparator would mismatch it"
+    },
+    {
+      "layer": "observation_record_file",
+      "file": "run-output/trusted-local-observation-record.json",
+      "original_digest": "9b9ce8a4b64453baa37ec953a3cbcb91ffbed9addf82b6e35daa51e44b31a0b9",
+      "modified_digest": "cfa7eb0d356eba860f80c601d468fae46f8b6d160c796f0a6ebd3e2cb591c1e1",
+      "note": "record core_hash is NOT recomputed: the comparator does not validate record.core_hash (coreHash is applied only to the response envelope), and the record file is not itself a bound artifact under run-output/store."
+    },
+    {
+      "layer": "frozen_sidecar[run-result]",
+      "file": "run-output/store/local-observation-output/interact-validate-stimulus/qualiber/product-out/run-result.json.frozen",
+      "original_digest": "1c367312199f23c2490bfeca8e6659bcd452e0f6416c6875d5c1d282498a7e08",
+      "modified_digest": "cd9d665885818bd4801a87860970c1bf13be0348e8ff4da7dfa978435e347a4a",
+      "updated_to": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35",
+      "match_count": 1
+    }
+  ],
+  "binding_coverage": [
+    {
+      "layer": "run_result_content",
+      "status": "updated",
+      "from": "3d496e9bb849f2574d738b5e70d6ae8300ec748d0445165ee868bdd3b4813ec2",
+      "to": "98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35"
+    },
+    {
+      "layer": "operation_record_ref_run_result",
+      "status": "updated",
+      "match_count": 1,
+      "to": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35"
+    },
+    {
+      "layer": "run_summary_artifact_hashes",
+      "status": "updated",
+      "match_count": 1,
+      "to": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35"
+    },
+    {
+      "layer": "operation_record_ref_run_summary",
+      "status": "updated",
+      "match_count": 1,
+      "to": "sha256:010c847aa28a2670f10063e8b604b9a8165b82d38288605ed347f1f8283afc49"
+    },
+    {
+      "layer": "frozen_sidecar_run_result",
+      "status": "updated",
+      "match_count": 1,
+      "to": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35"
+    },
+    {
+      "layer": "frozen_sidecar_run_summary",
+      "status": "inapplicable",
+      "reason": "run-summary.json.frozen exists but lives outside product-out/; the comparator's frozen check only walks product-out, so it is never read"
+    }
+  ],
+  "post_mutation_verification": [
+    {
+      "label": "run-result file == run-result ref",
+      "ok": true,
+      "detail": "sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35 vs 98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35"
+    },
+    {
+      "label": "run-summary file == run-summary ref",
+      "ok": true,
+      "detail": "sha256:010c847aa28a2670f10063e8b604b9a8165b82d38288605ed347f1f8283afc49 vs 010c847aa28a2670f10063e8b604b9a8165b82d38288605ed347f1f8283afc49"
+    },
+    {
+      "label": "run-summary artifact_hashes[run-result] == run-result file",
+      "ok": true,
+      "detail": "artifact_hashes cascade"
+    },
+    {
+      "label": "run-result observed status is inconclusive",
+      "ok": true,
+      "detail": "status flip"
+    },
+    {
+      "label": "frozen sidecar == run-result file",
+      "ok": true,
+      "detail": "frozen cascade"
+    }
+  ],
+  "expectation_digests": {
+    "NC-11R-POSITIVE-BOUND-CONTROL": "3ee7918ecd3868009da67098c28d4e037778c6ad46f84b8024e5f9ab5568dcca",
+    "NC-11R-FORBIDDEN-PRECEDENCE": "ac81c09737d2218b72632061c8387c5977a1d1b580ee827fc1135532e7ec8671",
+    "NC-11R-MUTATION-NO-FORBIDDEN": "6a4c7d3c17383ba02186cf82b649693317468c5fc157027c59d0c35a381d3e43"
+  },
+  "oracle": {
+    "precommit": "oracle-precommit.json",
+    "campaign_index": "campaign-index.json",
+    "execution_lock": "execution-lock.json"
+  },
+  "construction_log": [
+    "interact/completed operation record selected: operation_id=interact-validate-stimulus, refs=11",
+    "run-result.json runStatus clean -> inconclusive; digest 3d496e9bb849f2574d738b5e70d6ae8300ec748d0445165ee868bdd3b4813ec2 -> 98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35",
+    "run-summary.json artifact_hashes[qualiber/product-out/run-result.json] -> sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35; digest 7d70a1db5baa8627de76cafe1fbc823d0bf315d42d4c3ad4f74932098884e0e6 -> 010c847aa28a2670f10063e8b604b9a8165b82d38288605ed347f1f8283afc49",
+    "observation record rewritten with 2 ref updates; digest 9b9ce8a4b64453baa37ec953a3cbcb91ffbed9addf82b6e35daa51e44b31a0b9 -> cfa7eb0d356eba860f80c601d468fae46f8b6d160c796f0a6ebd3e2cb591c1e1",
+    "run-result.json.frozen sidecar rebound to sha256:98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35",
+    "expectation NC-11R-POSITIVE-BOUND-CONTROL.expected.json digest 3ee7918ecd3868009da67098c28d4e037778c6ad46f84b8024e5f9ab5568dcca",
+    "expectation NC-11R-FORBIDDEN-PRECEDENCE.expected.json digest ac81c09737d2218b72632061c8387c5977a1d1b580ee827fc1135532e7ec8671",
+    "expectation NC-11R-MUTATION-NO-FORBIDDEN.expected.json digest 6a4c7d3c17383ba02186cf82b649693317468c5fc157027c59d0c35a381d3e43"
+  ]
+}

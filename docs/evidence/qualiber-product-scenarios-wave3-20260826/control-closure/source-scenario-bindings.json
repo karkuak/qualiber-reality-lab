@@ -1,0 +1,22 @@
+{
+  "schema": "source-scenario-bindings/v1",
+  "source": "immutable attempt-1 evidence root",
+  "scenarios": {
+    "QLB-EXT-009": {
+      "source_tree_sha256": "49f5b0854908a7605b596cf757243932a5dcfcc15706d6e098ed9e9e50536c5f",
+      "revalidated_after_campaign": "intact"
+    },
+    "QLB-EXT-010": {
+      "source_tree_sha256": "08b14e8a30c7ee6c1081205713ddcff5076f363e2db9a11d204906f733422603",
+      "revalidated_after_campaign": "intact"
+    },
+    "QLB-EXT-011": {
+      "source_tree_sha256": "8bfb95d26424cf38cd4a14f45c2bf271fbf4c7ea7e2d0a0157bc0122e2a441f6",
+      "revalidated_after_campaign": "intact"
+    },
+    "QLB-EXT-012": {
+      "source_tree_sha256": "a477bef65403b29cd041617c48ad3ea7aad4d87bcfe7e0a2944bb810d8fc6619",
+      "revalidated_after_campaign": "intact"
+    }
+  }
+}

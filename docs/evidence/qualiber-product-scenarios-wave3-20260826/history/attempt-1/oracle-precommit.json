@@ -1,0 +1,113 @@
+{
+  "schema_version": "qualiber-reality-lab/oracle-precommit/v1",
+  "campaign": "qualiber-product-scenarios-wave3-20260826",
+  "revision": 1,
+  "frozen_at": "2026-08-26T13:50:00Z",
+  "authorization": "owner-authorized",
+  "note": "Wave 3 stage 1. Written before any Qualiber execution against Wave 3 inputs. Waves 1 and 2 are frozen and not amended.",
+
+  "scenarios": [
+    {
+      "scenario_id": "QLB-EXT-009",
+      "capture_stimulus_file": "stimulus-009.json",
+      "capture_stimulus_sha256": "sha256:fef741e0984dbd52b445386e6c6ef22a6493614c5c6e2cd9bf49ae7ffe2b2073",
+      "capture_stimulus_bytes": 994,
+      "contract_stimulus_file": "C-BOUND2.json",
+      "contract_stimulus_sha256": "sha256:2666c8539fc4c1e4eb40d35528e15e4e32bcdab932f629ab7ddea41b59ea776d",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:7bb957fe1d0eb9603da7c6731e81ec2847f17899896778b85f484857c3969b70",
+      "expectation_bytes": 464,
+      "expected_run_status": "clean",
+      "required_finding_types": [],
+      "target_event": null,
+      "expected_finding_count": 0,
+      "definition": "Wave 2 stimulus-006 bytes reused verbatim with C-BOUND2 (max=2 on quote_requested_one); 2 observed <= 2 max so no cardinality finding",
+      "derivation": "occurrence_bounds.quote_requested_one.max = 2; observed count is 2; 2 > 2 is false. All ordering, property and forbidden checks pass. Zero findings."
+    },
+    {
+      "scenario_id": "QLB-EXT-010",
+      "capture_stimulus_file": "stimulus-010.json",
+      "capture_stimulus_sha256": "sha256:3b59babc3b3776bb67b35107e2b4eff53dfa5010624e4962b6c2d24e2ef2efe1",
+      "capture_stimulus_bytes": 996,
+      "contract_stimulus_file": "C-VALID.json",
+      "contract_stimulus_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:20a1b5648108afb07d02c7f11ec5d173d9e0315bee01b2af8ca2c595902726b3",
+      "expectation_bytes": 518,
+      "expected_run_status": "rule_violation_detected",
+      "required_finding_types": ["duplicate_event"],
+      "target_event": "quote_requested_three",
+      "expected_finding_count": 1,
+      "permitted_additional_types": [],
+      "definition": "four POSTs: three, one, three, zero; C-VALID max=1 for three, 2 observed; ordering satisfied by existence semantics",
+      "derivation": "occurrence_bounds.quote_requested_three.max = 1; 2 > 1 is true. Ordering: three.must_occur_after_any=[one]; one at position 1, three at positions 0 and 2; some(p>1) holds at p=2. No wrong_order."
+    },
+    {
+      "scenario_id": "QLB-EXT-011",
+      "capture_stimulus_file": "stimulus-011.json",
+      "capture_stimulus_sha256": "sha256:842ece52378d161c0839c3806ddc1047d79f607d8cfd99650e8bb416af7ead30",
+      "capture_stimulus_bytes": 997,
+      "contract_stimulus_file": "C-FORBID-INFO.json",
+      "contract_stimulus_sha256": "sha256:61da9cbc5f487efdced5cde60301885d96d1fc704e6984d1a31972159db1bbc8",
+      "contract_stimulus_bytes": 1295,
+      "expectation_sha256": "sha256:d8631a32c74996305e15da3f26e755645abd1db5456d4558e038585ed352bb4e",
+      "expectation_bytes": 510,
+      "expected_run_status": "clean",
+      "required_finding_types": ["forbidden_event_observed"],
+      "target_event": "quote_requested_cancel",
+      "expected_finding_count": 1,
+      "permitted_additional_types": [],
+      "definition": "Wave 1 001 sequence plus quote_requested_cancel; C-FORBID-INFO declares cancel as forbidden with severity info",
+      "derivation": "forbidden_events[0].event = quote_requested_cancel, severity = info. Rollup over {info} yields pass, so runStatus is clean. One finding emitted."
+    },
+    {
+      "scenario_id": "QLB-EXT-012",
+      "capture_stimulus_file": "stimulus-012.json",
+      "capture_stimulus_sha256": "sha256:a49ec1f1c21a9a004659ac1435051bd765ab6d1ac5c1c65f7428a45577effb43",
+      "capture_stimulus_bytes": 960,
+      "contract_stimulus_file": "C-VALID.json",
+      "contract_stimulus_sha256": "sha256:abf5fc9bad051e7f1fe7008b2f7b2236e448fc1343098bc86459718816b2a3f4",
+      "contract_stimulus_bytes": 1180,
+      "expectation_sha256": "sha256:a59337580a2654246fd0f2f50241757308e6835d81dcab5d167dfa46104eb21b",
+      "expectation_bytes": 508,
+      "expected_run_status": "clean",
+      "required_finding_types": [],
+      "target_event": null,
+      "expected_finding_count": 0,
+      "forbidden_run_status": ["inconclusive"],
+      "definition": "Wave 1 001 sequence plus one event-less body; C-VALID reused. Fourth request has no event field, causing partial health",
+      "derivation": "Fourth request matches URL but has no event field; unsupported > 0 => health partial. partial not in UNHEALTHY, eligible.length = 3 != 0 => checks run. Three events satisfy C-VALID. Zero findings, clean, partial."
+    }
+  ],
+
+  "tooling_digests": {
+    "compare_scenario_mjs": {
+      "sha256": "83223022f1522f4c22607f02123e02a0c5ff9cf92363aba0ec1e8a256010bcc4",
+      "source": "/private/tmp/qualiber-wave3-comparator-candidate/compare-scenario.mjs"
+    },
+    "compare_scenario_test_mjs": {
+      "sha256": "c92de1f3b37f39a3292903cd39084c23f59c592400197bb76778628514e562b4",
+      "source": "/private/tmp/qualiber-wave3-comparator-candidate/compare-scenario.test.mjs"
+    },
+    "oracle_absence_scan_mjs": {
+      "sha256": "5a2f48445aee2aa76b7621c661cd24d8f343bc1f632478099cf85f8a5322d631",
+      "source": "/private/tmp/qualiber-wave3-comparator-candidate/oracle-absence-scan.mjs"
+    }
+  },
+
+  "comparator_dependency_resolution": {
+    "erl2_contracts_entry_sha256": "da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c",
+    "erl2_integrity_entry_sha256": "c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13",
+    "resolved_at_commit": "02de870ef593c2cbd8c517792072769867f33e46"
+  },
+
+  "scanner_needle_count": 50,
+  "scanner_wave3_strict_superset_of_committed": true,
+
+  "approved_changes": {
+    "G1": "generic optional expected_collector_health assertion -- APPROVED 2026-08-25",
+    "G2": "removal of scenario-specific event-name literals; stable token target_event_mismatch -- APPROVED 2026-08-25"
+  },
+
+  "amendments": []
+}

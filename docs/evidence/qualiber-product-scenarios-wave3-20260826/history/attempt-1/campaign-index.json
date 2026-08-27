@@ -1,0 +1,30 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-index/v1",
+  "campaign": "qualiber-product-scenarios-wave3-20260826",
+  "scenarios": [
+    {
+      "scenario_id": "QLB-EXT-009",
+      "observation_id": "01a03e6f-6d64-7b3e-8160-04c21596611e",
+      "sealed_plan_core_hash": "sha256:a010671f1cdd7382e044ad889498f7904382db04d5e68a008572b23f18278e7a",
+      "record_plan_hash": "sha256:a010671f1cdd7382e044ad889498f7904382db04d5e68a008572b23f18278e7a"
+    },
+    {
+      "scenario_id": "QLB-EXT-010",
+      "observation_id": "01a03e72-1d27-728b-9744-6da5b4bf9ede",
+      "sealed_plan_core_hash": "sha256:e3bb1426b22c508b66263978039e418778d4c1f42a731ddf7e46f675a8d79c8b",
+      "record_plan_hash": "sha256:e3bb1426b22c508b66263978039e418778d4c1f42a731ddf7e46f675a8d79c8b"
+    },
+    {
+      "scenario_id": "QLB-EXT-011",
+      "observation_id": "01a03e72-ee8e-70de-a019-6f09ae4faa9f",
+      "sealed_plan_core_hash": "sha256:925cc4573661e61ee4a7ac2e93afa959767f2240ace5c54532b86005d4774f10",
+      "record_plan_hash": "sha256:925cc4573661e61ee4a7ac2e93afa959767f2240ace5c54532b86005d4774f10"
+    },
+    {
+      "scenario_id": "QLB-EXT-012",
+      "observation_id": "01a03e73-6d25-7cfd-b259-75f8cc56f85a",
+      "sealed_plan_core_hash": "sha256:afc1060f78af970faf3a96237b29258efe2044a8ef3e9ec29e133e27256fcd5b",
+      "record_plan_hash": "sha256:afc1060f78af970faf3a96237b29258efe2044a8ef3e9ec29e133e27256fcd5b"
+    }
+  ]
+}

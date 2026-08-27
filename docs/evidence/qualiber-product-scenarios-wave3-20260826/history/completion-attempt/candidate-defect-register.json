@@ -1,0 +1,19 @@
+{
+  "schema_version": "qualiber-reality-lab/candidate-defect-register/v1",
+  "campaign": "qualiber-product-scenarios-wave3-20260826-completion",
+  "generated_at": "2026-08-26T15:30:00Z",
+  "defect_count": 1,
+  "defects": [
+    {
+      "id": "CDF-001",
+      "source": "NC-12",
+      "severity": "informational",
+      "title": "Planted residue file in product-out/ not detected by comparator-only check",
+      "description": "NC-12 planted a residue file (NC12-planted-residue.txt) into the product-out/ subtree of a disposable copy of QLB-EXT-009. The comparator produced agree/product_agreement because it verifies only that declared retained_output_refs match their expected digests — it does not fail on undeclared extra files. The design expected the offline verifier (which computes retained-tree digests) to catch this, but the offline verifier is product code and was not available in the completion run.",
+      "impact": "The comparator alone cannot detect extra files planted in the retained workspace tree. The offline verifier (product-side) provides this check. This is a known limitation documented in the claim ceiling: the campaign's comparator-only check does not guarantee tree-level integrity.",
+      "resolution": "Not a product defect. This is a scope limitation of the campaign's comparator tooling vs the full offline verification pipeline. The claim ceiling already acknowledges this. NC-12's FAILED status is recorded honestly.",
+      "affects_verdict": false,
+      "affects_claim_ceiling": false
+    }
+  ]
+}

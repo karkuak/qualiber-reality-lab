@@ -1,0 +1,12 @@
+{
+  "control": "NC-1b",
+  "mutations": [
+    {
+      "target": "expected.json",
+      "beforeDigest": "d8631a32c74996305e15da3f26e755645abd1db5456d4558e038585ed352bb4e",
+      "afterDigest": "4710f2430d7c107b80c176b1cecc10d9568522930dfbc3d8ffa0660b0aa8745d",
+      "mutationApplied": true
+    }
+  ],
+  "applied": true
+}

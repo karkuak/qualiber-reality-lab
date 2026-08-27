@@ -1,0 +1,20 @@
+{
+  "schema_version": "qualiber-reality-lab/determinism-comparison/v1",
+  "scenario_id": "QLB-EXT-009",
+  "attempt1_root": "/private/tmp/qualiber-wave3-execution-1787753088/evidence/scenarios/QLB-EXT-009",
+  "completion_root": "/private/tmp/qualiber-wave3-completion-1787755899/evidence/scenarios/QLB-EXT-009",
+  "semantic_differences": [],
+  "semantic_determinism": "CONFIRMED",
+  "byte_comparisons": [],
+  "nondeterministic_identity_fields": [
+    {
+      "field": "oracle_precommit_sha256",
+      "note": "expected: completion precommit differs from attempt 1"
+    },
+    {
+      "field": "execution_lock_sha256",
+      "note": "expected: completion lock differs from attempt 1"
+    }
+  ],
+  "note_on_identity_fields": "observation_id, timestamps, plan hashes, and precommit/lock digests are expected to differ between runs. These are listed explicitly and excluded from semantic comparison."
+}

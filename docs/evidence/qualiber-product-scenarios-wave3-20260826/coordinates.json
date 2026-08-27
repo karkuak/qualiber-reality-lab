@@ -1,0 +1,59 @@
+{
+  "schema": "qualiber-wave3/coordinates/v1",
+  "campaign": "qualiber-product-scenarios-wave3-20260826",
+  "as_of": "2026-08-26",
+  "immutable": true,
+  "product": {
+    "repo": "qualiber",
+    "commit": "236282a667fa161ee16fd363e33559cfe7871ba0",
+    "tree": "e40e5028ef172590ce482debf18e5d99f6099971"
+  },
+  "reality_lab": {
+    "repo": "qualiber-reality-lab",
+    "commit": "02de870ef593c2cbd8c517792072769867f33e46",
+    "tree": "16e20fff5f09535ccb0014c4346258f34ec94ef6"
+  },
+  "adapter_dependency": {
+    "reality_lab_pin": "69ace16fb7ee021dddbcf3fa70e4295c2e5a400b",
+    "note": "real @erl2 (contracts+integrity) built from Reality Lab 69ace16"
+  },
+  "adapter_artifact": {
+    "adapter_id": "qualiber-erl2-validation-subject",
+    "artifact_path": "adapters/erl2-subject/dist/qualiber-erl2-validation-subject.mjs",
+    "sha256": "c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+    "bytes": 41472,
+    "manifest_core_hash": "sha256:504ab99b85804ad900bc56fac89d3e64da5295a772dfaef1be4848eef9b5b393"
+  },
+  "product_artifact_identities": {
+    "live_quote_subject": {
+      "sha256": "d757168a6f1623d78a922434b5f05f45389891574105ebf1c2bf505591efec94",
+      "bytes": 43891
+    },
+    "validation_subject": {
+      "sha256": "c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+      "bytes": 41472
+    }
+  },
+  "dependency_anchor_entries": {
+    "@erl2/contracts": {
+      "version": "0.1.0",
+      "entry_sha256": "da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c"
+    },
+    "@erl2/integrity": {
+      "version": "0.1.0",
+      "entry_sha256": "c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13"
+    }
+  },
+  "tooling_digests": {
+    "compare-scenario.mjs": "83223022f1522f4c22607f02123e02a0c5ff9cf92363aba0ec1e8a256010bcc4",
+    "oracle-absence-scan.mjs": "5a2f48445aee2aa76b7621c661cd24d8f343bc1f632478099cf85f8a5322d631",
+    "run-negative-control.mjs (v1 retained runner)": "951326f76e438d7c7e4abea10d11ec147d9af660cc1ebe2a7f2aa259d074215c",
+    "run-negative-control-v2.mjs (v2 remediation runner)": "f59f31271e108a2312ca2b46adc1a9567d1081dbb5b5e918a3b7e533d360773f",
+    "nc11r-fixture-builder.mjs": "b74e65712f97e1cc409de50a3f3ee2178c20289eae73d064fba4df055ba72f9b",
+    "residue-scanner.mjs": "53b8c3f5a482c10bfdfa810c7bb0695d6e2236412a146d96550c4a91cfecaa99"
+  },
+  "notes": [
+    "No Qualiber product-code change. No Reality Lab product-code change.",
+    "Detached checkouts at exact commits; later remote movement is informational only."
+  ]
+}

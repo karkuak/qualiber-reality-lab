@@ -1,0 +1,26 @@
+{
+  "schema_version": "qualiber-erl2-validation-run-summary/v1",
+  "run_id": "01a03e72-1d27-728b-9744-6da5b4bf9ede",
+  "journey_id": "erl2_ext_journey",
+  "request_count": 4,
+  "product_cli": {
+    "command": "telemetrytest validate --contract <mounted contract bytes> --capture <this run's capture> --out <run-scoped dir>",
+    "exit_code": 0,
+    "run_status": "rule_violation_detected",
+    "completed": true
+  },
+  "subject_role": "This subject reports what the product emitted and asserts nothing about whether that constitutes a pass. The product's own artifacts are under product-out/.",
+  "artifact_hashes": {
+    "qualiber/capture.json": "sha256:dc48dc28de59a9ec2152bf0c0cb74952a0e022244477e36326bc16cd7b0f4849",
+    "qualiber/stimulus-identity.json": "sha256:eb3499fc551f2533bfaf39e6ad80bee34a2307482dff57ef62790c1249cbc3b0",
+    "qualiber/product-out/evidence-pack.json": "sha256:57c2697cbc1b999acc1cb0dfecc32016af3ae4e174f60ada84f6ea57da6c7841",
+    "qualiber/product-out/report.json": "sha256:04a4d66d1c1ae9e228342cbf9dac07a57d424c05a96852146879fb029d12e8d2",
+    "qualiber/product-out/report.junit.xml": "sha256:0623bccf2eec055d923c898962fa89f503c167555948922b3f80bf3895317b1e",
+    "qualiber/product-out/report.md": "sha256:8a5e43f6b05757ac838e24588c5b5d4473be3a0e00f922067b800f7783481bb0",
+    "qualiber/product-out/run-result.json": "sha256:93c57674171f546e5e22b65de28037da0692335f5d11338386c927687258f8bd",
+    "qualiber/product-out/telemetrytest.decision.local-1.0-mta6mce6-16a40220.c1afebc9a355.snap.json": "sha256:21dc5de7e00b225cb492416c5086f062ba88ea25b5dcf1228a507e229f10f0e1",
+    "qualiber/product-out/telemetrytest.eligibility.json": "sha256:bc09b9e2a9fc586dc7f94e7e61fb824ddf1b806fc53497d9095d0c3f4d646168",
+    "qualiber/product-out/validation-evidence-pack.json": "sha256:491be5185b82dc85bef8a57395f39474be67439611b83d6f557a91002437a3e6"
+  },
+  "telemetry_source": "Qualiber consumed the analytics JSON of the Lab-supplied request bodies. No request was issued, no socket was opened, and no OTLP was read."
+}

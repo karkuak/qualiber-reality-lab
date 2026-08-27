@@ -1,0 +1,15 @@
+{
+  "schema_version": "qualiber-reality-lab/campaign-expectation/v1",
+  "scenario_id": "QLB-EXT-009",
+  "expected_operation_state": "completed",
+  "expected_response_status": "supported",
+  "expected_run_status": "rule_violation_detected",
+  "required_finding_types": ["duplicate_event"],
+  "permitted_additional_types": [],
+  "permitted_additional_justification": {},
+  "target_event": null,
+  "max_finding_count": 0,
+  "expected_product_reported": true,
+  "expected_collector_health": "healthy",
+  "counterfactual_note": "NC-1: 009's expectation mutated to expected_run_status=rule_violation_detected and required_finding_types=[duplicate_event]. Precommitted to disagree/product_disagreement with sub-reasons run_status_mismatch and required_finding_type_absent:duplicate_event."
+}

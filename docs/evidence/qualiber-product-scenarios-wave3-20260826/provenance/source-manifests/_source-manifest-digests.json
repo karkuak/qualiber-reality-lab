@@ -1,0 +1,155 @@
+{
+  "attempt1_evidence": {
+    "bytes": 658964,
+    "files": 315,
+    "manifest_sha256": "294a3ea70aadcc581d83e9b2702806312fba4d699da205e7084ed5e6c1022926",
+    "source": "/private/tmp/qualiber-wave3-execution-1787753088/evidence",
+    "type": "dir"
+  },
+  "completion_evidence": {
+    "bytes": 185988,
+    "files": 36,
+    "manifest_sha256": "593567012f13d6693afc90d0568668f09ce7764cd6b68774393ed66199c107d2",
+    "source": "/private/tmp/qualiber-wave3-completion-1787755899/evidence",
+    "type": "dir"
+  },
+  "control_closure_evidence": {
+    "bytes": 364689,
+    "files": 83,
+    "manifest_sha256": "a65559a5796623e55f42725763c960a292232354ef1e2eb971ab9a52ceffb593",
+    "source": "/private/tmp/qualiber-wave3-control-closure-1787765436-98932/evidence",
+    "type": "dir"
+  },
+  "control_set_v2_standalone": {
+    "bytes": 14159,
+    "file_sha256": "da41370bb8475b5dd15a538703261c28781e8b34d96ee6c8950716bed3c5243a",
+    "files": 1,
+    "manifest_sha256": "3ffa09b04b451459f50a585fc2a0fc1690a26a04d7d4fe085e936c1eaf639668",
+    "source": "/private/tmp/qualiber-wave3-control-set-v2.json",
+    "type": "file"
+  },
+  "ird001_binding_coverage": {
+    "bytes": 8732,
+    "file_sha256": "9682c10d5fe3efafbb2c2e7fab36a61d1206563e5f954b5cb4747e8500658e35",
+    "files": 1,
+    "manifest_sha256": "4473519990ede9edf5f12606dc46e68cf2853a82bcaadc1cfdae69bfccd060f8",
+    "source": "/private/tmp/qualiber-wave3-ird001-binding-coverage.json",
+    "type": "file"
+  },
+  "ird001_focused_review_prompt": {
+    "bytes": 3587,
+    "file_sha256": "a7e8de858e6f95f6f17644bf05a59c0b55298757ddcdc6f4b708bbba81c4d16f",
+    "files": 1,
+    "manifest_sha256": "d7bb06c319503534d1a5c46af8fd5de2226fd3ccd09f2cfa9c0c7c9cfa24c40b",
+    "source": "/private/tmp/qualiber-wave3-ird001-focused-review-prompt.md",
+    "type": "file"
+  },
+  "ird001_preservation": {
+    "bytes": 142939,
+    "files": 8,
+    "manifest_sha256": "21c98a57b0f95bf8f74b907f00ada1ac4dfd1b7de93a41b1a12a6ebf59d5eaa8",
+    "source": "/private/tmp/qualiber-wave3-ird001-preservation",
+    "type": "dir"
+  },
+  "ird001_remediation_report": {
+    "bytes": 5706,
+    "file_sha256": "22d32991798fb21069540fef9ebc825db559607b771eaea8c4d606dd03a22783",
+    "files": 1,
+    "manifest_sha256": "bb5a3f8d3352cd6db5d4039e668d7b179b2ee9d1f8cda64425876b6ef4f6fd45",
+    "source": "/private/tmp/qualiber-wave3-ird001-remediation-report.md",
+    "type": "file"
+  },
+  "ird001_reproduction": {
+    "bytes": 4205,
+    "file_sha256": "610c6bc46b4cdf338cc871b1eb841890a834e9e0cece53717f79cffd1fc7b624",
+    "files": 1,
+    "manifest_sha256": "88676d65608fad8d68419393993da326ac87e2217577626d2fb02ff3589b1fd4",
+    "source": "/private/tmp/qualiber-wave3-ird001-REPRODUCTION.md",
+    "type": "file"
+  },
+  "ird001_sha256_manifest": {
+    "bytes": 3425,
+    "file_sha256": "a0ae9eb44de14c03a47c80095115500246adc56680f7b71717c23e5684fe66de",
+    "files": 1,
+    "manifest_sha256": "906fdd49e75aa771a532140b38dc0987b553eb47647fef0250b9e62a3f9830ef",
+    "source": "/private/tmp/qualiber-wave3-ird001-SHA256-MANIFEST.txt",
+    "type": "file"
+  },
+  "remediation_candidate_v1": {
+    "bytes": 51791,
+    "files": 5,
+    "manifest_sha256": "ad2bcbd02e36da7398d9d21f499fb2549594ee14f6cac4b5d013ec8740d9881f",
+    "source": "/private/tmp/qualiber-wave3-control-remediation-candidate",
+    "type": "dir"
+  },
+  "remediation_candidate_v2": {
+    "bytes": 147497,
+    "files": 12,
+    "manifest_sha256": "cfb5c4f7e803400f8560147b18b3d02fea940c0169fa29943f5cf49542baa945",
+    "source": "/private/tmp/qualiber-wave3-control-remediation-candidate-v2",
+    "type": "dir"
+  },
+  "remediation_design": {
+    "bytes": 24566,
+    "file_sha256": "3064162aa2b8ed0830e4b36f8baec8ebe56e28a82b2c8491796ad10228d62256",
+    "files": 1,
+    "manifest_sha256": "d79a0d5ae86d7b43fe769189d918e6b629304cf6dc64f2a8b6b0743bfc463283",
+    "source": "/private/tmp/qualiber-wave3-control-remediation-design.md",
+    "type": "file"
+  },
+  "remediation_preservation": {
+    "bytes": 132199,
+    "files": 7,
+    "manifest_sha256": "e1ed5b0019100df05337cbb49cc20fad42c8c85e22257e161d265b0f9263a275",
+    "source": "/private/tmp/qualiber-wave3-control-remediation-preservation",
+    "type": "dir"
+  },
+  "remediation_review_prompt": {
+    "bytes": 7840,
+    "file_sha256": "283e5a66637d09ad6a722e19c2dd31d12ebedb3ab873f34fb8d64003989dd308",
+    "files": 1,
+    "manifest_sha256": "066ab8b41254604c314201f1662948737f8e578dd3735bda80cdf8f8d366c286",
+    "source": "/private/tmp/qualiber-wave3-control-remediation-independent-review-prompt.md",
+    "type": "file"
+  },
+  "remediation_review_result": {
+    "bytes": 17469,
+    "file_sha256": "934d5817478719fe9479f02a81609af080e7a4d79e90456bf5877f7b08490617",
+    "files": 1,
+    "manifest_sha256": "fec6dae1e176742c575cf9f2695d9b140382286a36d8a22cd5604fec4ad92136",
+    "source": "/private/tmp/qualiber-wave3-control-remediation-independent-review-result.json",
+    "type": "file"
+  },
+  "remediation_sha256": {
+    "bytes": 1906,
+    "file_sha256": "58d0f01939b58137bc66ce5e66bf96b466bd5ee5844be9f31805e3bc30232061",
+    "files": 1,
+    "manifest_sha256": "28bc0b8720e466d92b4290ad6bc237f24f2c2180ec063161bafddef2b7d39f10",
+    "source": "/private/tmp/qualiber-wave3-control-remediation-sha256.txt",
+    "type": "file"
+  },
+  "remediation_test_report": {
+    "bytes": 7074,
+    "file_sha256": "6a80fddc029a9e377c27be369cdd73692f208cbcc108bb6433c438fa59997e53",
+    "files": 1,
+    "manifest_sha256": "0407c7ca900e6aa0c5e7a4729873f97429d109cec2424bddd20409d50a2eb03c",
+    "source": "/private/tmp/qualiber-wave3-control-remediation-test-report.md",
+    "type": "file"
+  },
+  "review_closure_final": {
+    "bytes": 6636,
+    "file_sha256": "6c420e0e7913a216601cbd900e4ed2702f74917984cec31194c3de232652a233",
+    "files": 1,
+    "manifest_sha256": "757d54661efbebfcf2b751eb67b48d24ac0fb5d58ffb5b2f71a513417de11964",
+    "source": "/private/tmp/qualiber-wave3-control-closure-independent-review-FINAL.md",
+    "type": "file"
+  },
+  "review_ird001_focused": {
+    "bytes": 4687,
+    "file_sha256": "b0f33293aa35ae8810b3748ff4595402587dc95487917d9a115efa25ea8deb46",
+    "files": 1,
+    "manifest_sha256": "c0a34349984e4e9986075dfc952aa62646c90166e3f2a39a2a194f7688a37e6a",
+    "source": "/private/tmp/qualiber-wave3-ird001-focused-review.md",
+    "type": "file"
+  }
+}

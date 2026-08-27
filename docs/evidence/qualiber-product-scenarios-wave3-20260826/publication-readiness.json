@@ -1,0 +1,52 @@
+{
+  "schema": "qualiber-wave3/publication-readiness/v1",
+  "campaign": "qualiber-product-scenarios-wave3-20260826",
+  "as_of": "2026-08-26",
+  "state": "publication-candidate (immutable, uncommitted, awaiting independent review)",
+  "counts": {
+    "scenarios": 4,
+    "scenario_agreements": 4,
+    "product_disagreements": 0,
+    "determinism_checks_confirmed": 4,
+    "active_controls": 15,
+    "active_controls_reproduced": 15,
+    "superseded_controls_not_counted": [
+      "NC-11",
+      "NC-12"
+    ]
+  },
+  "source_integrity": {
+    "method": "path|sha256|bytes|mode manifest per source root; each composed lane re-verified byte/path/mode identical to source",
+    "source_roots": 20,
+    "source_files_total": 479,
+    "source_bytes_total": 1794059,
+    "all_dir_lanes_match_source_manifest": true,
+    "all_file_copies_digest_and_mode_verified": true,
+    "symlinks_found": 0,
+    "non_regular_found": 0,
+    "preexisting_pathset_defects": [
+      "completion attempt: independent-review-result.json present on disk but absent from that attempt's evidence-index.json (unindexed) \u2014 preserved as-is (errata E-4)",
+      "attempt-1 SHA256SUMS.txt lists itself as an entry (self-referential manifest line) \u2014 preserved as-is"
+    ]
+  },
+  "assembly": {
+    "byte_preserving_only": true,
+    "source_edited": false,
+    "scenarios_rerun": false,
+    "controls_rerun": false,
+    "published": false,
+    "committed": false,
+    "repo_or_github_mutation": false,
+    "is_independent_review": false
+  },
+  "outstanding_blockers": [
+    "Independent review of this composed candidate has not been performed (this assembly is not a review).",
+    "Candidate is uncommitted; no publication/commit/PR/merge/issue authorized or performed.",
+    "Claim ceiling is trusted-local / unconfined / synthetic; no certification, assurance, or production-readiness."
+  ],
+  "final_index": {
+    "location": "evidence-index.json",
+    "sidecar": "evidence-index.sha256",
+    "note": "canonical index excludes exactly itself and its sidecar; digest recorded in evidence-index.sha256 after final indexing"
+  }
+}

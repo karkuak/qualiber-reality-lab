@@ -1,0 +1,13 @@
+{
+  "control": "NC-12R",
+  "mutations": [
+    {
+      "label": "planted file presence verified",
+      "original_digest": "absent",
+      "current_digest": "a9c0f981c8b3620660177dbabe3ffa265613d0bdaab25684247dc6c2e9550300",
+      "mutation_applied": true,
+      "verified": true
+    }
+  ],
+  "applied": true
+}

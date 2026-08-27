@@ -1,0 +1,32 @@
+{
+  "control_id": "NC-7",
+  "evidence_root": "/private/tmp/qualiber-wave3-execution-1787753088/evidence",
+  "scratch_dir": "/private/tmp/claude-502/-private-tmp/498da042-1ff5-401b-a553-86502f23c5c9/scratchpad/nc-scratch/NC-7",
+  "started_at": "2026-08-26T15:21:53.952Z",
+  "mutations": [
+    {
+      "target": "response-envelope.json",
+      "beforeDigest": "b40915533694764931f56033b2edf4430d4eb183d42f259dd49f77896f1e50c0",
+      "afterDigest": "d049e2684508d50a82b5203f4feb63c6740011334291c8a2819e547703895f37",
+      "mutationApplied": true
+    },
+    {
+      "target": "response-envelope.json.frozen",
+      "refreshed": true
+    }
+  ],
+  "legs": [
+    {
+      "name": "nc7-envelope-mutation",
+      "exit_code": 0,
+      "stdout": "{\n  \"schema_version\": \"qualiber-reality-lab/campaign-comparison/v1\",\n  \"scenario_id\": \"QLB-EXT-009\",\n  \"mode\": \"nc1\",\n  \"observation_id\": null,\n  \"oracle_precommit_sha256\": \"sha256:171d2ad61f91ce8379203438bff68ebf2255ab6abd20262556f2d14ee407477b\",\n  \"oracle_precommit_revision\": 1,\n  \"execution_lock_sha256\": \"sha256:bad6a340e9774e5b2e1e31c9ca642d7c449b21d6a91b48fa3c155a1bf8b1bbe4\",\n  \"expectation_sha256\": \"sha256:bf8a8d5638d7be3d0c8697ea73257513dc7de983bce42af67ade461cff5d1795\",\n  \"comparator_dependencies_resolved\": [\n    {\n      \"name\": \"@erl2/contracts\",\n      \"version\": \"0.1.0\",\n      \"entry_sha256\": \"sha256:da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c\"\n    },\n    {\n      \"name\": \"@erl2/integrity\",\n      \"version\": \"0.1.0\",\n      \"entry_sha256\": \"sha256:c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13\"\n    }\n  ],\n  \"binding\": {\n    \"bound\": false,\n    \"dependency_triples_matched\": true,\n    \"expectation_digest_matched\": false,\n    \"expectation_binding_mode\": \"nc1\",\n    \"record_retained_output_refs_matched\": [],\n    \"record_retained_output_refs_mismatched\": [],\n    \"adapter_artifact_hashes_matched\": null,\n    \"frozen_sidecars_matched\": null,\n    \"response_envelope_bytes_matched\": null,\n    \"response_envelope_schema_valid\": null,\n    \"response_envelope_core_hash_recomputed\": null,\n    \"response_envelope_core_hash_matched\": null,\n    \"plan_hash\": null,\n    \"adapter_artifact_hash\": null,\n    \"capture_stimulus_sha256\": null,\n    \"contract_stimulus_sha256\": null,\n    \"oracle_precommit_digests_matched\": null,\n    \"execution_lock_digests_matched\": null,\n    \"campaign_index_observation_id_matched\": null\n  },\n  \"expected\": null,\n  \"observed\": {\n    \"operation_state\": null,\n    \"response_status\": null,\n    \"envelope_error_code\": null,\n    \"envelope_error_owner\": null,\n    \"envelope_error_safe_message\": null,\n    \"run_status\": null,\n    \"not_run_reason\": null,\n    \"inconclusive_reason\": null,\n    \"collector_health\": null,\n    \"customer_visible_message\": null,\n    \"finding_count\": null,\n    \"finding_types\": null,\n    \"finding_events\": null,\n    \"target_event_observed\": null,\n    \"recorded_exit_code\": null,\n    \"recorded_ci_exit_code\": null,\n    \"artifacts_present\": [],\n    \"artifacts_absent\": [],\n    \"terminal_status_recorded_not_used\": null\n  },\n  \"verdict\": \"unavailable\",\n  \"classification\": \"lab_harness_failure\",\n  \"sub_reasons\": [\n    \"counterfactual_not_precommitted\"\n  ],\n  \"evidence_refs\": []\n}\nQLB-EXT-009 [nc1] verdict=unavailable classification=lab_harness_failure sub_reasons=counterfactual_not_precommitted\n",
+      "stderr": ""
+    }
+  ],
+  "verdict": "HELD",
+  "classification": "lab_harness_failure",
+  "sub_reasons": [],
+  "precommitted_outcome": "refreshed envelope file hash refused through recomputed core identity",
+  "source_evidence_intact": null,
+  "completed_at": "2026-08-26T15:21:54.080Z"
+}

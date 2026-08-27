@@ -1,0 +1,41 @@
+{
+  "schema": "qualiber-reality-lab/negative-control-result/v2",
+  "control_set_version": 2,
+  "control_id": "NC-11R",
+  "method_digest": "f59f31271e108a2312ca2b46adc1a9567d1081dbb5b5e918a3b7e533d360773f",
+  "fixture_digests": {
+    "fixture_record": "eabd210a8efe1758ced26d8d8559cbc21c102ff7d8fb3971637b6d268a41b9d0",
+    "forbidden_precedence_expectation": "ac81c09737d2218b72632061c8387c5977a1d1b580ee827fc1135532e7ec8671",
+    "run_result_modified": "98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35"
+  },
+  "evidence_digests": {},
+  "expected_gate": "forbidden_run_status §10.5 rule 6 precedence over a matching expectation",
+  "observed_gate": "forbidden=disagree/product_disagreement bound=true sub=[\"forbidden_run_status_observed\"]",
+  "expected_classification": "product_disagreement",
+  "observed_classification": "product_disagreement",
+  "expected_sub_reasons": [
+    "forbidden_run_status_observed"
+  ],
+  "observed_sub_reasons": [
+    "forbidden_run_status_observed"
+  ],
+  "mutation_proofs": [
+    {
+      "label": "run-result mutated to inconclusive and re-bound across all comparator-read layers",
+      "original_digest": "3d496e9bb849f2574d738b5e70d6ae8300ec748d0445165ee868bdd3b4813ec2",
+      "current_digest": "98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35",
+      "mutation_applied": true,
+      "verified": true
+    }
+  ],
+  "verdict": "disagree/product_disagreement",
+  "raw_command_refs": [
+    "node compare-scenario.mjs --scenario NC-11R-POSITIVE-BOUND-CONTROL  ... => agree",
+    "node compare-scenario.mjs --scenario NC-11R-FORBIDDEN-PRECEDENCE ... => disagree sub=[\"forbidden_run_status_observed\"]",
+    "node compare-scenario.mjs --scenario NC-11R-MUTATION-NO-FORBIDDEN ... => agree"
+  ],
+  "started_at": "2026-08-26T17:36:04.919Z",
+  "completed_at": "2026-08-26T17:36:05.556Z",
+  "note": "NC-11R via real comparator + real fixture bytes. property_checks={\"positive_bound_agrees\":true,\"forbidden_bound\":true,\"forbidden_observed_inconclusive\":true,\"forbidden_disagrees\":true,\"forbidden_reason_present\":true,\"forbidden_not_via_mismatch\":true,\"mutation_no_forbidden_agrees\":true}. The disagree comes from forbidden_run_status_observed with expected==observed==inconclusive, so run_status_mismatch is not the cause; removing the forbidden list flips the verdict to agree.",
+  "non_campaign_rehearsal": true
+}

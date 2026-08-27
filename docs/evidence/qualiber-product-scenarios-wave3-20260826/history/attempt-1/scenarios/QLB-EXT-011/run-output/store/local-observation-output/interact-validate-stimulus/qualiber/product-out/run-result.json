@@ -1,0 +1,10 @@
+{
+  "runStatus": "clean",
+  "collectorHealth": "healthy",
+  "findingCount": 1,
+  "ciExitCode": 0,
+  "blocking": false,
+  "advisoryCommentEligible": false,
+  "evidencePackGenerated": true,
+  "customerVisibleMessage": "1 informational telemetry finding recorded; no rule violation reported (advisory; CI not affected)."
+}

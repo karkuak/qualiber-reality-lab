@@ -1,0 +1,13 @@
+{
+  "control": "NC-11R",
+  "mutations": [
+    {
+      "label": "run-result mutated to inconclusive and re-bound across all comparator-read layers",
+      "original_digest": "3d496e9bb849f2574d738b5e70d6ae8300ec748d0445165ee868bdd3b4813ec2",
+      "current_digest": "98196cbc82730ab390f127ee5d8bcb31ca6081316df72c4e2f4f01bbb446ea35",
+      "mutation_applied": true,
+      "verified": true
+    }
+  ],
+  "applied": true
+}

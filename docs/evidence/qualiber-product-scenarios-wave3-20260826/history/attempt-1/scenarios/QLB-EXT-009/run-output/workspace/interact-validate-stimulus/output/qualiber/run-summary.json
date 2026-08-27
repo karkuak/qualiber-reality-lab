@@ -1,0 +1,26 @@
+{
+  "schema_version": "qualiber-erl2-validation-run-summary/v1",
+  "run_id": "01a03e6f-6d64-7b3e-8160-04c21596611e",
+  "journey_id": "erl2_ext_journey",
+  "request_count": 4,
+  "product_cli": {
+    "command": "telemetrytest validate --contract <mounted contract bytes> --capture <this run's capture> --out <run-scoped dir>",
+    "exit_code": 0,
+    "run_status": "clean",
+    "completed": true
+  },
+  "subject_role": "This subject reports what the product emitted and asserts nothing about whether that constitutes a pass. The product's own artifacts are under product-out/.",
+  "artifact_hashes": {
+    "qualiber/capture.json": "sha256:484e0934eb62754a33b6e6e8645453287387d588fe2e2cc5358f86da01b5b89b",
+    "qualiber/stimulus-identity.json": "sha256:71d7c548f73dc1fccb6846fc94e538dda5d0a506d448b9f2cc5c14a806cc6422",
+    "qualiber/product-out/evidence-pack.json": "sha256:65b6e66374557fb3d10653d74237e9b9b463b7360b33b021a5546f4c4e459abe",
+    "qualiber/product-out/report.json": "sha256:3b8ad4467a9f684953275ab9f8da3df8c90f7984a610deeae59f726e8fcf55bb",
+    "qualiber/product-out/report.junit.xml": "sha256:0623bccf2eec055d923c898962fa89f503c167555948922b3f80bf3895317b1e",
+    "qualiber/product-out/report.md": "sha256:0fadf97318508bcc9c0d3fe598090abe8b7cdd1f04f669e961602cead48f69c7",
+    "qualiber/product-out/run-result.json": "sha256:43b4b2cb26cfa5c51b1c738439b407e2a784872b7f5315c78b92da726cde6f4c",
+    "qualiber/product-out/telemetrytest.decision.local-1.0-mta6ivya-1b14e662.4e3653c56376.snap.json": "sha256:06c04c41057fc1059a8dbf357e2bf27ac3ffe8b4698c65b77cb3d013665cf61b",
+    "qualiber/product-out/telemetrytest.eligibility.json": "sha256:83809c952ad24f80918ffa725cfd634117340f39f2ce4ae5ba6c192c3aea6d32",
+    "qualiber/product-out/validation-evidence-pack.json": "sha256:77995132fa42a02e41032a5ba1bc3c5fd514bc987bd7c61c45735a58d01559f7"
+  },
+  "telemetry_source": "Qualiber consumed the analytics JSON of the Lab-supplied request bodies. No request was issued, no socket was opened, and no OTLP was read."
+}

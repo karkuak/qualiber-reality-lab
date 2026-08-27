@@ -1,0 +1,478 @@
+{
+  "schema": "qualiber-wave3/composition-map/v1",
+  "campaign": "qualiber-product-scenarios-wave3-20260826",
+  "as_of": "2026-08-26",
+  "assembly_method": "byte-preserving copy only (shutil.copy2; each file digest+mode re-verified against source). No source evidence edited, renamed, reindexed, or repaired. No scenarios/controls re-run. Uncommitted; awaiting independent review.",
+  "immutable_coordinates": {
+    "qualiber": {
+      "commit": "236282a667fa161ee16fd363e33559cfe7871ba0",
+      "tree": "e40e5028ef172590ce482debf18e5d99f6099971"
+    },
+    "reality_lab": {
+      "commit": "02de870ef593c2cbd8c517792072769867f33e46",
+      "tree": "16e20fff5f09535ccb0014c4346258f34ec94ef6"
+    },
+    "adapter_dependency_pin": {
+      "commit": "69ace16fb7ee021dddbcf3fa70e4295c2e5a400b",
+      "note": "real @erl2 built from Reality Lab 69ace16"
+    },
+    "adapter_artifact": {
+      "path": "adapters/erl2-subject/dist/qualiber-erl2-validation-subject.mjs",
+      "sha256": "c65c6393af5e6d83f937c3d0d7f274101e915922494d8fcec26f8865fe05e762",
+      "bytes": 41472
+    },
+    "dependency_anchor_entries": {
+      "@erl2/contracts": "da45bec05eada150c6006c64cf51a41f7bcfa233eb1d299b8adb341adb9dc00c",
+      "@erl2/integrity": "c927d02cb33fa1c8f0a08a78fedcfe8137d0954180ed07ceaa8f2e1112feff13"
+    },
+    "tooling_digests": {
+      "compare-scenario.mjs (comparator)": "83223022f1522f4c22607f02123e02a0c5ff9cf92363aba0ec1e8a256010bcc4",
+      "oracle-absence-scan.mjs": "5a2f48445aee2aa76b7621c661cd24d8f343bc1f632478099cf85f8a5322d631",
+      "run-negative-control.mjs (v1 retained runner)": "951326f76e438d7c7e4abea10d11ec147d9af660cc1ebe2a7f2aa259d074215c",
+      "run-negative-control-v2.mjs (v2 remediation runner)": "f59f31271e108a2312ca2b46adc1a9567d1081dbb5b5e918a3b7e533d360773f",
+      "nc11r-fixture-builder.mjs": "b74e65712f97e1cc409de50a3f3ee2178c20289eae73d064fba4df055ba72f9b",
+      "residue-scanner.mjs (NC-12R)": "53b8c3f5a482c10bfdfa810c7bb0695d6e2236412a146d96550c4a91cfecaa99"
+    }
+  },
+  "source_roots": [
+    {
+      "key": "attempt1_evidence",
+      "source_path": "/private/tmp/qualiber-wave3-execution-1787753088/evidence",
+      "type": "dir",
+      "files": 315,
+      "bytes": 658964,
+      "source_manifest_sha256": "294a3ea70aadcc581d83e9b2702806312fba4d699da205e7084ed5e6c1022926"
+    },
+    {
+      "key": "completion_evidence",
+      "source_path": "/private/tmp/qualiber-wave3-completion-1787755899/evidence",
+      "type": "dir",
+      "files": 36,
+      "bytes": 185988,
+      "source_manifest_sha256": "593567012f13d6693afc90d0568668f09ce7764cd6b68774393ed66199c107d2"
+    },
+    {
+      "key": "control_closure_evidence",
+      "source_path": "/private/tmp/qualiber-wave3-control-closure-1787765436-98932/evidence",
+      "type": "dir",
+      "files": 83,
+      "bytes": 364689,
+      "source_manifest_sha256": "a65559a5796623e55f42725763c960a292232354ef1e2eb971ab9a52ceffb593"
+    },
+    {
+      "key": "control_set_v2_standalone",
+      "source_path": "/private/tmp/qualiber-wave3-control-set-v2.json",
+      "type": "file",
+      "files": 1,
+      "bytes": 14159,
+      "source_manifest_sha256": "3ffa09b04b451459f50a585fc2a0fc1690a26a04d7d4fe085e936c1eaf639668"
+    },
+    {
+      "key": "ird001_binding_coverage",
+      "source_path": "/private/tmp/qualiber-wave3-ird001-binding-coverage.json",
+      "type": "file",
+      "files": 1,
+      "bytes": 8732,
+      "source_manifest_sha256": "4473519990ede9edf5f12606dc46e68cf2853a82bcaadc1cfdae69bfccd060f8"
+    },
+    {
+      "key": "ird001_focused_review_prompt",
+      "source_path": "/private/tmp/qualiber-wave3-ird001-focused-review-prompt.md",
+      "type": "file",
+      "files": 1,
+      "bytes": 3587,
+      "source_manifest_sha256": "d7bb06c319503534d1a5c46af8fd5de2226fd3ccd09f2cfa9c0c7c9cfa24c40b"
+    },
+    {
+      "key": "ird001_preservation",
+      "source_path": "/private/tmp/qualiber-wave3-ird001-preservation",
+      "type": "dir",
+      "files": 8,
+      "bytes": 142939,
+      "source_manifest_sha256": "21c98a57b0f95bf8f74b907f00ada1ac4dfd1b7de93a41b1a12a6ebf59d5eaa8"
+    },
+    {
+      "key": "ird001_remediation_report",
+      "source_path": "/private/tmp/qualiber-wave3-ird001-remediation-report.md",
+      "type": "file",
+      "files": 1,
+      "bytes": 5706,
+      "source_manifest_sha256": "bb5a3f8d3352cd6db5d4039e668d7b179b2ee9d1f8cda64425876b6ef4f6fd45"
+    },
+    {
+      "key": "ird001_reproduction",
+      "source_path": "/private/tmp/qualiber-wave3-ird001-REPRODUCTION.md",
+      "type": "file",
+      "files": 1,
+      "bytes": 4205,
+      "source_manifest_sha256": "88676d65608fad8d68419393993da326ac87e2217577626d2fb02ff3589b1fd4"
+    },
+    {
+      "key": "ird001_sha256_manifest",
+      "source_path": "/private/tmp/qualiber-wave3-ird001-SHA256-MANIFEST.txt",
+      "type": "file",
+      "files": 1,
+      "bytes": 3425,
+      "source_manifest_sha256": "906fdd49e75aa771a532140b38dc0987b553eb47647fef0250b9e62a3f9830ef"
+    },
+    {
+      "key": "remediation_candidate_v1",
+      "source_path": "/private/tmp/qualiber-wave3-control-remediation-candidate",
+      "type": "dir",
+      "files": 5,
+      "bytes": 51791,
+      "source_manifest_sha256": "ad2bcbd02e36da7398d9d21f499fb2549594ee14f6cac4b5d013ec8740d9881f"
+    },
+    {
+      "key": "remediation_candidate_v2",
+      "source_path": "/private/tmp/qualiber-wave3-control-remediation-candidate-v2",
+      "type": "dir",
+      "files": 12,
+      "bytes": 147497,
+      "source_manifest_sha256": "cfb5c4f7e803400f8560147b18b3d02fea940c0169fa29943f5cf49542baa945"
+    },
+    {
+      "key": "remediation_design",
+      "source_path": "/private/tmp/qualiber-wave3-control-remediation-design.md",
+      "type": "file",
+      "files": 1,
+      "bytes": 24566,
+      "source_manifest_sha256": "d79a0d5ae86d7b43fe769189d918e6b629304cf6dc64f2a8b6b0743bfc463283"
+    },
+    {
+      "key": "remediation_preservation",
+      "source_path": "/private/tmp/qualiber-wave3-control-remediation-preservation",
+      "type": "dir",
+      "files": 7,
+      "bytes": 132199,
+      "source_manifest_sha256": "e1ed5b0019100df05337cbb49cc20fad42c8c85e22257e161d265b0f9263a275"
+    },
+    {
+      "key": "remediation_review_prompt",
+      "source_path": "/private/tmp/qualiber-wave3-control-remediation-independent-review-prompt.md",
+      "type": "file",
+      "files": 1,
+      "bytes": 7840,
+      "source_manifest_sha256": "066ab8b41254604c314201f1662948737f8e578dd3735bda80cdf8f8d366c286"
+    },
+    {
+      "key": "remediation_review_result",
+      "source_path": "/private/tmp/qualiber-wave3-control-remediation-independent-review-result.json",
+      "type": "file",
+      "files": 1,
+      "bytes": 17469,
+      "source_manifest_sha256": "fec6dae1e176742c575cf9f2695d9b140382286a36d8a22cd5604fec4ad92136"
+    },
+    {
+      "key": "remediation_sha256",
+      "source_path": "/private/tmp/qualiber-wave3-control-remediation-sha256.txt",
+      "type": "file",
+      "files": 1,
+      "bytes": 1906,
+      "source_manifest_sha256": "28bc0b8720e466d92b4290ad6bc237f24f2c2180ec063161bafddef2b7d39f10"
+    },
+    {
+      "key": "remediation_test_report",
+      "source_path": "/private/tmp/qualiber-wave3-control-remediation-test-report.md",
+      "type": "file",
+      "files": 1,
+      "bytes": 7074,
+      "source_manifest_sha256": "0407c7ca900e6aa0c5e7a4729873f97429d109cec2424bddd20409d50a2eb03c"
+    },
+    {
+      "key": "review_closure_final",
+      "source_path": "/private/tmp/qualiber-wave3-control-closure-independent-review-FINAL.md",
+      "type": "file",
+      "files": 1,
+      "bytes": 6636,
+      "source_manifest_sha256": "757d54661efbebfcf2b751eb67b48d24ac0fb5d58ffb5b2f71a513417de11964"
+    },
+    {
+      "key": "review_ird001_focused",
+      "source_path": "/private/tmp/qualiber-wave3-ird001-focused-review.md",
+      "type": "file",
+      "files": 1,
+      "bytes": 4687,
+      "source_manifest_sha256": "c0a34349984e4e9986075dfc952aa62646c90166e3f2a39a2a194f7688a37e6a"
+    }
+  ],
+  "lane_roles": {
+    "campaign": {
+      "role": "authoritative scenario evidence",
+      "contributes_to_verdict": true,
+      "source": "qualiber-wave3-execution-1787753088/evidence (attempt-1)",
+      "note": "Full four-scenario run: inputs, outputs, comparisons, locks, scans. Byte-identical to history/attempt-1/."
+    },
+    "determinism": {
+      "role": "authoritative determinism evidence",
+      "contributes_to_verdict": true,
+      "source": "qualiber-wave3-completion-1787755899/evidence (completion determinism + scenario comparisons)",
+      "note": "Completion attempt supplies determinism evidence: four semantic-determinism checks CONFIRMED."
+    },
+    "control-closure": {
+      "role": "authoritative control evidence",
+      "contributes_to_verdict": true,
+      "source": "qualiber-wave3-control-closure-1787765436-98932/evidence",
+      "note": "Control closure supplies authoritative control evidence: 15 active control-set-v2 controls, all reproduced."
+    },
+    "history/attempt-1": {
+      "role": "historical/first-attempt (chronology authority)",
+      "contributes_to_verdict": false,
+      "note": "attempt-1 expectations retain chronology authority."
+    },
+    "history/completion-attempt": {
+      "role": "historical/completion-attempt",
+      "contributes_to_verdict": false,
+      "note": "Immutable completion attempt; carries visible historical defects (see errata.md and supersession.json)."
+    },
+    "history/remediation": {
+      "role": "historical/remediation",
+      "contributes_to_verdict": false,
+      "note": "v1/v2 designs, corrected tooling, reviews, manifests, supersession records."
+    },
+    "reviews": {
+      "role": "independent review",
+      "contributes_to_verdict": false,
+      "note": "Independent review reports copied byte-identically."
+    },
+    "provenance": {
+      "role": "provenance/composition records",
+      "contributes_to_verdict": false
+    }
+  },
+  "copy_map": [
+    {
+      "source_key": "attempt1_evidence",
+      "source_manifest_sha256": "294a3ea70aadcc581d83e9b2702806312fba4d699da205e7084ed5e6c1022926",
+      "destination_lane": "campaign",
+      "role": "authoritative scenario evidence",
+      "contributes_to_verdict": true,
+      "files": 315,
+      "bytes": 658964
+    },
+    {
+      "source_key": "control_closure_evidence",
+      "source_manifest_sha256": "a65559a5796623e55f42725763c960a292232354ef1e2eb971ab9a52ceffb593",
+      "destination_lane": "control-closure",
+      "role": "authoritative control evidence",
+      "contributes_to_verdict": true,
+      "files": 83,
+      "bytes": 364689
+    },
+    {
+      "source_key": "completion_evidence",
+      "source_manifest_sha256": "593567012f13d6693afc90d0568668f09ce7764cd6b68774393ed66199c107d2",
+      "destination_lane": "determinism",
+      "role": "authoritative determinism evidence",
+      "contributes_to_verdict": true,
+      "files": 8,
+      "bytes": 37640
+    },
+    {
+      "source_key": "attempt1_evidence",
+      "source_manifest_sha256": "294a3ea70aadcc581d83e9b2702806312fba4d699da205e7084ed5e6c1022926",
+      "destination_lane": "history/attempt-1",
+      "role": "historical/first-attempt",
+      "contributes_to_verdict": false,
+      "files": 315,
+      "bytes": 658964
+    },
+    {
+      "source_key": "completion_evidence",
+      "source_manifest_sha256": "593567012f13d6693afc90d0568668f09ce7764cd6b68774393ed66199c107d2",
+      "destination_lane": "history/completion-attempt",
+      "role": "historical/completion-attempt",
+      "contributes_to_verdict": false,
+      "files": 36,
+      "bytes": 185988
+    },
+    {
+      "source_key": "control_set_v2_standalone",
+      "source_manifest_sha256": "3ffa09b04b451459f50a585fc2a0fc1690a26a04d7d4fe085e936c1eaf639668",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation (control-set-v2 standalone copy)",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 14159
+    },
+    {
+      "source_key": "ird001_binding_coverage",
+      "source_manifest_sha256": "4473519990ede9edf5f12606dc46e68cf2853a82bcaadc1cfdae69bfccd060f8",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 8732
+    },
+    {
+      "source_key": "ird001_focused_review_prompt",
+      "source_manifest_sha256": "d7bb06c319503534d1a5c46af8fd5de2226fd3ccd09f2cfa9c0c7c9cfa24c40b",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation-review",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 3587
+    },
+    {
+      "source_key": "ird001_preservation",
+      "source_manifest_sha256": "21c98a57b0f95bf8f74b907f00ada1ac4dfd1b7de93a41b1a12a6ebf59d5eaa8",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation-preservation",
+      "contributes_to_verdict": false,
+      "files": 8,
+      "bytes": 142939
+    },
+    {
+      "source_key": "ird001_remediation_report",
+      "source_manifest_sha256": "bb5a3f8d3352cd6db5d4039e668d7b179b2ee9d1f8cda64425876b6ef4f6fd45",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 5706
+    },
+    {
+      "source_key": "ird001_reproduction",
+      "source_manifest_sha256": "88676d65608fad8d68419393993da326ac87e2217577626d2fb02ff3589b1fd4",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 4205
+    },
+    {
+      "source_key": "ird001_sha256_manifest",
+      "source_manifest_sha256": "906fdd49e75aa771a532140b38dc0987b553eb47647fef0250b9e62a3f9830ef",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation-manifest",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 3425
+    },
+    {
+      "source_key": "remediation_candidate_v1",
+      "source_manifest_sha256": "ad2bcbd02e36da7398d9d21f499fb2549594ee14f6cac4b5d013ec8740d9881f",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation",
+      "contributes_to_verdict": false,
+      "files": 5,
+      "bytes": 51791
+    },
+    {
+      "source_key": "remediation_candidate_v2",
+      "source_manifest_sha256": "cfb5c4f7e803400f8560147b18b3d02fea940c0169fa29943f5cf49542baa945",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation",
+      "contributes_to_verdict": false,
+      "files": 12,
+      "bytes": 147497
+    },
+    {
+      "source_key": "remediation_design",
+      "source_manifest_sha256": "d79a0d5ae86d7b43fe769189d918e6b629304cf6dc64f2a8b6b0743bfc463283",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 24566
+    },
+    {
+      "source_key": "remediation_preservation",
+      "source_manifest_sha256": "e1ed5b0019100df05337cbb49cc20fad42c8c85e22257e161d265b0f9263a275",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation-preservation",
+      "contributes_to_verdict": false,
+      "files": 7,
+      "bytes": 132199
+    },
+    {
+      "source_key": "remediation_review_prompt",
+      "source_manifest_sha256": "066ab8b41254604c314201f1662948737f8e578dd3735bda80cdf8f8d366c286",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation-review",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 7840
+    },
+    {
+      "source_key": "remediation_review_result",
+      "source_manifest_sha256": "fec6dae1e176742c575cf9f2695d9b140382286a36d8a22cd5604fec4ad92136",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation-review",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 17469
+    },
+    {
+      "source_key": "remediation_sha256",
+      "source_manifest_sha256": "28bc0b8720e466d92b4290ad6bc237f24f2c2180ec063161bafddef2b7d39f10",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation-manifest",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 1906
+    },
+    {
+      "source_key": "remediation_test_report",
+      "source_manifest_sha256": "0407c7ca900e6aa0c5e7a4729873f97429d109cec2424bddd20409d50a2eb03c",
+      "destination_lane": "history/remediation",
+      "role": "historical/remediation",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 7074
+    },
+    {
+      "source_key": "review_closure_final",
+      "source_manifest_sha256": "757d54661efbebfcf2b751eb67b48d24ac0fb5d58ffb5b2f71a513417de11964",
+      "destination_lane": "reviews",
+      "role": "independent review",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 6636
+    },
+    {
+      "source_key": "review_ird001_focused",
+      "source_manifest_sha256": "c0a34349984e4e9986075dfc952aa62646c90166e3f2a39a2a194f7688a37e6a",
+      "destination_lane": "reviews",
+      "role": "independent review",
+      "contributes_to_verdict": false,
+      "files": 1,
+      "bytes": 4687
+    }
+  ],
+  "supersession": {
+    "NC-11": {
+      "superseded_by": "NC-11R",
+      "original_verdict": "HELD",
+      "reason": "Observed run_status was clean (not inconclusive); forbidden_run_status_observed never fired; run_status_mismatch exercised a different property than forbidden-status precedence.",
+      "contributes_as_passing_control": false,
+      "authoritative_replacement_location": "control-closure/results/NC-11R.json + control-closure/nc11r/"
+    },
+    "NC-12": {
+      "superseded_by": "NC-12R",
+      "original_verdict": "FAILED",
+      "reason": "Only the comparator (declared-ref check) was exercised; offline verifier and residue scanner were not executed. Reclassified as an orchestration/method-execution defect (CDF-001).",
+      "contributes_as_passing_control": false,
+      "authoritative_replacement_location": "control-closure/results/NC-12R.json + control-closure/nc12r/"
+    },
+    "runner_tooling": {
+      "post_freeze_edit": "completion oracle-precommit committed run-negative-control.mjs = a8f0d1b6...; on-disk (and tooling-test-result) = 951326f7...; no amendment recorded.",
+      "resolution": "control-set-v2 closure froze the on-disk v1 runner 951326f7... in control-precommit.json and re-executed; the FINAL review verified digest+mode 644."
+    }
+  },
+  "invariants": {
+    "original_NC11_and_NC12_do_not_contribute_as_passing_controls": true,
+    "NC11R_and_NC12R_are_authoritative_replacements": true,
+    "attempt1_expectations_retain_chronology_authority": true,
+    "completion_attempt_supplies_determinism_evidence": true,
+    "control_closure_supplies_authoritative_control_evidence": true,
+    "no_source_evidence_edited": true,
+    "assembly_is_not_an_independent_review": true
+  },
+  "known_caveats": [
+    "campaign/ and history/attempt-1/ are byte-identical copies of the same source (attempt-1) with distinct roles.",
+    "determinism/ files are also present within history/completion-attempt/ (same source bytes, distinct role).",
+    "control-set-v2.json appears at 3 destinations byte-identically (da41370b...): control-closure/, history/remediation/, history/remediation/candidate-v2/.",
+    "The completion attempt's independent-review-result.json is UNINDEXED in its own source evidence-index.json; it is preserved here under history/completion-attempt/ and this fact is recorded, not repaired."
+  ]
+}
