@@ -16,10 +16,16 @@ import {
   type Hash,
   type Instant,
   type IsolationEnforcementProbeResultV1,
+  type IsolationProbeSigningManifestV1,
   type IsolationQualificationReportV1,
   type IsolationSubstrateLockV1,
 } from "@erl2/contracts";
 import { coreHash } from "@erl2/integrity";
+import {
+  verifyIsolationLockSignature,
+  verifyIsolationProbeManifest,
+  type PinnedQualificationAuthority,
+} from "./isolationAuthenticity.js";
 import {
   NOT_QUALIFIED_STATE,
   REQUIRED_ISOLATION_CONTROLS,
@@ -137,16 +143,35 @@ function dedupe(values: readonly string[]): string[] {
  *  1. the observed substrate still matches its lock (drift);
  *  2. the probe suite that produced the evidence is the one the lock pins;
  *  3. every probe result is bound to *this* lock;
- *  4. the verdict re-derives as `qualified`.
+ *  4. the verdict re-derives as `qualified`;
+ *  5. the lock's Ed25519 signature verifies (the authenticity the first four
+ *     checks do not provide — they compare caller-supplied fields against other
+ *     caller-supplied fields and two recomputable constants, so a structurally
+ *     forged lock passes them);
+ *  6. a covering signed probe-signing manifest authenticates *exactly* the
+ *     evaluated probe results, and is neither absent nor tampered.
  *
- * Step 4 re-runs the decision rather than reading the report, so a hand-written
- * report claiming `qualified` grants nothing.
+ * Steps 1-4 re-run the decision rather than reading the report, so a hand-written
+ * report claiming `qualified` grants nothing. Steps 5-6 add the cryptographic
+ * authority those four lack (EQ-L-010): the two verifiers already exist and back
+ * `erl2 doctor`; wiring them here makes the pre-run guarantee documented in
+ * `permitted-claims.md` (EQ-L-011) literally true. On this checkout the accepted
+ * signer is the repo-derivable development governor key, so passing is
+ * `locally_observed_unauthenticated`, never `authenticated`: an unsigned forgery
+ * is refused, but a dev-key holder is not excluded and this is not confinement or
+ * certification (ERL2-OQ-008 stays open). `pinnedAuthorities` is resolved
+ * explicitly at the host/CLI boundary — empty on this checkout — never read
+ * ambiently, so core stays pure.
  */
 export function assertQualifiedForExecution(input: {
   readonly profile: "container" | "disposable_vm";
   readonly lock: IsolationSubstrateLockV1;
   readonly observed: ObservedSubstrateState;
   readonly probeResults: readonly IsolationEnforcementProbeResultV1[];
+  /** The signed manifest that must authenticate exactly these probe results. */
+  readonly probeManifest: IsolationProbeSigningManifestV1 | undefined;
+  /** Verifier-held authorities; empty on this checkout (ERL2-OQ-008 open). */
+  readonly pinnedAuthorities?: readonly PinnedQualificationAuthority[];
 }): void {
   assertObservedMatchesIsolationLock(input.lock, input.observed);
   assertProbeSuiteMatchesLock(input.lock, PROBE_SUITE_ID, probeSuiteDigest());
@@ -175,6 +200,34 @@ export function assertQualifiedForExecution(input: {
     throw new Erl2Error(
       CODES.ADAPTER_SANDBOX_CONTROL_UNSUPPORTED,
       `the ${input.profile} profile is ${NOT_QUALIFIED_STATE}: ${verdict.reasons.slice(0, 6).join("; ")}`,
+      { owner: "lab" },
+    );
+  }
+
+  // Steps 5-6 — authenticity, after content so a drift or content failure still
+  // surfaces first. These are the checks the first four cannot make: caller
+  // fields compared to caller fields are not authority. `pinnedAuthorities` is
+  // passed in from the boundary; empty here means a dev-signed lock is accepted
+  // as locally_observed_unauthenticated, and an unsigned one is refused.
+  const pinnedAuthorities = input.pinnedAuthorities ?? [];
+  const lockSignature = verifyIsolationLockSignature(input.lock, pinnedAuthorities);
+  if (!lockSignature.signatureValid) {
+    throw new Erl2Error(
+      CODES.ENV_ISOLATION_LOCK_UNAUTHENTIC,
+      `the ${input.profile} substrate lock signature did not verify: ${lockSignature.reason ?? "unknown"}`,
+      { owner: "lab" },
+    );
+  }
+  const probeManifest = verifyIsolationProbeManifest(
+    input.probeManifest,
+    input.lock,
+    input.probeResults,
+    pinnedAuthorities,
+  );
+  if (probeManifest.status === "absent" || probeManifest.status === "invalid") {
+    throw new Erl2Error(
+      CODES.ENV_ISOLATION_PROBE_MANIFEST_UNAUTHENTIC,
+      `the ${input.profile} probe-signing manifest is ${probeManifest.status}: ${probeManifest.reason ?? "no covering manifest authenticates the evaluated probe results"}`,
       { owner: "lab" },
     );
   }

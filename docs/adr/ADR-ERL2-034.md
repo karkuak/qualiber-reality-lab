@@ -221,16 +221,26 @@ subject's trust class — and every derived value (`containerObservedControls`,
 object literal is writable by anyone; carrying evidence is what makes that
 harmless, because `assertSandboxProfileEnabled` re-runs every gate over what the
 object carries on every call. Forging an activation therefore means supplying a
-signed lock and twenty probe results bound to it, which is not forgery. Same
+lock whose Ed25519 signature verifies **and** a covering signed
+`isolation-probe-signing-manifest/v1` over twenty probe results bound to it —
+which `assertQualifiedForExecution` now checks (EQ-L-010), so a structurally
+forged, unsigned or unmanifested activation is refused rather than accepted. Same
 argument as `IsolationQualificationReportV1`: the admission check re-derives
-rather than reads.
+rather than reads. The accepted signer on this checkout is the repo-derivable
+development governor key, so this raises the forgery bar to deriving that dev key
+and the result is `locally_observed_unauthenticated`, never `authenticated` — it
+is not confinement or certification (ERL2-OQ-008 open).
 
 The four gates, in order, all refusals:
 
 1. **Substrate.** `assertQualifiedForExecution` re-compares the observed runtime
    against the lock (`ENV_ISOLATION_SUBSTRATE_DRIFT`), re-checks the probe-suite
-   digest, re-binds every probe result to this lock, and re-derives the verdict
-   rather than reading a stored one.
+   digest, re-binds every probe result to this lock, re-derives the verdict
+   rather than reading a stored one, and then verifies the lock's Ed25519
+   signature (`ENV_ISOLATION_LOCK_UNAUTHENTIC`) and a covering signed probe
+   manifest (`ENV_ISOLATION_PROBE_MANIFEST_UNAUTHENTIC`) — the authenticity the
+   drift and content checks do not provide, since they compare caller-supplied
+   fields against other caller-supplied fields (EQ-L-010).
 2. **Launcher.** Observed by starting a hardened container in the locked image
    and watching the adapter runtime answer. Not "the daemon is up" — gate 2
    existed precisely because a fully qualified substrate could be unable to host

@@ -325,12 +325,19 @@ Two readings worth making explicit:
    type, so an object literal with `state` set and a plausible lock hash would
    have opened the profile and produced a manifest naming its own fabricated
    hash — a "derived, never declared" gate that could be declared. It now
-   carries the lock, the observed substrate and the probe results, every derived
-   value is computed on use, and `assertSandboxProfileEnabled` re-runs all four
-   gates on every call. Forging one therefore means supplying a signed lock and
-   twenty probe results bound to it, which is the evidence. Caught in
-   self-review; `container-activation-rederived-from-evidence` is the control
-   that keeps it caught.
+   carries the lock, the observed substrate, the probe results and a covering
+   signed probe manifest, every derived value is computed on use, and
+   `assertSandboxProfileEnabled` re-runs all four gates on every call. Forging one
+   therefore means supplying a lock whose Ed25519 signature verifies and a
+   covering signed probe manifest over twenty probe results bound to it — which
+   `assertQualifiedForExecution` now checks, so an unsigned or unmanifested
+   activation is refused (EQ-L-010). The accepted signer here is the
+   repo-derivable development governor key, so the result is
+   `locally_observed_unauthenticated`, never `authenticated` — not confinement.
+   Caught in self-review; `container-activation-rederived-from-evidence` keeps the
+   structural-forgery property caught, and `container-lock-signature-verified`,
+   `container-probe-manifest-verified` and `container-manifest-absent-fails-closed`
+   keep the authenticity checks load-bearing.
 
 ---
 

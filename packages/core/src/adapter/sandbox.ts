@@ -34,6 +34,7 @@ import {
   Erl2Error,
   type Hash,
   type IsolationEnforcementProbeResultV1,
+  type IsolationProbeSigningManifestV1,
   type IsolationSubstrateLockV1,
   type SandboxControlId,
   type SandboxInvocationManifestV1,
@@ -41,6 +42,7 @@ import {
 } from "@erl2/contracts";
 import { coreHash } from "@erl2/integrity";
 import type { ContainerLauncherAvailability } from "./containerLauncher.js";
+import type { PinnedQualificationAuthority } from "./isolationAuthenticity.js";
 import { REQUIRED_ISOLATION_CONTROLS } from "./isolationQualification.js";
 import { assertQualifiedForExecution } from "./isolationQualificationReport.js";
 import type { ObservedSubstrateState } from "./isolationSubstrateLock.js";
@@ -149,11 +151,16 @@ const CONTAINER_CONTROL_PROOFS: readonly SandboxControlId[] = PROCESS_UNSUPPORTE
  * earlier shape stored `observedControls`, `imageDigest` and `substrateLockHash`
  * as fields; because this is a structural type, anyone could write the object
  * literal and the profile would open. Every derived value is now computed from
- * the lock and the probe results on each use, so hand-writing an activation
- * means supplying a real signed lock and twenty real probe results bound to it
- * — which is the evidence, not a claim about it. Same argument as
- * `IsolationQualificationReportV1`: the admission check re-derives rather than
- * reads, so a hand-written verdict grants nothing.
+ * the lock and the probe results on each use, and `assertQualifiedForExecution`
+ * verifies the lock's Ed25519 signature and the covering probe manifest this
+ * activation carries (EQ-L-010), so hand-writing an activation means supplying a
+ * lock whose signature verifies and a covering signed probe manifest over twenty
+ * real probe results bound to it — which is the evidence, not a claim about it.
+ * On this checkout the accepted signer is the repo-derivable development governor
+ * key, so a passing activation is `locally_observed_unauthenticated`, never
+ * `authenticated`: an unsigned forgery is refused, but this is not confinement.
+ * Same argument as `IsolationQualificationReportV1`: the admission check
+ * re-derives rather than reads, so a hand-written verdict grants nothing.
  *
  * `state` is therefore a label, not the permission. `assertSandboxProfileEnabled`
  * re-runs every gate on every call.
@@ -163,6 +170,14 @@ export interface ContainerProfileActivation {
   readonly lock: IsolationSubstrateLockV1;
   readonly observed: ObservedSubstrateState;
   readonly probeResults: readonly IsolationEnforcementProbeResultV1[];
+  /**
+   * The signed manifest that authenticates the probe results this activation
+   * carries. Required, and re-verified on every use by `assertQualified` below:
+   * the manifest travels with the evidence it authenticates so the gate can fail
+   * closed when it is absent, rather than accepting an activation whose probe
+   * results nothing signed (EQ-L-010).
+   */
+  readonly probeSigningManifest: IsolationProbeSigningManifestV1;
   readonly launcher: ContainerLauncherAvailability;
   readonly subjectTrust: SubjectTrust;
 }
@@ -212,14 +227,18 @@ function assertQualified(input: {
   readonly lock: IsolationSubstrateLockV1;
   readonly observed: ObservedSubstrateState;
   readonly probeResults: readonly IsolationEnforcementProbeResultV1[];
+  readonly probeSigningManifest: IsolationProbeSigningManifestV1;
   readonly launcher: ContainerLauncherAvailability;
   readonly subjectTrust: SubjectTrust;
+  readonly pinnedAuthorities?: readonly PinnedQualificationAuthority[];
 }): void {
   assertQualifiedForExecution({
     profile: "container",
     lock: input.lock,
     observed: input.observed,
     probeResults: input.probeResults,
+    probeManifest: input.probeSigningManifest,
+    ...(input.pinnedAuthorities === undefined ? {} : { pinnedAuthorities: input.pinnedAuthorities }),
   });
 
   if (!input.launcher.available) {
@@ -244,8 +263,10 @@ export function deriveContainerProfileActivation(input: {
   readonly lock: IsolationSubstrateLockV1;
   readonly observed: ObservedSubstrateState;
   readonly probeResults: readonly IsolationEnforcementProbeResultV1[];
+  readonly probeSigningManifest: IsolationProbeSigningManifestV1;
   readonly launcher: ContainerLauncherAvailability;
   readonly subjectTrust: SubjectTrust;
+  readonly pinnedAuthorities?: readonly PinnedQualificationAuthority[];
 }): ContainerProfileActivation {
   assertQualified(input);
   return {
@@ -253,6 +274,7 @@ export function deriveContainerProfileActivation(input: {
     lock: input.lock,
     observed: input.observed,
     probeResults: [...input.probeResults],
+    probeSigningManifest: input.probeSigningManifest,
     launcher: input.launcher,
     subjectTrust: input.subjectTrust,
   };
@@ -261,6 +283,7 @@ export function deriveContainerProfileActivation(input: {
 export function assertSandboxProfileEnabled(
   profile: SandboxProfileId,
   activation?: ContainerProfileActivation,
+  pinnedAuthorities: readonly PinnedQualificationAuthority[] = [],
 ): void {
   if (profile === "local-process") return;
   if (activation === undefined || activation.state !== CONTAINER_PROFILE_ENABLED_STATE) {
@@ -271,10 +294,13 @@ export function assertSandboxProfileEnabled(
   }
   // Re-run every gate over the evidence the activation carries, rather than
   // trusting the label it arrived with. This is what makes the type safe to be
-  // structural: a fabricated activation must carry a signed lock, a matching
-  // observed substrate and twenty probe results bound to that lock, and if it
-  // does, it is not fabricated.
-  assertQualified(activation);
+  // structural: a fabricated activation must carry a lock whose Ed25519 signature
+  // verifies, a covering signed probe manifest, a matching observed substrate and
+  // twenty probe results bound to that lock, and if it does, it is not fabricated
+  // (EQ-L-010). `pinnedAuthorities` is empty on this checkout, so a dev-signed
+  // activation is accepted as locally_observed_unauthenticated and an unsigned
+  // one is refused.
+  assertQualified({ ...activation, pinnedAuthorities });
 }
 
 /**
